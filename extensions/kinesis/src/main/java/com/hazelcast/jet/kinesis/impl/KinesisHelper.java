@@ -27,6 +27,9 @@ import com.amazonaws.services.kinesis.model.InvalidArgumentException;
 import com.amazonaws.services.kinesis.model.LimitExceededException;
 import com.amazonaws.services.kinesis.model.ListShardsRequest;
 import com.amazonaws.services.kinesis.model.ListShardsResult;
+import com.amazonaws.services.kinesis.model.PutRecordsRequest;
+import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
+import com.amazonaws.services.kinesis.model.PutRecordsResult;
 import com.amazonaws.services.kinesis.model.ResourceInUseException;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
 import com.amazonaws.services.kinesis.model.Shard;
@@ -41,6 +44,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -76,11 +80,6 @@ public class KinesisHelper {
     public static boolean shardBelongsToRange(@Nonnull Shard shard, @Nonnull HashRange range) {
         String startingHashKey = shard.getHashKeyRange().getStartingHashKey();
         return range.contains(new BigInteger(startingHashKey));
-    }
-
-    public boolean isStreamActive() {
-        StreamStatus status = callSafely(this::getStreamStatus);
-        return StreamStatus.ACTIVE.equals(status);
     }
 
     public void waitForStreamToActivate() {
@@ -188,6 +187,13 @@ public class KinesisHelper {
         GetRecordsRequest request = new GetRecordsRequest();
         request.setShardIterator(shardIterator);
         return kinesis.getRecordsAsync(request);
+    }
+
+    public Future<PutRecordsResult> putRecordsAsync(Collection<PutRecordsRequestEntry> entries) {
+        PutRecordsRequest request = new PutRecordsRequest();
+        request.setRecords(entries);
+        request.setStreamName(stream);
+        return kinesis.putRecordsAsync(request);
     }
 
     private <T> T callSafely(Callable<T> callable) {

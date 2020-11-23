@@ -44,7 +44,7 @@ public class RangeMonitor extends AbstractShardWorker {
     /**
      * We don't want to issue shard listing requests at the peak allowed rate.
      */
-    private static final double PERCENTAGE_OF_SHARD_LISTING_RATE_UTILIZED = 0.2;
+    private static final double PERCENTAGE_OF_SHARD_LISTING_RATE_UTILIZED = 0.1;
 
     /**
      * Failure usually happens due to the over-utilization of resources and/or

@@ -15,8 +15,9 @@
  */
 package com.hazelcast.jet.kinesis.impl;
 
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
-import com.amazonaws.services.kinesis.model.PutRecordsRequest;
+import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
 import com.amazonaws.services.kinesis.model.PutRecordsResult;
 import com.amazonaws.services.kinesis.model.PutRecordsResultEntry;
@@ -33,8 +34,11 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
 public class KinesisSinkP<T> implements Processor {
 
@@ -49,6 +53,7 @@ public class KinesisSinkP<T> implements Processor {
      */
     private static final int MAX_RECORDS_IN_REQUEST = 500;
 
+    private static final long PAUSE_AFTER_FAILURE = 1000L; //todo: exponential backoff
 
     /**
      * Each record, when encoded as a byte array, is limited to 1M,
@@ -70,13 +75,15 @@ public class KinesisSinkP<T> implements Processor {
 
     private final AmazonKinesisAsync kinesis;
     private final String stream;
-    private final FunctionEx<T, String> keyFn;
-    private final FunctionEx<T, byte[]> valueFn;
 
     private final Buffer<T> buffer;
 
     private ILogger logger;
     private KinesisHelper helper;
+
+    private State state = State.READY_TO_SEND;
+    private long nextSendTime;
+    private Future<PutRecordsResult> sendResult;
 
     public KinesisSinkP(
             AmazonKinesisAsync kinesis,
@@ -86,14 +93,12 @@ public class KinesisSinkP<T> implements Processor {
     ) {
         this.kinesis = kinesis;
         this.stream = stream;
-        this.keyFn = keyFn;
-        this.valueFn = valueFn;
         this.buffer = new Buffer<>(keyFn, valueFn);
     }
 
     @Override
     public boolean isCooperative() {
-        return false; //todo: can be made cooperative
+        return true;
     }
 
     @Override
@@ -104,24 +109,23 @@ public class KinesisSinkP<T> implements Processor {
     }
 
     @Override
-    public boolean tryProcess() {
-        return helper.isStreamActive();
-    }
-
-    @Override
     public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
         return true; //watermark ignored
     }
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
-        if (!helper.isStreamActive()) {
-            return;
+        switch (state) {
+            case READY_TO_SEND:
+                handleReadyToSend(inbox);
+                return;
+            case SENDING_IN_PROGRESS:
+                handleSendingInProgress();
+                return;
+            default:
+                throw new RuntimeException("Programming error, unhandled state: " + state);
         }
 
-        bufferFromInbox(inbox);
-        PutRecordsResult result = dispatchBufferContent();
-        pruneSentFromBuffer(result);
     }
 
     private void bufferFromInbox(@Nonnull Inbox inbox) {
@@ -146,17 +150,54 @@ public class KinesisSinkP<T> implements Processor {
         }
     }
 
-    @Nullable
-    private PutRecordsResult dispatchBufferContent() {
-        if (!buffer.isEmpty()) {
-
-            PutRecordsRequest request = new PutRecordsRequest();
-            request.setRecords(buffer.content());
-            request.setStreamName(stream);
-
-            return kinesis.putRecords(request);
+    private void handleReadyToSend(@Nonnull Inbox inbox) {
+        bufferFromInbox(inbox);
+        if (attemptToDispatchBufferContent()) {
+            state = State.SENDING_IN_PROGRESS;
         }
-        return null;
+    }
+
+    private boolean attemptToDispatchBufferContent() {
+        if (buffer.isEmpty() || System.currentTimeMillis() < nextSendTime) {
+            return false;
+        }
+
+        List<PutRecordsRequestEntry> entries = buffer.content();
+        sendResult = helper.putRecordsAsync(entries);
+
+        nextSendTime = System.currentTimeMillis(); //todo: add some wait here?
+        return true;
+    }
+
+    private void handleSendingInProgress() {
+        if (sendResult.isDone()) {
+            try {
+                PutRecordsResult result = helper.readResult(this.sendResult);
+                pruneSentFromBuffer(result);
+                if (result.getFailedRecordCount() > 0) {
+                    dealWithSendFailure("Sending only partially successful. Retry sending failed items (ordering" +
+                            " will be affected). ");
+                } else {
+                    dealWithSendSuccessful();
+                }
+            } catch (ProvisionedThroughputExceededException pte) {
+                dealWithSendFailure("Data throughput rate exceeded. Backing off and retrying.");
+            } catch (SdkClientException sce) {
+                dealWithSendFailure("Failed reading records, retrying. Cause: " + sce.getMessage());
+            } catch (Throwable t) {
+                throw rethrow(t);
+            }
+        }
+    }
+
+    private void dealWithSendSuccessful() {
+        state = State.READY_TO_SEND;
+    }
+
+    private void dealWithSendFailure(@Nonnull String message) {
+        logger.warning(message);
+        nextSendTime = System.currentTimeMillis() + PAUSE_AFTER_FAILURE;
+        state = State.READY_TO_SEND;
     }
 
     private void pruneSentFromBuffer(@Nullable PutRecordsResult result) {
@@ -175,10 +216,21 @@ public class KinesisSinkP<T> implements Processor {
                     buffer.remove(i);
                 }
             }
-            //todo: need exponential backoff before retrying, will implement after it's cooperative
         } else {
             buffer.clear();
         }
+    }
+
+    private enum State {
+        /**
+         * Ready to send data to Kinesis, if available.
+         */
+        READY_TO_SEND,
+
+        /**
+         * Data has been sent to Kinesis, waiting for a reply.
+         */
+        SENDING_IN_PROGRESS,
     }
 
     private static class Buffer<T> {
@@ -276,16 +328,14 @@ public class KinesisSinkP<T> implements Processor {
 
     private static final class BufferEntry {
 
-        private final PutRecordsRequestEntry putRecordsRequestEntry;
-
+        private PutRecordsRequestEntry putRecordsRequestEntry;
         private int encodedSize;
 
-        BufferEntry() {
-            putRecordsRequestEntry = new PutRecordsRequestEntry();
-            encodedSize = 0;
-        }
-
         public void set(String partitionKey, byte[] data, int size) {
+            if (putRecordsRequestEntry == null) {
+                putRecordsRequestEntry = new PutRecordsRequestEntry();
+            }
+
             putRecordsRequestEntry.setPartitionKey(partitionKey);
 
             ByteBuffer byteBuffer = putRecordsRequestEntry.getData();
@@ -297,9 +347,8 @@ public class KinesisSinkP<T> implements Processor {
                 byteBuffer.flip();
             }
 
-            //todo: do we ever want to shrink the buffers?
-
             encodedSize = size;
         }
     }
+
 }

@@ -21,12 +21,9 @@ import com.amazonaws.services.kinesis.model.CreateStreamRequest;
 import com.amazonaws.services.kinesis.model.MergeShardsRequest;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.SplitShardRequest;
-import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.JetTestSupport;
-import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
 import com.hazelcast.jet.kinesis.impl.HashRange;
@@ -58,7 +55,6 @@ import org.testcontainers.containers.localstack.LocalStackContainer.Service;
 
 import javax.annotation.Nonnull;
 import java.math.BigInteger;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -75,6 +71,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.pipeline.test.Assertions.assertCollectedEventually;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -154,15 +151,8 @@ public class KinesisIntegrationTest extends JetTestSupport {
                     .groupingKey(Entry::getKey)
                     .window(WindowDefinition.tumbling(windowSize))
                     .aggregate(counting())
-                    .apply(assertCollectedEventually(120, windowResults -> {
-                        for (int i = 0; i < KEYS; i++) {
-                            String key = Integer.toString(i);
-                            List<KeyedWindowResult<String, Long>> resultsForKey = windowResults.stream()
-                                    .filter(wr -> wr.key().equals(key))
-                                    .collect(Collectors.toList());
-                            assertTrue("Results for key " + key + ": " + resultsForKey,
-                                    resultsForKey.size() > 2); //multiple windows for each key, so watermarks work too
-                        }
+                    .apply(assertCollectedEventually(ASSERT_TRUE_EVENTUALLY_TIMEOUT, windowResults -> {
+                        assertTrue(windowResults.size() > KEYS); //more window results than keys, so watermarks work
                     }));
 
             sendMessages(false);
@@ -194,14 +184,10 @@ public class KinesisIntegrationTest extends JetTestSupport {
         createStream(shards);
         HELPER.waitForStreamToActivate();
 
-        StreamSource<Entry<String, byte[]>> source = kinesisSource();
-
-        Sink<Entry<String, List<String>>> sink = Sinks.map(results);
-
-        jet().newJob(getPipeline(source, sink));
+        jet().newJob(getPipeline());
 
         Map<String, List<String>> expectedMessages = sendMessages(true);
-        assertMessages(expectedMessages, results, true);
+        assertMessages(expectedMessages, true);
     }
 
     @Test
@@ -213,14 +199,10 @@ public class KinesisIntegrationTest extends JetTestSupport {
         List<Shard> shards = HELPER.listActiveShards();
         mergeShards(shards.get(0), shards.get(1));
 
-        StreamSource<Entry<String, byte[]>> source = kinesisSource();
-
-        Sink<Entry<String, List<String>>> sink = Sinks.map(results);
-
-        jet().newJob(getPipeline(source, sink));
+        jet().newJob(getPipeline());
 
         Map<String, List<String>> expectedMessages = sendMessages(true);
-        assertMessages(expectedMessages, results, true);
+        assertMessages(expectedMessages, true);
     }
 
     @Test
@@ -233,18 +215,14 @@ public class KinesisIntegrationTest extends JetTestSupport {
     @Category({SerialTest.class, NightlyTest.class})
     public void dynamicStream_50Shards_mergesDuringData() {
         //important to test with more shards than can fit in a single list shards response
-         dynamicStream_mergesDuringData(50, 5);
+        dynamicStream_mergesDuringData(50, 5);
     }
 
     private void dynamicStream_mergesDuringData(int shards, int merges) {
         createStream(shards);
         HELPER.waitForStreamToActivate();
 
-        StreamSource<Entry<String, byte[]>> source = kinesisSource();
-
-        Sink<Entry<String, List<String>>> sink = Sinks.map(results);
-
-        jet().newJob(getPipeline(source, sink));
+        jet().newJob(getPipeline());
 
         Map<String, List<String>> expectedMessages = sendMessages(false);
 
@@ -257,7 +235,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
             List<Shard> currentShards = HELPER.listActiveShards();
             List<Shard> newShards = currentShards.stream()
                     .filter(shard -> !oldShardIds.contains(shard.getShardId()))
-                    .collect(Collectors.toList());
+                    .collect(toList());
             assertTrue(newShards.size() >= 1);
             oldShards = currentShards;
 
@@ -267,7 +245,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
             HELPER.waitForStreamToActivate();
         }
 
-        assertMessages(expectedMessages, results, false);
+        assertMessages(expectedMessages, false);
     }
 
     @Test
@@ -279,14 +257,10 @@ public class KinesisIntegrationTest extends JetTestSupport {
         List<Shard> shards = HELPER.listActiveShards();
         splitShard(shards.get(0));
 
-        StreamSource<Entry<String, byte[]>> source = kinesisSource();
-
-        Sink<Entry<String, List<String>>> sink = Sinks.map(results);
-
-        jet().newJob(getPipeline(source, sink));
+        jet().newJob(getPipeline());
 
         Map<String, List<String>> expectedMessages = sendMessages(true);
-        assertMessages(expectedMessages, results, true);
+        assertMessages(expectedMessages, true);
     }
 
     @Test
@@ -305,11 +279,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
         createStream(shards);
         HELPER.waitForStreamToActivate();
 
-        StreamSource<Entry<String, byte[]>> source = kinesisSource();
-
-        Sink<Entry<String, List<String>>> sink = Sinks.map(results);
-
-        jet().newJob(getPipeline(source, sink));
+        jet().newJob(getPipeline());
 
         Map<String, List<String>> expectedMessages = sendMessages(false);
 
@@ -322,7 +292,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
             List<Shard> currentShards = HELPER.listActiveShards();
             List<Shard> newShards = currentShards.stream()
                     .filter(shard -> !oldShardIds.contains(shard.getShardId()))
-                    .collect(Collectors.toList());
+                    .collect(toList());
             assertTrue(newShards.size() >= 1);
             oldShards = currentShards;
 
@@ -331,20 +301,24 @@ public class KinesisIntegrationTest extends JetTestSupport {
             HELPER.waitForStreamToActivate();
         }
 
-        assertMessages(expectedMessages, results, false);
+        assertMessages(expectedMessages, false);
     }
 
     private Map<String, List<String>> sendMessages(boolean join) {
         List<Entry<String, String>> msgEntryList = IntStream.range(0, MESSAGES)
                 .boxed()
                 .map(i -> entry(Integer.toString(i % KEYS), i))
-                .map(e -> entry(e.getKey(), String.format("Message %09d for key %s", e.getValue(), e.getKey())))
-                .collect(Collectors.toList());
+                .map(e -> entry(e.getKey(), String.format("%s: msg %09d", e.getKey(), e.getValue())))
+                .collect(toList());
 
         BatchSource<Entry<String, byte[]>> source = TestSources.items(msgEntryList.stream()
                 .map(e1 -> entry(e1.getKey(), e1.getValue().getBytes()))
-                .collect(Collectors.toList()));
-        Sink<Entry<String, byte[]>> sink = kinesisSink();
+                .collect(toList()));
+        Sink<Entry<String, byte[]>> sink = KinesisSinks.kinesis(STREAM)
+                .withEndpoint(AWS_CONFIG.getEndpoint())
+                .withRegion(AWS_CONFIG.getRegion())
+                .withCredentials(AWS_CONFIG.getAccessKey(), AWS_CONFIG.getSecretKey())
+                .build();
 
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(source)
@@ -365,36 +339,46 @@ public class KinesisIntegrationTest extends JetTestSupport {
         return cluster[0];
     }
 
+    private Pipeline getPipeline() {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(kinesisSource())
+                .withoutTimestamps()
+                .rebalance(Entry::getKey)
+                .map(e -> entry(e.getKey(), Collections.singletonList(new String(e.getValue()))))
+                .writeTo(Sinks.mapWithMerging(results, Entry::getKey, Entry::getValue, (l1, l2) -> {
+                    ArrayList<String> list = new ArrayList<>();
+                    list.addAll(l1);
+                    list.addAll(l2);
+                    return list;
+                }));
+        return pipeline;
+    }
+
+    private void assertMessages(Map<String, List<String>> expected, boolean checkOrder) {
+        assertTrueEventually(() -> {
+            assertEquals(getKeySetsDifferDescription(expected, results), expected.keySet(), results.keySet());
+
+            for (Entry<String, List<String>> entry : expected.entrySet()) {
+                String key = entry.getKey();
+                List<String> expectedMessages = entry.getValue();
+
+                List<String> actualMessages = results.get(key);
+                if (!checkOrder) {
+                    actualMessages = new ArrayList<>(actualMessages);
+                    actualMessages.sort(String::compareTo);
+                }
+                assertEquals(getMessagesDifferDescription(key, expectedMessages, actualMessages),
+                        expectedMessages, actualMessages);
+            }
+        });
+    }
+
     private static StreamSource<Entry<String, byte[]>> kinesisSource() {
         return KinesisSources.kinesis(STREAM)
                 .withEndpoint(AWS_CONFIG.getEndpoint())
                 .withRegion(AWS_CONFIG.getRegion())
                 .withCredentials(AWS_CONFIG.getAccessKey(), AWS_CONFIG.getSecretKey())
                 .build();
-    }
-
-    private static Sink<Entry<String, byte[]>> kinesisSink() {
-        return KinesisSinks.kinesis(STREAM)
-                .withEndpoint(AWS_CONFIG.getEndpoint())
-                .withRegion(AWS_CONFIG.getRegion())
-                .withCredentials(AWS_CONFIG.getAccessKey(), AWS_CONFIG.getSecretKey())
-                .build();
-    }
-
-    private static Pipeline getPipeline(StreamSource<Entry<String, byte[]>> source,
-                                        Sink<Entry<String, List<String>>> sink) {
-        Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(source)
-                .withoutTimestamps()
-                .groupingKey(Entry::getKey)
-                .mapStateful((SupplierEx<List<String>>) ArrayList::new,
-                        (s, k, e) -> {
-                            String m = new String(e.getValue(), Charset.defaultCharset());
-                            s.add(m);
-                            return Util.<String, List<String>>entry(k, new ArrayList<>(s));
-                        })
-                .writeTo(sink);
-        return pipeline;
     }
 
     private static void createStream(int shardCount) {
@@ -432,32 +416,9 @@ public class KinesisIntegrationTest extends JetTestSupport {
         KINESIS.splitShard(request);
     }
 
-    private static void assertMessages(
-            Map<String, List<String>> expected,
-            IMap<String, List<String>> actual,
-            boolean checkOrder
-    ) {
-        assertTrueEventually(() -> {
-            assertEquals(getKeySetsDifferDescription(expected, actual), expected.keySet(), actual.keySet());
-
-            for (Entry<String, List<String>> entry : expected.entrySet()) {
-                String key = entry.getKey();
-                List<String> expectedMessages = entry.getValue();
-
-                List<String> actualMessages = actual.get(key);
-                if (!checkOrder) {
-                    actualMessages = new ArrayList<>(actualMessages);
-                    actualMessages.sort(String::compareTo);
-                }
-                assertEquals(getMessagesDifferDescription(key, expectedMessages, actualMessages),
-                        expectedMessages, actualMessages);
-            }
-        });
-    }
-
     @Nonnull
     private static String getKeySetsDifferDescription(Map<String, List<String>> expected,
-                                                      IMap<String, List<String>> actual) {
+                                                      Map<String, List<String>> actual) {
         return "Key sets differ!" +
                 "\n\texpected: " + new TreeSet<>(expected.keySet()) +
                 "\n\t  actual: " + new TreeSet<>(actual.keySet());
