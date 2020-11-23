@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.hadoop.impl;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
@@ -61,7 +62,9 @@ public class CsvInputFormat extends FileInputFormat<NullWritable, Object> {
                     CsvMapper mapper = new CsvMapper();
 
                     CsvSchema schema = CsvSchema.emptySchema().withHeader();
-                    ObjectReader reader = mapper.readerFor(clazz).with(schema);
+                    ObjectReader reader = mapper.readerFor(clazz)
+                                                .withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                                                .with(schema);
 
                     Path file = fileSplit.getPath();
                     FileSystem fs = file.getFileSystem(conf);

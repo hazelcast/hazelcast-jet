@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.csv.impl;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
@@ -53,7 +54,9 @@ public class CsvReadFileFnProvider implements ReadFileFnProvider {
         return path -> {
             CsvSchema schema = CsvSchema.emptySchema().withHeader();
             CsvMapper mapper = new CsvMapper();
-            ObjectReader reader = mapper.readerFor(formatClazz).with(schema);
+            ObjectReader reader = mapper.readerFor(formatClazz)
+                                        .withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                                        .with(schema);
 
             FileInputStream fis = new FileInputStream(path.toFile());
 

@@ -35,4 +35,16 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
                 new User("Ali", 42)
         );
     }
+
+    @Test
+    public void shouldReadCsvFileWithMoreColumnsThanTargetClass() throws Exception {
+
+        FileSourceBuilder<User> source = FileSources.files("src/test/resources/file-more-columns.csv")
+                                                    .format(FileFormat.csv(User.class));
+
+        assertItemsInSource(source,
+                new User("Frantisek", 7),
+                new User("Ali", 42)
+        );
+    }
 }
