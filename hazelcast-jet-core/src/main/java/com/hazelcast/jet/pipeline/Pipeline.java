@@ -109,7 +109,7 @@ public interface Pipeline extends Serializable {
     String toDotString();
 
     /**
-     * Returns {@code true} if pipeline has no vertices nor edges attached.
+     * Returns {@code true} if there are no stages in the pipeline.
      *
      * @since 4.4
      */
