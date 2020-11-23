@@ -17,6 +17,7 @@
 package com.hazelcast.jet.pipeline.file.impl;
 
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.util.IOUtil;
 import com.hazelcast.jet.json.JsonUtil;
@@ -86,6 +87,10 @@ public class LocalFileSourceFactory implements FileSourceFactory {
 
         FileFormat<T> format = requireNonNull(builder.format());
         ReadFileFnProvider readFileFnProvider = readFileFnProviders.get(format.format());
+        if (readFileFnProvider == null) {
+            throw new JetException("Could not find ReadFileFnProvider for FileFormat: " + format.format() + ". " +
+                    "Did you provide correct modules on classpath?");
+        }
         FunctionEx<Path, Stream<T>> mapFn = readFileFnProvider.createReadFileFn(format);
         return Sources.filesBuilder(dirAndGlob.f0())
                       .glob(dirAndGlob.f1())
