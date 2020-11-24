@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
@@ -114,14 +115,16 @@ class PythonServiceContext {
         try {
             Process process = new ProcessBuilder("python3", "--version").redirectErrorStream(true).start();
             process.waitFor();
-            String output = new String(readFully(process.getInputStream()));
-            if (process.exitValue() != 0) {
-                logger.severe("python3 version check returned non-zero exit value, output: " + output);
-                throw new IllegalStateException("python3 is not available");
-            }
-            if (!output.startsWith("Python 3")) {
-                logger.severe("python3 version check returned unknown version, output: " + output);
-                throw new IllegalStateException("python3 is not available");
+            try (InputStream inputStream = process.getInputStream()) {
+                String output = new String(readFully(inputStream), UTF_8);
+                if (process.exitValue() != 0) {
+                    logger.severe("python3 version check returned non-zero exit value, output: " + output);
+                    throw new IllegalStateException("python3 is not available");
+                }
+                if (!output.startsWith("Python 3")) {
+                    logger.severe("python3 version check returned unknown version, output: " + output);
+                    throw new IllegalStateException("python3 is not available");
+                }
             }
         } catch (Exception e) {
             throw new IllegalStateException("python3 is not available", e);
