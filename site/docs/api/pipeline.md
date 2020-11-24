@@ -92,7 +92,7 @@ preserved, in order to be able to apply stateful processing logic on
 them.
 
 The `Pipeline` has a property named `preserveOrder` and enabling this
-property hints the Jet to keep the order of events with the same
+property instructs Jet to keep the order of events with the same
 partitioning key by avoiding the usage of round-robin edges.
 
 You can enable this property as follows:
