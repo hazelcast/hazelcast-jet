@@ -17,7 +17,7 @@ FROM [schema_name.]table_name [ [ AS ] table_alias ]
 ```
 
 The clauses above are standard SQL clauses. The `table_name` is a
-mapping name, either as created using [DDL](01-ddl.md) or one created
+mapping name, either as created using [DDL](ddl.md) or one created
 automatically for non-empty IMaps.
 
 Jet supports all operators and functions supported by IMDG. Go to the
@@ -65,7 +65,7 @@ of groups in the result is large, it can lead to an `OutOfMemoryError`,
 after which the cluster might be unusable. One technique to reduce the
 memory needs is to arrange for the input stream to be sorted by the
 grouping key: then you can store the aggregation state of just one key
-at a time. Once we add agregate functions to the default SQL engine, we
+at a time. Once we add aggregate functions to the default SQL engine, we
 will leverage this optimization.
 
 ### Isolation level

@@ -70,16 +70,12 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
-                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
-                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
-                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
-                + ", \"auto.offset.reset\" 'earliest'"
+                + '\'' + OPTION_KEY_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_KEY_CLASS + "'='" + Integer.class.getName() + '\''
+                + ", '" + OPTION_VALUE_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_VALUE_CLASS + "'='" + String.class.getName() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
 
@@ -103,16 +99,12 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
-                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
-                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
-                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
-                + ", \"auto.offset.reset\" 'earliest'"
+                + '\'' + OPTION_KEY_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_KEY_CLASS + "'='" + Integer.class.getName() + '\''
+                + ", '" + OPTION_VALUE_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_VALUE_CLASS + "'='" + String.class.getName() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
 
@@ -133,16 +125,12 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
-                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
-                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
-                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
-                + ", \"auto.offset.reset\" 'earliest'"
+                + '\'' + OPTION_KEY_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_KEY_CLASS + "'='" + Integer.class.getName() + '\''
+                + ", '" + OPTION_VALUE_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_VALUE_CLASS + "'='" + String.class.getName() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
 
@@ -163,16 +151,12 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
-                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
-                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
-                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
-                + ", \"auto.offset.reset\" 'earliest'"
+                + '\'' + OPTION_KEY_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_KEY_CLASS + "'='" + Integer.class.getName() + '\''
+                + ", '" + OPTION_VALUE_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_VALUE_CLASS + "'='" + String.class.getName() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
 
@@ -193,16 +177,12 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
-                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
-                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
-                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
-                + ", \"auto.offset.reset\" 'earliest'"
+                + '\'' + OPTION_KEY_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_KEY_CLASS + "'='" + Integer.class.getName() + '\''
+                + ", '" + OPTION_VALUE_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_VALUE_CLASS + "'='" + String.class.getName() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
 
@@ -225,16 +205,12 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                 + ", name VARCHAR EXTERNAL NAME this"
                 + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
-                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
-                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
-                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
-                + ", \"auto.offset.reset\" 'earliest'"
+                + '\'' + OPTION_KEY_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_KEY_CLASS + "'='" + Integer.class.getName() + '\''
+                + ", '" + OPTION_VALUE_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_VALUE_CLASS + "'='" + String.class.getName() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
 
@@ -257,17 +233,13 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + tableName + ' '
                 + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_OBJECT_NAME + "\" '" + topicName + '\''
-                + ", \"" + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
-                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
-                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
-                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
-                + ", \"auto.offset.reset\" 'earliest'"
+                + '\'' + OPTION_OBJECT_NAME + "'='" + topicName + '\''
+                + ", '" + OPTION_KEY_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_KEY_CLASS + "'='" + Integer.class.getName() + '\''
+                + ", '" + OPTION_VALUE_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_VALUE_CLASS + "'='" + String.class.getName() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
 
@@ -296,16 +268,12 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                 + "this VARCHAR" +
                 ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
-                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
-                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
-                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
-                + ", \"auto.offset.reset\" 'earliest'"
+                + '\'' + OPTION_KEY_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_KEY_CLASS + "'='" + Integer.class.getName() + '\''
+                + ", '" + OPTION_VALUE_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_VALUE_CLASS + "'='" + String.class.getName() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
 
@@ -326,36 +294,63 @@ public class SqlPrimitiveTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_noValueFormat() {
-        String topicName = randomName();
-        assertThatThrownBy(
-                () -> sqlService.execute("CREATE MAPPING " + topicName + " TYPE " + KafkaSqlConnector.TYPE_NAME + " "
-                        + "OPTIONS ("
-                        + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + "',"
-                        + '"' + OPTION_KEY_CLASS + "\" '" + String.class.getName() + "'"
-                        + ")"))
-                .hasMessage("Missing 'valueFormat' option");
+    public void test_explicitKeyAndValueSerializers() {
+        String name = createRandomTopic();
+        sqlService.execute("CREATE MAPPING " + name + ' '
+                + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '\'' + OPTION_KEY_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_KEY_CLASS + "'='" + Integer.class.getName() + '\''
+                + ", '" + OPTION_VALUE_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + ", '" + OPTION_VALUE_CLASS + "'='" + String.class.getName() + '\''
+                + ", 'key.serializer'='" + IntegerSerializer.class.getCanonicalName() + '\''
+                + ", 'key.deserializer'='" + IntegerDeserializer.class.getCanonicalName() + '\''
+                + ", 'value.serializer'='" + StringSerializer.class.getCanonicalName() + '\''
+                + ", 'value.deserializer'='" + StringDeserializer.class.getCanonicalName() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'auto.offset.reset'='earliest'"
+                + ")"
+        );
+
+        assertTopicEventually(
+                name,
+                "INSERT INTO " + name + " (__key, this) VALUES (1, '2')",
+                createMap(1, "2")
+        );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row(1, "2"))
+        );
     }
 
     @Test
     public void test_noKeyFormat() {
         String topicName = createRandomTopic();
         sqlService.execute("CREATE MAPPING " + topicName + ' '
-                + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
-                + "OPTIONS ("
-                + '"' + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + "',"
-                + '"' + OPTION_VALUE_CLASS + "\" '" + Integer.class.getName() + "'"
-                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
-                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
-                + ", \"value.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
-                + ", \"value.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
-                + ", \"auto.offset.reset\" 'earliest'"
-                + ")");
+                           + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
+                           + "OPTIONS ("
+                           + '\'' + OPTION_VALUE_FORMAT + "'='" + JAVA_FORMAT + "',"
+                           + '\'' + OPTION_VALUE_CLASS + "'='" + Integer.class.getName() + "'"
+                           + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                           + ", 'auto.offset.reset'='earliest'"
+                           + ")"
+        );
 
         sqlService.execute("SINK INTO " + topicName + " VALUES(42)");
 
         assertRowsEventuallyInAnyOrder("SELECT * FROM " + topicName, singletonList(new Row(42)));
+    }
+
+    @Test
+    public void test_noValueFormat() {
+        String topicName = randomName();
+        assertThatThrownBy(
+                () -> sqlService.execute("CREATE MAPPING " + topicName + " TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                        + "OPTIONS ("
+                        + '\'' + OPTION_KEY_FORMAT + "'='" + JAVA_FORMAT + "',"
+                        + '\'' + OPTION_KEY_CLASS + "'='" + String.class.getName() + "'"
+                        + ")"))
+                .hasMessage("Missing 'valueFormat' option");
     }
 
     @Test
@@ -376,10 +371,10 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                         + ", field INT EXTERNAL NAME \"" + fieldName + ".field\""
                         + ") TYPE " + KafkaSqlConnector.TYPE_NAME
                         + " OPTIONS ("
-                        + '"' + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + "',"
-                        + '"' + OPTION_VALUE_CLASS + "\" '" + Integer.class.getName() + "',"
-                        + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + "',"
-                        + '"' + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
+                        + '\'' + OPTION_VALUE_FORMAT + "'='" + JAVA_FORMAT + "',"
+                        + '\'' + OPTION_VALUE_CLASS + "'='" + Integer.class.getName() + "',"
+                        + '\'' + OPTION_KEY_FORMAT + "'='" + JAVA_FORMAT + "',"
+                        + '\'' + OPTION_KEY_CLASS + "'='" + Integer.class.getName() + "'"
                         + ")"))
                 .hasMessage(
                         "The field '" + fieldName + "' is of type INTEGER, you can't map '" + fieldName + ".field' too");

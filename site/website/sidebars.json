@@ -43,12 +43,12 @@
       "api/spring"
     ],
     "SQL": [
-      "sql/00-intro",
-      "sql/00a-basic-commands",
-      "sql/01-ddl",
-      "sql/02-job-management",
-      "sql/03-imap-connector",
-      "sql/05-kafka-connector"
+      "sql/intro",
+      "sql/basic-commands",
+      "sql/ddl",
+      "sql/job-management",
+      "sql/imap-connector",
+      "sql/kafka-connector"
     ],
     "How-To Guides": [
       "how-tos/stream-imap",
@@ -96,6 +96,7 @@
     ],
     "Design Documents": [
       "design-docs/index",
+      "design-docs/015-mqtt-connector",
       "design-docs/014-batchstage-sort",
       "design-docs/013-system-time-watermarks",
       "design-docs/012-improved-job-resilience",
