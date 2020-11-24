@@ -22,6 +22,7 @@ import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.test.Assertions;
+import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
@@ -42,6 +43,13 @@ public abstract class BaseFileFormatTest extends JetTestSupport {
     @Parameters(name = "{index}: useHadoop={0}")
     public static Iterable<?> parameters() {
         return Arrays.asList(true, false);
+    }
+
+    @Before
+    public void setUp() throws Exception {
+        if (useHadoop) {
+            assumeThatNoWindowsOS();
+        }
     }
 
     @SafeVarargs

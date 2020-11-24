@@ -40,6 +40,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
@@ -110,13 +111,30 @@ public class LocalFileSourceFactory implements FileSourceFactory {
     }
 
     private static Tuple2<String, String> deriveDirectoryAndGlobFromPath(String path) {
-        Path p = Paths.get(path).toAbsolutePath();
+        Path p;
+
+        try {
+            p = Paths.get(path).toAbsolutePath();
+        } catch (InvalidPathException e) {
+            int indexOf = path.lastIndexOf(File.separatorChar);
+            if (indexOf == -1) {
+                indexOf = path.lastIndexOf("/");
+            }
+            if (indexOf != -1) {
+                String directory = path.substring(0, indexOf);
+                String glob = path.substring(indexOf + 1);
+                return tuple2(directory, glob);
+            } else {
+                throw e;
+            }
+        }
 
         String directory;
         String glob = "*";
+
         if (isDirectory(path)) {
-            // The path is the directory and glob is used
-            directory = p.toString();
+            // The path is the directory and glob matching all ('*') is used
+            return tuple2(p.toString(), "*");
         } else {
             Path parent = p.getParent();
             if (parent != null) {
@@ -126,7 +144,8 @@ public class LocalFileSourceFactory implements FileSourceFactory {
                 if (fileName != null) {
                     glob = fileName.toString();
                 } else {
-                    glob = "*";
+                    throw new IllegalStateException("Path has a non-null parent but has null file name. This violates" +
+                            "the Path contract. Please report this bug.");
                 }
             } else {
                 // p is root of the filesystem, has no parent

@@ -22,6 +22,8 @@ import com.hazelcast.jet.pipeline.file.FileSources;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.File;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
@@ -72,6 +74,15 @@ public class GlobFileSourceTest extends BaseFileFormatTest {
     @Test
     public void shouldReadAllFilesInDirectoryNoSlash() {
         FileSourceBuilder<String> source = FileSources.files("src/test/resources/directory")
+                                                      .format(FileFormat.text());
+
+        assertItemsInSource(source, (collected) -> assertThat(collected).hasSize(2));
+    }
+
+    @Test
+    public void shouldReadAllFilesInDirectoryWithNativeSeparator() {
+        String path = "src" + File.separator + "test" + File.separator + "resources" + File.separator + "directory";
+        FileSourceBuilder<String> source = FileSources.files(path)
                                                       .format(FileFormat.text());
 
         assertItemsInSource(source, (collected) -> assertThat(collected).hasSize(2));

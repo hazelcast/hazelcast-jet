@@ -33,7 +33,10 @@ public class TextFileFormatTest extends BaseFileFormatTest {
         FileSourceBuilder<String> source = FileSources.files("src/test/resources/file.txt")
                                                       .format(FileFormat.text());
 
-        assertItemsInSource(source, "Text contents of\nthe file.\n");
+        assertItemsInSource(source,
+                "Text contents of" + System.lineSeparator() +
+                        "the file." + System.lineSeparator()
+        );
     }
 
     @Test
