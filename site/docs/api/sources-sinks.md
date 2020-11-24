@@ -909,15 +909,15 @@ version.
 
 |Jet Version|Embedded IMDG Version|CompatibleVersions|
 |:-----|:------------------|:-----------|
-|Jet 3.0|Hazelcast 3.12|Hazelcast 3.x.x|
-|Jet 3.1    |Hazelcast 3.12.1   |Hazelcast 3.6+.x|
-|Jet 3.2    |Hazelcast 3.12.3   |Hazelcast 3.6+.x|
-|Jet 3.2.1  |Hazelcast 3.12.5   |Hazelcast 3.6+.x|
-|Jet 3.2.2  |Hazelcast 3.12.6   |Hazelcast 3.6+.x|
-|Jet 4.0    |Hazelcast 4.0      |Hazelcast 4.x.x|
-|Jet 4.1.1  |Hazelcast 4.0.1    |Hazelcast 4.x.x|
-|Jet 4.2    |Hazelcast 4.0.1    |Hazelcast 4.x.x|
-|Jet 4.3    |Hazelcast 4.0.3    |Hazelcast 4.x.x|
+|Jet 3.0    |Hazelcast 3.12     |Hazelcast 3.y.z|
+|Jet 3.1    |Hazelcast 3.12.1   |Hazelcast 3.6+|
+|Jet 3.2    |Hazelcast 3.12.3   |Hazelcast 3.6+|
+|Jet 3.2.1  |Hazelcast 3.12.5   |Hazelcast 3.6+|
+|Jet 3.2.2  |Hazelcast 3.12.6   |Hazelcast 3.6+|
+|Jet 4.0    |Hazelcast 4.0      |Hazelcast 4.y.z|
+|Jet 4.1.1  |Hazelcast 4.0.1    |Hazelcast 4.y.z|
+|Jet 4.2    |Hazelcast 4.0.1    |Hazelcast 4.y.z|
+|Jet 4.3    |Hazelcast 4.0.3    |Hazelcast 4.y.z|
 
 ## Databases
 
