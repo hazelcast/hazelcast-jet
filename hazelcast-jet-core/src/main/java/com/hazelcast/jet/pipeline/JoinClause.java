@@ -38,12 +38,12 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
  *     <em>right-hand projection function</em>: maps the enriching stream item
  *     to the item that will be in the result of the join operation.
  * </li></ol>
- *  The primary use case for the projection function is enrichment from a
- *  map source, such as {@link Sources#map}.
- *  The enriching stream consists of map entries, but the result should
- *  contain just the values. In this case the projection function should be
- *  {@code Entry::getValue}. There is direct support for this case with the
- *  method {@link #joinMapEntries(FunctionEx)}.
+ * The primary use case for the projection function is enrichment from a
+ * map source, such as {@link Sources#map}. The enriching stream consists
+ * of map entries, but the result should contain just the values. In this
+ * case the projection function should be {@code Entry::getValue}. There is
+ * direct support for this case with the method {@link
+ * #joinMapEntries(FunctionEx)}.
  *
  * @param <K> the type of the join key
  * @param <T0> the type of the left-hand stream item

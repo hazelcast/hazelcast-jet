@@ -56,8 +56,8 @@ public interface AggregateOperation2<T0, T1, A, R> extends AggregateOperation<A,
      * A primitive that updates the accumulator state to account for a new
      * item coming from stream-0.
      * <p>
-     *  The consumer must be stateless and {@linkplain Processor#isCooperative()
-     *  cooperative}.
+     * The consumer must be stateless and {@linkplain Processor#isCooperative()
+     * cooperative}.
      */
     @Nonnull
     BiConsumerEx<? super A, ? super T0> accumulateFn0();
@@ -66,8 +66,8 @@ public interface AggregateOperation2<T0, T1, A, R> extends AggregateOperation<A,
      * A primitive that updates the accumulator state to account for a new
      * item coming from stream-1.
      * <p>
-     *  The consumer must be stateless and {@linkplain Processor#isCooperative()
-     *  cooperative}.
+     * The consumer must be stateless and {@linkplain Processor#isCooperative()
+     * cooperative}.
      */
     @Nonnull
     BiConsumerEx<? super A, ? super T1> accumulateFn1();
@@ -76,8 +76,8 @@ public interface AggregateOperation2<T0, T1, A, R> extends AggregateOperation<A,
      * Returns a copy of this aggregate operation, but with the {@code
      * accumulate} primitive at index 0 replaced with the one supplied here.
      * <p>
-     *  The consumer must be stateless and {@linkplain Processor#isCooperative()
-     *  cooperative}.
+     * The consumer must be stateless and {@linkplain Processor#isCooperative()
+     * cooperative}.
      */
     @Nonnull
     <T0_NEW> AggregateOperation2<T0_NEW, T1, A, R> withAccumulateFn0(
@@ -88,8 +88,8 @@ public interface AggregateOperation2<T0, T1, A, R> extends AggregateOperation<A,
      * Returns a copy of this aggregate operation, but with the {@code
      * accumulate} primitive at index 1 replaced with the one supplied here.
      * <p>
-     *  The consumer must be stateless and {@linkplain Processor#isCooperative()
-     *  cooperative}.
+     * The consumer must be stateless and {@linkplain Processor#isCooperative()
+     * cooperative}.
      */
     @Nonnull
     <T1_NEW> AggregateOperation2<T0, T1_NEW, A, R> withAccumulateFn1(

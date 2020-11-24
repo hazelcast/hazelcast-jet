@@ -46,8 +46,8 @@ public interface AggregateOperation1<T, A, R> extends AggregateOperation<A, R> {
      * A primitive that updates the accumulator state to account for a new
      * item.
      * <p>
-     *  The consumer must be stateless and {@linkplain Processor#isCooperative()
-     *  cooperative}.
+     * The consumer must be stateless and {@linkplain Processor#isCooperative()
+     * cooperative}.
      */
     @Nonnull
     BiConsumerEx<? super A, ? super T> accumulateFn();
@@ -56,8 +56,8 @@ public interface AggregateOperation1<T, A, R> extends AggregateOperation<A, R> {
      * Returns a copy of this aggregate operation, but with the {@code
      * accumulate} primitive replaced with the one supplied here.
      * <p>
-     *  The consumer must be stateless and {@linkplain Processor#isCooperative()
-     *  cooperative}.
+     * The consumer must be stateless and {@linkplain Processor#isCooperative()
+     * cooperative}.
      */
     @Nonnull
     <NEW_T> AggregateOperation1<NEW_T, A, R> withAccumulateFn(
