@@ -31,7 +31,7 @@ based on it, only new jobs are affected.
 CREATE [OR REPLACE] [EXTERNAL] MAPPING [IF NOT EXISTS] mapping_name
 [ ( column_name column_type [EXTERNAL NAME external_name] [, ...] ) ]
 TYPE type_identifier
-[ OPTIONS ( option_name 'option_value' [, ...] ) ]
+[ OPTIONS ( 'option_name' = 'option_value' [, ...] ) ]
 ```
 
 - `OR REPLACE`: overwrite the mapping if it already exists
@@ -57,10 +57,11 @@ TYPE type_identifier
 - `type_identifier`: the connector type.
 
 - `option_name`, `option_value`: a connector-specific option. For a list
-  of possible options, check out the connector javadoc. `option_name` is
-  an SQL identifier, and must be enclosed in double quotes if it
-  contains special characters like `.`, `-` etc. `option_value` is a
-  regular SQL string literal enclosed in apostrophes.
+  of possible options, check out the connector javadoc. The
+  `option_name` and `option_value` are string literals and must be
+  enclosed in apostrophes. The `objectName` option is common for all
+  connectors: it's the name of the object in the external system. By
+  default, it's equal to the mapping name.
 
 #### Auto-resolving of columns and options
 
@@ -82,9 +83,9 @@ CREATE MAPPING my_table(
 )
 TYPE IMap
 OPTIONS (
-    "serialization.key.format" 'java',
-    "serialization.key.java.class" 'java.lang.Integer'
-    "serialization.value.format" 'json'
+    'serialization.key.format' = 'java',
+    'serialization.key.java.class' = 'java.lang.Integer'
+    'serialization.value.format' = 'json'
 )
 ```
 
@@ -99,7 +100,7 @@ the string value is a JSON object like this:
 ```
 
 For details regarding the above statement see the [IMap
-connector](03-imap-connector.md) chapter.
+connector](imap-connector.md) chapter.
 
 ### DROP MAPPING Synopsis
 

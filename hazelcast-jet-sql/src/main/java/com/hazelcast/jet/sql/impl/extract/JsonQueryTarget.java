@@ -33,12 +33,13 @@ public class JsonQueryTarget implements QueryTarget {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private ObjectNode json;
+    private JsonNode json;
 
     @Override
     public void setTarget(Object target) {
         try {
-            json = (ObjectNode) (target instanceof ObjectNode ? target : MAPPER.readTree((String) target));
+            json = target instanceof ObjectNode ? (ObjectNode) target
+                    : MAPPER.readTree((byte[]) target);
         } catch (IOException e) {
             throw sneakyThrow(e);
         }
