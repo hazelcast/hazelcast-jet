@@ -38,6 +38,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.jet.impl.util.IOUtil.copyStream;
+import static com.hazelcast.jet.impl.util.IOUtil.readFully;
 import static com.hazelcast.jet.impl.util.Util.editPermissionsRecursively;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.attribute.PosixFilePermission.GROUP_WRITE;
@@ -75,7 +76,7 @@ class PythonServiceContext {
 
     PythonServiceContext(ProcessorSupplier.Context context, PythonServiceConfig cfg) {
         logger = context.jetInstance().getHazelcastInstance().getLoggingService()
-                        .getLogger(getClass().getPackage().getName());
+                .getLogger(getClass().getPackage().getName());
         checkIfPythonIsAvailable();
         try {
             long start = System.nanoTime();
@@ -111,7 +112,17 @@ class PythonServiceContext {
 
     private void checkIfPythonIsAvailable() {
         try {
-            new ProcessBuilder("python3", "--version").start().waitFor();
+            Process process = new ProcessBuilder("python3", "--version").redirectErrorStream(true).start();
+            process.waitFor();
+            String output = new String(readFully(process.getInputStream()));
+            if (process.exitValue() != 0) {
+                logger.severe("python3 version check returned non-zero exit value, output: " + output);
+                throw new IllegalStateException("python3 is not available");
+            }
+            if (!output.startsWith("Python 3")) {
+                logger.severe("python3 version check returned unknown version, output: " + output);
+                throw new IllegalStateException("python3 is not available");
+            }
         } catch (Exception e) {
             throw new IllegalStateException("python3 is not available", e);
         }
