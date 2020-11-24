@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
@@ -52,9 +54,9 @@ public class SqlJsonTest extends SqlTestSupport {
                 + "nonExistingField VARCHAR"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_FORMAT + "\" '" + JSON_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
-                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.json" + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.json" + '\''
                 + ")"
         );
 
@@ -72,9 +74,9 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", name VARCHAR EXTERNAL NAME string"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_FORMAT + "\" '" + JSON_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
-                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.json" + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.json" + '\''
                 + ")"
         );
 
@@ -101,11 +103,12 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", \"date\" DATE"
                 + ", \"timestamp\" TIMESTAMP"
                 + ", timestampTz TIMESTAMP WITH TIME ZONE"
+                + ", object OBJECT"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_FORMAT + "\" '" + JSON_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
-                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.json" + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.json" + '\''
                 + ")"
         );
 
@@ -124,7 +127,8 @@ public class SqlJsonTest extends SqlTestSupport {
                         LocalTime.of(12, 23, 34),
                         LocalDate.of(2020, 4, 15),
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
-                        OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC)
+                        OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC),
+                        new ObjectNode(JsonNodeFactory.instance)
                 ))
         );
     }
@@ -135,9 +139,9 @@ public class SqlJsonTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_FORMAT + "\" '" + JSON_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
-                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.json" + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.json" + '\''
                 + ")"
         );
 

@@ -63,9 +63,11 @@ public class CsvQueryTargetTest {
                 .put("date", 10)
                 .put("timestamp", 11)
                 .put("timestampTz", 12)
+                .put("object", 13)
                 .build();
 
         QueryTarget target = new CsvQueryTarget(indicesByNames);
+        QueryExtractor topExtractor = target.createExtractor(null, OBJECT);
         QueryExtractor nonExistingExtractor = target.createExtractor("nonExisting", OBJECT);
         QueryExtractor stringExtractor = target.createExtractor("string", VARCHAR);
         QueryExtractor booleanExtractor = target.createExtractor("boolean", BOOLEAN);
@@ -80,6 +82,7 @@ public class CsvQueryTargetTest {
         QueryExtractor dateExtractor = target.createExtractor("date", DATE);
         QueryExtractor timestampExtractor = target.createExtractor("timestamp", TIMESTAMP);
         QueryExtractor timestampTzExtractor = target.createExtractor("timestampTz", TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME);
+        QueryExtractor objectExtractor = target.createExtractor("object", OBJECT);
 
         target.setTarget(new String[]{
                 "string"
@@ -95,8 +98,10 @@ public class CsvQueryTargetTest {
                 , "2020-09-09"
                 , "2020-09-09T12:23:34.100"
                 , "2020-09-09T12:23:34.200Z"
+                , "object"
         });
 
+        assertThat(topExtractor.get()).isInstanceOf(String[].class);
         assertThat(nonExistingExtractor.get()).isNull();
         assertThat(stringExtractor.get()).isEqualTo("string");
         assertThat(booleanExtractor.get()).isEqualTo(true);
@@ -111,5 +116,6 @@ public class CsvQueryTargetTest {
         assertThat(dateExtractor.get()).isEqualTo(LocalDate.of(2020, 9, 9));
         assertThat(timestampExtractor.get()).isEqualTo(LocalDateTime.of(2020, 9, 9, 12, 23, 34, 100_000_000));
         assertThat(timestampTzExtractor.get()).isEqualTo(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 200_000_000, UTC));
+        assertThat(objectExtractor.get()).isNotNull();
     }
 }

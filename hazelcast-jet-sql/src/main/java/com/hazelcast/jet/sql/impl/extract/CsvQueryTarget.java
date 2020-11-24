@@ -40,12 +40,20 @@ public class CsvQueryTarget implements QueryTarget {
     }
 
     @Override
-    public QueryExtractor createExtractor(String name, QueryDataType type) {
-        Integer index = indicesByNames.get(name);
+    public QueryExtractor createExtractor(String path, QueryDataType type) {
+        return path == null ? createExtractor() : createFieldExtractor(path, type);
+    }
+
+    private QueryExtractor createExtractor() {
+        return () -> line;
+    }
+
+    private QueryExtractor createFieldExtractor(String path, QueryDataType type) {
+        Integer index = indicesByNames.get(path);
         if (index == null) {
             return () -> null;
         } else {
-            return () -> type.convert(line[index]);
+            return () -> index < line.length ? type.convert(line[index]) : null;
         }
     }
 }

@@ -62,12 +62,13 @@ public class SqlCsvTest extends SqlTestSupport {
                 + ", \"date\" DATE"
                 + ", \"timestamp\" TIMESTAMP"
                 + ", timestampTz TIMESTAMP WITH TIME ZONE"
+                + ", object OBJECT"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_FORMAT + "\" '" + CSV_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
-                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.csv" + '\''
-                + ", \"" + FileSqlConnector.OPTION_HEADER + "\" '" + Boolean.TRUE + '\''
+                + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.csv" + '\''
+                + ", '" + FileSqlConnector.OPTION_HEADER + "'='" + Boolean.TRUE + '\''
                 + ")"
         );
 
@@ -86,7 +87,8 @@ public class SqlCsvTest extends SqlTestSupport {
                         LocalTime.of(12, 23, 34),
                         LocalDate.of(2020, 4, 15),
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
-                        OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC)
+                        OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC),
+                        null
                 ))
         );
     }
@@ -97,10 +99,10 @@ public class SqlCsvTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_FORMAT + "\" '" + CSV_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
-                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.csv" + '\''
-                + ", \"" + FileSqlConnector.OPTION_HEADER + "\" '" + Boolean.TRUE + '\''
+                + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.csv" + '\''
+                + ", '" + FileSqlConnector.OPTION_HEADER + "'='" + Boolean.TRUE + '\''
                 + ")"
         );
 

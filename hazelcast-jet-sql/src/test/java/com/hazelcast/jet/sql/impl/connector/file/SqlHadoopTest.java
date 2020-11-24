@@ -83,8 +83,8 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", name VARCHAR"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_FORMAT + "\" '" + CSV_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("csv") + '\''
+                + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("csv") + '\''
                 + ")"
         );
 
@@ -105,9 +105,9 @@ public class SqlHadoopTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_FORMAT + "\" '" + CSV_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("discovered-csv") + '\''
-                + ", \"" + OPTION_HEADER + "\" '" + Boolean.TRUE + '\''
+                + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("discovered-csv") + '\''
+                + ", '" + OPTION_HEADER + "'='" + Boolean.TRUE + '\''
                 + ")"
         );
 
@@ -130,8 +130,8 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", name VARCHAR"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_FORMAT + "\" '" + JSON_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("json") + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("json") + '\''
                 + ")"
         );
 
@@ -152,8 +152,8 @@ public class SqlHadoopTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_FORMAT + "\" '" + JSON_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("discovered-json") + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("discovered-json") + '\''
                 + ")"
         );
 
@@ -176,8 +176,8 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", name VARCHAR EXTERNAL NAME string"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_FORMAT + "\" '" + AVRO_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("avro") + '\''
+                + '\'' + OPTION_FORMAT + "'='" + AVRO_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("avro") + '\''
                 + ")"
         );
 
@@ -195,8 +195,8 @@ public class SqlHadoopTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_FORMAT + "\" '" + AVRO_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("discovered-avro") + '\''
+                + '\'' + OPTION_FORMAT + "'='" + AVRO_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("discovered-avro") + '\''
                 + ")"
         );
 
@@ -215,8 +215,8 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "nonExistingField VARCHAR"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_FORMAT + "\" '" + PARQUET_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("parquet-nulls") + '\''
+                + '\'' + OPTION_FORMAT + "'='" + PARQUET_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("parquet-nulls") + '\''
                 + ")"
         );
 
@@ -236,8 +236,8 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", name VARCHAR EXTERNAL NAME string"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_FORMAT + "\" '" + PARQUET_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("parquet-fields-mapping") + '\''
+                + '\'' + OPTION_FORMAT + "'='" + PARQUET_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("parquet-fields-mapping") + '\''
                 + ")"
         );
 
@@ -268,8 +268,8 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", timestampTz TIMESTAMP WITH TIME ZONE"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_FORMAT + "\" '" + PARQUET_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("parquet-all-types") + '\''
+                + '\'' + OPTION_FORMAT + "'='" + PARQUET_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("parquet-all-types") + '\''
                 + ")"
         );
 
@@ -301,8 +301,8 @@ public class SqlHadoopTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_FORMAT + "\" '" + PARQUET_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("parquet-schema-discovery") + '\''
+                + '\'' + OPTION_FORMAT + "'='" + PARQUET_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("parquet-schema-discovery") + '\''
                 + ")"
         );
 
