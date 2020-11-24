@@ -49,8 +49,13 @@ import com.hazelcast.sql.SqlColumnMetadata;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlRowMetadata;
+import org.jline.reader.EOFError;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.ParsedLine;
+import org.jline.reader.Parser;
+import org.jline.reader.SyntaxError;
+import org.jline.reader.impl.DefaultParser;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.DefaultExceptionHandler;
@@ -192,7 +197,7 @@ public class JetCommandLine implements Runnable {
             @Mixin(name = "targets") TargetsMixin targets
             ) {
         runWithJet(targets, verbosity, jet -> {
-            LineReader reader = LineReaderBuilder.builder()
+            LineReader reader = LineReaderBuilder.builder().parser(new MultilineParser())
                     .variable(LineReader.SECONDARY_PROMPT_PATTERN, "%M%P > ")
                     .variable(LineReader.INDENTATION, 2)
                     .variable(LineReader.LIST_MAX, SQL_LIST_MAX)
@@ -201,15 +206,19 @@ public class JetCommandLine implements Runnable {
                     .build();
             for (;;) {
                 String line = reader.readLine("sql> ");
-                if (line == null || "exit".equals(line)) {
+                if (line == null) {
                     break;
                 }
-                if ("".equals(line.trim())) {
+                String command = line.substring(0, line.lastIndexOf(";"));
+                if ("exit".equals(command)) {
+                    break;
+                }
+                if ("".equals(command.trim())) {
                     continue;
                 }
                 SqlResult res;
                 try {
-                    res = jet.getSql().execute(line);
+                    res = jet.getSql().execute(command);
                 } catch (HazelcastSqlException e) {
                     out.println(e.getMessage());
                     continue;
@@ -768,4 +777,24 @@ public class JetCommandLine implements Runnable {
         }
     }
 
+    /**
+     * A jline extension for SQL-like inputs. Commands are terminated with a semicolon.
+     * It was taken from https://github.com/jline/jline3/issues/36#issuecomment-652522724
+     */
+    private final class MultilineParser implements Parser {
+
+        private final Parser defaultParser = new DefaultParser();
+
+        private MultilineParser() { }
+
+        @Override
+        public ParsedLine parse(String line, int cursor, Parser.ParseContext context) throws SyntaxError {
+            if ((Parser.ParseContext.UNSPECIFIED.equals(context) || Parser.ParseContext.ACCEPT_LINE.equals(context))
+                    && !line.trim().endsWith(";")) {
+                throw new EOFError(-1, cursor, "Missing semicolon (;)");
+            }
+
+            return defaultParser.parse(line, cursor, context);
+        }
+    }
 }
