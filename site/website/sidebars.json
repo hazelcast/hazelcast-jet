@@ -42,6 +42,14 @@
       "api/testing",
       "api/spring"
     ],
+    "SQL": [
+      "sql/intro",
+      "sql/basic-commands",
+      "sql/ddl",
+      "sql/job-management",
+      "sql/imap-connector",
+      "sql/kafka-connector"
+    ],
     "How-To Guides": [
       "how-tos/stream-imap",
       "how-tos/observables",
@@ -88,7 +96,8 @@
     ],
     "Design Documents": [
       "design-docs/index",
-      "design-docs/015-event-reordering",
+      "design-docs/016-event-reordering",
+      "design-docs/015-mqtt-connector",
       "design-docs/014-batchstage-sort",
       "design-docs/013-system-time-watermarks",
       "design-docs/012-improved-job-resilience",

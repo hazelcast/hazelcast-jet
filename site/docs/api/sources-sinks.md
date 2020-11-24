@@ -749,10 +749,10 @@ For a full example, please see the [Stream Changes From IMap tutorial.](../how-t
 
 #### Map Sink
 
-By default, map sink expects items of type `Entry<Key, Value>` and will
-simply replace the previous entries, if any. However there's variants of
-this that allow you to do atomic updates to existing entries in the map
-by making use `EntryProcessor` objects.
+By default, the map sink expects items of type `Entry<Key, Value>` and
+will simply replace the previous entries, if any. However, there are
+variants of the map sink that allow you to do atomic updates to existing
+entries in the map by making use of `EntryProcessor` objects.
 
 The updating sinks come in three variants:
 
@@ -810,6 +810,11 @@ static class IncrementEntryProcessor implements EntryProcessor<String, Integer, 
     }
 }
 ```
+
+> The variants above can be used to remove existing map entries by
+setting their values to `null`. To put it another way, if these map sink
+variants set the entry’s value to null, the entry will be removed
+from the map.
 
 #### Predicates and Projections
 
@@ -898,6 +903,26 @@ Pipeline p = Pipeline.create();
 p.readFrom(Sources.remoteMap("inputMap", cfg));
 ...
 ```
+
+#### Compatibility
+
+When reading or writing to remote sources, Jet internally creates a
+client. This client uses the embedded IMDG version to connect to the
+remote cluster. Starting with Hazelcast 3.6, Hazelcast server & client
+versions are backward and forward compatible within the same major
+version.
+
+|Jet Version|Embedded IMDG Version|CompatibleVersions|
+|:-----|:------------------|:-----------|
+|Jet 3.0    |Hazelcast 3.12     |Hazelcast 3.y.z|
+|Jet 3.1    |Hazelcast 3.12.1   |Hazelcast 3.6+|
+|Jet 3.2    |Hazelcast 3.12.3   |Hazelcast 3.6+|
+|Jet 3.2.1  |Hazelcast 3.12.5   |Hazelcast 3.6+|
+|Jet 3.2.2  |Hazelcast 3.12.6   |Hazelcast 3.6+|
+|Jet 4.0    |Hazelcast 4.0      |Hazelcast 4.y.z|
+|Jet 4.1.1  |Hazelcast 4.0.1    |Hazelcast 4.y.z|
+|Jet 4.2    |Hazelcast 4.0.1    |Hazelcast 4.y.z|
+|Jet 4.3    |Hazelcast 4.0.3    |Hazelcast 4.y.z|
 
 ## Databases
 
@@ -1087,12 +1112,12 @@ periodically saves the database write ahead log offset for which it had
 dispatched events and in case of a failure/restart it will replay all
 events since the last successfully saved offset.
 
-Unfortunately however there are no guaranties that the last saved offset
+Unfortunately, however, there is no guarantee that the last saved offset
 is still in the database changelog. Such logs are always finite and
-depending on the DB configuration can be relatively short, so if the
-CDC source has to replay data for a long period of inactivity, then
-there can be loss. With careful management though we can say that
-at-least once guaranties can practially be provided.
+depending on the DB configuration can be relatively short, so if the CDC
+source has to replay data for a long period of inactivity, then there
+can be a data loss. With careful management though we can say that
+at-least once guarantee can practically be provided.
 
 #### CDC Sinks
 
