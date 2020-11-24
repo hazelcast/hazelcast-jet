@@ -131,8 +131,8 @@ public interface AggregateOperation<A, R> extends Serializable {
      * The accumulator produced by the supplier must be serializable. For
      * performance, you should prefer Hazelcast custom serialization.
      * <p>
-     *  The supplier must be stateless and {@linkplain Processor#isCooperative()
-     *  cooperative}.
+     * The supplier must be stateless and {@linkplain Processor#isCooperative()
+     * cooperative}.
      */
     @Nonnull
     SupplierEx<A> createFn();
@@ -143,8 +143,8 @@ public interface AggregateOperation<A, R> extends Serializable {
      * the returned function will handle. If asked for a tag that isn't
      * registered with it, it will throw an exception.
      * <p>
-     *  The function must be stateless and {@linkplain Processor#isCooperative()
-     *  cooperative}.
+     * The function must be stateless and {@linkplain Processor#isCooperative()
+     * cooperative}.
      */
     @Nonnull
     default <T> BiConsumerEx<? super A, ? super T> accumulateFn(@Nonnull Tag<T> tag) {
@@ -157,8 +157,8 @@ public interface AggregateOperation<A, R> extends Serializable {
      * the returned function will handle. If asked for an index that isn't
      * registered with it, it will throw an exception.
      * <p>
-     *  The function must be stateless and {@linkplain Processor#isCooperative()
-     *  cooperative}.
+     * The function must be stateless and {@linkplain Processor#isCooperative()
+     * cooperative}.
      */
     @Nonnull
     <T> BiConsumerEx<? super A, ? super T> accumulateFn(int index);
@@ -170,8 +170,8 @@ public interface AggregateOperation<A, R> extends Serializable {
      * for single-stage batch or tumbling window aggregation it is not needed
      * and may be {@code null}.
      * <p>
-     *  The function must be stateless and {@linkplain Processor#isCooperative()
-     *  cooperative}.
+     * The function must be stateless and {@linkplain Processor#isCooperative()
+     * cooperative}.
      */
     @Nullable
     BiConsumerEx<? super A, ? super A> combineFn();
@@ -212,8 +212,8 @@ public interface AggregateOperation<A, R> extends Serializable {
      *     assert acc.equals(create()) : "improper combine/deduct behavior";
      * </pre>
      * <p>
-     *  The function must be stateless and {@linkplain Processor#isCooperative()
-     *  cooperative}.
+     * The function must be stateless and {@linkplain Processor#isCooperative()
+     * cooperative}.
      */
     @Nullable
     BiConsumerEx<? super A, ? super A> deductFn();
@@ -235,8 +235,8 @@ public interface AggregateOperation<A, R> extends Serializable {
      * The returned function must never return {@code null}. In other words,
      * for any accumulator it must return a non-null exported value.
      * <p>
-     *  The function must be stateless and {@linkplain Processor#isCooperative()
-     *  cooperative}.
+     * The function must be stateless and {@linkplain Processor#isCooperative()
+     * cooperative}.
      */
     @Nonnull
     FunctionEx<? super A, ? extends R> exportFn();
@@ -251,8 +251,8 @@ public interface AggregateOperation<A, R> extends Serializable {
      * The returned function must never return {@code null}. In other words,
      * for any accumulator it must return a non-null finished value.
      * <p>
-     *  The function must be stateless and {@linkplain Processor#isCooperative()
-     *  cooperative}.
+     * The function must be stateless and {@linkplain Processor#isCooperative()
+     * cooperative}.
      */
     @Nonnull
     default FunctionEx<? super A, ? extends R> finishFn() {
@@ -265,8 +265,8 @@ public interface AggregateOperation<A, R> extends Serializable {
      * argument at position {@code i} replaces the primitive at index {@code
      * i}, as returned by {@link #accumulateFn(int)}.
      * <p>
-     *  The functions must be stateless and {@linkplain
-     *  Processor#isCooperative() cooperative}.
+     * The functions must be stateless and {@linkplain
+     * Processor#isCooperative() cooperative}.
      */
     @Nonnull
     @SuppressWarnings("rawtypes")
@@ -289,8 +289,8 @@ public interface AggregateOperation<A, R> extends Serializable {
      * of a two-stage aggregation setup. The first stage emits its accumulators
      * to the second stage.
      * <p>
-     *  The function must be stateless and {@linkplain Processor#isCooperative()
-     *  cooperative}.
+     * The function must be stateless and {@linkplain Processor#isCooperative()
+     * cooperative}.
      *
      * @param getAccFn the function that extracts the accumulator from the stream item
      * @param <T> the type of stream item
@@ -317,8 +317,8 @@ public interface AggregateOperation<A, R> extends Serializable {
      * same for {@code finishFn}. The main use case is to transform the result
      * of an existing (library-provided) aggregate operation.
      * <p>
-     *  The given function must be stateless and {@linkplain
-     *  Processor#isCooperative() cooperative}.
+     * The given function must be stateless and {@linkplain
+     * Processor#isCooperative() cooperative}.
      *
      * @param thenFn the function to apply to the results of {@code export} and {@code finish}
      *               primitives
