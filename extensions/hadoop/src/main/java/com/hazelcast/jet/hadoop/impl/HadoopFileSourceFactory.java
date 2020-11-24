@@ -97,6 +97,8 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
             Job job = Job.getInstance();
 
             Configuration configuration = job.getConfiguration();
+            configuration.setBoolean(FileInputFormat.INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, true);
+            configuration.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, false);
             for (Entry<String, String> option : builder.options().entrySet()) {
                 configuration.set(option.getKey(), option.getValue());
             }

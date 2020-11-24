@@ -76,4 +76,31 @@ public class GlobFileSourceTest extends BaseFileFormatTest {
 
         assertItemsInSource(source, (collected) -> assertThat(collected).hasSize(2));
     }
+
+    @Test
+    public void shouldIgnoreSubdirectories() {
+        FileSourceBuilder<String> source = FileSources.files("src/test/resources/level1")
+                                                      .format(FileFormat.text());
+
+        assertItemsInSource(source, "level1_file");
+    }
+
+    @Test
+    public void shouldIgnoreSubdirectoriesWhenUsingGlob() {
+        assumeThat(useHadoop).isFalse();
+        FileSourceBuilder<String> source = FileSources.files("src/test/resources/level1/*")
+                                                      .format(FileFormat.text());
+
+        assertItemsInSource(source, "level1_file");
+    }
+
+    @Test
+    public void shouldReadPathNoDirectoryFileOnly() {
+        FileSourceBuilder<String> source = FileSources.files("pom.xml")
+                                                      .format(FileFormat.text());
+
+        assertItemsInSource(source, (collected) ->
+                assertThat(collected).anyMatch(s -> s.contains("<artifactId>hazelcast-jet-hadoop</artifactId>"))
+        );
+    }
 }

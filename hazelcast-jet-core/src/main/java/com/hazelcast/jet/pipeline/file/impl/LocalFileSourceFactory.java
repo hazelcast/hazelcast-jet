@@ -110,7 +110,7 @@ public class LocalFileSourceFactory implements FileSourceFactory {
     }
 
     private static Tuple2<String, String> deriveDirectoryAndGlobFromPath(String path) {
-        Path p = Paths.get(path);
+        Path p = Paths.get(path).toAbsolutePath();
 
         String directory;
         String glob = "*";
