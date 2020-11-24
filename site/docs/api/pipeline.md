@@ -91,7 +91,7 @@ In some use cases, the order of events with the same key should be
 preserved, in order to be able to apply stateful processing logic on
 them.
 
-The `Pipeline` has a property named `preserveOrder` and enabling this
+`Pipeline` has a property named `preserveOrder` and enabling this
 property instructs Jet to keep the order of events with the same
 partitioning key by avoiding the usage of round-robin edges.
 
