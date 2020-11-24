@@ -712,6 +712,28 @@ cfg<span class="token punctuation">.</span><span class="token function">getNetwo
 p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">Sources</span><span class="token punctuation">.</span><span class="token function">remoteMap</span><span class="token punctuation">(</span><span class="token string">"inputMap"</span><span class="token punctuation">,</span> cfg<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
 </code></pre>
+<h4><a class="anchor" aria-hidden="true" id="compatibility"></a><a href="#compatibility" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Compatibility</h4>
+<p>When reading or writing to remote sources, Jet internally creates a
+client. This client uses the embedded IMDG version to connect to the
+remote cluster. Starting with Hazelcast 3.6, Hazelcast server &amp; client
+versions are backward and forward compatible within the same major
+version.</p>
+<table>
+<thead>
+<tr><th style="text-align:left">Jet Version</th><th style="text-align:left">Embedded IMDG Version</th><th style="text-align:left">CompatibleVersions</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align:left">Jet 3.0</td><td style="text-align:left">Hazelcast 3.12</td><td style="text-align:left">Hazelcast 3.y.z</td></tr>
+<tr><td style="text-align:left">Jet 3.1</td><td style="text-align:left">Hazelcast 3.12.1</td><td style="text-align:left">Hazelcast 3.6+</td></tr>
+<tr><td style="text-align:left">Jet 3.2</td><td style="text-align:left">Hazelcast 3.12.3</td><td style="text-align:left">Hazelcast 3.6+</td></tr>
+<tr><td style="text-align:left">Jet 3.2.1</td><td style="text-align:left">Hazelcast 3.12.5</td><td style="text-align:left">Hazelcast 3.6+</td></tr>
+<tr><td style="text-align:left">Jet 3.2.2</td><td style="text-align:left">Hazelcast 3.12.6</td><td style="text-align:left">Hazelcast 3.6+</td></tr>
+<tr><td style="text-align:left">Jet 4.0</td><td style="text-align:left">Hazelcast 4.0</td><td style="text-align:left">Hazelcast 4.y.z</td></tr>
+<tr><td style="text-align:left">Jet 4.1.1</td><td style="text-align:left">Hazelcast 4.0.1</td><td style="text-align:left">Hazelcast 4.y.z</td></tr>
+<tr><td style="text-align:left">Jet 4.2</td><td style="text-align:left">Hazelcast 4.0.1</td><td style="text-align:left">Hazelcast 4.y.z</td></tr>
+<tr><td style="text-align:left">Jet 4.3</td><td style="text-align:left">Hazelcast 4.0.3</td><td style="text-align:left">Hazelcast 4.y.z</td></tr>
+</tbody>
+</table>
 <h2><a class="anchor" aria-hidden="true" id="databases"></a><a href="#databases" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Databases</h2>
 <p>Jet supports a wide variety of relational and NoSQL databases as a data
 source or sink. While most traditional databases are batch oriented,
