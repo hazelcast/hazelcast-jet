@@ -188,7 +188,7 @@ public final class SourceBuilder<C> {
      *
      * @param name     a descriptive name for the source (for diagnostic purposes)
      * @param createFn a function that creates the source's context object. It
-     *                 must be stateless
+     *                 must be stateless.
      * @param <C>      type of the context object
      *
      * @since 3.0
@@ -249,7 +249,7 @@ public final class SourceBuilder<C> {
      *
      * @param name     a descriptive name for the source (for diagnostic purposes)
      * @param createFn a function that creates the source's context object. It
-     *                 must be stateless
+     *                 must be stateless.
      * @param <C>      type of the context object
      *
      * @since 3.0
@@ -333,7 +333,7 @@ public final class SourceBuilder<C> {
      *
      * @param name a descriptive name for the source (for diagnostic purposes)
      * @param createFn a function that creates the source's context object. It
-     *     must be stateless
+     *     must be stateless.
      * @param <C> type of the context object
      *
      * @since 3.0
@@ -422,7 +422,7 @@ public final class SourceBuilder<C> {
          * }</pre>
          *
          * @param createSnapshotFn a function to create an object to store in the
-         *     state snapshot. It must be stateless
+         *     state snapshot. It must be stateless.
          * @param <S> type of the snapshot object
          *
          * @since 3.1
@@ -454,7 +454,7 @@ public final class SourceBuilder<C> {
          * callback of an asynchronous operation.
          *
          * @param fillBufferFn function that fills the buffer with source data. It
-         *     must be stateless
+         *     must be stateless.
          * @param <T_NEW> type of the emitted items
          * @return this builder with the item type reset to the one inferred from
          *         {@code fillBufferFn}
@@ -614,7 +614,7 @@ public final class SourceBuilder<C> {
          * to it in a callback of an asynchronous operation.
          *
          * @param fillBufferFn function that fills the buffer with source data. It
-         *     must be stateless
+         *     must be stateless.
          * @param <T_NEW> type of the emitted items
          * @return this builder with the item type reset to the one inferred from
          *         {@code fillBufferFn}
@@ -709,7 +709,7 @@ public final class SourceBuilder<C> {
          * do so as explained {@link Base#distributed here}.
          *
          * @param restoreSnapshotFn the function to restore the state into the
-         *     context. It must be stateless
+         *     context. It must be stateless.
          *
          * @since 3.1
          */

@@ -106,7 +106,7 @@ public interface GeneralStage<T> extends Stage {
      * }</pre>
      *
      * @param flatMapFn a flatmapping function, whose result type is
-     *                  Jet's {@link Traverser}. It must not return null traverser, but can
+     *                  Jet's {@link Traverser}. It must not return a null traverser, but can
      *                  return an {@linkplain Traversers#empty() empty traverser}. It must be
      *                  stateless and {@linkplain Processor#isCooperative() cooperative}
      * @param <R> the type of items in the result's traversers

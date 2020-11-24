@@ -68,7 +68,7 @@ public interface StageWithWindow<T> {
      * {@code hashCode()}.
      *
      * @param keyFn function that extracts the grouping key. It must be
-     *     stateless and {@linkplain Processor#isCooperative() cooperative}
+     *     stateless and {@linkplain Processor#isCooperative() cooperative}.
      * @param <K> type of the key
      */
     @Nonnull

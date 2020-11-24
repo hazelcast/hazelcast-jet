@@ -138,7 +138,7 @@ public final class ServiceFactory<C, S> implements Serializable, Cloneable {
      *
      * @param createContextFn the function to create new context object, given a {@link
      *                        ProcessorSupplier.Context}. Called once per Jet member. It must be
-     *                        stateless
+     *                        stateless.
      * @param <C> type of the service context instance
      *
      * @return a new factory instance, not yet ready to use (needs the {@code
@@ -160,7 +160,7 @@ public final class ServiceFactory<C, S> implements Serializable, Cloneable {
      * object it created (one on each cluster member).
      *
      * @param destroyContextFn the function to destroy the shared service
-     *     context. It must be stateless
+     *     context. It must be stateless.
      * @return a copy of this factory with the supplied destroy-function
      */
     @Nonnull
@@ -189,7 +189,7 @@ public final class ServiceFactory<C, S> implements Serializable, Cloneable {
      * no-op.
      *
      * @param createServiceFn the function that creates the service instance.
-     *     It must be stateless
+     *     It must be stateless.
      * @return a copy of this factory with the supplied create-service-function
      */
     @Nonnull
@@ -212,7 +212,7 @@ public final class ServiceFactory<C, S> implements Serializable, Cloneable {
      *
      * @param destroyServiceFn the function to destroy the service instance.
      *                         This function is called once per processor instance. It must be
-     *                         stateless
+     *                         stateless.
      * @return a copy of this factory with the supplied destroy-function
      */
     @Nonnull

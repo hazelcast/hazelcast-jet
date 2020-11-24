@@ -95,7 +95,7 @@ public final class SinkBuilder<C, T> {
      *
      * @param name the name of the processor
      * @param createFn the function to create the sink context, given a
-     *     processor context. It must be stateless
+     *     processor context. It must be stateless.
      * @param <C> type of the context object
      *
      * @since 3.0
@@ -139,7 +139,7 @@ public final class SinkBuilder<C, T> {
      * doesn't need it.
      *
      * @param flushFn the optional "flush the context" function. It must be
-     *     stateless
+     *     stateless.
      */
     @Nonnull
     public SinkBuilder<C, T> flushFn(@Nonnull ConsumerEx<? super C> flushFn) {
@@ -158,7 +158,7 @@ public final class SinkBuilder<C, T> {
      * doesn't need it.
      *
      * @param destroyFn the optional "destroy the context object" function. It
-     *     must be stateless
+     *     must be stateless.
      */
     @Nonnull
     public SinkBuilder<C, T> destroyFn(@Nonnull ConsumerEx<? super C> destroyFn) {

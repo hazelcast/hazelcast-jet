@@ -204,7 +204,7 @@ public interface AggregateOperation<A, R> extends Serializable {
      * to determine whether the accumulator is now "empty" (i.e., equal to a
      * fresh instance), which signals that the current window contains no more
      * items with the associated grouping key and the entry must be removed
-     * from the results. I.e.:
+     * from the results. For example:
      * <pre>
      *     acc = create();
      *     combine(acc, x);

@@ -110,7 +110,7 @@ public final class Sinks {
      * @param metaSupplier the processor meta-supplier
      * @param partitionKeyFn key extractor function for partitioning edges to
      *     sink. It must be stateless and {@linkplain Processor#isCooperative()
-     *     cooperative}
+     *     cooperative}.
      */
     @Nonnull
     public static <T> Sink<T> fromProcessor(
@@ -906,7 +906,7 @@ public final class Sinks {
      * @param host the host to connect to
      * @param port the target port
      * @param toStringFn a function to convert received items to string. It
-     *     must be stateless and {@linkplain Processor#isCooperative() cooperative}
+     *     must be stateless and {@linkplain Processor#isCooperative() cooperative}.
      * @param charset charset used to convert the string to bytes
      */
     @Nonnull
@@ -1060,7 +1060,7 @@ public final class Sinks {
      *
      * @param toStringFn a function that returns a string representation of a
      *     stream item. It must be stateless and {@linkplain
-     *     Processor#isCooperative() cooperative}
+     *     Processor#isCooperative() cooperative}.
      * @param <T> stream item type
      */
     @Nonnull
@@ -1093,7 +1093,7 @@ public final class Sinks {
      *
      * @param queueName the name of the queue
      * @param factorySupplier supplier to obtain JMS connection factory. It
-     *     must be stateless
+     *     must be stateless.
      */
     @Nonnull
     public static <T> Sink<T> jmsQueue(
@@ -1149,7 +1149,7 @@ public final class Sinks {
      *
      * @param factorySupplier supplier to obtain JMS connection factory. For
      *      exactly-once the factory must implement {@link
-     *      javax.jms.XAConnectionFactory}. It must be stateless
+     *      javax.jms.XAConnectionFactory}. It must be stateless.
      * @param <T> type of the items the sink accepts
      */
     @Nonnull
@@ -1170,7 +1170,7 @@ public final class Sinks {
      * @param topicName the name of the queue
      * @param factorySupplier supplier to obtain JMS connection factory. For
      *      exactly-once the factory must implement {@link
-     *      javax.jms.XAConnectionFactory}. It must be stateless
+     *      javax.jms.XAConnectionFactory}. It must be stateless.
      */
     @Nonnull
     public static <T> Sink<T> jmsTopic(
@@ -1222,7 +1222,7 @@ public final class Sinks {
      * The default local parallelism for this processor is 1.
      *
      * @param factorySupplier supplier to obtain JMS connection factory. It
-     *     must be stateless
+     *     must be stateless.
      * @param <T> type of the items the sink accepts
      */
     @Nonnull

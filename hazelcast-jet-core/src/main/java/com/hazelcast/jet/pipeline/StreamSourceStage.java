@@ -115,7 +115,7 @@ public interface StreamSourceStage<T> {
      *
      * @param timestampFn a function that returns the timestamp for each item, typically in
      *                    milliseconds. It must be stateless and {@linkplain
-     *                    Processor#isCooperative() cooperative}
+     *                    Processor#isCooperative() cooperative}.
      * @param allowedLag the allowed lag of a given event's timestamp behind the top
      *                   timestamp value observed so far. The time unit is
      *                   the same as the unit used by {@code timestampFn}
