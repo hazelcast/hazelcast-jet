@@ -57,6 +57,7 @@ public interface Pipeline extends Serializable {
 
     /**
      * Returns the preserve order property of this pipeline
+     * @since 4.4
      */
     boolean isPreserveOrder();
 
@@ -77,6 +78,7 @@ public interface Pipeline extends Serializable {
      * The default value is false.
      *
      * @return {@code this}, for fluent API
+     * @since 4.4
      */
     @Nonnull
     Pipeline setPreserveOrder(boolean value);
