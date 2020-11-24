@@ -168,16 +168,16 @@ public final class JetBootstrap {
                 continue;
             }
             if (remainingCount == 1) {
-                System.out.printf("A job is still starting...%n");
+                System.out.println("A job is still starting...");
             } else {
-                System.out.printf("%,d jobs are still starting...%n", remainingCount);
+                System.out.format("%,d jobs are still starting...%n", remainingCount);
             }
             previousCount = remainingCount;
         }
         if (submittedCount == 1) {
             System.out.println("Job started.");
         } else {
-            System.out.printf("Started %,d jobs.%n", submittedCount);
+            System.out.format("Started %,d jobs.%n", submittedCount);
         }
     }
 
