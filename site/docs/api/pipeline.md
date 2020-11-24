@@ -98,7 +98,8 @@ partitioning key by avoiding the usage of round-robin edges.
 You can enable this property as follows:
 
 ```java
-pipeline.setPreserveOrder(true);
+Pipeline p = Pipeline.create();
+p.setPreserveOrder(true);
 ```
 
 > Note that: Changing the partition keys in the different stages of the
