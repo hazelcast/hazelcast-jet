@@ -65,7 +65,7 @@ public final class AggregateOperationBuilder<A> {
      *
      * @param accumulateFn the {@code accumulate} primitive, parameters are
      *              {@code (accumulator, item)}. It must be stateless and {@linkplain
-     *              Processor#isCooperative() cooperative}
+     *              Processor#isCooperative() cooperative}.
      * @param <T> the expected type of input item
      * @return a new builder object that captures the {@code T0} type parameter
      */
@@ -81,7 +81,7 @@ public final class AggregateOperationBuilder<A> {
      * aggregate operation.
      *
      * @param accumulateFn0 the {@code accumulate} primitive for stream-0. It
-     *     must be stateless and {@linkplain Processor#isCooperative() cooperative}
+     *     must be stateless and {@linkplain Processor#isCooperative() cooperative}.
      * @param <T0> the expected type of item in stream-0
      * @return a new builder object that captures the {@code T0} type parameter
      */
@@ -108,7 +108,7 @@ public final class AggregateOperationBuilder<A> {
      *
      * @param tag the tag of the associated input stream
      * @param accumulateFn the {@code accumulate} primitive. It must be
-     *     stateless and {@linkplain Processor#isCooperative() cooperative}
+     *     stateless and {@linkplain Processor#isCooperative() cooperative}.
      * @param <T> the expected type of input item
      * @return a new builder object for variable-arity aggregate operations which has
      *         the {@code createFn} of the current builder
@@ -151,7 +151,7 @@ public final class AggregateOperationBuilder<A> {
          * primitive for stream-1, returning the arity-2 variant of the builder.
          *
          * @param accumulateFn1 the {@code accumulate} primitive for stream-1. It
-         *     must be stateless and {@linkplain Processor#isCooperative() cooperative}
+         *     must be stateless and {@linkplain Processor#isCooperative() cooperative}.
          * @param <T1> the expected type of item in stream-1
          * @return a new builder object that captures the {@code T1} type parameter
          */
@@ -289,7 +289,7 @@ public final class AggregateOperationBuilder<A> {
          * primitive for stream-2, returning the arity-3 variant of the builder.
          *
          * @param accumulateFn2 the {@code accumulate} primitive for stream-2. It
-         *     must be stateless and {@linkplain Processor#isCooperative() cooperative}
+         *     must be stateless and {@linkplain Processor#isCooperative() cooperative}.
          * @param <T2> the expected type of item in stream-2
          * @return a new builder object that captures the {@code T2} type parameter
          */
@@ -548,7 +548,7 @@ public final class AggregateOperationBuilder<A> {
          *
          * @param tag the tag of the associated input stream
          * @param accumulateFn the {@code accumulate} primitive. It must be
-         *     stateless and {@linkplain Processor#isCooperative() cooperative}
+         *     stateless and {@linkplain Processor#isCooperative() cooperative}.
          * @param <T> the expected type of input item
          * @return this
          */

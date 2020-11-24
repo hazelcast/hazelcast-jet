@@ -118,7 +118,7 @@ public final class AggregateOperations {
      *
      * @param getLongValueFn function that extracts the {@code long} values you
      *     want to sum. It must be stateless and {@linkplain
-     *     Processor#isCooperative() cooperative}
+     *     Processor#isCooperative() cooperative}.
      * @param <T> type of the input item
      */
     @Nonnull
