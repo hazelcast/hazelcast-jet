@@ -781,7 +781,7 @@ public class JetCommandLine implements Runnable {
      * A jline extension for SQL-like inputs. Commands are terminated with a semicolon.
      * It was taken from https://github.com/jline/jline3/issues/36#issuecomment-652522724
      */
-    private final class MultilineParser implements Parser {
+    private static final class MultilineParser implements Parser {
 
         private final Parser defaultParser = new DefaultParser();
 
