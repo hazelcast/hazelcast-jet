@@ -47,6 +47,7 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.parquet.avro.AvroParquetInputFormat;
 
 import javax.annotation.Nonnull;
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -103,7 +104,8 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
                 configuration.set(option.getKey(), option.getValue());
             }
 
-            FileInputFormat.addInputPath(job, new Path(builder.path()));
+            Path inputPath = getInputPath(builder);
+            FileInputFormat.addInputPath(job, inputPath);
 
             FileFormat<T> fileFormat = requireNonNull(builder.format());
             JobConfigurer configurer = this.configurers.get(fileFormat.format());
@@ -116,6 +118,18 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
             return HadoopSources.inputFormat(configuration, (BiFunctionEx<?, ?, T>) configurer.projectionFn());
         } catch (IOException e) {
             throw new JetException("Could not create a source", e);
+        }
+    }
+
+    @Nonnull
+    private <T> Path getInputPath(@Nonnull FileSourceBuilder<T> builder) {
+        if (builder.glob().equals("*")) {
+            // * means all files in the directory, but also all directories
+            // Hadoop interprets it as multiple input folders, resulting to processing files in 1st level
+            // subdirectories
+            return new Path(builder.path());
+        } else {
+            return new Path(builder.path() + File.separatorChar + builder.glob());
         }
     }
 

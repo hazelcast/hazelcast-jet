@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.hadoop.impl;
+package com.hazelcast.jet.hadoop.file;
 
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.hadoop.file.BaseFileFormatTest;
+import com.hazelcast.jet.hadoop.impl.JobConfigurer;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -59,7 +59,8 @@ public class CustomFormatTest extends BaseFileFormatTest {
     @Test
     public void unknownFormat() {
         assertThatThrownBy(() -> {
-            FileSourceBuilder<Integer> builder = FileSources.files("target/classes/com/hazelcast/jet/hadoop/*class")
+            FileSourceBuilder<Integer> builder = FileSources.files(currentDir + "/target/classes/com/hazelcast/jet/hadoop")
+                                                            .glob("*class")
                                                             .format(new UnknownIntegerFormat());
             if (useHadoop) {
                 builder.useHadoopForLocalFiles(true);
@@ -85,7 +86,8 @@ public class CustomFormatTest extends BaseFileFormatTest {
 
     @Test
     public void customFormatTest() {
-        FileSourceBuilder<ClassFile> builder = FileSources.files("target/classes/com/hazelcast/jet/hadoop/*class")
+        FileSourceBuilder<ClassFile> builder = FileSources.files(currentDir + "/target/classes/com/hazelcast/jet/hadoop")
+                                                          .glob("*class")
                                                           .format(new ClassFileFormat());
 
 

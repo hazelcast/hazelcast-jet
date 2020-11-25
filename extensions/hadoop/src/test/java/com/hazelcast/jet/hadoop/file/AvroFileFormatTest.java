@@ -35,7 +35,8 @@ public class AvroFileFormatTest extends BaseFileFormatTest {
     public void shouldReadAvroWithSchema() throws Exception {
         createAvroFile();
 
-        FileSourceBuilder<SpecificUser> source = FileSources.files("target/avro/file.avro")
+        FileSourceBuilder<SpecificUser> source = FileSources.files(currentDir + "/target/avro")
+                                                            .glob("file.avro")
                                                             .format(FileFormat.avro());
         assertItemsInSource(source,
                 new SpecificUser("Frantisek", 7),
@@ -48,7 +49,8 @@ public class AvroFileFormatTest extends BaseFileFormatTest {
     public void shouldReadAvroWithReflection() throws Exception {
         createAvroFile();
 
-        FileSourceBuilder<User> source = FileSources.files("target/avro/file.avro")
+        FileSourceBuilder<User> source = FileSources.files(currentDir + "/target/avro")
+                                                    .glob("file.avro")
                                                     .format(FileFormat.avro(User.class));
 
         assertItemsInSource(source,

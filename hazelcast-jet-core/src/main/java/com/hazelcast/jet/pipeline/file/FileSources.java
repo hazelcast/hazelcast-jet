@@ -35,10 +35,12 @@ public final class FileSources {
      * Returns a {@link FileSourceBuilder} configured with LinesTextFileFormat
      * - each line of the file is emitted from the source as a single String.
      * <p>
-     * The path can point to a file, a directory or contain a glob
-     * (e.g. {@code "file*"}, capturing {@code file1.txt},
-     * {@code file2.txt}, ...).
-     *<pre>{@code
+     * The path must point to a directory. All files in the directory are
+     * processed. The directory is not processed recursively.
+     * <p>
+     * An optional glob parameter can be provided, e.g. {@code "file*"}, capturing {@code file1.txt},
+     * {@code file2.txt}, ...
+     * <pre>{@code
      * Pipeline p = Pipeline.create();
      * p.readFrom(FileSources.files("src/main/java"))
      *  .map(line -> LogParser.parse(line))

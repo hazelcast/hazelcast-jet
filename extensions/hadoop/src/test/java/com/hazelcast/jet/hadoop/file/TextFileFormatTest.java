@@ -30,7 +30,8 @@ public class TextFileFormatTest extends BaseFileFormatTest {
 
     @Test
     public void readTextFileAsSingleItem() {
-        FileSourceBuilder<String> source = FileSources.files("src/test/resources/file.txt")
+        FileSourceBuilder<String> source = FileSources.files(currentDir + "/src/test/resources")
+                                                      .glob("file.txt")
                                                       .format(FileFormat.text());
 
         assertItemsInSource(source,
@@ -41,7 +42,8 @@ public class TextFileFormatTest extends BaseFileFormatTest {
 
     @Test
     public void readTextFileAsLines() {
-        FileSourceBuilder<String> source = FileSources.files("src/test/resources/file.txt")
+        FileSourceBuilder<String> source = FileSources.files(currentDir + "/src/test/resources")
+                                                      .glob("file.txt")
                                                       .format(FileFormat.lines());
 
         assertItemsInSource(source, "Text contents of", "the file.");
@@ -52,7 +54,8 @@ public class TextFileFormatTest extends BaseFileFormatTest {
         // Charset isn't available on Hadoop - all text is in UTF-8
         assumeThat(useHadoop).isFalse();
 
-        FileSourceBuilder<String> source = FileSources.files("src/test/resources/cp1250.txt")
+        FileSourceBuilder<String> source = FileSources.files(currentDir + "/src/test/resources")
+                                                      .glob("cp1250.txt")
                                                       .format(FileFormat.text(Charset.forName("Cp1250")));
 
         assertItemsInSource(source, "Příliš žluťoučký kůň úpěl ďábelské ódy.");
@@ -60,7 +63,8 @@ public class TextFileFormatTest extends BaseFileFormatTest {
 
     @Test
     public void defaultFileFormatShouldReadFileAsLines() {
-        FileSourceBuilder<String> source = FileSources.files("src/test/resources/file.txt");
+        FileSourceBuilder<String> source = FileSources.files(currentDir + "/src/test/resources")
+                .glob("file.txt");
 
         assertItemsInSource(source, "Text contents of", "the file.");
     }

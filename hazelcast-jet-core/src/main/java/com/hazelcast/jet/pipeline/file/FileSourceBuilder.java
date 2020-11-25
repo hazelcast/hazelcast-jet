@@ -23,6 +23,7 @@ import com.hazelcast.jet.pipeline.file.impl.LocalFileSourceFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -80,19 +81,34 @@ public class FileSourceBuilder<T> {
     private final Map<String, String> options = new HashMap<>();
 
     private final String path;
+    private String glob = "*";
     private FileFormat<T> format;
     private boolean useHadoop;
     private boolean sharedFileSystem;
 
     /**
-     * Creates a new file source builder with the given path. It can point
-     * to a file, a directory or contain a glob (e.g. {@code "file*"},
-     * capturing {@code file1.txt}, {@code file2.txt}, ...).
+     * Creates a new file source builder with the given path. The path
+     * must point to a directory. All files in the directory are
+     * processed. The directory is not processed recursively.
      *
-     * @param path the path to the file
+     * @param path path pointing to a directory to read files from
      */
     public FileSourceBuilder(@Nonnull String path) {
         this.path = requireNonNull(path, "path must not be null");
+        if (!Paths.get(path).isAbsolute()) {
+            throw new IllegalArgumentException("Provided path must be absolute. path: " + path);
+        }
+    }
+
+    /**
+     * Sets a glob pattern to filter the files in the specified directory.
+     * The default value is '*', matching all files in the directory.
+     *
+     * @param glob glob pattern,
+     */
+    public FileSourceBuilder<T> glob(@Nonnull String glob) {
+        this.glob = requireNonNull(glob, "glob must not be null");
+        return this;
     }
 
     /**
@@ -178,11 +194,19 @@ public class FileSourceBuilder<T> {
     }
 
     /**
-     * Returns the source path.
+     * Returns the source directory path.
      */
     @Nonnull
     public String path() {
         return path;
+    }
+
+    /**
+     * Returns the glob.
+     */
+    @Nonnull
+    public String glob() {
+        return glob;
     }
 
     /**

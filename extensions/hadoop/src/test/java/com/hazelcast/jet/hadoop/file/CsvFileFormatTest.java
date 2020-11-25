@@ -27,7 +27,8 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
     @Test
     public void shouldReadCsvFile() throws Exception {
 
-        FileSourceBuilder<User> source = FileSources.files("src/test/resources/file.csv")
+        FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
+                                                    .glob("file.csv")
                                                     .format(FileFormat.csv(User.class));
 
         assertItemsInSource(source,
@@ -39,7 +40,8 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
     @Test
     public void shouldReadCsvFileWithMoreColumnsThanTargetClass() throws Exception {
 
-        FileSourceBuilder<User> source = FileSources.files("src/test/resources/file-more-columns.csv")
+        FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
+                                                    .glob("file-more-columns.csv")
                                                     .format(FileFormat.csv(User.class));
 
         assertItemsInSource(source,

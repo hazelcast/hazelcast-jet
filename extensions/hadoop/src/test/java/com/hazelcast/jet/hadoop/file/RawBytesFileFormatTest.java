@@ -27,8 +27,9 @@ public class RawBytesFileFormatTest extends BaseFileFormatTest {
 
     @Test
     public void testRawFile() {
-        FileSourceBuilder<byte[]> source = FileSources.files("src/test/resources/raw.bin")
-                .format(FileFormat.bytes());
+        FileSourceBuilder<byte[]> source = FileSources.files(currentDir + "/src/test/resources")
+                                                      .glob("raw.bin")
+                                                      .format(FileFormat.bytes());
 
         byte[] expectedBytes = "Raw contents of the file.".getBytes(UTF_8);
         assertItemsInSource(source, expectedBytes);

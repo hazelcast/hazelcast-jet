@@ -1,1 +1,1 @@
-com.hazelcast.jet.hadoop.impl.CustomFormatTest$ClassFileReadFileFnProvider
+com.hazelcast.jet.hadoop.file.CustomFormatTest$ClassFileReadFileFnProvider

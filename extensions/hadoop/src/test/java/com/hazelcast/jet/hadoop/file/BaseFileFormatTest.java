@@ -28,6 +28,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 
@@ -40,6 +41,8 @@ public abstract class BaseFileFormatTest extends JetTestSupport {
     @Parameter
     public boolean useHadoop;
 
+    protected String currentDir;
+
     @Parameters(name = "{index}: useHadoop={0}")
     public static Iterable<?> parameters() {
         return Arrays.asList(true, false);
@@ -47,6 +50,7 @@ public abstract class BaseFileFormatTest extends JetTestSupport {
 
     @Before
     public void setUp() throws Exception {
+        currentDir = Paths.get(".").toAbsolutePath().normalize().toString();
         if (useHadoop) {
             assumeThatNoWindowsOS();
         }

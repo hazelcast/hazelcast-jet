@@ -18,12 +18,10 @@ package com.hazelcast.jet.pipeline.file.impl;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.datamodel.Tuple2;
-import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.impl.util.IOUtil;
 import com.hazelcast.jet.json.JsonUtil;
 import com.hazelcast.jet.pipeline.BatchSource;
+import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.file.JsonFileFormat;
@@ -35,24 +33,19 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
-import static com.hazelcast.jet.pipeline.Sources.batchFromProcessor;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
@@ -86,77 +79,17 @@ public class LocalFileSourceFactory implements FileSourceFactory {
 
     @Nonnull @Override
     public <T> BatchSource<T> create(@Nonnull FileSourceBuilder<T> builder) {
-
-        // Avoid serialization of the builder
-        String path = builder.path();
         FileFormat<T> format = requireNonNull(builder.format());
-        String formatId = format.format();
-        boolean sharedFileSystem = builder.isSharedFileSystem();
-
-        return batchFromProcessor("filesSource(" + new File(builder.path()) + ')',
-                ProcessorMetaSupplier.of(2, () -> {
-                    Tuple2<String, String> dirAndGlob = deriveDirectoryAndGlobFromPath(path);
-                    assert dirAndGlob.f0() != null && dirAndGlob.f1() != null;
-
-                    ReadFileFnProvider readFileFnProvider = readFileFnProviders.get(formatId);
-                    if (readFileFnProvider == null) {
-                        throw new JetException("Could not find ReadFileFnProvider for FileFormat: " + formatId + ". " +
-                                "Did you provide correct modules on classpath?");
-                    }
-                    FunctionEx<Path, Stream<T>> mapFn = readFileFnProvider.createReadFileFn(format);
-
-
-                    return ReadFilesP.processor(dirAndGlob.f0(), dirAndGlob.f1(), sharedFileSystem, mapFn);
-                }));
-    }
-
-    private static Tuple2<String, String> deriveDirectoryAndGlobFromPath(String path) {
-        Path p;
-
-        try {
-            p = Paths.get(path).toAbsolutePath();
-        } catch (InvalidPathException e) {
-            int indexOf = path.lastIndexOf(File.separatorChar);
-            if (indexOf == -1) {
-                indexOf = path.lastIndexOf("/");
-            }
-            if (indexOf != -1) {
-                String directory = path.substring(0, indexOf);
-                String glob = path.substring(indexOf + 1);
-                return tuple2(directory, glob);
-            } else {
-                throw e;
-            }
+        ReadFileFnProvider readFileFnProvider = readFileFnProviders.get(format.format());
+        if (readFileFnProvider == null) {
+            throw new JetException("Could not find ReadFileFnProvider for FileFormat: " + format.format() + ". " +
+                    "Did you provide correct modules on classpath?");
         }
-
-        String directory;
-        String glob = "*";
-
-        if (isDirectory(path)) {
-            // The path is the directory and glob matching all ('*') is used
-            return tuple2(p.toString(), "*");
-        } else {
-            Path parent = p.getParent();
-            if (parent != null) {
-                directory = parent.toString();
-
-                Path fileName = p.getFileName();
-                if (fileName != null) {
-                    glob = fileName.toString();
-                } else {
-                    throw new IllegalStateException("Path has a non-null parent but has null file name. This violates" +
-                            "the Path contract. Please report this bug.");
-                }
-            } else {
-                // p is root of the filesystem, has no parent
-                directory = p.toString();
-            }
-        }
-        return tuple2(directory, glob);
-    }
-
-    private static boolean isDirectory(String path) {
-        return new File(path).isDirectory();
+        FunctionEx<Path, Stream<T>> mapFn = readFileFnProvider.createReadFileFn(format);
+        return Sources.filesBuilder(builder.path())
+                      .glob(builder.glob())
+                      .sharedFileSystem(builder.isSharedFileSystem())
+                      .build(mapFn);
     }
 
     @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")

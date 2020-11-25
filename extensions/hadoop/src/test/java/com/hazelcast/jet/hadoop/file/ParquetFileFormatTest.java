@@ -44,7 +44,8 @@ public class ParquetFileFormatTest extends BaseFileFormatTest {
     public void shouldReadParquetFile() throws Exception {
         createParquetFile();
 
-        FileSourceBuilder<SpecificUser> source = FileSources.files("target/parquet/file.parquet")
+        FileSourceBuilder<SpecificUser> source = FileSources.files(currentDir + "/target/parquet")
+                                                            .glob("file.parquet")
                                                             .format(FileFormat.parquet());
         assertItemsInSource(source,
                 new SpecificUser("Frantisek", 7),

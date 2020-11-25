@@ -31,13 +31,13 @@ public class SharedFilesystemFileTest extends BaseFileFormatTest {
     public void shouldReadFileOnlyOnceOnSharedFilesystem() {
         assumeThat(useHadoop).isFalse();
 
-        FileSourceBuilder<String> source = FileSources.files("src/test/resources/directory/")
+        FileSourceBuilder<String> source = FileSources.files(currentDir + "/src/test/resources/directory/")
                                                       .format(FileFormat.lines())
                                                       .sharedFileSystem(true);
 
         assertItemsInSource(2, source, (collected) -> assertThat(collected).hasSize(4));
 
-        source = FileSources.files("src/test/resources/directory/")
+        source = FileSources.files(currentDir + "/src/test/resources/directory/")
                                                       .format(FileFormat.lines())
                                                       .sharedFileSystem(false);
 
