@@ -175,15 +175,15 @@ public class KinesisSinkP<T> implements Processor {
                 PutRecordsResult result = helper.readResult(this.sendResult);
                 pruneSentFromBuffer(result);
                 if (result.getFailedRecordCount() > 0) {
-                    dealWithSendFailure("Sending only partially successful. Retry sending failed items (ordering" +
-                            " will be affected). ");
+                    dealWithSendFailure("Failed to send " + result.getFailedRecordCount() + " record(s) to stream '"
+                            + stream + "'. Sending will be retried, message reordering is likely.");
                 } else {
                     dealWithSendSuccessful();
                 }
             } catch (ProvisionedThroughputExceededException pte) {
-                dealWithSendFailure("Data throughput rate exceeded. Backing off and retrying.");
+                dealWithSendFailure("Data throughput rate exceeded. Backing off and will retry.");
             } catch (SdkClientException sce) {
-                dealWithSendFailure("Failed reading records, retrying. Cause: " + sce.getMessage());
+                dealWithSendFailure("Failed to send records, will retry. Cause: " + sce.getMessage());
             } catch (Throwable t) {
                 throw rethrow(t);
             }
@@ -205,10 +205,7 @@ public class KinesisSinkP<T> implements Processor {
             return;
         }
 
-        int failCount = result.getFailedRecordCount();
-        if (failCount > 0) {
-            logger.warning("Failed sending " + failCount + " records to stream " + stream + ". " +
-                    "Sending them will be retried, but reordering might be unavoidable.");
+        if (result.getFailedRecordCount() > 0) {
             List<PutRecordsResultEntry> resultEntries = result.getRecords();
             for (int i = resultEntries.size() - 1; i >= 0; i--) {
                 PutRecordsResultEntry resultEntry = resultEntries.get(i);
