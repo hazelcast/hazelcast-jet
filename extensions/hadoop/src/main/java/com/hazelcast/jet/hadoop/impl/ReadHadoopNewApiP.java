@@ -35,6 +35,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.lib.input.InvalidInputException;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -174,14 +175,22 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
             super.init(context);
             InputFormat inputFormat = getInputFormat(configuration);
             Job job = Job.getInstance(configuration);
-            @SuppressWarnings("unchecked")
-            List<InputSplit> splits = inputFormat.getSplits(job);
+            List<InputSplit> splits = getSplits(inputFormat, job);
             IndexedInputSplit[] indexedInputSplits = new IndexedInputSplit[splits.size()];
             Arrays.setAll(indexedInputSplits, i -> new IndexedInputSplit(i, splits.get(i)));
             Address[] addrs = context.jetInstance().getCluster().getMembers()
                                      .stream().map(Member::getAddress).toArray(Address[]::new);
             assigned = assignSplitsToMembers(indexedInputSplits, addrs);
             printAssignments(assigned);
+        }
+
+        @SuppressWarnings("unchecked")
+        private List<InputSplit> getSplits(InputFormat inputFormat, Job job) throws IOException, InterruptedException {
+            try {
+                return inputFormat.getSplits(job);
+            } catch (InvalidInputException e) {
+                return emptyList();
+            }
         }
 
         @Nonnull @Override

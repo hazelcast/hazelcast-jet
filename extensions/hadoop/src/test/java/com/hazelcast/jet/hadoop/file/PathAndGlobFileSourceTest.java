@@ -142,4 +142,22 @@ public class PathAndGlobFileSourceTest extends BaseFileFormatTest {
 
         assertItemsInSource(source, (items) -> fail("should have thrown exception"));
     }
+
+    @Test
+    public void shouldNotReadAnyFileForNonMatchingGlob() {
+        FileSourceBuilder<String> source = FileSources.files(currentDir + "/src/test/resources/glob")
+                                                      .glob("doesnotmatch")
+                                                      .format(FileFormat.text());
+
+        assertItemsInSource(source, items -> assertThat(items).isEmpty());
+    }
+
+    @Test
+    public void shouldNotReadAnyFileForNonExistingFolder() {
+        FileSourceBuilder<String> source = FileSources.files(currentDir + "/src/test/resources/notexists")
+                                                      .glob("*")
+                                                      .format(FileFormat.text());
+
+        assertItemsInSource(source, items -> assertThat(items).isEmpty());
+    }
 }

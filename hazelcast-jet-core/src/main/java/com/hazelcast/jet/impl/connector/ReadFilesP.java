@@ -30,6 +30,8 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseStream;
@@ -83,10 +85,19 @@ public final class ReadFilesP<T> extends AbstractProcessor {
         processorIndex = sharedFileSystem ? context.globalProcessorIndex() : context.localProcessorIndex();
         parallelism = sharedFileSystem ? context.totalParallelism() : context.localParallelism();
 
-        directoryStream = Files.newDirectoryStream(directory, glob);
-        outputTraverser = Traversers.traverseIterator(directoryStream.iterator())
+        outputTraverser = Traversers.traverseIterator(pathIterator())
                                     .filter(this::shouldProcessEvent)
                                     .flatMap(this::processFile);
+    }
+
+    @Nonnull
+    private Iterator<Path> pathIterator() throws IOException {
+        if (directory.toFile().exists()) {
+            directoryStream = Files.newDirectoryStream(directory, glob);
+            return directoryStream.iterator();
+        } else {
+            return Collections.emptyIterator();
+        }
     }
 
     @Override
