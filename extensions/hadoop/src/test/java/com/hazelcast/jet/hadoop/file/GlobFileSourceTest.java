@@ -19,10 +19,11 @@ package com.hazelcast.jet.hadoop.file;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.file.FileSources;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
@@ -35,6 +36,14 @@ public class GlobFileSourceTest extends BaseFileFormatTest {
                                                       .format(FileFormat.text());
 
         assertItemsInSource(source, "file", "file1");
+    }
+
+    @Test
+    public void shouldNotReadAnyFile() {
+        FileSourceBuilder<String> source = FileSources.files("src/test/resources/glob/fi")
+                                                      .format(FileFormat.text());
+
+        assertItemsInSource(source, items -> assertThat(items).isEmpty());
     }
 
     @Test
@@ -55,10 +64,20 @@ public class GlobFileSourceTest extends BaseFileFormatTest {
     }
 
     @Test
-    @Ignore("windows don't support * in filenames, either remove this test or make it non-windows only")
-    public void shouldReadFileWithEscapedGlob() {
-        FileSourceBuilder<String> source = FileSources.files("src/test/resources/glob/file\\*")
+    public void shouldReadFileWithEscapedGlob() throws IOException {
+        assumeThatNoWindowsOS(); // * is not allowed in filename
+
+        try (PrintWriter out = new PrintWriter("target/file*")) {
+            out.print("file*");
+        }
+
+        FileSourceBuilder<String> source = FileSources.files("target/file\\*")
                                                       .format(FileFormat.text());
+
+        assertItemsInSource(source, "file*");
+
+        source = FileSources.files("target/file*")
+                            .format(FileFormat.text());
 
         assertItemsInSource(source, "file*");
     }
