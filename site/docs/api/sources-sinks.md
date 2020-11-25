@@ -38,8 +38,8 @@ any Hadoop compatible file system.
 Support for reading from the local filesystem is included in the base
 distribution of Hazelcast Jet. You don't need any additional
 dependencies. To access Hadoop or any of the cloud based stores use the
-separately downloadable Hadoop module in the _Additional Modules_
-section on the [download page](/download).
+separately downloadable module. See the details in the
+[Supported Storage Systems](#supported-storage-systems) section.
 
 The main entrypoint to the file connector is `FileSources.files`, which
 takes a `path` as a String parameter and returns a `FileSourceBuilder`.
@@ -241,20 +241,46 @@ BatchSource<byte[]> source = FileSources.files("file.txt")
                                         .build();
 ```
 
-### Supported Cloud Storage
+### Supported Storage Systems
 
-|Cloud Storage|Module|Example path|
+|Storage System|Module|Example path|
 |:------------|:------------------|:--------------|
+|HDFS|`hazelcast-jet-hadoop-all`|`hdfs://path/to/a/file.csv`|
 |Amazon S3|`hazelcast-jet-files-s3`|`s3a://example-bucket/path/in/the/bucket/file.csv`|
 |Google Cloud Storage|`hazelcast-jet-files-gcs`|`gs://example-bucket/path/in/the/bucket/file.csv`|
 |Windows Azure Blob Storage|`hazelcast-jet-files-azure`|`wasbs://example-container@examplestorageaccount.blob.core.windows.net/path/in/the/container/file.csv`|
 |Azure Data Lake Generation 1|`hazelcast-jet-files-azure`|`adl://exampledatalake.azuredatalakestore.net/path/in/the/container/file.csv`|
 |Azure Data Lake Generation 2|`hazelcast-jet-files-azure`|`abfs://example-container@exampledatalakeaccount.dfs.core.windows.net/path/in/the/container/file.csv`|
 
+You can obtain the artifacts in the _Additional Modules_ section on the
+[download page](/download) or download from Maven Central repository,
+for example:
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```groovy
+compile 'com.hazelcast.jet:hazelcast-jet-hadoop-all:{jet-version}'
+```
+
+<!--Maven-->
+
+```xml
+<dependency>
+  <groupId>com.hazelcast.jet</groupId>
+  <artifactId>hazelcast-jet-hadoop-all</artifactId>
+  <version>{jet-version}</version>
+  <classifier>jar-with-dependencies</classifier>
+</dependency>
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
 #### Authentication
 
 The basic authentication mechanisms are covered here. For additional
-ways to authenticate see the linked documentation for the services and
+ways to authenticate see the linked documentation for the services.
 
 #### Amazon S3
 
