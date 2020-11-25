@@ -56,8 +56,7 @@ final class InfoSchemaConnector implements SqlConnector {
         return false;
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public List<MappingField> resolveAndValidateFields(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
@@ -66,8 +65,7 @@ final class InfoSchemaConnector implements SqlConnector {
         throw new UnsupportedOperationException();
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
@@ -83,8 +81,7 @@ final class InfoSchemaConnector implements SqlConnector {
         return true;
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull Table table0,
@@ -95,7 +92,7 @@ final class InfoSchemaConnector implements SqlConnector {
 
         List<Object[]> rows = ExpressionUtil.evaluate(predicate, projection, table.rows());
 
-        return dag.newVertex(
+        return dag.newUniqueVertex(
                 table.toString(),
                 forceTotalParallelismOne(ProcessorSupplier.of(() -> new StaticSourceP(rows)))
         );

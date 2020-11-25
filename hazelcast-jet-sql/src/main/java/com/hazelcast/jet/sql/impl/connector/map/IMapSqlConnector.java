@@ -135,6 +135,7 @@ public class IMapSqlConnector implements SqlConnector {
 
     @Nonnull @Override
     public NestedLoopJoin nestedLoopReader(
+            @Nonnull DAG dag,
             @Nonnull Table table0,
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projections,
@@ -155,25 +156,31 @@ public class IMapSqlConnector implements SqlConnector {
         int leftEquiJoinPrimitiveKeyIndex = leftEquiJoinPrimitiveKeyIndex(joinInfo, fields);
         if (leftEquiJoinPrimitiveKeyIndex > -1) {
             return new NestedLoopJoin(
-                    "Join(Lookup-" + toString(table) + ")",
-                    new JoinByPrimitiveKeyProcessorSupplier(
-                            joinInfo.isOuter(),
-                            leftEquiJoinPrimitiveKeyIndex,
-                            joinInfo.condition(),
-                            name,
-                            rightRowProjectorSupplier
+                    dag.newUniqueVertex(
+                            "Join(Lookup-" + toString(table) + ")",
+                            new JoinByPrimitiveKeyProcessorSupplier(
+                                    joinInfo.isOuter(),
+                                    leftEquiJoinPrimitiveKeyIndex,
+                                    joinInfo.condition(),
+                                    name,
+                                    rightRowProjectorSupplier
+                            )
                     ),
                     edge -> edge.partitioned(extractPrimitiveKeyFn(leftEquiJoinPrimitiveKeyIndex)).distributed()
             );
         } else if (joinInfo.isEquiJoin()) {
             return new NestedLoopJoin(
-                    "Join(Predicate-" + toString(table) + ")",
-                    new JoinByPredicateProcessorSupplier(joinInfo, name, paths, rightRowProjectorSupplier)
+                    dag.newUniqueVertex(
+                            "Join(Predicate-" + toString(table) + ")",
+                            new JoinByPredicateProcessorSupplier(joinInfo, name, paths, rightRowProjectorSupplier)
+                    )
             );
         } else {
             return new NestedLoopJoin(
-                    "Join(Scan-" + toString(table) + ")",
-                    new JoinScanProcessorSupplier(joinInfo, name, rightRowProjectorSupplier)
+                    dag.newUniqueVertex(
+                            "Join(Scan-" + toString(table) + ")",
+                            new JoinScanProcessorSupplier(joinInfo, name, rightRowProjectorSupplier)
+                    )
             );
         }
         // TODO: detect and handle always-false condition ?
@@ -219,7 +226,7 @@ public class IMapSqlConnector implements SqlConnector {
         QueryPath[] paths = fields.stream().map(field -> ((MapTableField) field).getPath()).toArray(QueryPath[]::new);
         QueryDataType[] types = fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
 
-        Vertex vStart = dag.newVertex(
+        Vertex vStart = dag.newUniqueVertex(
                 "Project(" + toString(table) + ")",
                 KvProcessors.entryProjector(
                         paths,
@@ -229,7 +236,7 @@ public class IMapSqlConnector implements SqlConnector {
                 )
         );
 
-        Vertex vEnd = dag.newVertex(
+        Vertex vEnd = dag.newUniqueVertex(
                 toString(table),
                 SinkProcessors.writeMapP(table.getMapName())
         );

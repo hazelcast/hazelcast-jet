@@ -100,6 +100,22 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     }
 
     /**
+     * Creates a vertex from a {@code Supplier<Processor>} and adds it to this DAG.
+     *
+     * @see Vertex#Vertex(String, SupplierEx)
+     *
+     * @param namePrefix the prefix for unique name of the vertex
+     * @param simpleSupplier the simple, parameterless supplier of {@code Processor} instances
+     * @since 4.4
+     */
+    @Nonnull
+    public Vertex newUniqueVertex(
+            @Nonnull String namePrefix, @Nonnull SupplierEx<? extends Processor> simpleSupplier
+    ) {
+        return addVertex(new Vertex(uniqueName(namePrefix), simpleSupplier));
+    }
+
+    /**
      * Creates a vertex from a {@code ProcessorSupplier} and adds it to this DAG.
      *
      * @see Vertex#Vertex(String, ProcessorSupplier)
@@ -110,6 +126,20 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     @Nonnull
     public Vertex newVertex(@Nonnull String name, @Nonnull ProcessorSupplier processorSupplier) {
         return addVertex(new Vertex(name, processorSupplier));
+    }
+
+    /**
+     * Creates a vertex from a {@code ProcessorSupplier} and adds it to this DAG.
+     *
+     * @see Vertex#Vertex(String, ProcessorSupplier)
+     *
+     * @param namePrefix the prefix for unique name of the vertex
+     * @param processorSupplier the supplier of {@code Processor} instances which will be used on all members
+     * @since 4.4
+     */
+    @Nonnull
+    public Vertex newUniqueVertex(@Nonnull String namePrefix, @Nonnull ProcessorSupplier processorSupplier) {
+        return addVertex(new Vertex(uniqueName(namePrefix), processorSupplier));
     }
 
     /**
@@ -124,6 +154,20 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     @Nonnull
     public Vertex newVertex(@Nonnull String name, @Nonnull ProcessorMetaSupplier metaSupplier) {
         return addVertex(new Vertex(name, metaSupplier));
+    }
+
+    /**
+     * Creates a vertex from a {@code ProcessorMetaSupplier} and adds it to this DAG.
+     *
+     * @see Vertex#Vertex(String, ProcessorMetaSupplier)
+     *
+     * @param namePrefix the prefix for unique name of the vertex
+     * @param metaSupplier the meta-supplier of {@code ProcessorSupplier}s for each member
+     * @since 4.4
+     */
+    @Nonnull
+    public Vertex newUniqueVertex(@Nonnull String namePrefix, @Nonnull ProcessorMetaSupplier metaSupplier) {
+        return addVertex(new Vertex(uniqueName(namePrefix), metaSupplier));
     }
 
     /**
@@ -237,6 +281,18 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     @Nonnull @Override
     public Iterator<Vertex> iterator() {
         return validate().iterator();
+    }
+
+    /**
+     * Creates a unique {@code Vertex} name with a given prefix.
+     */
+    private String uniqueName(String namePrefix) {
+        int i = 0;
+        String name  = namePrefix;
+        while (nameToVertex.containsKey(name)) {
+            name = name + '-' + ++i;
+        }
+        return name;
     }
 
     private Vertex addVertex(Vertex vertex) {

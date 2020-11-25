@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
@@ -260,6 +259,7 @@ public interface SqlConnector {
      */
     @Nonnull
     default NestedLoopJoin nestedLoopReader(
+            @Nonnull DAG dag,
             @Nonnull Table table,
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection,
@@ -301,42 +301,29 @@ public interface SqlConnector {
      * Definition of a nested loop join.
      * <p>
      * Contains:<ul>
-     * <li>{@code vertexName}: name of the joining vertex to be added
-     * to DAG
-     * <li>{@code processorSupplier}: supplier of the joining vertex to
-     * be added to the DAG, that reads the Object[] input - on the left
-     * side of a join - and connects it with the source - on the right
-     * side of a join
+     * <li>{@code vertex}: the joining vertex to be added to the DAG,
+     * that reads the Object[] input - on the left side of a join - and
+     * connects it with the source - on the right side of a join
      * <li>{@code configureEdgeFn}: function to configure the edge the
      * joining vertex is connected to
      * </ul>
      */
     class NestedLoopJoin {
 
-        private final String vertexName;
-        private final ProcessorSupplier joiningProcessorSupplier;
+        private final Vertex vertex;
         private final Consumer<Edge> configureEdgeFn;
 
-        public NestedLoopJoin(String vertexName, ProcessorSupplier joiningProcessorSupplier) {
-            this(vertexName, joiningProcessorSupplier, null);
+        public NestedLoopJoin(Vertex vertex) {
+            this(vertex, null);
         }
 
-        public NestedLoopJoin(
-                String vertexName,
-                ProcessorSupplier joiningProcessorSupplier,
-                Consumer<Edge> configureEdgeFn
-        ) {
-            this.vertexName = vertexName;
-            this.joiningProcessorSupplier = joiningProcessorSupplier;
+        public NestedLoopJoin(Vertex vertex, Consumer<Edge> configureEdgeFn) {
+            this.vertex = vertex;
             this.configureEdgeFn = configureEdgeFn;
         }
 
-        public String vertexName() {
-            return vertexName;
-        }
-
-        public ProcessorSupplier joiningProcessorSupplier() {
-            return joiningProcessorSupplier;
+        public Vertex vertex() {
+            return vertex;
         }
 
         public Consumer<Edge> configureEdgeFn() {
