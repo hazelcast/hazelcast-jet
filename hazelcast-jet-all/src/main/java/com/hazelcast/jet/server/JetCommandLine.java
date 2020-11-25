@@ -783,7 +783,8 @@ public class JetCommandLine implements Runnable {
     /**
      * A parser for SQL-like inputs. Commands are terminated with a semicolon.
      * It is mainly taken from
-     * @see <a href="https://github.com/julianhyde/sqlline/blob/master/src/main/java/sqlline/SqlLineParser.java">SqlLineParser</a>
+     * @see <a href="https://github.com/julianhyde/sqlline/blob/master/src/main/java/sqlline/SqlLineParser.java">
+     *     SqlLineParser</a>
      * which is licensed under the BSD-3-Clause License
      */
     private static final class MultilineParser extends DefaultParser {
@@ -814,8 +815,7 @@ public class JetCommandLine implements Runnable {
                 if (oneLineCommentStart == -1
                         && multiLineCommentStart == -1
                         && quoteStart < 0
-                        && (isQuoteChar(line, i)))
-                {
+                        && (isQuoteChar(line, i))) {
                     // Start a quote block
                     quoteStart = i;
                     containsNonCommentData = true;
