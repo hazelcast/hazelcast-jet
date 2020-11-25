@@ -31,6 +31,7 @@ import java.util.concurrent.Future;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.kinesis.impl.KinesisHelper.shardBelongsToRange;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
@@ -53,6 +54,9 @@ public class RangeMonitor extends AbstractShardWorker {
      * problem.
      */
     private static final long PAUSE_AFTER_FAILURE = 1000L; //todo: exponential backoff
+
+    //todo: never removing from the set of known shards, because I have to read from all shards, not
+    // just the active ones and I have to not read from shards that are closed and I have read from them already...
 
     private final HashRange hashRange;
     private final Set<String> knownShards;
@@ -116,7 +120,6 @@ public class RangeMonitor extends AbstractShardWorker {
                 List<Shard> shards = result.getShards();
 
                 List<Shard> unknownShards = shards.stream()
-                        .filter(KinesisHelper::shardActive)
                         .filter(shard -> shardBelongsToRange(shard, hashRange))
                         .filter(shard -> !knownShards.contains(shard.getShardId())).collect(toList());
 
@@ -126,6 +129,8 @@ public class RangeMonitor extends AbstractShardWorker {
                 } else {
                     knownShards.addAll(unknownShards.stream().map(Shard::getShardId).collect(toList()));
                     newShards.addAll(unknownShards);
+                    logger.info("New shards detected: " +
+                            unknownShards.stream().map(Shard::getShardId).collect(joining(", ")));
                     state = State.NEW_SHARDS_FOUND;
                     return Result.NEW_SHARDS;
                 }
@@ -147,10 +152,6 @@ public class RangeMonitor extends AbstractShardWorker {
         newShards.clear();
         state = State.READY_TO_LIST_SHARDS;
         return Result.NOTHING;
-    }
-
-    public void forgetShard(Shard shard) {
-        knownShards.remove(shard.getShardId());
     }
 
     public Collection<Shard> getNewShards() {

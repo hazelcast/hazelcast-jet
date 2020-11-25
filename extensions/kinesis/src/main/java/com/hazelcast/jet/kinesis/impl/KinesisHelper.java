@@ -50,7 +50,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -127,22 +126,9 @@ public class KinesisHelper {
         return StreamStatus.valueOf(statusString);
     }
 
-    public List<Shard> listActiveShards() {
-        return listActiveShards(shard -> true, Function.identity());
-    }
-
-    public List<Shard> listActiveShards(Predicate<? super Shard> filter) {
-        return listActiveShards(filter, Function.identity());
-    }
-
-    private <T> List<T> listActiveShards(
-            Predicate<? super Shard> filter,
-            Function<? super Shard, T> mapper
-    ) {
+    public List<Shard> listShards(Predicate<? super Shard> filter) {
         return callSafely(this::listShards).stream()
                 .filter(filter)
-                .filter(KinesisHelper::shardActive)
-                .map(mapper)
                 .collect(Collectors.toList());
     }
 

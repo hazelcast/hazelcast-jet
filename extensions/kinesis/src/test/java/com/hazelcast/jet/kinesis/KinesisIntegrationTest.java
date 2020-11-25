@@ -53,7 +53,6 @@ import org.junit.runner.RunWith;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.containers.localstack.LocalStackContainer.Service;
 
-import javax.annotation.Nonnull;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -70,6 +69,8 @@ import static com.hazelcast.internal.util.MapUtil.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.pipeline.test.Assertions.assertCollectedEventually;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
@@ -196,7 +197,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
         createStream(2);
         HELPER.waitForStreamToActivate();
 
-        List<Shard> shards = HELPER.listActiveShards();
+        List<Shard> shards = listActiveShards();
         mergeShards(shards.get(0), shards.get(1));
 
         jet().newJob(getPipeline());
@@ -232,7 +233,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
         List<Shard> oldShards = Collections.emptyList();
         for (int i = 0; i < merges; i++) {
             Set<String> oldShardIds = oldShards.stream().map(Shard::getShardId).collect(Collectors.toSet());
-            List<Shard> currentShards = HELPER.listActiveShards();
+            List<Shard> currentShards = listActiveShards();
             List<Shard> newShards = currentShards.stream()
                     .filter(shard -> !oldShardIds.contains(shard.getShardId()))
                     .collect(toList());
@@ -254,7 +255,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
         createStream(1);
         HELPER.waitForStreamToActivate();
 
-        List<Shard> shards = HELPER.listActiveShards();
+        List<Shard> shards = listActiveShards();
         splitShard(shards.get(0));
 
         jet().newJob(getPipeline());
@@ -289,7 +290,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
         List<Shard> oldShards = Collections.emptyList();
         for (int i = 0; i < splits; i++) {
             Set<String> oldShardIds = oldShards.stream().map(Shard::getShardId).collect(Collectors.toSet());
-            List<Shard> currentShards = HELPER.listActiveShards();
+            List<Shard> currentShards = listActiveShards();
             List<Shard> newShards = currentShards.stream()
                     .filter(shard -> !oldShardIds.contains(shard.getShardId()))
                     .collect(toList());
@@ -416,7 +417,10 @@ public class KinesisIntegrationTest extends JetTestSupport {
         KINESIS.splitShard(request);
     }
 
-    @Nonnull
+    private static List<Shard> listActiveShards() {
+        return HELPER.listShards(KinesisHelper::shardActive);
+    }
+
     private static String getKeySetsDifferDescription(Map<String, List<String>> expected,
                                                       Map<String, List<String>> actual) {
         return "Key sets differ!" +
@@ -424,23 +428,22 @@ public class KinesisIntegrationTest extends JetTestSupport {
                 "\n\t  actual: " + new TreeSet<>(actual.keySet());
     }
 
-    @Nonnull
     private static String getMessagesDifferDescription(String key, List<String> expected, List<String> actual) {
         StringBuilder sb = new StringBuilder()
                 .append("Messages for key ").append(key).append(" differ!")
                 .append("\n\texpected: ").append(expected.size())
                 .append("\n\t  actual: ").append(actual.size());
 
-        for (int i = 0; i < Math.min(expected.size(), actual.size()); i++) {
+        for (int i = 0; i < min(expected.size(), actual.size()); i++) {
             if (!expected.get(i).equals(actual.get(i))) {
                 sb.append("\n\tfirst difference at index: ").append(i);
-                sb.append("\n\t\texpected: ").append(expected.get(i));
-                for (int j = i + 1; j < Math.min(i + 10, expected.size()); j++) {
-                    sb.append(", ").append(expected.get(j));
+                sb.append("\n\t\texpected: ");
+                for (int j = max(0, i - 2); j < min(i + 5, expected.size()); j++) {
+                    sb.append(j).append(": ").append(expected.get(j)).append(", ");
                 }
-                sb.append("\n\t\t  actual: ").append(actual.get(i));
-                for (int j = i + 1; j < Math.min(i + 10, actual.size()); j++) {
-                    sb.append(", ").append(actual.get(j));
+                sb.append("\n\t\t  actual: ");
+                for (int j = max(0, i - 2); j < min(i + 5, actual.size()); j++) {
+                    sb.append(j).append(": ").append(actual.get(j)).append(", ");
                 }
                 break;
             }

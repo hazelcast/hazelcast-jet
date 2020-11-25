@@ -82,7 +82,7 @@ public class KinesisSourceP extends AbstractProcessor {
         logger.info("Processor " + id + " handles " + hashRange);
 
         helper.waitForStreamToActivate();
-        List<Shard> shardsInRange = helper.listActiveShards(
+        List<Shard> shardsInRange = helper.listShards(
                 (Predicate<? super Shard>) shard -> shardBelongsToRange(shard, hashRange));
         rangeMonitor = new RangeMonitor(context.totalParallelism(), kinesis, stream, hashRange, shardsInRange, logger);
         addShardReaders(shardsInRange);
@@ -128,7 +128,6 @@ public class KinesisSourceP extends AbstractProcessor {
                 Shard shard = reader.getShard();
                 logger.info("Shard " + shard.getShardId() + " of stream " + stream + " closed");
                 removeShardReader(currentReader);
-                rangeMonitor.forgetShard(shard);
                 nextReader = 0;
                 return;
             }
