@@ -144,15 +144,6 @@ public class OrderedBatchParallelismTest {
                 ),
                 createParamSet(
                         stage -> stage
-                                .rebalance()
-                                .map(x -> x)
-                                .setLocalParallelism(LOCAL_PARALLELISM),
-                        Collections.singletonList("map"),
-                        Collections.singletonList(UPSTREAM_PARALLELISM),
-                        "map-after-rebalance"
-                ),
-                createParamSet(
-                        stage -> stage
                                 .<Long>customTransform("custom-transform",
                                         Processors.mapP(FunctionEx.identity()))
                                 .setLocalParallelism(LOCAL_PARALLELISM),
