@@ -95,7 +95,7 @@ public class FileSourceBuilder<T> {
      */
     public FileSourceBuilder(@Nonnull String path) {
         this.path = requireNonNull(path, "path must not be null");
-        if (!Paths.get(path).isAbsolute()) {
+        if (!(Paths.get(path).isAbsolute() || hasHadoopPrefix(path))) {
             throw new IllegalArgumentException("Provided path must be absolute. path: " + path);
         }
     }
@@ -201,7 +201,7 @@ public class FileSourceBuilder<T> {
                 path, glob, format, sharedFileSystem, options
         );
 
-        if (useHadoop || hasHadoopPrefix()) {
+        if (useHadoop || hasHadoopPrefix(path)) {
             ServiceLoader<FileSourceFactory> loader = ServiceLoader.load(FileSourceFactory.class);
             // Only one implementation is expected to be present on classpath
             for (FileSourceFactory fileSourceFactory : loader) {
@@ -213,7 +213,7 @@ public class FileSourceBuilder<T> {
         return new LocalFileSourceFactory().create(fsc);
     }
 
-    private boolean hasHadoopPrefix() {
+    private static boolean hasHadoopPrefix(String path) {
         return HADOOP_PREFIXES.stream().anyMatch(path::startsWith);
     }
 }
