@@ -643,6 +643,36 @@ public class SqlJoinTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_leftJoin() {
+        String leftName = randomName();
+        TestBatchSqlConnector.create(
+                sqlService,
+                leftName,
+                singletonList("v"),
+                singletonList(INT),
+                asList(new String[]{"0"}, new String[]{null}, new String[]{"2"})
+        );
+
+        String mapName = randomName();
+        instance().getMap(mapName).putAll(ImmutableMap.of(
+                "1", "value-1",
+                "2", "value-2",
+                "3", "value-3"
+        ));
+
+        assertRowsAnyOrder(
+                "SELECT l.v, m.__key, m.this || '-s' " +
+                "FROM " + leftName + " l " +
+                "LEFT OUTER JOIN " + mapName + " m ON l.v = m.__key ",
+                asList(
+                        new Row(0, null, null),
+                        new Row(null, null, null),
+                        new Row(2, "2", "value-2-s")
+                )
+        );
+    }
+
+    @Test
     public void test_leftJoinOnPrimitiveKey() {
         String leftName = randomName();
         TestBatchSqlConnector.create(

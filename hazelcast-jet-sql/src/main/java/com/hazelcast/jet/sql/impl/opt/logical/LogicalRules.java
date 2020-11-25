@@ -62,7 +62,7 @@ public final class LogicalRules {
 
                 // Join
                 JoinLogicalRule.INSTANCE,
-                JoinProjectTransposeRule.RIGHT_PROJECT,
+                JoinProjectTransposeRule.RIGHT_PROJECT_INCLUDE_OUTER,
                 ReduceExpressionsRule.JOIN_INSTANCE,
 
                 // Value rules
