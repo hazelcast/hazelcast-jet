@@ -76,23 +76,23 @@ public class SqlJobManagementTest extends SimpleTestInClusterSupport {
 
     @Test
     public void when_createJobUnknownOption_then_fail() {
-        assertThatThrownBy(() -> sqlService.execute("CREATE JOB foo OPTIONS (badOption 'value') AS "
+        assertThatThrownBy(() -> sqlService.execute("CREATE JOB foo OPTIONS ('badOption'='value') AS "
                         + "INSERT INTO t1 VALUES(1)"))
-                .hasMessage("From line 1, column 25 to line 1, column 33: Unknown job option: badOption");
+                .hasMessage("From line 1, column 25 to line 1, column 35: Unknown job option: badOption");
     }
 
     @Test
     public void when_snapshotIntervalNotNumber_then_fail() {
-        assertThatThrownBy(() -> sqlService.execute("CREATE JOB foo OPTIONS (snapshotIntervalMillis 'foo') AS "
+        assertThatThrownBy(() -> sqlService.execute("CREATE JOB foo OPTIONS ('snapshotIntervalMillis'='foo') AS "
                         + "INSERT INTO t1 VALUES(1)"))
-               .hasMessage("From line 1, column 48 to line 1, column 52: Invalid number for snapshotIntervalMillis: foo");
+               .hasMessage("From line 1, column 50 to line 1, column 54: Invalid number for snapshotIntervalMillis: foo");
     }
 
     @Test
     public void when_badProcessingGuarantee_then_fail() {
-        assertThatThrownBy(() -> sqlService.execute("CREATE JOB foo OPTIONS (processingGuarantee 'foo') AS "
+        assertThatThrownBy(() -> sqlService.execute("CREATE JOB foo OPTIONS ('processingGuarantee'='foo') AS "
                         + "INSERT INTO t1 VALUES(1)"))
-               .hasMessage("From line 1, column 45 to line 1, column 49: Unsupported value for processingGuarantee: foo");
+               .hasMessage("From line 1, column 47 to line 1, column 51: Unsupported value for processingGuarantee: foo");
     }
 
     @Test
@@ -151,13 +151,13 @@ public class SqlJobManagementTest extends SimpleTestInClusterSupport {
         sqlService.execute("CREATE JOB testJob " +
                 "OPTIONS (" +
                 // we use non-default value for each config option
-                "processingGuarantee 'exactlyOnce'," +
-                "snapshotIntervalMillis '6000'," +
-                "autoScaling 'false'," +
-                "splitBrainProtectionEnabled 'true'," +
-                "metricsEnabled 'false'," +
-                "initialSnapshotName 'fooSnapshot'," +
-                "storeMetricsAfterJobCompletion 'true')" +
+                "'processingGuarantee'='exactlyOnce'," +
+                "'snapshotIntervalMillis'='6000'," +
+                "'autoScaling'='false'," +
+                "'splitBrainProtectionEnabled'='true'," +
+                "'metricsEnabled'='false'," +
+                "'initialSnapshotName'='fooSnapshot'," +
+                "'storeMetricsAfterJobCompletion'='true')" +
                 "AS SINK INTO dest SELECT v, v FROM src");
 
         JobConfig config = instance().getJob("testJob").getConfig();
@@ -260,6 +260,17 @@ public class SqlJobManagementTest extends SimpleTestInClusterSupport {
 
         assertThatThrownBy(() -> sqlService.execute("DROP JOB testJob WITH SNAPSHOT mySnapshot"))
                 .hasMessageContaining("You need Hazelcast Jet Enterprise to use this feature");
+    }
+
+    @Test
+    public void test_createDropJobInQuickSuccession() {
+        sqlService.execute("CREATE MAPPING src TYPE TestStream");
+        sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
+
+        for (int i = 0; i < 10; i++) {
+            sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src");
+            sqlService.execute("DROP JOB testJob");
+        }
     }
 
     private long countActiveJobs() {
