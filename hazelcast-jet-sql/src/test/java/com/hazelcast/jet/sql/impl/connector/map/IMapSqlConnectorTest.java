@@ -16,7 +16,10 @@
 
 package com.hazelcast.jet.sql.impl.connector.map;
 
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.Edge;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector.NestedLoopJoin;
@@ -39,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 @RunWith(JUnitParamsRunner.class)
 public class IMapSqlConnectorTest {
@@ -52,7 +56,10 @@ public class IMapSqlConnectorTest {
     private PartitionedMapTable table;
 
     @Mock
-    private Vertex vertex;
+    private Vertex ingress;
+
+    @Mock
+    private Vertex egress;
 
     @Before
     public void setUp() {
@@ -71,31 +78,54 @@ public class IMapSqlConnectorTest {
     public void test_joinByPrimitiveKey(boolean inner) {
         // given
         given(table.getFields()).willReturn(singletonList(new MapTableField("field", VARCHAR, false, KEY_PATH)));
-        given(dag.newUniqueVertex(contains("Lookup"), isA(JoinByPrimitiveKeyProcessorSupplier.class))).willReturn(vertex);
+        given(dag.newUniqueVertex(contains("Lookup"), isA(JoinByPrimitiveKeyProcessorSupplier.class))).willReturn(ingress);
 
         // when
         NestedLoopJoin join =
                 connector.nestedLoopReader(dag, table, null, emptyList(), joinInfo(inner, new int[]{0}, new int[]{0}));
 
         // then
-        assertThat(join.vertex()).isNotNull();
+        assertThat(join.ingress()).isNotNull();
+        assertThat(join.ingress()).isEqualTo(join.egress());
         assertThat(join.configureEdgeFn()).isNotNull();
     }
 
     @Test
-    @Parameters(method = "joinTypes")
-    public void test_joinByPredicate(boolean inner) {
+    @SuppressWarnings("unchecked")
+    public void test_joinByPredicateInner() {
         // given
         given(table.getFields())
                 .willReturn(singletonList(new MapTableField("field", VARCHAR, false, QueryPath.create("path"))));
-        given(dag.newUniqueVertex(contains("Predicate"), isA(JoinByPredicateProcessorSupplier.class))).willReturn(vertex);
+        given(dag.newUniqueVertex(contains("Broadcast"), isA(SupplierEx.class))).willReturn(ingress);
+        given(dag.newUniqueVertex(contains("Predicate"), isA(ProcessorMetaSupplier.class))).willReturn(egress);
 
         // when
         NestedLoopJoin join =
-                connector.nestedLoopReader(dag, table, null, emptyList(), joinInfo(inner, new int[]{0}, new int[]{0}));
+                connector.nestedLoopReader(dag, table, null, emptyList(), joinInfo(true, new int[]{0}, new int[]{0}));
 
         // then
-        assertThat(join.vertex()).isNotNull();
+        assertThat(join.ingress()).isNotNull();
+        assertThat(join.egress()).isNotNull();
+        assertThat(join.ingress()).isNotEqualTo(join.egress());
+        assertThat(join.configureEdgeFn()).isNotNull();
+        verify(dag).edge(isA(Edge.class));
+    }
+
+    @Test
+    public void test_joinByPredicateOuter() {
+        // given
+        given(table.getFields())
+                .willReturn(singletonList(new MapTableField("field", VARCHAR, false, QueryPath.create("path"))));
+        given(dag.newUniqueVertex(contains("Predicate"), isA(JoinByPredicateOuterProcessorSupplier.class)))
+                .willReturn(ingress);
+
+        // when
+        NestedLoopJoin join =
+                connector.nestedLoopReader(dag, table, null, emptyList(), joinInfo(false, new int[]{0}, new int[]{0}));
+
+        // then
+        assertThat(join.ingress()).isNotNull();
+        assertThat(join.ingress()).isEqualTo(join.egress());
         assertThat(join.configureEdgeFn()).isNull();
     }
 
@@ -104,14 +134,15 @@ public class IMapSqlConnectorTest {
     public void test_joinByScan(boolean inner) {
         // given
         given(table.getFields()).willReturn(singletonList(new MapTableField("field", VARCHAR, false, KEY_PATH)));
-        given(dag.newUniqueVertex(contains("Scan"), isA(JoinScanProcessorSupplier.class))).willReturn(vertex);
+        given(dag.newUniqueVertex(contains("Scan"), isA(JoinScanProcessorSupplier.class))).willReturn(ingress);
 
         // when
         NestedLoopJoin join =
                 connector.nestedLoopReader(dag, table, null, emptyList(), joinInfo(inner, new int[0], new int[0]));
 
         // then
-        assertThat(join.vertex()).isNotNull();
+        assertThat(join.ingress()).isNotNull();
+        assertThat(join.ingress()).isEqualTo(join.egress());
         assertThat(join.configureEdgeFn()).isNull();
     }
 

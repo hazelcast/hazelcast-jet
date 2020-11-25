@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.util;
 
+import com.hazelcast.cluster.Address;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.EdgeConfig;
@@ -51,8 +52,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -506,9 +511,9 @@ public final class Util {
      * its subdirectories. It calls {@link #editPermissions} with every file.
      *
      * @param basePath the directory where to edit the file permissions
-     * @param editFn the permission-editing function, described above
+     * @param editFn   the permission-editing function, described above
      * @return the list of all relative path names of files for which editing
-     *         permissions failed
+     * permissions failed
      * @throws IOException if the directory's contents cannot be traversed
      */
     public static List<String> editPermissionsRecursively(
@@ -556,5 +561,43 @@ public final class Util {
         durationMs /= 24;
         String textUpToHours = String.format("%02d:%02d:%02d.%03d", hours, minutes, seconds, millis);
         return sign + (durationMs > 0 ? durationMs + "d " : "") + textUpToHours;
+    }
+
+    /**
+     * Assigns given partitions to given {@code members}.
+     * Set of partitions belonging to non-members are assigned to
+     * {@code members} in a round robin fashion.
+     */
+    public static Map<Address, List<Integer>> assignPartitions(
+            Collection<Address> members0,
+            Map<Address, List<Integer>> partitionsByOwner
+    ) {
+        assert !members0.isEmpty();
+
+        LinkedHashSet<Address> members = new LinkedHashSet<>(members0);
+
+        Iterator<Address> iterator = members.iterator();
+
+        Map<Address, List<Integer>> partitionsByMember = new HashMap<>();
+        for (Entry<Address, List<Integer>> entry : partitionsByOwner.entrySet()) {
+            Address partitionOwner = entry.getKey();
+            List<Integer> partitions = entry.getValue();
+
+            Address target;
+            if (members.contains(partitionOwner)) {
+                target = partitionOwner;
+            } else {
+                if (!iterator.hasNext()) {
+                    iterator = members.iterator();
+                }
+                target = iterator.next();
+            }
+
+            partitionsByMember.merge(target, new ArrayList<>(partitions), (existing, incoming) -> {
+                existing.addAll(incoming);
+                return existing;
+            });
+        }
+        return partitionsByMember;
     }
 }

@@ -44,7 +44,6 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static com.hazelcast.jet.Traversers.empty;
 import static com.hazelcast.jet.Traversers.singleton;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.impl.util.Util.padRight;
@@ -53,7 +52,7 @@ import static com.hazelcast.jet.impl.util.Util.padRight;
         value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
         justification = "the class is never java-serialized"
 )
-final class JoinByPredicateProcessorSupplier implements ProcessorSupplier, DataSerializable {
+final class JoinByPredicateOuterProcessorSupplier implements ProcessorSupplier, DataSerializable {
 
     private JetJoinInfo joinInfo;
     private String mapName;
@@ -65,16 +64,16 @@ final class JoinByPredicateProcessorSupplier implements ProcessorSupplier, DataS
     private transient Extractors extractors;
 
     @SuppressWarnings("unused")
-    private JoinByPredicateProcessorSupplier() {
+    private JoinByPredicateOuterProcessorSupplier() {
     }
 
-    JoinByPredicateProcessorSupplier(
+    JoinByPredicateOuterProcessorSupplier(
             JetJoinInfo joinInfo,
             String mapName,
             QueryPath[] rightPaths,
             KvRowProjector.Supplier rightRowProjectorSupplier
     ) {
-        assert joinInfo.isEquiJoin();
+        assert joinInfo.isEquiJoin() && joinInfo.isOuter();
 
         this.joinInfo = joinInfo;
         this.mapName = mapName;
@@ -114,7 +113,6 @@ final class JoinByPredicateProcessorSupplier implements ProcessorSupplier, DataS
             QueryPath[] rightPaths,
             KvRowProjector rightRowProjector
     ) {
-        boolean inner = joinInfo.isInner();
         int[] leftEquiJoinIndices = joinInfo.leftEquiJoinIndices();
         int[] rightEquiJoinIndices = joinInfo.rightEquiJoinIndices();
         BiFunctionEx<Object[], Object[], Object[]> joinFn = ExpressionUtil.joinFn(joinInfo.nonEquiCondition());
@@ -123,13 +121,13 @@ final class JoinByPredicateProcessorSupplier implements ProcessorSupplier, DataS
             Predicate<Object, Object> predicate =
                     JoinPredicateFactory.toPredicate(left, leftEquiJoinIndices, rightEquiJoinIndices, rightPaths);
             if (predicate == null) {
-                return inner ? empty() : singleton(padRight(left, rightRowProjector.getColumnCount()));
+                return singleton(padRight(left, rightRowProjector.getColumnCount()));
             }
 
             List<Object[]> joined = join(left, map.entrySet(predicate), rightRowProjector, joinFn);
-            return !joined.isEmpty() ? traverseIterable(joined)
-                    : inner ? empty()
-                    : singleton(padRight(left, rightRowProjector.getColumnCount()));
+            return joined.isEmpty()
+                    ? singleton(padRight(left, rightRowProjector.getColumnCount()))
+                    : traverseIterable(joined);
         };
     }
 

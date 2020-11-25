@@ -54,7 +54,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @RunWith(MockitoJUnitRunner.class)
-public class JoinByPredicateProcessorTest {
+public class JoinByPredicateOuterProcessorTest {
 
     @Mock
     private IMap<Object, Object> map;
@@ -92,70 +92,9 @@ public class JoinByPredicateProcessorTest {
 
     @Test
     @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
-    public void when_innerJoinFilteredOutByProjector_then_absent() throws Exception {
+    public void when_filteredOutByProjector_then_nulls() throws Exception {
         // given
-        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), true);
-
-        given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1"), entry(2, "value-2")));
-        given(rightProjector.project(entry(1, "value-1"))).willReturn(null);
-        given(rightProjector.project(entry(2, "value-2"))).willReturn(new Object[]{2, "value-2"});
-
-        // when
-        processor.process(0, new TestInbox(asList(new Object[]{1}, new Object[]{2})));
-        processor.complete();
-
-        // then
-        verify(outbox).offer(-1, new Object[]{1, 2, "value-2"});
-        verify(outbox).offer(-1, new Object[]{2, 2, "value-2"});
-        verifyNoMoreInteractions(outbox);
-    }
-
-    @Test
-    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
-    public void when_innerJoinProjectedByProjector_then_modified() throws Exception {
-        // given
-        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), true);
-
-        given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1")));
-        given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{2, "modified"});
-
-        // when
-        processor.process(0, new TestInbox(singletonList(new Object[]{1})));
-        processor.complete();
-
-        // then
-        verify(outbox).offer(-1, new Object[]{1, 2, "modified"});
-        verifyNoMoreInteractions(outbox);
-    }
-
-    @Test
-    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
-    public void when_innerJoinFilteredOutByCondition_then_absent() throws Exception {
-        // given
-        Processor processor = processor(ComparisonPredicate.create(
-                ColumnExpression.create(0, INT),
-                ColumnExpression.create(1, INT),
-                ComparisonMode.EQUALS
-        ), true);
-
-        given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1"), entry(2, "value-2")));
-        given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{1, "value-1"});
-        given(rightProjector.project(entry(2, "value-2"))).willReturn(new Object[]{2, "value-2"});
-
-        // when
-        processor.process(0, new TestInbox(asList(new Object[]{0}, new Object[]{1})));
-        processor.complete();
-
-        // then
-        verify(outbox).offer(-1, new Object[]{1, 1, "value-1"});
-        verifyNoMoreInteractions(outbox);
-    }
-
-    @Test
-    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
-    public void when_outerJoinFilteredOutByProjector_then_nulls() throws Exception {
-        // given
-        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
+        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
 
         given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1")));
         given(rightProjector.project(entry(1, "value-1"))).willReturn(null);
@@ -172,9 +111,9 @@ public class JoinByPredicateProcessorTest {
 
     @Test
     @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
-    public void when_outerJoinProjectedByProjector_then_modified() throws Exception {
+    public void when_projectedByProjector_then_modified() throws Exception {
         // given
-        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
+        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
 
         given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1")));
         given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{2, "modified"});
@@ -190,13 +129,13 @@ public class JoinByPredicateProcessorTest {
 
     @Test
     @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
-    public void when_outerJoinFilteredOutByCondition_then_nulls() throws Exception {
+    public void when_filteredOutByCondition_then_nulls() throws Exception {
         // given
         Processor processor = processor(ComparisonPredicate.create(
                 ColumnExpression.create(0, INT),
                 ColumnExpression.create(1, INT),
                 ComparisonMode.EQUALS
-        ), false);
+        ));
 
         given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(2, "value-2")));
         given(rightProjector.project(entry(2, "value-2"))).willReturn(new Object[]{2, "value-2"});
@@ -211,9 +150,9 @@ public class JoinByPredicateProcessorTest {
         verifyNoMoreInteractions(outbox);
     }
 
-    private Processor processor(Expression<Boolean> nonEquiCondition, boolean inner) throws Exception {
-        ProcessorSupplier supplier = new JoinByPredicateProcessorSupplier(
-                new JetJoinInfo(inner, new int[]{0}, new int[]{0}, nonEquiCondition, null),
+    private Processor processor(Expression<Boolean> nonEquiCondition) throws Exception {
+        ProcessorSupplier supplier = new JoinByPredicateOuterProcessorSupplier(
+                new JetJoinInfo(false, new int[]{0}, new int[]{0}, nonEquiCondition, null),
                 "map",
                 new QueryPath[]{QueryPath.KEY_PATH},
                 rightRowProjectorSupplier

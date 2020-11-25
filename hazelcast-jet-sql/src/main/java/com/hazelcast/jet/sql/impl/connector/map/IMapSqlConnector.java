@@ -19,9 +19,11 @@ package com.hazelcast.jet.sql.impl.connector.map;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadata;
@@ -51,6 +53,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import static com.hazelcast.function.Functions.wholeItem;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.sql.impl.schema.map.MapTableUtils.estimatePartitionedMapRowCount;
 import static java.util.stream.Collectors.toList;
@@ -168,11 +171,24 @@ public class IMapSqlConnector implements SqlConnector {
                     ),
                     edge -> edge.partitioned(extractPrimitiveKeyFn(leftEquiJoinPrimitiveKeyIndex)).distributed()
             );
-        } else if (joinInfo.isEquiJoin()) {
+        } else if (joinInfo.isEquiJoin() && joinInfo.isInner()) {
+            // TODO: define new edge type (mix of broadcast & unicast) ?
+            Vertex ingress = dag.newUniqueVertex("Broadcast", () -> new TransformP<>(Traversers::singleton));
+            ingress.localParallelism(1);
+
+            Vertex egress = dag.newUniqueVertex(
+                    "Join(Predicate-" + toString(table) + ")",
+                    JoinByPredicateInnerProcessorSupplier.supplier(joinInfo, name, paths, rightRowProjectorSupplier)
+            );
+
+            dag.edge(between(ingress, egress).partitioned(wholeItem()));
+
+            return new NestedLoopJoin(ingress, egress, edge -> edge.distributed().broadcast());
+        } else if (joinInfo.isEquiJoin() && joinInfo.isOuter()) {
             return new NestedLoopJoin(
                     dag.newUniqueVertex(
                             "Join(Predicate-" + toString(table) + ")",
-                            new JoinByPredicateProcessorSupplier(joinInfo, name, paths, rightRowProjectorSupplier)
+                            new JoinByPredicateOuterProcessorSupplier(joinInfo, name, paths, rightRowProjectorSupplier)
                     )
             );
         } else {

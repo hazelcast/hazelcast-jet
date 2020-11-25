@@ -190,9 +190,8 @@ public class CreateDagVisitor {
                 rel.rightProjection(),
                 rel.joinInfo()
         );
-        Vertex vertex = join.vertex();
-        connectInput(rel.getLeft(), vertex, join.configureEdgeFn());
-        return vertex;
+        connectInput(rel.getLeft(), join.ingress(), join.configureEdgeFn());
+        return join.egress();
     }
 
     public Vertex onRoot(JetRootRel rootRel) {
