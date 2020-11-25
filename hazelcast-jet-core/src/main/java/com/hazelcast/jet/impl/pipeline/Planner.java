@@ -280,6 +280,10 @@ public class Planner {
         if (keyFn != null) {
             edge.partitioned(keyFn);
         }
+        if (edge.getRoutingPolicy() == Edge.RoutingPolicy.ISOLATED) {
+            throw new IllegalArgumentException("Using rebalance without a key directly breaks the order. " +
+                    "When the \"preserveOrder\" property is active, rebalance without a key is not allowed to use");
+        }
     }
 
     public void addEdges(Transform transform, Vertex toVertex, Consumer<Edge> configureEdgeFn) {
