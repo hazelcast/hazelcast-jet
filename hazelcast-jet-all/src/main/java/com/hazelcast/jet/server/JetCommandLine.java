@@ -209,6 +209,9 @@ public class JetCommandLine implements Runnable {
                 if (line == null) {
                     break;
                 }
+                if (line.lastIndexOf(";") < 0) {
+                    continue;
+                }
                 String command = line.substring(0, line.lastIndexOf(";"));
                 if ("exit".equals(command)) {
                     break;
@@ -778,23 +781,208 @@ public class JetCommandLine implements Runnable {
     }
 
     /**
-     * A jline extension for SQL-like inputs. Commands are terminated with a semicolon.
-     * It was taken from https://github.com/jline/jline3/issues/36#issuecomment-652522724
+     * A parser for SQL-like inputs. Commands are terminated with a semicolon.
+     * It is mainly taken from
+     * @see <a href="https://github.com/julianhyde/sqlline/blob/master/src/main/java/sqlline/SqlLineParser.java">SqlLineParser</a>
+     * which is licensed under the BSD-3-Clause License
      */
-    private static final class MultilineParser implements Parser {
-
-        private final Parser defaultParser = new DefaultParser();
+    private static final class MultilineParser extends DefaultParser {
 
         private MultilineParser() { }
 
         @Override
         public ParsedLine parse(String line, int cursor, Parser.ParseContext context) throws SyntaxError {
-            if ((Parser.ParseContext.UNSPECIFIED.equals(context) || Parser.ParseContext.ACCEPT_LINE.equals(context))
-                    && !line.trim().endsWith(";")) {
-                throw new EOFError(-1, cursor, "Missing semicolon (;)");
+            super.setQuoteChars(new char[]{'\'', '"'});
+            super.setEofOnUnclosedQuote(true);
+            stateCheck(line, cursor);
+            return new ArgumentList(line, Collections.emptyList(), -1, -1,
+                    cursor, "'", -1, -1);
+        }
+
+        private void stateCheck(String line, int cursor) {
+            boolean containsNonCommentData = false;
+            int quoteStart = -1;
+            int oneLineCommentStart = -1;
+            int multiLineCommentStart = -1;
+            final int[] roundBracketsBalance = new int[2];
+            final int[] squareBracketsBalance = new int[2];
+            int lastNonQuoteCommentIndex = 0;
+
+            for (int i = 0; i < line.length(); i++) {
+                // once we reach the cursor, set the
+                // position of the selected index
+                if (oneLineCommentStart == -1
+                        && multiLineCommentStart == -1
+                        && quoteStart < 0
+                        && (isQuoteChar(line, i)))
+                {
+                    // Start a quote block
+                    quoteStart = i;
+                    containsNonCommentData = true;
+                } else {
+                    char currentChar = line.charAt(i);
+                    if (quoteStart >= 0) {
+                        // In a quote block
+                        if ((line.charAt(quoteStart) == currentChar) && !isEscaped(line, i)) {
+                            // End the block; arg could be empty, but that's fine
+                            quoteStart = -1;
+                        }
+                    } else if (oneLineCommentStart == -1 && isMultiLineComment(line, i)) {
+                        multiLineCommentStart = i;
+                    } else if (multiLineCommentStart >= 0) {
+                        if (i - multiLineCommentStart > 2
+                                && currentChar == '/' && line.charAt(i - 1) == '*') {
+                            // End the block; arg could be empty, but that's fine
+                            multiLineCommentStart = -1;
+                        }
+                    } else if (oneLineCommentStart == -1 && isOneLineComment(line, i)) {
+                        oneLineCommentStart = i;
+                    } else if (oneLineCommentStart >= 0) {
+                        if (currentChar == '\n') {
+                            // End the block; arg could be empty, but that's fine
+                            oneLineCommentStart = -1;
+                        }
+                    } else {
+                        // Not in a quote or comment block
+                        checkBracketBalance(roundBracketsBalance, currentChar, '(', ')');
+                        checkBracketBalance(squareBracketsBalance, currentChar, '[', ']');
+                        containsNonCommentData = true;
+                        if (!Character.isWhitespace(currentChar)) {
+                            lastNonQuoteCommentIndex = i;
+                        }
+                    }
+                }
             }
 
-            return defaultParser.parse(line, cursor, context);
+            if (isEofOnEscapedNewLine() && isEscapeChar(line, line.length() - 1)) {
+                throw new EOFError(-1, cursor, "Escaped new line");
+            }
+
+            if (isEofOnUnclosedQuote() && quoteStart >= 0) {
+                int finalQuoteStart = quoteStart;
+                throw new EOFError(-1, finalQuoteStart, "Missing closing quote",
+                        line.charAt(quoteStart) == '\'' ? "quote" : "dquote");
+            }
+
+            if (multiLineCommentStart != -1) {
+                throw new EOFError(-1, cursor, "Missing end of comment", "**");
+            }
+
+            if (squareBracketsBalance[0] != 0 || squareBracketsBalance[1] != 0) {
+                throw new EOFError(-1, cursor, "Square brackets balance fails");
+            }
+
+            if (roundBracketsBalance[0] != 0 || roundBracketsBalance[1] != 0) {
+                throw new EOFError(-1, cursor, "Round brackets balance fails");
+            }
+            final int lastNonQuoteCommentIndex1 =
+                    lastNonQuoteCommentIndex == line.length() - 1
+                            && lastNonQuoteCommentIndex - 1 >= 0
+                            ? lastNonQuoteCommentIndex - 1 : lastNonQuoteCommentIndex;
+            if (containsNonCommentData
+                    && !isLineFinishedWithSemicolon(
+                    lastNonQuoteCommentIndex1, line)) {
+                throw new EOFError(-1, cursor, "Missing semicolon (;)");
+            }
+        }
+
+        /**
+         * Returns whether a line (already trimmed) ends with a semicolon that
+         * is not commented with one line comment.
+         *
+         * <p>ASSUMPTION: to have correct behavior, this method must be
+         * called after quote and multi-line comments check calls, which implies that
+         * there are no non-finished quotations or multi-line comments.
+         *
+         * @param buffer Input line to check for ending with ';'
+         * @return true if the ends with non-commented ';'
+         */
+        private boolean isLineFinishedWithSemicolon(
+                final int lastNonQuoteCommentIndex, final CharSequence buffer) {
+            final String line = buffer.toString();
+            boolean lineEmptyOrFinishedWithSemicolon = line.isEmpty();
+            boolean requiredSemicolon = false;
+            String[] oneLineComments = {"#", "--"};
+            for (int i = lastNonQuoteCommentIndex; i < line.length(); i++) {
+                if (';' == line.charAt(i)) {
+                    lineEmptyOrFinishedWithSemicolon = true;
+                    continue;
+                } else if (i < line.length() - 1
+                        && line.regionMatches(i, "/*", 0, "/*".length())) {
+                    int nextNonCommentedChar = line.indexOf("*/", i + "/*".length());
+                    // From one side there is an assumption that multi-line comment
+                    // is completed, from the other side nextNonCommentedChar
+                    // could be negative or less than lastNonQuoteCommentIndex
+                    // in case '/*' is a part of quoting string.
+                    if (nextNonCommentedChar > lastNonQuoteCommentIndex) {
+                        i = nextNonCommentedChar + "*/".length();
+                    }
+                } else {
+                    for (String oneLineCommentString : oneLineComments) {
+                        if (i <= buffer.length() - oneLineCommentString.length()
+                                && oneLineCommentString
+                                .regionMatches(0, line, i, oneLineCommentString.length())) {
+                            int nextLine = line.indexOf('\n', i + 1);
+                            if (nextLine > lastNonQuoteCommentIndex) {
+                                i = nextLine;
+                            } else {
+                                return !requiredSemicolon || lineEmptyOrFinishedWithSemicolon;
+                            }
+                        }
+                    }
+                }
+                requiredSemicolon = i == line.length()
+                        ? requiredSemicolon
+                        : !lineEmptyOrFinishedWithSemicolon
+                        || !Character.isWhitespace(line.charAt(i));
+                if (requiredSemicolon) {
+                    lineEmptyOrFinishedWithSemicolon = false;
+                }
+            }
+            return !requiredSemicolon || lineEmptyOrFinishedWithSemicolon;
+        }
+
+        private void checkBracketBalance(int[] balance, char actual,
+                                         char openBracket, char closeBracket) {
+            if (actual == openBracket) {
+                balance[0]++;
+            } else if (actual == closeBracket) {
+                if (balance[0] > 0) {
+                    balance[0]--;
+                } else {
+                    // closed bracket without open
+                    balance[1]++;
+                }
+            }
+        }
+
+        private boolean isMultiLineComment(final CharSequence buffer, final int pos) {
+            return pos < buffer.length() - 1
+                    && buffer.charAt(pos) == '/'
+                    && buffer.charAt(pos + 1) == '*';
+        }
+
+        private boolean isOneLineComment(final String buffer, final int pos) {
+            String[] oneLineComments = {"#", "--"};
+            final int newLinePos = buffer.indexOf('\n');
+            if ((newLinePos == -1 || newLinePos > pos)
+                    && buffer.substring(0, pos).trim().isEmpty()) {
+                for (String oneLineCommentString : oneLineComments) {
+                    if (pos <= buffer.length() - oneLineCommentString.length()
+                            && oneLineCommentString
+                            .regionMatches(0, buffer, pos, oneLineCommentString.length())) {
+                        return true;
+                    }
+                }
+            }
+            for (String oneLineCommentString : oneLineComments) {
+                if (pos <= buffer.length() - oneLineCommentString.length()
+                        && oneLineCommentString
+                        .regionMatches(0, buffer, pos, oneLineCommentString.length())) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }
