@@ -290,7 +290,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
         int i = 0;
         String name  = namePrefix;
         while (nameToVertex.containsKey(name)) {
-            name = name + '-' + ++i;
+            name = namePrefix + '-' + ++i;
         }
         return name;
     }
