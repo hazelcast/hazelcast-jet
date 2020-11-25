@@ -32,9 +32,9 @@ public interface FileSourceFactory {
      * Returns a Jet {@link BatchSource} that behaves as specified by the
      * provided file source builder.
      *
-     * @param builder the builder object to use to create the source
-     * @param <T>     type of the item the source emits
+     * @param configuration the configuration object to use to create the source
+     * @param <T>           type of the item the source emits
      */
     @Nonnull
-    <T> BatchSource<T> create(@Nonnull FileSourceBuilder<T> builder);
+    <T> BatchSource<T> create(@Nonnull FileSourceConfiguration<T> configuration);
 }

@@ -23,12 +23,12 @@ import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.file.AvroFileFormat;
 import com.hazelcast.jet.pipeline.file.CsvFileFormat;
 import com.hazelcast.jet.pipeline.file.FileFormat;
-import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.file.JsonFileFormat;
 import com.hazelcast.jet.pipeline.file.LinesTextFileFormat;
 import com.hazelcast.jet.pipeline.file.ParquetFileFormat;
 import com.hazelcast.jet.pipeline.file.RawBytesFileFormat;
 import com.hazelcast.jet.pipeline.file.TextFileFormat;
+import com.hazelcast.jet.pipeline.file.impl.FileSourceConfiguration;
 import com.hazelcast.jet.pipeline.file.impl.FileSourceFactory;
 import org.apache.avro.Schema;
 import org.apache.avro.mapred.AvroKey;
@@ -89,10 +89,10 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
         configurers.put(configurer.format(), configurer);
     }
 
-
-    @Nonnull @Override
+    @Nonnull
+    @Override
     @SuppressWarnings("unchecked")
-    public <T> BatchSource<T> create(@Nonnull FileSourceBuilder<T> builder) {
+    public <T> BatchSource<T> create(@Nonnull FileSourceConfiguration<T> fsc) {
 
         try {
             Job job = Job.getInstance();
@@ -100,14 +100,14 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
             Configuration configuration = job.getConfiguration();
             configuration.setBoolean(FileInputFormat.INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, true);
             configuration.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, false);
-            for (Entry<String, String> option : builder.options().entrySet()) {
+            for (Entry<String, String> option : fsc.getOptions().entrySet()) {
                 configuration.set(option.getKey(), option.getValue());
             }
 
-            Path inputPath = getInputPath(builder);
+            Path inputPath = getInputPath(fsc);
             FileInputFormat.addInputPath(job, inputPath);
 
-            FileFormat<T> fileFormat = requireNonNull(builder.format());
+            FileFormat<T> fileFormat = requireNonNull(fsc.getFormat());
             JobConfigurer configurer = this.configurers.get(fileFormat.format());
             if (configurer == null) {
                 throw new JetException("Could not find JobConfigurer for FileFormat: " + fileFormat.format() + ". " +
@@ -122,14 +122,14 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
     }
 
     @Nonnull
-    private <T> Path getInputPath(@Nonnull FileSourceBuilder<T> builder) {
-        if (builder.glob().equals("*")) {
+    private <T> Path getInputPath(FileSourceConfiguration<T> fsc) {
+        if (fsc.getGlob().equals("*")) {
             // * means all files in the directory, but also all directories
             // Hadoop interprets it as multiple input folders, resulting to processing files in 1st level
             // subdirectories
-            return new Path(builder.path());
+            return new Path(fsc.getPath());
         } else {
-            return new Path(builder.path() + File.separatorChar + builder.glob());
+            return new Path(fsc.getPath() + File.separatorChar + fsc.getGlob());
         }
     }
 

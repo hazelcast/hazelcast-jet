@@ -18,11 +18,11 @@ package com.hazelcast.jet.pipeline.file;
 
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.pipeline.BatchSource;
+import com.hazelcast.jet.pipeline.file.impl.FileSourceConfiguration;
 import com.hazelcast.jet.pipeline.file.impl.FileSourceFactory;
 import com.hazelcast.jet.pipeline.file.impl.LocalFileSourceFactory;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
@@ -60,7 +60,7 @@ import static java.util.Objects.requireNonNull;
  *   .build();
  * }</pre>
  *
- * @param <T>
+ * @param <T> type of items a source using this file format will emit
  * @since 4.4
  */
 public class FileSourceBuilder<T> {
@@ -186,45 +186,6 @@ public class FileSourceBuilder<T> {
     }
 
     /**
-     * Returns the options configured for the file source.
-     */
-    @Nonnull
-    public Map<String, String> options() {
-        return options;
-    }
-
-    /**
-     * Returns the source directory path.
-     */
-    @Nonnull
-    public String path() {
-        return path;
-    }
-
-    /**
-     * Returns the glob.
-     */
-    @Nonnull
-    public String glob() {
-        return glob;
-    }
-
-    /**
-     * Returns the source format.
-     */
-    @Nullable
-    public FileFormat<T> format() {
-        return format;
-    }
-
-    /**
-     * Returns if the filesystem is shared. Only valid for local filesystem, distributed filesystems are always shared.
-     */
-    public boolean isSharedFileSystem() {
-        return sharedFileSystem;
-    }
-
-    /**
      * Builds a {@link BatchSource} based on the current state of the builder.
      */
     @Nonnull
@@ -235,16 +196,21 @@ public class FileSourceBuilder<T> {
         if (format == null) {
             throw new IllegalStateException("Parameter 'format' is required");
         }
+
+        FileSourceConfiguration<T> fsc = new FileSourceConfiguration<>(
+                path, glob, format, sharedFileSystem, options
+        );
+
         if (useHadoop || hasHadoopPrefix()) {
             ServiceLoader<FileSourceFactory> loader = ServiceLoader.load(FileSourceFactory.class);
             // Only one implementation is expected to be present on classpath
             for (FileSourceFactory fileSourceFactory : loader) {
-                return fileSourceFactory.create(this);
+                return fileSourceFactory.create(fsc);
             }
             throw new JetException("No suitable FileSourceFactory found. " +
                     "Do you have Jet's Hadoop module on classpath?");
         }
-        return new LocalFileSourceFactory().create(this);
+        return new LocalFileSourceFactory().create(fsc);
     }
 
     private boolean hasHadoopPrefix() {

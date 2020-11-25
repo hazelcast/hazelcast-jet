@@ -23,7 +23,6 @@ import com.hazelcast.jet.json.JsonUtil;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.file.FileFormat;
-import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.file.JsonFileFormat;
 import com.hazelcast.jet.pipeline.file.LinesTextFileFormat;
 import com.hazelcast.jet.pipeline.file.ParquetFileFormat;
@@ -78,17 +77,17 @@ public class LocalFileSourceFactory implements FileSourceFactory {
     }
 
     @Nonnull @Override
-    public <T> BatchSource<T> create(@Nonnull FileSourceBuilder<T> builder) {
-        FileFormat<T> format = requireNonNull(builder.format());
+    public <T> BatchSource<T> create(@Nonnull FileSourceConfiguration<T> fsc) {
+        FileFormat<T> format = requireNonNull(fsc.getFormat());
         ReadFileFnProvider readFileFnProvider = readFileFnProviders.get(format.format());
         if (readFileFnProvider == null) {
             throw new JetException("Could not find ReadFileFnProvider for FileFormat: " + format.format() + ". " +
                     "Did you provide correct modules on classpath?");
         }
         FunctionEx<Path, Stream<T>> mapFn = readFileFnProvider.createReadFileFn(format);
-        return Sources.filesBuilder(builder.path())
-                      .glob(builder.glob())
-                      .sharedFileSystem(builder.isSharedFileSystem())
+        return Sources.filesBuilder(fsc.getPath())
+                      .glob(fsc.getGlob())
+                      .sharedFileSystem(fsc.isSharedFileSystem())
                       .build(mapFn);
     }
 
