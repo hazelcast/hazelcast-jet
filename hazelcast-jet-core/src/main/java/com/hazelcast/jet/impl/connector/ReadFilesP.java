@@ -23,6 +23,7 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
+import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -53,6 +54,8 @@ public final class ReadFilesP<T> extends AbstractProcessor {
 
     private static final int DEFAULT_LOCAL_PARALLELISM = 4;
 
+    private transient ILogger logger;
+
     private final Path directory;
     private final String glob;
     private final boolean sharedFileSystem;
@@ -82,6 +85,7 @@ public final class ReadFilesP<T> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
+        logger = context.logger();
         processorIndex = sharedFileSystem ? context.globalProcessorIndex() : context.localProcessorIndex();
         parallelism = sharedFileSystem ? context.totalParallelism() : context.localParallelism();
 
@@ -96,6 +100,7 @@ public final class ReadFilesP<T> extends AbstractProcessor {
             directoryStream = Files.newDirectoryStream(directory, glob);
             return directoryStream.iterator();
         } else {
+            logger.fine("The directory " + directory + " does not exists. This processor will emit 0 items.");
             return Collections.emptyIterator();
         }
     }

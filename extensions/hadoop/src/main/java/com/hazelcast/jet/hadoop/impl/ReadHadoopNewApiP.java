@@ -54,6 +54,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
+import static org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR;
 
 /**
  * See {@link HadoopSources#inputFormat}.
@@ -189,6 +190,8 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
             try {
                 return inputFormat.getSplits(job);
             } catch (InvalidInputException e) {
+                String directory = job.getConfiguration().get(INPUT_DIR, "");
+                logger.fine("The directory " + directory + " does not exists. This source will emit 0 items.");
                 return emptyList();
             }
         }
