@@ -55,7 +55,7 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
 
     private static final int MAX_CONCURRENT_OPS = 8;
 
-    private boolean outer;
+    private boolean inner;
     private int leftEquiJoinIndex;
     private Expression<Boolean> condition;
     private String mapName;
@@ -70,13 +70,13 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
     }
 
     JoinByPrimitiveKeyProcessorSupplier(
-            boolean outer,
+            boolean inner,
             int leftEquiJoinIndex,
             Expression<Boolean> condition,
             String mapName,
             KvRowProjector.Supplier rightRowProjectorSupplier
     ) {
-        this.outer = outer;
+        this.inner = inner;
         this.leftEquiJoinIndex = leftEquiJoinIndex;
         this.condition = condition;
         this.mapName = mapName;
@@ -102,7 +102,7 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
                     ServiceFactories.iMapService(mapName),
                     map,
                     MAX_CONCURRENT_OPS,
-                    joinFn(outer, leftEquiJoinIndex, condition, rightRowProjectorSupplier)
+                    joinFn(inner, leftEquiJoinIndex, condition, rightRowProjectorSupplier)
             );
             processors.add(processor);
         }
@@ -110,7 +110,7 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
     }
 
     private static BiFunctionEx<IMap<Object, Object>, Object[], CompletableFuture<Traverser<Object[]>>> joinFn(
-            boolean outer,
+            boolean inner,
             int leftEquiJoinIndex,
             Expression<Boolean> condition,
             SupplierEx<KvRowProjector> rightRowProjectorSupplier
@@ -123,15 +123,15 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
             KvRowProjector rightRowProjector = rightRowProjectorSupplier.get();
 
             if (key == null) {
-                return outer ? completedFuture(singleton(padRight(left, rightRowProjector.getColumnCount()))) : null;
+                return inner ? null : completedFuture(singleton(padRight(left, rightRowProjector.getColumnCount())));
             }
 
             return map.getAsync(key).toCompletableFuture()
                       .thenApply(value -> {
                           Object[] joined = join(left, key, value, rightRowProjector, joinFn);
                           return joined != null ? singleton(joined)
-                                  : outer ? singleton(padRight(left, rightRowProjector.getColumnCount()))
-                                  : null;
+                                  : inner ? null
+                                  : singleton(padRight(left, rightRowProjector.getColumnCount()));
                       });
         };
     }
@@ -157,7 +157,7 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeBoolean(outer);
+        out.writeBoolean(inner);
         out.writeInt(leftEquiJoinIndex);
         out.writeObject(condition);
         out.writeObject(mapName);
@@ -166,7 +166,7 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        outer = in.readBoolean();
+        inner = in.readBoolean();
         leftEquiJoinIndex = in.readInt();
         condition = in.readObject();
         mapName = in.readObject();

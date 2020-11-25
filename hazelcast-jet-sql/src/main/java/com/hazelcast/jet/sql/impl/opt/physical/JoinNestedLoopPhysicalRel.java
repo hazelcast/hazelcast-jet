@@ -67,7 +67,7 @@ public class JoinNestedLoopPhysicalRel extends Join implements PhysicalRel {
 
         Expression<Boolean> condition = filter(schema(), getCondition());
 
-        return new JetJoinInfo(getJoinType().isOuterJoin(), leftKeys, rightKeys, nonEquiCondition, condition);
+        return new JetJoinInfo(!getJoinType().isOuterJoin(), leftKeys, rightKeys, nonEquiCondition, condition);
     }
 
     @Override

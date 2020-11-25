@@ -29,7 +29,7 @@ import java.util.Arrays;
  * An analyzed join condition.
  * <p>
  * Contains:<ul>
- * <li>{@code outer}: true if it's an outer join
+ * <li>{@code inner}: true if it's an inner join
  * <li>{@code leftEquiJoinIndices}: indices of the fields from the left side of
  * a join which are equi-join keys
  * <li>{@code rightEquiJoinIndices}: indices of the fields from the right side
@@ -40,7 +40,7 @@ import java.util.Arrays;
  */
 public class JetJoinInfo implements DataSerializable {
 
-    private boolean outer;
+    private boolean inner;
 
     private int[] leftEquiJoinIndices;
     private int[] rightEquiJoinIndices;
@@ -53,7 +53,7 @@ public class JetJoinInfo implements DataSerializable {
     }
 
     public JetJoinInfo(
-            boolean outer,
+            boolean inner,
             int[] leftEquiJoinIndices,
             int[] rightEquiJoinIndices,
             Expression<Boolean> nonEquiCondition,
@@ -61,7 +61,7 @@ public class JetJoinInfo implements DataSerializable {
     ) {
         Preconditions.checkTrue(leftEquiJoinIndices.length == rightEquiJoinIndices.length, "indices length mismatch");
 
-        this.outer = outer;
+        this.inner = inner;
 
         this.leftEquiJoinIndices = leftEquiJoinIndices;
         this.rightEquiJoinIndices = rightEquiJoinIndices;
@@ -70,8 +70,12 @@ public class JetJoinInfo implements DataSerializable {
         this.condition = condition;
     }
 
+    public boolean isInner() {
+        return inner;
+    }
+
     public boolean isOuter() {
-        return outer;
+        return !inner;
     }
 
     public int[] leftEquiJoinIndices() {
@@ -96,7 +100,7 @@ public class JetJoinInfo implements DataSerializable {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeBoolean(outer);
+        out.writeBoolean(inner);
         out.writeObject(leftEquiJoinIndices);
         out.writeObject(rightEquiJoinIndices);
         out.writeObject(nonEquiCondition);
@@ -105,7 +109,7 @@ public class JetJoinInfo implements DataSerializable {
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        outer = in.readBoolean();
+        inner = in.readBoolean();
         leftEquiJoinIndices = in.readObject();
         rightEquiJoinIndices = in.readObject();
         nonEquiCondition = in.readObject();
@@ -115,7 +119,7 @@ public class JetJoinInfo implements DataSerializable {
     @Override
     public String toString() {
         return "JetJoinInfo{" +
-               "outer=" + outer +
+               "inner=" + inner +
                ", leftEquiJoinIndices=" + Arrays.toString(leftEquiJoinIndices) +
                ", rightEquiJoinIndices=" + Arrays.toString(rightEquiJoinIndices) +
                ", nonEquiCondition=" + nonEquiCondition +

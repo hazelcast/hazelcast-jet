@@ -94,7 +94,7 @@ public class JoinByPredicateProcessorTest {
     @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
     public void when_innerJoinFilteredOutByProjector_then_absent() throws Exception {
         // given
-        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
+        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), true);
 
         given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1"), entry(2, "value-2")));
         given(rightProjector.project(entry(1, "value-1"))).willReturn(null);
@@ -114,7 +114,7 @@ public class JoinByPredicateProcessorTest {
     @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
     public void when_innerJoinProjectedByProjector_then_modified() throws Exception {
         // given
-        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
+        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), true);
 
         given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1")));
         given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{2, "modified"});
@@ -136,7 +136,7 @@ public class JoinByPredicateProcessorTest {
                 ColumnExpression.create(0, INT),
                 ColumnExpression.create(1, INT),
                 ComparisonMode.EQUALS
-        ), false);
+        ), true);
 
         given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1"), entry(2, "value-2")));
         given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{1, "value-1"});
@@ -155,7 +155,7 @@ public class JoinByPredicateProcessorTest {
     @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
     public void when_outerJoinFilteredOutByProjector_then_nulls() throws Exception {
         // given
-        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), true);
+        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
 
         given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1")));
         given(rightProjector.project(entry(1, "value-1"))).willReturn(null);
@@ -174,7 +174,7 @@ public class JoinByPredicateProcessorTest {
     @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
     public void when_outerJoinProjectedByProjector_then_modified() throws Exception {
         // given
-        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), true);
+        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
 
         given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1")));
         given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{2, "modified"});
@@ -196,7 +196,7 @@ public class JoinByPredicateProcessorTest {
                 ColumnExpression.create(0, INT),
                 ColumnExpression.create(1, INT),
                 ComparisonMode.EQUALS
-        ), true);
+        ), false);
 
         given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(2, "value-2")));
         given(rightProjector.project(entry(2, "value-2"))).willReturn(new Object[]{2, "value-2"});
@@ -211,9 +211,9 @@ public class JoinByPredicateProcessorTest {
         verifyNoMoreInteractions(outbox);
     }
 
-    private Processor processor(Expression<Boolean> nonEquiCondition, boolean outer) throws Exception {
+    private Processor processor(Expression<Boolean> nonEquiCondition, boolean inner) throws Exception {
         ProcessorSupplier supplier = new JoinByPredicateProcessorSupplier(
-                new JetJoinInfo(outer, new int[]{0}, new int[]{0}, nonEquiCondition, null),
+                new JetJoinInfo(inner, new int[]{0}, new int[]{0}, nonEquiCondition, null),
                 "map",
                 new QueryPath[]{QueryPath.KEY_PATH},
                 rightRowProjectorSupplier

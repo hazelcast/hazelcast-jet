@@ -86,15 +86,15 @@ final class JoinScanProcessorSupplier implements ProcessorSupplier, DataSerializ
     public Collection<? extends Processor> get(int count) {
         List<Processor> processors = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            Processor processor = new TransformBatchedP<Object[], Object[]>(
-                    MAX_BATCH_SIZE,
-                    joinFn(joinInfo, map, rightRowProjectorSupplier.get(serializationService, extractors))
-            ) {
-                @Override
-                public boolean isCooperative() {
-                    return false;
-                }
-            };
+            KvRowProjector rightProjector = rightRowProjectorSupplier.get(serializationService, extractors);
+            Processor processor =
+                    new TransformBatchedP<Object[], Object[]>(MAX_BATCH_SIZE, joinFn(joinInfo, map, rightProjector)
+                    ) {
+                        @Override
+                        public boolean isCooperative() {
+                            return false;
+                        }
+                    };
             processors.add(processor);
         }
         return processors;

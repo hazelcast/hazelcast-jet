@@ -94,14 +94,15 @@ final class JoinByPredicateProcessorSupplier implements ProcessorSupplier, DataS
     public Collection<? extends Processor> get(int count) {
         List<Processor> processors = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            Processor processor = new TransformP<Object[], Object[]>(
-                    joinFn(joinInfo, map, rightPaths, rightRowProjectorSupplier.get(serializationService, extractors))
-            ) {
-                @Override
-                public boolean isCooperative() {
-                    return false;
-                }
-            };
+            KvRowProjector rightProjector = rightRowProjectorSupplier.get(serializationService, extractors);
+            Processor processor =
+                    new TransformP<Object[], Object[]>(joinFn(joinInfo, map, rightPaths, rightProjector)
+                    ) {
+                        @Override
+                        public boolean isCooperative() {
+                            return false;
+                        }
+                    };
             processors.add(processor);
         }
         return processors;
@@ -113,7 +114,7 @@ final class JoinByPredicateProcessorSupplier implements ProcessorSupplier, DataS
             QueryPath[] rightPaths,
             KvRowProjector rightRowProjector
     ) {
-        boolean outer = joinInfo.isOuter();
+        boolean inner = joinInfo.isInner();
         int[] leftEquiJoinIndices = joinInfo.leftEquiJoinIndices();
         int[] rightEquiJoinIndices = joinInfo.rightEquiJoinIndices();
         BiFunctionEx<Object[], Object[], Object[]> joinFn = ExpressionUtil.joinFn(joinInfo.nonEquiCondition());
@@ -122,13 +123,13 @@ final class JoinByPredicateProcessorSupplier implements ProcessorSupplier, DataS
             Predicate<Object, Object> predicate =
                     JoinPredicateFactory.toPredicate(left, leftEquiJoinIndices, rightEquiJoinIndices, rightPaths);
             if (predicate == null) {
-                return outer ? singleton(padRight(left, rightRowProjector.getColumnCount())) : empty();
+                return inner ? empty() : singleton(padRight(left, rightRowProjector.getColumnCount()));
             }
 
             List<Object[]> joined = join(left, map.entrySet(predicate), rightRowProjector, joinFn);
             return !joined.isEmpty() ? traverseIterable(joined)
-                    : outer ? singleton(padRight(left, rightRowProjector.getColumnCount()))
-                    : empty();
+                    : inner ? empty()
+                    : singleton(padRight(left, rightRowProjector.getColumnCount()));
         };
     }
 

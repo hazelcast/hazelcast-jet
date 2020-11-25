@@ -159,7 +159,7 @@ public class IMapSqlConnector implements SqlConnector {
                     dag.newUniqueVertex(
                             "Join(Lookup-" + toString(table) + ")",
                             new JoinByPrimitiveKeyProcessorSupplier(
-                                    joinInfo.isOuter(),
+                                    joinInfo.isInner(),
                                     leftEquiJoinPrimitiveKeyIndex,
                                     joinInfo.condition(),
                                     name,
