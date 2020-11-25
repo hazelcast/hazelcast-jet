@@ -119,6 +119,7 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
 
         return (map, left) -> {
             Object key = left[leftEquiJoinIndex];
+            // TODO: somehow avoid projector instantiation for each row ?
             KvRowProjector rightRowProjector = rightRowProjectorSupplier.get();
 
             if (key == null) {
