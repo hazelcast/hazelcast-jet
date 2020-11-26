@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.pipeline.file.impl;
 
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
 
@@ -36,5 +37,5 @@ public interface FileSourceFactory {
      * @param <T>           type of the item the source emits
      */
     @Nonnull
-    <T> BatchSource<T> create(@Nonnull FileSourceConfiguration<T> configuration);
+    <T> ProcessorMetaSupplier create(@Nonnull FileSourceConfiguration<T> configuration);
 }

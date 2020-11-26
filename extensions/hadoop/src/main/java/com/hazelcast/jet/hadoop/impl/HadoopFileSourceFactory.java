@@ -18,8 +18,7 @@ package com.hazelcast.jet.hadoop.impl;
 
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.hadoop.HadoopSources;
-import com.hazelcast.jet.pipeline.BatchSource;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.file.AvroFileFormat;
 import com.hazelcast.jet.pipeline.file.CsvFileFormat;
 import com.hazelcast.jet.pipeline.file.FileFormat;
@@ -54,6 +53,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.ServiceLoader;
 
+import static com.hazelcast.jet.hadoop.HadoopProcessors.readHadoopP;
 import static com.hazelcast.jet.hadoop.impl.CsvInputFormat.CSV_INPUT_FORMAT_BEAN_CLASS;
 import static com.hazelcast.jet.hadoop.impl.JsonInputFormat.JSON_INPUT_FORMAT_BEAN_CLASS;
 import static java.util.Objects.requireNonNull;
@@ -92,7 +92,7 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
     @Nonnull
     @Override
     @SuppressWarnings("unchecked")
-    public <T> BatchSource<T> create(@Nonnull FileSourceConfiguration<T> fsc) {
+    public <T> ProcessorMetaSupplier create(@Nonnull FileSourceConfiguration<T> fsc) {
 
         try {
             Job job = Job.getInstance();
@@ -115,7 +115,7 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
             }
             configurer.configure(job, fileFormat);
 
-            return HadoopSources.inputFormat(configuration, (BiFunctionEx<?, ?, T>) configurer.projectionFn());
+            return readHadoopP(SerializableConfiguration.asSerializable(configuration), configurer.projectionFn());
         } catch (IOException e) {
             throw new JetException("Could not create a source", e);
         }

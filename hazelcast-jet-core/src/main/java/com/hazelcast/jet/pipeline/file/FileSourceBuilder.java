@@ -17,7 +17,9 @@
 package com.hazelcast.jet.pipeline.file;
 
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.BatchSource;
+import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.file.impl.FileSourceConfiguration;
 import com.hazelcast.jet.pipeline.file.impl.FileSourceFactory;
 import com.hazelcast.jet.pipeline.file.impl.LocalFileSourceFactory;
@@ -190,6 +192,17 @@ public class FileSourceBuilder<T> {
      */
     @Nonnull
     public BatchSource<T> build() {
+        ProcessorMetaSupplier metaSupplier = buildMetaSupplier();
+
+        return Sources.batchFromProcessor("files(path=" + path + ", glob=" + glob + ", hadoop=" + shouldUseHadoop(),
+                metaSupplier);
+    }
+
+    /**
+     * Builds a {@link com.hazelcast.jet.core.ProcessorMetaSupplier} based on the current state of the builder.
+     */
+    @Nonnull
+    public ProcessorMetaSupplier buildMetaSupplier() {
         if (path == null) {
             throw new IllegalStateException("Parameter 'path' is required");
         }
@@ -201,7 +214,7 @@ public class FileSourceBuilder<T> {
                 path, glob, format, sharedFileSystem, options
         );
 
-        if (useHadoop || hasHadoopPrefix(path)) {
+        if (shouldUseHadoop()) {
             ServiceLoader<FileSourceFactory> loader = ServiceLoader.load(FileSourceFactory.class);
             // Only one implementation is expected to be present on classpath
             for (FileSourceFactory fileSourceFactory : loader) {
@@ -211,6 +224,10 @@ public class FileSourceBuilder<T> {
                     "Do you have Jet's Hadoop module on classpath?");
         }
         return new LocalFileSourceFactory().create(fsc);
+    }
+
+    private boolean shouldUseHadoop() {
+        return useHadoop || hasHadoopPrefix(path);
     }
 
     private static boolean hasHadoopPrefix(String path) {
