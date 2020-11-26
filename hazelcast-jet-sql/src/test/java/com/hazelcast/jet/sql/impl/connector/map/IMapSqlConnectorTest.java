@@ -87,7 +87,6 @@ public class IMapSqlConnectorTest {
         // then
         assertThat(join.ingress()).isNotNull();
         assertThat(join.ingress()).isEqualTo(join.egress());
-        assertThat(join.configureEdgeFn()).isNotNull();
     }
 
     @Test
@@ -108,8 +107,6 @@ public class IMapSqlConnectorTest {
         assertThat(join.ingress()).isNotNull();
         assertThat(join.egress()).isNotNull();
         assertThat(join.ingress()).isNotEqualTo(join.egress());
-        assertThat(join.configureEdgeFn()).isNotNull();
-        verify(dag).edge(isA(Edge.class));
     }
 
     @Test
@@ -127,7 +124,6 @@ public class IMapSqlConnectorTest {
         // then
         assertThat(join.ingress()).isNotNull();
         assertThat(join.ingress()).isEqualTo(join.egress());
-        assertThat(join.configureEdgeFn()).isNull();
     }
 
     @Test
@@ -144,7 +140,6 @@ public class IMapSqlConnectorTest {
         // then
         assertThat(join.ingress()).isNotNull();
         assertThat(join.ingress()).isEqualTo(join.egress());
-        assertThat(join.configureEdgeFn()).isNull();
     }
 
     private static JetJoinInfo joinInfo(boolean inner, int[] leftEquiJoinIndices, int[] rightEquiJoinIndices) {
