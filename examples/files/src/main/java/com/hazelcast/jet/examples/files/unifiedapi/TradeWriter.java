@@ -33,6 +33,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.parquet.avro.AvroParquetOutputFormat;
 
+import java.nio.file.Paths;
+
 /**
  * Converts data from jsonl file to other formats. You don't need to run this.
  * The data is already stored in data/trades.
@@ -48,7 +50,8 @@ public class TradeWriter {
         AvroParquetOutputFormat.setOutputPath(job, new Path("./data/trades.parquet"));
         AvroParquetOutputFormat.setSchema(job, tradeAvroSchema);
 
-        BatchSource<Trade> source = FileSources.files("data/trades/*jsonl")
+        BatchSource<Trade> source = FileSources.files(Paths.get("data/trades").toAbsolutePath().toString())
+                                               .glob("*jsonl")
                                                .format(FileFormat.json(Trade.class))
                                                .build();
 

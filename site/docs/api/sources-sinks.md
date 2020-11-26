@@ -47,19 +47,20 @@ The following shows the simplest use of the file source, which reads a
 text file line by line:
 
 ```java
-BatchSource<String> source = FileSources.files("path/to/my/file")
+BatchSource<String> source = FileSources.files("/path/to/my/directory")
                                         .build();
 ```
 
-The `path` parameter takes both relative and absolute paths. It can
-point to a single file, or a directory. Note that the directory is not
-read recursively. The file part can contain a glob (`*`), that can be
-used to read portion of the files from a directory.  For example, if a
-folder contains log files, named using `YYYY-MM-DD.log` pattern, you can
-read all the files from January 2020 by setting the following path:
+The `path` parameter takes an absolute path. It must point to a
+directory. The directory is not read recursively. The files in the
+directory can be filtered by specifying a glob parameter - a pattern
+with wildcard characters (`*`, `?`). For example, if a folder contains
+log files, named using `YYYY-MM-DD.log` pattern, you can read all the
+files from January 2020 by setting the following parameters:
 
 ```java
-BatchSource<String> source = FileSources.files("logs/2020-01-*.log")
+BatchSource<String> source = FileSources.files("/var/log/")
+                                        .glob("2020-01-*.log")
                                         .build();
 ```
 
@@ -71,7 +72,8 @@ using Parquet format. You need to provide Hadoop module
 following way:
 
 ```java
-BatchSource<String> source = FileSources.files("logs/wikipedia.txt")
+BatchSource<String> source = FileSources.files("/data")
+                                        .glob("wikipedia.txt")
                                         .useHadoopForLocalFiles(true)
                                         .build();
 ```
@@ -80,7 +82,8 @@ You can provide additional options to Hadoop via `option(String,
 String)` method. E.g. to read all files in a directory recursively:
 
 ```java
-BatchSource<String> source = FileSources.files("logs/wikipedia.txt")
+BatchSource<String> source = FileSources.files("/data")
+                                        .glob("wikipedia.txt")
                                         .useHadoopForLocalFiles(true)
                                         .option("mapreduce.input.fileinputformat.input.dir.recursive", "true")
                                         .build();
@@ -95,7 +98,7 @@ read line by line. You can specify the file format using
 to read the whole file as a single String using `FileFormat.text()`:
 
 ```java
-BatchSource<String> source = FileSources.files("path/to/my/file")
+BatchSource<String> source = FileSources.files("/path/to/my/directory")
                                         .format(FileFormat.text())
                                         .build();
 ```
@@ -133,7 +136,8 @@ don't need to provide the User class to the builder, but we need to
 satisfy the Java type system:
 
 ```java
-BatchSource<User> source = FileSources.files("users.avro")
+BatchSource<User> source = FileSources.files("/data")
+                                      .glob("users.avro")
                                       .format(FileFormat.<User>avro())
                                       .build();
 ```
@@ -145,7 +149,8 @@ structure of your class matches the data you can use Java reflection to
 read the data:
 
 ```java
-BatchSource<User> source = FileSources.files("users.avro")
+BatchSource<User> source = FileSources.files("/data")
+                                      .glob("users.avro")
                                       .format(FileFormat.avro(User.class))
                                       .build();
 ```
@@ -163,7 +168,8 @@ Create the file source in the following way to read from file
 `users.csv` and deserialize into a `User` class.
 
 ```java
-BatchSource<User> source = FileSources.files("users.csv")
+BatchSource<User> source = FileSources.files("/data")
+                                      .glob("users.csv")
                                       .format(FileFormat.csv(User.class))
                                       .build();
 ```
@@ -177,7 +183,8 @@ Create the file source in the following way to read from file
 `users.jsonl` and deserialize into a `User` class.
 
 ```java
-BatchSource<User> source = FileSources.files("users.jsonl")
+BatchSource<User> source = FileSources.files("/data")
+                                      .glob("users.jsonl")
                                       .format(FileFormat.json(User.class))
                                       .build();
 ```
@@ -188,9 +195,10 @@ Create the file source in the following way to read file as text, whole
 file is read as a single String:
 
 ```java
-BatchSource<String> source = FileSources.files("file.txt")
-                                      .format(FileFormat.text())
-                                      .build();
+BatchSource<String> source = FileSources.files("/data")
+                                        .glob("file.txt")
+                                        .format(FileFormat.text())
+                                        .build();
 ```
 
 When reading from local filesystem you can specify the character
@@ -198,7 +206,8 @@ encoding. This is not supported when using the Hadoop based modules. If provided
 the option will be ignored.
 
 ```java
-BatchSource<String> source = FileSources.files("file.txt")
+BatchSource<String> source = FileSources.files("/data")
+                                        .glob("file.txt")
                                         .format(FileFormat.text(Charset.forName("Cp1250")));
 ```
 
@@ -206,9 +215,10 @@ You can read file line by line in the following way, this is the default
 and you can omit the `.format(FileFormat.lines())` part.
 
 ```java
-BatchSource<String> source = FileSources.files("file.txt")
-                                      .format(FileFormat.lines())
-                                      .build();
+BatchSource<String> source = FileSources.files("/data")
+                                        .glob("file.txt")
+                                        .format(FileFormat.lines())
+                                        .build();
 ```
 
 #### Parquet
@@ -226,7 +236,8 @@ Create the file source in the following way to read data from a parquet
 file:
 
 ```java
-BatchSource<String> source = FileSources.files("users.parquet")
+BatchSource<String> source = FileSources.files("/data")
+                                        .glob("users.parquet")
                                         .format(FileFormat.<SpecificUser>parquet())
                                         .build();
 ```
@@ -236,7 +247,8 @@ BatchSource<String> source = FileSources.files("users.parquet")
 You can read binary files (e.g. images) in the following way:
 
 ```java
-BatchSource<byte[]> source = FileSources.files("file.txt")
+BatchSource<byte[]> source = FileSources.files("/data")
+                                        .glob("file.txt")
                                         .format(FileFormat.bytes())
                                         .build();
 ```
@@ -245,12 +257,12 @@ BatchSource<byte[]> source = FileSources.files("file.txt")
 
 |Storage System|Module|Example path|
 |:------------|:------------------|:--------------|
-|HDFS|`hazelcast-jet-hadoop-all`|`hdfs://path/to/a/file.csv`|
-|Amazon S3|`hazelcast-jet-files-s3`|`s3a://example-bucket/path/in/the/bucket/file.csv`|
-|Google Cloud Storage|`hazelcast-jet-files-gcs`|`gs://example-bucket/path/in/the/bucket/file.csv`|
-|Windows Azure Blob Storage|`hazelcast-jet-files-azure`|`wasbs://example-container@examplestorageaccount.blob.core.windows.net/path/in/the/container/file.csv`|
-|Azure Data Lake Generation 1|`hazelcast-jet-files-azure`|`adl://exampledatalake.azuredatalakestore.net/path/in/the/container/file.csv`|
-|Azure Data Lake Generation 2|`hazelcast-jet-files-azure`|`abfs://example-container@exampledatalakeaccount.dfs.core.windows.net/path/in/the/container/file.csv`|
+|HDFS|`hazelcast-jet-hadoop-all`|`hdfs://path/to/a/directory`|
+|Amazon S3|`hazelcast-jet-files-s3`|`s3a://example-bucket/path/in/the/bucket`|
+|Google Cloud Storage|`hazelcast-jet-files-gcs`|`gs://example-bucket/path/in/the/bucket`|
+|Windows Azure Blob Storage|`hazelcast-jet-files-azure`|`wasbs://example-container@examplestorageaccount.blob.core.windows.net/path/in/the/container`|
+|Azure Data Lake Generation 1|`hazelcast-jet-files-azure`|`adl://exampledatalake.azuredatalakestore.net/path/in/the/container`|
+|Azure Data Lake Generation 2|`hazelcast-jet-files-azure`|`abfs://example-container@exampledatalakeaccount.dfs.core.windows.net/path/in/the/container`|
 
 You can obtain the artifacts in the _Additional Modules_ section on the
 [download page](/download) or download from Maven Central repository,
@@ -332,6 +344,24 @@ For additional ways to authenticate see
 
 For additional ways to authenticate see
 [Hadoop Azure Data Lake Storage Gen2](https://hadoop.apache.org/docs/stable/hadoop-azure/abfs.html)
+
+### Hadoop with Custom Classpath
+
+Alternatively to using one of the modules with all the dependencies
+included, you may use `hazelcast-jet-hadoop` module and configure the
+classpath manually.
+
+Enable the module by moving the jar
+`opt/hazelcast-jet-hadoop-{jet-version}.jar` to `lib/` directory and
+configure the classpath in the following way, using the
+`hadoop classpath` command:
+
+```bash
+export CLASSPATH=$($HADOOP_HOME/bin/hadoop classpath)
+```
+
+Note that you must do these actions on both the node submitting the job
+and all Jet cluster members.
 
 ### Hadoop Native Libraries
 

@@ -27,6 +27,8 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSources;
 
+import java.nio.file.Paths;
+
 /**
  * Demonstrates usage of {@link FileSources#files(String)} and various file formats from {@link FileFormat}
  * <p>
@@ -56,28 +58,32 @@ public class TradeAnalyzerJob {
         BatchSource<Trade> source;
         switch (type) {
             case "csv":
-                source = FileSources.files(sourceDir + "/*." + type)
+                source = FileSources.files(sourceDir)
+                                    .glob("*." + type)
                                     .format(FileFormat.csv(Trade.class))
                                     .build();
                 trades = p.readFrom(source);
                 break;
 
             case "jsonl":
-                source = FileSources.files(sourceDir + "/*." + type)
+                source = FileSources.files(sourceDir)
+                                    .glob("*." + type)
                                     .format(FileFormat.json(Trade.class))
                                     .build();
                 trades = p.readFrom(source);
                 break;
 
             case "avro":
-                source = FileSources.files(sourceDir + "/*." + type)
+                source = FileSources.files(sourceDir)
+                                    .glob("*." + type)
                                     .format(FileFormat.avro(Trade.class))
                                     .build();
                 trades = p.readFrom(source);
                 break;
 
             case "parquet":
-                BatchSource<AvroTrade> parquetSource = FileSources.files(sourceDir + "/*." + type)
+                BatchSource<AvroTrade> parquetSource = FileSources.files(sourceDir)
+                                                                  .glob("*." + type)
                                                                   .format(FileFormat.<AvroTrade>parquet())
                                                                   .useHadoopForLocalFiles(true)
                                                                   .build();
@@ -108,7 +114,7 @@ public class TradeAnalyzerJob {
         final String type = args[0];
         final String sourceDir = args[1];
 
-        Pipeline p = buildPipeline(sourceDir, type);
+        Pipeline p = buildPipeline(Paths.get(sourceDir).toAbsolutePath().toString(), type);
 
         JetInstance instance = Jet.bootstrappedInstance();
         try {
