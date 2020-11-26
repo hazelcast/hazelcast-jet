@@ -270,6 +270,23 @@
             <version>${hadoop.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!--
+        HDFS (via hadoop-minicluster) and kafka-schema-registry depend on different versions of jetty
+        Listing hadoop-common here brings it further up the dependency tree (it is a transitive dependency of
+        hadoop-client and hadoop-minicluster), therefore preferring it's version of jetty.
+        Easier than specifying jetty artifacts directly.
+
+        Not an ideal solution. Much better would be to move kafka-schema-registry out, using e.g. testcontainers so it
+        doesn't pollute the classpath.
+        -->
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <version>3.2.1</version>
+            <scope>provided</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
