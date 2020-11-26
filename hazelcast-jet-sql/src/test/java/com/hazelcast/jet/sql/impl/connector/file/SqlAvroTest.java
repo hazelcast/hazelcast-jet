@@ -128,7 +128,9 @@ public class SqlAvroTest extends SqlTestSupport {
                         LocalDate.of(2020, 4, 15),
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
                         OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC),
-                        new GenericRecordBuilder(SchemaBuilder.record("object").namespace("jet.sql").fields().endRecord()).build()
+                        new GenericRecordBuilder(
+                                SchemaBuilder.record("object").namespace("jet.sql").fields().endRecord()
+                        ).build()
                 ))
         );
     }
