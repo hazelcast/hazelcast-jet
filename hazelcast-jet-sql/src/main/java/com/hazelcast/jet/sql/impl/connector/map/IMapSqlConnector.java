@@ -83,7 +83,8 @@ public class IMapSqlConnector implements SqlConnector {
         return false;
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public List<MappingField> resolveAndValidateFields(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
@@ -92,7 +93,8 @@ public class IMapSqlConnector implements SqlConnector {
         return metadataResolvers.resolveAndValidateFields(userFields, options, nodeEngine);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public final Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
@@ -136,7 +138,8 @@ public class IMapSqlConnector implements SqlConnector {
         return true;
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public NestedLoopJoin nestedLoopReader(
             @Nonnull DAG dag,
             @Nonnull Table table0,
@@ -173,8 +176,9 @@ public class IMapSqlConnector implements SqlConnector {
             );
         } else if (joinInfo.isEquiJoin() && joinInfo.isInner()) {
             // TODO: define new edge type (mix of broadcast & unicast) ?
-            Vertex ingress = dag.newUniqueVertex("Broadcast", () -> new TransformP<>(Traversers::singleton));
-            ingress.localParallelism(1);
+            Vertex ingress = dag
+                    .newUniqueVertex("Broadcast", () -> new TransformP<>(Traversers::singleton))
+                    .localParallelism(1);
 
             Vertex egress = dag.newUniqueVertex(
                     "Join(Predicate-" + toString(table) + ")",
@@ -231,7 +235,8 @@ public class IMapSqlConnector implements SqlConnector {
         return false;
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public Vertex sink(
             @Nonnull DAG dag,
             @Nonnull Table table0
