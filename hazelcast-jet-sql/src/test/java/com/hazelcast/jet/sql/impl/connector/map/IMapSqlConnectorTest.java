@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
@@ -42,7 +41,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
 
 @RunWith(JUnitParamsRunner.class)
 public class IMapSqlConnectorTest {
