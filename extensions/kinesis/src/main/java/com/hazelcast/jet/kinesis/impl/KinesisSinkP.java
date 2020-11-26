@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class KinesisSinkP<T> implements Processor {
 
@@ -53,7 +54,7 @@ public class KinesisSinkP<T> implements Processor {
      */
     private static final int MAX_RECORDS_IN_REQUEST = 500;
 
-    private static final long PAUSE_AFTER_FAILURE = 1000L; //todo: exponential backoff
+    private static final long PAUSE_AFTER_FAILURE = SECONDS.toNanos(1); //todo: exponential backoff
 
     /**
      * Each record, when encoded as a byte array, is limited to 1M,
@@ -82,7 +83,7 @@ public class KinesisSinkP<T> implements Processor {
     private KinesisHelper helper;
 
     private State state = State.READY_TO_SEND;
-    private long nextSendTime;
+    private long nextSendTime = System.nanoTime();
     private Future<PutRecordsResult> sendResult;
 
     public KinesisSinkP(
@@ -115,17 +116,26 @@ public class KinesisSinkP<T> implements Processor {
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
-        switch (state) {
-            case READY_TO_SEND:
-                handleReadyToSend(inbox);
-                return;
-            case SENDING_IN_PROGRESS:
-                handleSendingInProgress();
-                return;
-            default:
-                throw new RuntimeException("Programming error, unhandled state: " + state);
+        if (state == State.SENDING_IN_PROGRESS) {
+            handleSendingInProgress();
         }
+        if (state == State.READY_TO_SEND) {
+            handleReadyToSend(inbox);
+        }
+    }
 
+    @Override
+    public boolean complete() {
+        if (state == State.SENDING_IN_PROGRESS) {
+            handleSendingInProgress();
+        }
+        if (state == State.READY_TO_SEND) {
+            if (buffer.isEmpty()) {
+                return true;
+            }
+            handleReadyToSend(null);
+        }
+        return false;
     }
 
     private void bufferFromInbox(@Nonnull Inbox inbox) {
@@ -150,22 +160,24 @@ public class KinesisSinkP<T> implements Processor {
         }
     }
 
-    private void handleReadyToSend(@Nonnull Inbox inbox) {
-        bufferFromInbox(inbox);
+    private void handleReadyToSend(@Nullable Inbox inbox) {
+        if (inbox != null) {
+            bufferFromInbox(inbox);
+        }
         if (attemptToDispatchBufferContent()) {
             state = State.SENDING_IN_PROGRESS;
         }
     }
 
     private boolean attemptToDispatchBufferContent() {
-        if (buffer.isEmpty() || System.currentTimeMillis() < nextSendTime) {
+        if (buffer.isEmpty() || System.nanoTime() < nextSendTime) {
             return false;
         }
 
         List<PutRecordsRequestEntry> entries = buffer.content();
         sendResult = helper.putRecordsAsync(entries);
 
-        nextSendTime = System.currentTimeMillis(); //todo: add some wait here?
+        nextSendTime = System.nanoTime(); //todo: add some wait here?
         return true;
     }
 
@@ -196,7 +208,7 @@ public class KinesisSinkP<T> implements Processor {
 
     private void dealWithSendFailure(@Nonnull String message) {
         logger.warning(message);
-        nextSendTime = System.currentTimeMillis() + PAUSE_AFTER_FAILURE;
+        nextSendTime = System.nanoTime() + PAUSE_AFTER_FAILURE;
         state = State.READY_TO_SEND;
     }
 
@@ -284,14 +296,11 @@ public class KinesisSinkP<T> implements Processor {
             }
 
             totalEntrySize -= entries[index].encodedSize;
-
-            int lastIndex = entryCount - 1;
-            if (index < lastIndex) {
+            entryCount--;
+            if (index < entryCount) {
                 BufferEntry tmp = entries[index];
-                entries[index] = entries[lastIndex];
-                entries[lastIndex] = tmp;
-            } else {
-                entryCount--;
+                System.arraycopy(entries, index + 1, entries, index, entryCount - index);
+                entries[entryCount] = tmp;
             }
         }
 

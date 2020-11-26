@@ -42,6 +42,7 @@ import com.hazelcast.map.IMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -116,6 +117,11 @@ public class KinesisIntegrationTest extends JetTestSupport {
         );
         KINESIS = AWS_CONFIG.buildClient();
         HELPER = new KinesisHelper(KINESIS, STREAM, Logger.getLogger(KinesisIntegrationTest.class));
+    }
+
+    @AfterClass
+    public static void afterClass() {
+        KINESIS.shutdown();
     }
 
     @Before

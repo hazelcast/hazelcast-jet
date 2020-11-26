@@ -37,8 +37,8 @@ public class RandomizedRateTracker {
     private final long[] parts;
     private int index;
 
-    public RandomizedRateTracker(long durationMs, int n) {
-        parts = init(durationMs, n);
+    public RandomizedRateTracker(long duration, int n) {
+        parts = init(duration, n);
     }
 
     public long next() {

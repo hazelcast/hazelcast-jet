@@ -29,6 +29,7 @@ import java.util.LinkedList;
 import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 class ShardReader extends AbstractShardWorker {
 
@@ -57,7 +58,7 @@ class ShardReader extends AbstractShardWorker {
      * We also need to add this extra wait whenever we encounter other unexpected
      * failures.
      * */
-    private static final long PAUSE_AFTER_FAILURE = 1000L; //todo: exponential backoff
+    private static final long PAUSE_AFTER_FAILURE = SECONDS.toNanos(1); //todo: exponential backoff
 
     /**
      * Maximum number of records returned by this reader in a single batch. Is
@@ -75,7 +76,7 @@ class ShardReader extends AbstractShardWorker {
     private String shardIterator;
     private Future<GetShardIteratorResult> shardIteratorResult;
     private Future<GetRecordsResult> recordsResult;
-    private long nextGetRecordsTime;
+    private long nextGetRecordsTime = System.nanoTime();
 
     private final LinkedList<Record> data = new LinkedList<>();
 
@@ -167,7 +168,7 @@ class ShardReader extends AbstractShardWorker {
 
     private Result dealWithReadRecordFailure(String message) {
         logger.warning(message);
-        nextGetRecordsTime = System.currentTimeMillis() + PAUSE_AFTER_FAILURE;
+        nextGetRecordsTime = System.nanoTime() + PAUSE_AFTER_FAILURE;
         state = State.NEED_TO_REQUEST_RECORDS;
         return Result.NOTHING;
     }
@@ -190,13 +191,13 @@ class ShardReader extends AbstractShardWorker {
     }
 
     private boolean attemptToSendGetRecordsRequest() {
-        if (System.currentTimeMillis() < nextGetRecordsTime) {
+        if (System.nanoTime() < nextGetRecordsTime) {
             return false;
         }
 
         recordsResult = helper.getRecordsAsync(shardIterator);
 
-        nextGetRecordsTime = System.currentTimeMillis() + getRecordsRateTracker.next();
+        nextGetRecordsTime = System.nanoTime() + getRecordsRateTracker.next();
         return true;
     }
 

@@ -53,7 +53,7 @@ public class RangeMonitor extends AbstractShardWorker {
      * idea to add some waits (decrease the rate) in order to alleviate the
      * problem.
      */
-    private static final long PAUSE_AFTER_FAILURE = 1000L; //todo: exponential backoff
+    private static final long PAUSE_AFTER_FAILURE = SECONDS.toNanos(1); //todo: exponential backoff
 
     //todo: never removing from the set of known shards, because I have to read from all shards, not
     // just the active ones and I have to not read from shards that are closed and I have read from them already...
@@ -82,7 +82,7 @@ public class RangeMonitor extends AbstractShardWorker {
         this.hashRange = hashRange;
         this.knownShards = knownShards.stream().map(Shard::getShardId).collect(toSet());
         this.listShardsRateTracker = initRandomizedTracker(totalInstances);
-        this.nextListShardsTime = System.currentTimeMillis() + listShardsRateTracker.next();
+        this.nextListShardsTime = System.nanoTime() + listShardsRateTracker.next();
     }
 
     public Result run() {
@@ -99,14 +99,14 @@ public class RangeMonitor extends AbstractShardWorker {
     }
 
     private Result handleReadyToListShards() {
-        if (System.currentTimeMillis() < nextListShardsTime) {
+        if (System.nanoTime() < nextListShardsTime) {
             return Result.NOTHING;
         }
 
         listShardResult = helper.listShardsAsync(nextToken);
         state = State.WAITING_FOR_SHARD_LIST;
 
-        nextListShardsTime = System.currentTimeMillis() + listShardsRateTracker.next();
+        nextListShardsTime = System.nanoTime() + listShardsRateTracker.next();
 
         return Result.NOTHING;
     }
@@ -137,7 +137,7 @@ public class RangeMonitor extends AbstractShardWorker {
             } catch (SdkClientException e) {
                 logger.warning("Failed listing shards, retrying. Cause: " + e.getMessage());
                 nextToken = null;
-                nextListShardsTime = System.currentTimeMillis() + PAUSE_AFTER_FAILURE;
+                nextListShardsTime = System.nanoTime() + PAUSE_AFTER_FAILURE;
                 state = State.READY_TO_LIST_SHARDS;
                 return Result.NOTHING;
             } catch (Throwable t) {
@@ -195,7 +195,7 @@ public class RangeMonitor extends AbstractShardWorker {
         // The maximum rate at which ListStreams operations can be performed on
         // a data stream is 100/second and we need to enforce this, even while
         // we are issuing them from multiple processors in parallel
-        return new RandomizedRateTracker(SECONDS.toMillis(1) * totalInstances,
+        return new RandomizedRateTracker(SECONDS.toNanos(1) * totalInstances,
                 (int) (SHARD_LISTINGS_ALLOWED_PER_SECOND * PERCENTAGE_OF_SHARD_LISTING_RATE_UTILIZED));
     }
 

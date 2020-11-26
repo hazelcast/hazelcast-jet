@@ -15,12 +15,15 @@
  */
 package com.hazelcast.jet.kinesis.impl;
 
+import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -78,5 +81,12 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
                 .mapToObj(i -> new KinesisSourceP(
                         clients[i % clients.length], stream, eventTimePolicy, hashRange.partition(i, count)))
                 .collect(toList());
+    }
+
+    @Override
+    public void close(@Nullable Throwable error) {
+        if (clients != null) {
+            Arrays.stream(clients).forEach(AmazonKinesis::shutdown);
+        }
     }
 }

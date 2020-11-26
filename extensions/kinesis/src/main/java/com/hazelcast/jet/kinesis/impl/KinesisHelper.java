@@ -195,15 +195,13 @@ public class KinesisHelper {
                 logger.warning(message, ente);
             } catch (ResourceInUseException riue) {
                 String message = "The resource is not available for this operation. For successful operation, the " +
-                        "resource must be in the <code>ACTIVE</code> state. Will retry.";
+                        "resource must be in the ACTIVE state. Will retry.";
                 logger.warning(message, riue);
             } catch (ResourceNotFoundException rnfe) {
                 String message = "The requested resource could not be found. The stream might not be specified correctly.";
-                logger.severe(message, rnfe);
                 throw new JetException(message, rnfe);
             } catch (InvalidArgumentException iae) {
                 String message = "A specified parameter exceeds its restrictions, is not supported, or can't be used.";
-                logger.severe(message, iae);
                 throw new JetException(message, iae);
             } catch (SdkClientException sce) {
                 String message = "Amazon SDK failure, ignoring and retrying.";
