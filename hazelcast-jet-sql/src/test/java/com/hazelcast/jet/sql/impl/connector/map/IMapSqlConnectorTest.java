@@ -97,6 +97,7 @@ public class IMapSqlConnectorTest {
         given(table.getFields())
                 .willReturn(singletonList(new MapTableField("field", VARCHAR, false, QueryPath.create("path"))));
         given(dag.newUniqueVertex(contains("Broadcast"), isA(SupplierEx.class))).willReturn(ingress);
+        given(ingress.localParallelism(1)).willReturn(ingress);
         given(dag.newUniqueVertex(contains("Predicate"), isA(ProcessorMetaSupplier.class))).willReturn(egress);
 
         // when

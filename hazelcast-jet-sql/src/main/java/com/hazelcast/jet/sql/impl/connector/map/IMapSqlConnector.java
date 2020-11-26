@@ -175,7 +175,7 @@ public class IMapSqlConnector implements SqlConnector {
                     edge -> edge.partitioned(extractPrimitiveKeyFn(leftEquiJoinPrimitiveKeyIndex)).distributed()
             );
         } else if (joinInfo.isEquiJoin() && joinInfo.isInner()) {
-            // TODO: define new edge type (mix of broadcast & unicast) ?
+            // TODO: define new edge type (mix of broadcast & local-round-robin) ?
             Vertex ingress = dag
                     .newUniqueVertex("Broadcast", () -> new TransformP<>(Traversers::singleton))
                     .localParallelism(1);
