@@ -94,7 +94,7 @@ public class CoAggregateOperationBuilder {
      *
      * @param exportFinishFn function to convert {@link ItemsByTag} to the
      *     target result type. It must be stateless and {@linkplain
-     *     Processor#isCooperative() cooperative}
+     *     Processor#isCooperative() cooperative}.
      */
     @Nonnull
     @SuppressWarnings({"unchecked", "ConstantConditions"})

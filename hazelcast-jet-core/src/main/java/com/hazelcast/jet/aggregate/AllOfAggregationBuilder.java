@@ -77,7 +77,7 @@ public final class AllOfAggregationBuilder<T> {
      *
      * @param exportFinishFn function that converts the {@link ItemsByTag} to
      *     the target result type. It must be stateless and {@linkplain
-     *     Processor#isCooperative() cooperative}
+     *     Processor#isCooperative() cooperative}.
      */
     @Nonnull
     @SuppressWarnings({"unchecked", "ConstantConditions"})

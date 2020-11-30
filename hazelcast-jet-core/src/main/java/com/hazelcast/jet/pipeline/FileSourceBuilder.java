@@ -124,7 +124,7 @@ public final class FileSourceBuilder {
      *
      * @param mapOutputFn the function which creates output object from each
      *                    line. Gets the filename and line as parameters. It must be stateless and
-     *                    {@linkplain Processor#isCooperative() cooperative}
+     *                    {@linkplain Processor#isCooperative() cooperative}.
      * @param <T>         the type of the items the source emits
      */
     @Nonnull
@@ -221,7 +221,7 @@ public final class FileSourceBuilder {
      *
      * @param mapOutputFn the function which creates output object from each
      *                    line. Gets the filename and line as parameters. It must be stateless and
-     *                    {@linkplain Processor#isCooperative() cooperative}
+     *                    {@linkplain Processor#isCooperative() cooperative}.
      * @param <T>         the type of the items the source emits
      */
     @Nonnull

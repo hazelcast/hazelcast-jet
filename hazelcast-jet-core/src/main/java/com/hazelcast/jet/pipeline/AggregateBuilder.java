@@ -91,7 +91,7 @@ public class AggregateBuilder<R0> {
      *
      * @param finishFn the finishing function for the composite aggregate
      *     operation. It must be stateless and {@linkplain
-     *     Processor#isCooperative() cooperative}
+     *     Processor#isCooperative() cooperative}.
      * @param <R> the output item type
      *
      * @return a new stage representing the co-aggregation

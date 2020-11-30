@@ -84,7 +84,7 @@ public class GroupAggregateBuilder1<T0, K> {
      *
      * @param aggrOp the aggregate operation to perform
      * @param mapToOutputFn the function to map the output. It must be
-     *     stateless and {@linkplain Processor#isCooperative() cooperative}
+     *     stateless and {@linkplain Processor#isCooperative() cooperative}.
      * @param <R> result type of the aggregate operation
      * @param <OUT> output type of the returned stage
      * @return a new stage representing the co-group-and-aggregate operation

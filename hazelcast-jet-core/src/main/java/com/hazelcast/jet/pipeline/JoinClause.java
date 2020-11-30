@@ -92,7 +92,7 @@ public final class JoinClause<K, T0, T1, T1_OUT> implements Serializable {
      *
      * @param leftKeyFn the function to extract the key from the primary
      *     stream. It must be stateless and {@linkplain Processor#isCooperative()
-     *     cooperative}
+     *     cooperative}.
      * @param <K> the type of the key
      * @param <T0> the type of the primary stream
      * @param <T1_OUT> the type of the enriching stream's entry value

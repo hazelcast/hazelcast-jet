@@ -96,7 +96,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
      *
      * @param comparator the user-provided comparator that will be used for
      *     sorting. It must be stateless and {@linkplain Processor#isCooperative()
-     *     cooperative}
+     *     cooperative}.
      * @return the newly attached stage
      * @since 4.3
      */

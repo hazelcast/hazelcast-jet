@@ -150,7 +150,7 @@ public final class AggregateOperations {
      *
      * @param getDoubleValueFn function that extracts the {@code double} values
      *     you want to sum. It must be stateless and {@linkplain
-     *     Processor#isCooperative() cooperative}
+     *     Processor#isCooperative() cooperative}.
      * @param <T> type of the input item
      */
     @Nonnull
@@ -192,7 +192,7 @@ public final class AggregateOperations {
      * window aggregation</a>.
      *
      * @param comparator comparator to compare the items. It must be stateless
-     *     and {@linkplain Processor#isCooperative() cooperative}
+     *     and {@linkplain Processor#isCooperative() cooperative}.
      * @param <T> type of the input item
      */
     @Nonnull
@@ -229,7 +229,7 @@ public final class AggregateOperations {
      * window aggregation</a>.
      *
      * @param comparator comparator to compare the items. It must be stateless
-     *     and {@linkplain Processor#isCooperative() cooperative}
+     *     and {@linkplain Processor#isCooperative() cooperative}.
      * @param <T> type of the input item
      */
     @Nonnull
@@ -271,7 +271,7 @@ public final class AggregateOperations {
      *
      * @param n number of top items to find
      * @param comparator compares the items. It must be stateless and
-     *     {@linkplain Processor#isCooperative() cooperative}
+     *     {@linkplain Processor#isCooperative() cooperative}.
      * @param <T> type of the input item
      */
     @Nonnull
@@ -325,7 +325,7 @@ public final class AggregateOperations {
      *
      * @param n number of bottom items to find
      * @param comparator compares the items. It must be stateless and
-     *     {@linkplain Processor#isCooperative() cooperative}
+     *     {@linkplain Processor#isCooperative() cooperative}.
      * @param <T> type of the input item
      */
     @Nonnull
@@ -356,7 +356,7 @@ public final class AggregateOperations {
      *
      * @param getLongValueFn function that extracts the {@code long} value from
      *     the item. It must be stateless and {@linkplain Processor#isCooperative()
-     *     cooperative}
+     *     cooperative}.
      * @param <T> type of the input item
      */
     @Nonnull
@@ -403,7 +403,7 @@ public final class AggregateOperations {
      *
      * @param getDoubleValueFn function that extracts the {@code double} value
      *     from the item. It must be stateless and {@linkplain
-     *     Processor#isCooperative() cooperative}
+     *     Processor#isCooperative() cooperative}.
      * @param <T> type of the input item
      */
     @Nonnull
@@ -460,10 +460,10 @@ public final class AggregateOperations {
      *
      * @param getXFn a function to extract <strong>x</strong> from the input.
      *     It must be stateless and {@linkplain Processor#isCooperative()
-     *     cooperative}
+     *     cooperative}.
      * @param getYFn a function to extract <strong>y</strong> from the input.
      *     It must be stateless and {@linkplain Processor#isCooperative()
-     *     cooperative}
+     *     cooperative}.
      * @param <T> type of the input item
      */
     @Nonnull
@@ -594,7 +594,7 @@ public final class AggregateOperations {
      * @see #flatMapping
      *
      * @param mapFn the function to apply to the input items. It must be
-     *     stateless and {@linkplain Processor#isCooperative() cooperative}
+     *     stateless and {@linkplain Processor#isCooperative() cooperative}.
      * @param downstream the downstream aggregate operation
      * @param <T> type of the input item
      * @param <U> input type of the downstream aggregate operation
@@ -641,7 +641,7 @@ public final class AggregateOperations {
      * @see #flatMapping
      *
      * @param filterFn the filtering function. It must be stateless and
-     *     {@linkplain Processor#isCooperative() cooperative}
+     *     {@linkplain Processor#isCooperative() cooperative}.
      * @param downstream the downstream aggregate operation
      * @param <T> type of the input item
      * @param <A> downstream operation's accumulator type
@@ -694,7 +694,7 @@ public final class AggregateOperations {
      * @see #filtering
      *
      * @param flatMapFn the flat-mapping function to apply. It must be
-     *     stateless and {@linkplain Processor#isCooperative() cooperative}
+     *     stateless and {@linkplain Processor#isCooperative() cooperative}.
      * @param downstream the downstream aggregate operation
      * @param <T> type of the input item
      * @param <U> input type of the downstream aggregate operation
@@ -742,7 +742,7 @@ public final class AggregateOperations {
      *
      * @param createCollectionFn a {@code Supplier} of empty, mutable {@code
      *     Collection}s. It must be stateless and {@linkplain
-     *     Processor#isCooperative() cooperative}
+     *     Processor#isCooperative() cooperative}.
      * @param <T> type of the input item
      * @param <C> the type of the collection
      */
@@ -828,9 +828,10 @@ public final class AggregateOperations {
      * draining the stream to a sink.
      *
      * @param keyFn a function to extract the key from the input item. It must
-     *     be stateless and {@linkplain Processor#isCooperative() cooperative}
+     *     be stateless and {@linkplain Processor#isCooperative() cooperative}.
      * @param valueFn a function to extract the value from the input item. It
-     *     must be stateless and {@linkplain Processor#isCooperative() cooperative}
+     *     must be stateless and {@linkplain Processor#isCooperative()
+     *     cooperative}.
      * @param <T> type of the input item
      * @param <K> type of the key
      * @param <U> type of the value
@@ -1013,7 +1014,7 @@ public final class AggregateOperations {
      * grouping.
      *
      * @param keyFn a function to extract the key from input item. It must be
-     *     stateless and {@linkplain Processor#isCooperative() cooperative}
+     *     stateless and {@linkplain Processor#isCooperative() cooperative}.
      * @param <T> type of the input item
      * @param <K> the output type of the key mapping function
      *
@@ -1051,7 +1052,7 @@ public final class AggregateOperations {
      *
      *
      * @param keyFn a function to extract the key from input item. It must be
-     *     stateless and {@linkplain Processor#isCooperative() cooperative}
+     *     stateless and {@linkplain Processor#isCooperative() cooperative}.
      * @param downstream the downstream aggregate operation
      * @param <T> type of the input item
      * @param <K> the output type of the key mapping function
@@ -1096,10 +1097,10 @@ public final class AggregateOperations {
      * }</pre>
      *
      * @param keyFn a function to extract the key from input item. It must be
-     *     stateless and {@linkplain Processor#isCooperative() cooperative}
+     *     stateless and {@linkplain Processor#isCooperative() cooperative}.
      * @param createMapFn a function which returns a new, empty {@code Map} into
      *     which the results will be inserted. It must be stateless and {@linkplain
-     *     Processor#isCooperative() cooperative}
+     *     Processor#isCooperative() cooperative}.
      * @param downstream the downstream aggregate operation
      * @param <T> type of the input item
      * @param <K> the output type of the key mapping function
@@ -1283,7 +1284,7 @@ public final class AggregateOperations {
      * }</pre>
      *
      * @param comparator the comparator to use for sorting. It must be
-     *     stateless and {@linkplain Processor#isCooperative() cooperative}
+     *     stateless and {@linkplain Processor#isCooperative() cooperative}.
      * @param <T> the type of input items
      */
     public static <T> AggregateOperation1<T, ArrayList<T>, List<T>> sorting(
@@ -1325,7 +1326,7 @@ public final class AggregateOperations {
      * @param op1 2nd operation
      * @param exportFinishFn function combining the two results into a single
      *     target instance. It must be stateless and {@linkplain
-     *     Processor#isCooperative() cooperative}
+     *     Processor#isCooperative() cooperative}.
      *
      * @param <T> type of input items
      * @param <A0> 1st accumulator type
@@ -1405,7 +1406,7 @@ public final class AggregateOperations {
      * @param op2 3rd operation
      * @param exportFinishFn function combining the three results into a single
      *     target instance. It must be stateless and {@linkplain
-     *     Processor#isCooperative() cooperative}
+     *     Processor#isCooperative() cooperative}.
      *
      * @param <T> type of input items
      * @param <A0> 1st accumulator type
@@ -1566,7 +1567,7 @@ public final class AggregateOperations {
      * @param op1 the aggregate operation that will receive the second stage's input
      * @param exportFinishFn the function that transforms the individual aggregate results into the
      *                 overall result that the co-aggregating stage emits. It must be stateless
-     *                 and {@linkplain Processor#isCooperative() cooperative}
+     *                 and {@linkplain Processor#isCooperative() cooperative}.
      * @param <T0> type of items in the first stage
      * @param <A0> type of the first aggregate operation's accumulator
      * @param <R0> type of the first aggregate operation's result
@@ -1678,7 +1679,7 @@ public final class AggregateOperations {
      * @param op2 the aggregate operation that will receive the third stage's input
      * @param exportFinishFn the function that transforms the individual aggregate results into the
      *                 overall result that the co-aggregating stage emits. It must be stateless
-     *                 and {@linkplain Processor#isCooperative() cooperative}
+     *                 and {@linkplain Processor#isCooperative() cooperative}.
      *
      * @param <T0> type of items in the first stage
      * @param <A0> type of the first aggregate operation's accumulator
