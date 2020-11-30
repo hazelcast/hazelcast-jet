@@ -45,7 +45,6 @@ import com.hazelcast.jet.impl.JobSummary;
 import com.hazelcast.jet.impl.config.ConfigProvider;
 import com.hazelcast.jet.server.JetCommandLine.JetVersionProvider;
 import com.hazelcast.sql.HazelcastSqlException;
-import com.hazelcast.sql.SqlColumnMetadata;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlRowMetadata;
@@ -56,6 +55,7 @@ import org.jline.reader.ParsedLine;
 import org.jline.reader.Parser;
 import org.jline.reader.SyntaxError;
 import org.jline.reader.impl.DefaultParser;
+import org.jline.utils.AttributedStringBuilder;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.DefaultExceptionHandler;
@@ -74,6 +74,7 @@ import picocli.CommandLine.RunAll;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -204,20 +205,19 @@ public class JetCommandLine implements Runnable {
                     .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
                     .appName("hazelcast-jet-sql")
                     .build();
+            PrintWriter out = reader.getTerminal().writer();
+            final int colWidth = 15;
             for (;;) {
-                String line = reader.readLine("sql> ");
-                if (line == null) {
-                    break;
+                String command = reader.readLine("sql> ").trim();
+                if (command.lastIndexOf(";") > 0) {
+                    command = command.substring(0, command.lastIndexOf(";"));
                 }
-                if (line.lastIndexOf(";") < 0) {
-                    continue;
-                }
-                String command = line.substring(0, line.lastIndexOf(";"));
-                if ("exit".equals(command)) {
-                    break;
-                }
+
                 if ("".equals(command.trim())) {
                     continue;
+                }
+                if ("exit".equals(command)) {
+                    break;
                 }
                 SqlResult res;
                 try {
@@ -227,25 +227,11 @@ public class JetCommandLine implements Runnable {
                     continue;
                 }
                 if (res.updateCount() == -1) {
-                    SqlRowMetadata metadata = res.getRowMetadata();
-                    for (int i = 0; i < metadata.getColumnCount(); i++) {
-                        if (i > 0) {
-                            out.print(", ");
-                        }
-                        SqlColumnMetadata column = metadata.getColumn(i);
-                        out.print(column.getName() + ':' + column.getType());
-                    }
-                    out.println("\n--------");
+                    printMetadataInfo(res.getRowMetadata(), colWidth, out);
                     int rowCount = 0;
                     for (SqlRow row : res) {
                         rowCount++;
-                        for (int i = 0; i < metadata.getColumnCount(); i++) {
-                            if (i > 0) {
-                                out.print(", ");
-                            }
-                            out.print(row.<Object>getObject(i));
-                        }
-                        out.println();
+                        printRow(row, colWidth, out);
                     }
                     out.println("\n" + rowCount + " row(s) selected");
                 } else {
@@ -984,5 +970,55 @@ public class JetCommandLine implements Runnable {
             }
             return false;
         }
+    }
+    private static void printMetadataInfo(SqlRowMetadata metadata, int colWidth, PrintWriter out) {
+        int colSize = metadata.getColumnCount();
+        printSeparatorLine(colSize, colWidth, out);
+        AttributedStringBuilder builder = new AttributedStringBuilder();
+        builder.append("|");
+        for (int i = 0; i < colSize; i++) {
+            String colName = metadata.getColumn(i).getName();
+            int wsLen = colWidth - colName.length();
+            for (int j = 0; j < wsLen / 2 ; j++) {
+                builder.append(' ');
+            }
+            builder.append(colName);
+            for (int j = 0; j < wsLen / 2 + wsLen % 2; j++) {
+                builder.append(' ');
+            }
+            builder.append('|');
+        }
+        out.println(builder.toString());
+        printSeparatorLine(colSize, colWidth, out);
+        out.flush();
+    }
+
+    private static void printRow(SqlRow row, int colWidth, PrintWriter out) {
+        AttributedStringBuilder builder = new AttributedStringBuilder();
+        builder.append("|");
+        int colSize = row.getMetadata().getColumnCount();
+        for (int i = 0; i < colSize; i++) {
+            String colValue = row.getObject(i).toString();
+            builder.append(colValue);
+            for (int j = 0; j < colWidth - colValue.length(); j++) {
+                builder.append(' ');
+            }
+            builder.append('|');
+        }
+        out.println(builder.toString());
+        printSeparatorLine(colSize, colWidth, out);
+        out.flush();
+    }
+
+    private static void printSeparatorLine(int colSize, int colWidth, PrintWriter out) {
+        AttributedStringBuilder builder = new AttributedStringBuilder();
+        builder.append('+');
+        for (int i = 0; i < colSize; i++) {
+            for (int j = 0; j < colWidth; j++) {
+                builder.append('-');
+            }
+            builder.append('+');
+        }
+        out.println(builder.toString());
     }
 }
