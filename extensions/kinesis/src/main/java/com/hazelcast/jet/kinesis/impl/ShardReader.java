@@ -230,7 +230,7 @@ class ShardReader extends AbstractShardWorker {
         HAS_DATA,
 
         /**
-         * Running the reader revealed the shard being closed (due to merge or split).
+         * The shard was read up to its end (due to merge or split).
          */
         CLOSED
     }
@@ -257,7 +257,7 @@ class ShardReader extends AbstractShardWorker {
         WAITING_FOR_RECORDS,
 
         /**
-         * Has some data read previously, ready to issue request for more.
+         * Has some data read previously, ready to issue a request for more.
          * The previously read data might get processed while more arrives.
          */
         HAS_DATA_NEED_TO_REQUEST_RECORDS,

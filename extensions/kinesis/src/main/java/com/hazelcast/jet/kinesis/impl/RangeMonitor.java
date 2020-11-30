@@ -45,11 +45,11 @@ public class RangeMonitor extends AbstractShardWorker {
     /**
      * We don't want to issue shard listing requests at the peak allowed rate.
      */
-    private static final double PERCENTAGE_OF_SHARD_LISTING_RATE_UTILIZED = 0.1;
+    private static final double RATIO_OF_SHARD_LISTING_RATE_UTILIZED = 0.1;
 
     /**
      * Failure usually happens due to the over-utilization of resources and/or
-     * crossing of various limits. Even if we retry the operation it is a good
+     * crossing of various limits. Even if we retry the operation, it is a good
      * idea to add some waits (decrease the rate) in order to alleviate the
      * problem.
      */
@@ -168,7 +168,7 @@ public class RangeMonitor extends AbstractShardWorker {
         NOTHING,
 
         /**
-         * Running the monitor has lead to noticing new shards that need handling.
+         * Running the monitor has led to noticing new shards that need handling.
          */
         NEW_SHARDS
     }
@@ -185,7 +185,7 @@ public class RangeMonitor extends AbstractShardWorker {
         WAITING_FOR_SHARD_LIST,
 
         /**
-         * Monitor has discovered shards that aren't yet assigned readers.
+         * Monitor has discovered shards that aren't yet assigned to readers.
          */
         NEW_SHARDS_FOUND,
     }
@@ -196,7 +196,7 @@ public class RangeMonitor extends AbstractShardWorker {
         // a data stream is 100/second and we need to enforce this, even while
         // we are issuing them from multiple processors in parallel
         return new RandomizedRateTracker(SECONDS.toNanos(1) * totalInstances,
-                (int) (SHARD_LISTINGS_ALLOWED_PER_SECOND * PERCENTAGE_OF_SHARD_LISTING_RATE_UTILIZED));
+                (int) (SHARD_LISTINGS_ALLOWED_PER_SECOND * RATIO_OF_SHARD_LISTING_RATE_UTILIZED));
     }
 
 }

@@ -62,6 +62,10 @@ public class HashRange implements Serializable { //todo: is it worth to use bett
         return new HashRange(new BigInteger(startInclusive), new BigInteger(endExclusive));
     }
 
+    /**
+     * Return the slice of the hash range for partition {@code index} out of
+     * {@code count} partitions.
+     */
     public HashRange partition(int index, int count) {
         if (count <= 0) {
             throw new IllegalArgumentException("Count must be a strictly positive value");

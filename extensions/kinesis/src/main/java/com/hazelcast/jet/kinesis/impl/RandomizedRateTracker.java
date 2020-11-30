@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
  * all shards. It would be much better to spread out the parallel operations on
  * the shards over the time period.
  * <p>
- * This class does exactly that. It takes a time period, it brakes it up into
+ * This class does exactly that. It takes a time period, it breaks it up into
  * N random parts and helps with walking through them in a round-robin fashion.
  */
 public class RandomizedRateTracker {
