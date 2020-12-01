@@ -1024,15 +1024,7 @@ public class JetCommandLine implements Runnable {
         builder.append("|");
         for (int i = 0; i < colSize; i++) {
             String colName = metadata.getColumn(i).getName();
-            int wsLen = colWidth - colName.length();
-            for (int j = 0; j < wsLen / 2; j++) {
-                builder.append(' ');
-            }
-            builder.append(colName);
-            for (int j = 0; j < wsLen / 2 + wsLen % 2; j++) {
-                builder.append(' ');
-            }
-            builder.append('|');
+            centralize(colWidth, builder, colName);
         }
         out.println(builder.toAnsi());
         printSeparatorLine(colSize, colWidth, out);
@@ -1045,15 +1037,29 @@ public class JetCommandLine implements Runnable {
         int colSize = row.getMetadata().getColumnCount();
         for (int i = 0; i < colSize; i++) {
             String colValue = row.getObject(i).toString();
-            builder.append(colValue);
-            for (int j = 0; j < colWidth - colValue.length(); j++) {
-                builder.append(' ');
-            }
-            builder.append('|');
+            centralize(colWidth, builder, colValue);
         }
         out.println(builder.toAnsi());
         printSeparatorLine(colSize, colWidth, out);
         out.flush();
+    }
+
+    private static void centralize(int colWidth, AttributedStringBuilder builder, String colValue) {
+        int wsLen = 0;
+        if (colValue.length() < colWidth) {
+            wsLen = colWidth - colValue.length();
+        } else {
+            colValue = colValue.substring(0, colWidth - 3) + "...";
+        }
+
+        for (int j = 0; j < wsLen / 2; j++) {
+            builder.append(' ');
+        }
+        builder.append(colValue);
+        for (int j = 0; j < wsLen / 2 + wsLen % 2; j++) {
+            builder.append(' ');
+        }
+        builder.append('|');
     }
 
     private static void printSeparatorLine(int colSize, int colWidth, PrintWriter out) {
