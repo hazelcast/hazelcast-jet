@@ -30,14 +30,14 @@ import org.junit.Test;
 import org.junit.runners.Parameterized.Parameters;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collections;
 
 public class ParquetFileFormatTest extends BaseFileFormatTest {
 
     // Parquet has a dependency on Hadoop so it does not make sense to run it without it
     @Parameters(name = "{index}: useHadoop={0}")
     public static Iterable<?> parameters() {
-        return Arrays.asList(true);
+        return Collections.singletonList(true);
     }
 
     @Test

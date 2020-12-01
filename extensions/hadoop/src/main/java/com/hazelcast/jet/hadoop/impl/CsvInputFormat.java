@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvParser.Feature;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import com.hazelcast.jet.impl.util.ReflectionUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -56,14 +57,8 @@ public class CsvInputFormat extends FileInputFormat<NullWritable, Object> {
 
                 Configuration configuration = context.getConfiguration();
                 String className = configuration.get(CSV_INPUT_FORMAT_BEAN_CLASS);
-                Class<?> clazz = ReflectionUtils.loadClass(className);
-
-                CsvMapper mapper = new CsvMapper();
-
-                CsvSchema schema = CsvSchema.emptySchema().withHeader();
-                ObjectReader reader = mapper.readerFor(clazz)
-                                            .withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                                            .with(schema);
+                Class<?> clazz = className == null ? null : ReflectionUtils.loadClass(className);
+                ObjectReader reader = reader(clazz);
 
                 Path file = fileSplit.getPath();
                 FileSystem fs = file.getFileSystem(conf);
@@ -100,5 +95,18 @@ public class CsvInputFormat extends FileInputFormat<NullWritable, Object> {
                 iterator.close();
             }
         };
+    }
+
+    private static <T> ObjectReader reader(Class<T> clazz) {
+        if (clazz == null) {
+            return new CsvMapper().enable(Feature.WRAP_AS_ARRAY)
+                                  .readerFor(String[].class)
+                                  .withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                                  .with(CsvSchema.emptySchema().withSkipFirstDataRow(true));
+        } else {
+            return new CsvMapper().readerFor(clazz)
+                                  .withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                                  .with(CsvSchema.emptySchema().withHeader());
+        }
     }
 }

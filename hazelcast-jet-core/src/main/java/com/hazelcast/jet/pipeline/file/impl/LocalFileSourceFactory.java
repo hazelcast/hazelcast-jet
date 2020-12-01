@@ -41,6 +41,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
@@ -109,18 +110,23 @@ public class LocalFileSourceFactory implements FileSourceFactory {
 
     private static class JsonReadFileFnProvider extends AbstractReadFileFnProvider {
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         <T> FunctionEx<InputStream, Stream<T>> mapInputStreamFn(FileFormat<T> format) {
             JsonFileFormat<T> jsonFileFormat = (JsonFileFormat<T>) format;
-            Class<T> thisClazz = jsonFileFormat.clazz();
+            Class<T> formatClazz = jsonFileFormat.clazz();
             return is -> {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(is, UTF_8));
-
                 return reader.lines()
-                             .map(line -> uncheckCall(() -> JsonUtil.beanFrom(line, thisClazz)))
+                             .map(mapper(formatClazz))
                              .onClose(() -> uncheckRun(reader::close));
             };
+        }
+
+        @SuppressWarnings("unchecked")
+        private static <T> Function<? super String, T> mapper(Class<T> clazz) {
+            return clazz == null
+                    ? line -> uncheckCall(() -> JsonUtil.treeFrom(line))
+                    : line -> uncheckCall(() -> JsonUtil.beanFrom(line, clazz));
         }
 
         @Nonnull @Override

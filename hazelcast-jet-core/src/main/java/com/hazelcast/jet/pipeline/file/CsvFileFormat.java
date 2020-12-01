@@ -17,8 +17,7 @@
 package com.hazelcast.jet.pipeline.file;
 
 import javax.annotation.Nonnull;
-
-import static java.util.Objects.requireNonNull;
+import javax.annotation.Nullable;
 
 /**
  * {@link FileFormat} for CSV files. See {@link FileFormat#csv} for more
@@ -34,23 +33,33 @@ public class CsvFileFormat<T> implements FileFormat<T> {
      */
     public static final String FORMAT_CSV = "csv";
 
-    private final Class<T> clazz;
+    private Class<T> clazz;
 
     /**
-     * Creates a {@code CsvFileFormat}. See {@link FileFormat#csv} for more
+     * Creates {@link CsvFileFormat}. See {@link FileFormat#csv} for more
      * details.
-     *
-     * @param clazz type of the object to deserialize CSV lines into
      */
-    CsvFileFormat(@Nonnull Class<T> clazz) {
-        this.clazz = requireNonNull(clazz, "clazz must not be null");
+    CsvFileFormat() {
     }
 
     /**
-     * Returns the type of the object the data source using this format will
-     * emit.
+     * Specifies class that data will be deserialized into.
+     * If parameter is {@code null} data is deserialized into
+     * {@code String[]}.
+     *
+     * @param clazz type of the object to deserialize CSV lines into
      */
     @Nonnull
+    public CsvFileFormat<T> withClass(@Nullable Class<T> clazz) {
+        this.clazz = clazz;
+        return this;
+    }
+
+    /**
+     * Returns the class Jet will deserialize data into.
+     * Null if not set.
+     */
+    @Nullable
     public Class<T> clazz() {
         return clazz;
     }
