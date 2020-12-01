@@ -54,7 +54,11 @@ import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.ParsedLine;
 import org.jline.reader.Parser;
 import org.jline.reader.SyntaxError;
+import org.jline.reader.UserInterruptException;
+import org.jline.reader.EndOfFileException;
+
 import org.jline.reader.impl.DefaultParser;
+import org.jline.terminal.Terminal;
 import org.jline.utils.AttributedStringBuilder;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -75,6 +79,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.io.IOError;
+
 import java.lang.reflect.InvocationTargetException;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -82,8 +88,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
 import java.util.logging.Level;
@@ -195,8 +207,8 @@ public class JetCommandLine implements Runnable {
 
     @Command(description = "Starts the SQL console")
     public void sql(@Mixin(name = "verbosity") Verbosity verbosity,
-            @Mixin(name = "targets") TargetsMixin targets
-            ) {
+                    @Mixin(name = "targets") TargetsMixin targets
+    ) {
         runWithJet(targets, verbosity, jet -> {
             LineReader reader = LineReaderBuilder.builder().parser(new MultilineParser())
                     .variable(LineReader.SECONDARY_PROMPT_PATTERN, "%M%P > ")
@@ -205,10 +217,15 @@ public class JetCommandLine implements Runnable {
                     .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
                     .appName("hazelcast-jet-sql")
                     .build();
-            PrintWriter out = reader.getTerminal().writer();
-            final int colWidth = 15;
-            for (;;) {
-                String command = reader.readLine("sql> ").trim();
+            for (; ; ) {
+                String command;
+                try {
+                    command = reader.readLine("sql> ").trim();
+                } catch (UserInterruptException | EndOfFileException | IOError e) {
+                    // Ctrl+C, Ctrl+D, and kill signals result in exit
+                    break;
+                }
+
                 if (command.lastIndexOf(";") > 0) {
                     command = command.substring(0, command.lastIndexOf(";"));
                 }
@@ -219,24 +236,7 @@ public class JetCommandLine implements Runnable {
                 if ("exit".equals(command)) {
                     break;
                 }
-                SqlResult res;
-                try {
-                    res = jet.getSql().execute(command);
-                } catch (HazelcastSqlException e) {
-                    out.println(e.getMessage());
-                    continue;
-                }
-                if (res.updateCount() == -1) {
-                    printMetadataInfo(res.getRowMetadata(), colWidth, out);
-                    int rowCount = 0;
-                    for (SqlRow row : res) {
-                        rowCount++;
-                        printRow(row, colWidth, out);
-                    }
-                    out.println("\n" + rowCount + " row(s) selected");
-                } else {
-                    out.println(res.updateCount() + " row(s) affected");
-                }
+                executeSqlCmd(jet, command, reader.getTerminal());
             }
         });
     }
@@ -769,13 +769,15 @@ public class JetCommandLine implements Runnable {
     /**
      * A parser for SQL-like inputs. Commands are terminated with a semicolon.
      * It is mainly taken from
+     *
      * @see <a href="https://github.com/julianhyde/sqlline/blob/master/src/main/java/sqlline/SqlLineParser.java">
-     *     SqlLineParser</a>
+     * SqlLineParser</a>
      * which is licensed under the BSD-3-Clause License
      */
     private static final class MultilineParser extends DefaultParser {
 
-        private MultilineParser() { }
+        private MultilineParser() {
+        }
 
         @Override
         public ParsedLine parse(String line, int cursor, Parser.ParseContext context) throws SyntaxError {
@@ -845,8 +847,7 @@ public class JetCommandLine implements Runnable {
             }
 
             if (isEofOnUnclosedQuote() && quoteStart >= 0) {
-                int finalQuoteStart = quoteStart;
-                throw new EOFError(-1, finalQuoteStart, "Missing closing quote",
+                throw new EOFError(-1, quoteStart, "Missing closing quote",
                         line.charAt(quoteStart) == '\'' ? "quote" : "dquote");
             }
 
@@ -971,6 +972,51 @@ public class JetCommandLine implements Runnable {
             return false;
         }
     }
+
+    private void executeSqlCmd(JetInstance jet, String command, Terminal terminal) {
+
+        PrintWriter out = terminal.writer();
+        final int colWidth = 15;
+        AtomicReference<SqlResult> res = new AtomicReference<>();
+        AtomicInteger rowCount = new AtomicInteger();
+
+        ExecutorService executor
+                = Executors.newSingleThreadExecutor();
+        Future<?> resultFuture = executor.submit(() -> {
+            try {
+                res.set(jet.getSql().execute(command));
+            } catch (HazelcastSqlException e) {
+                out.println(e.getMessage());
+                return;
+            }
+            if (res.get().updateCount() == -1) {
+                printMetadataInfo(res.get().getRowMetadata(), colWidth, out);
+
+                for (SqlRow row : res.get()) {
+                    rowCount.getAndIncrement();
+                    printRow(row, colWidth, out);
+                }
+                out.println("\n" + rowCount.get() + " row(s) selected");
+            } else {
+                out.println(res.get().updateCount() + " row(s) affected");
+            }
+        });
+
+        terminal.handle(Terminal.Signal.INT, signal -> resultFuture.cancel(true));
+
+        try {
+            resultFuture.get();
+        } catch (CancellationException e) {
+            res.get().close();
+            out.println("\nQuery is cancelled. Until now, total " + rowCount.get() + " rows received.");
+            out.flush();
+        } catch (InterruptedException | java.util.concurrent.ExecutionException e) {
+            res.get().close();
+            e.printStackTrace();
+        }
+    }
+
+
     private static void printMetadataInfo(SqlRowMetadata metadata, int colWidth, PrintWriter out) {
         int colSize = metadata.getColumnCount();
         printSeparatorLine(colSize, colWidth, out);
@@ -979,7 +1025,7 @@ public class JetCommandLine implements Runnable {
         for (int i = 0; i < colSize; i++) {
             String colName = metadata.getColumn(i).getName();
             int wsLen = colWidth - colName.length();
-            for (int j = 0; j < wsLen / 2 ; j++) {
+            for (int j = 0; j < wsLen / 2; j++) {
                 builder.append(' ');
             }
             builder.append(colName);
@@ -988,7 +1034,7 @@ public class JetCommandLine implements Runnable {
             }
             builder.append('|');
         }
-        out.println(builder.toString());
+        out.println(builder.toAnsi());
         printSeparatorLine(colSize, colWidth, out);
         out.flush();
     }
@@ -1005,7 +1051,7 @@ public class JetCommandLine implements Runnable {
             }
             builder.append('|');
         }
-        out.println(builder.toString());
+        out.println(builder.toAnsi());
         printSeparatorLine(colSize, colWidth, out);
         out.flush();
     }
@@ -1019,6 +1065,6 @@ public class JetCommandLine implements Runnable {
             }
             builder.append('+');
         }
-        out.println(builder.toString());
+        out.println(builder.toAnsi());
     }
 }
