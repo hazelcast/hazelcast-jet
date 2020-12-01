@@ -36,8 +36,7 @@ public class ProcessorLoggerCreationLeakTest extends JetTestSupport {
 
     private String prevLoggingType;
     private String prevLoggingClass;
-
-    JetInstance jet;
+    private JetInstance jet;
 
     @Before
     public void setup() {
