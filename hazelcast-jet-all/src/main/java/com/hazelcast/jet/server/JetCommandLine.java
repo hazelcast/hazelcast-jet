@@ -205,7 +205,7 @@ public class JetCommandLine implements Runnable {
         // top-level command, do nothing
     }
 
-    @Command(description = "Starts the SQL console")
+    @Command(description = "Starts the SQL shell [BETA]")
     public void sql(@Mixin(name = "verbosity") Verbosity verbosity,
                     @Mixin(name = "targets") TargetsMixin targets
     ) {
