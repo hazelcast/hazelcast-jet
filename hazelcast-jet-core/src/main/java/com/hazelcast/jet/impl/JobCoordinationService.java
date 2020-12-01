@@ -602,7 +602,8 @@ public class JobCoordinationService {
                     membersShuttingDown.keySet());
             return false;
         }
-        PartitionServiceState state = getInternalPartitionService().getPartitionReplicaStateChecker().getPartitionServiceState();
+        PartitionServiceState state =
+                getInternalPartitionService().getPartitionReplicaStateChecker().getPartitionServiceState();
         if (state != PartitionServiceState.SAFE) {
             logger.fine("Not starting jobs because partition replication is not in safe state, but in " + state);
             return false;
