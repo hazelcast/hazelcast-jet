@@ -41,6 +41,7 @@ import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
+import com.hazelcast.logging.LoggingService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -81,6 +82,7 @@ import static com.hazelcast.jet.impl.execution.ProcessorState.SNAPSHOT_COMMIT_PR
 import static com.hazelcast.jet.impl.execution.ProcessorState.WAITING_FOR_SNAPSHOT_COMPLETED;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.NO_NEW_WM;
+import static com.hazelcast.jet.impl.execution.init.ExecutionPlan.createLoggerName;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
@@ -169,8 +171,8 @@ public class ProcessorTasklet implements Tasklet {
                         toCollection(ArrayList<InboundEdgeStream>::new)))
                 .values());
         this.outstreams = outstreams.stream()
-                                    .sorted(comparing(OutboundEdgeStream::ordinal))
-                                    .toArray(OutboundEdgeStream[]::new);
+                .sorted(comparing(OutboundEdgeStream::ordinal))
+                .toArray(OutboundEdgeStream[]::new);
         this.ssContext = ssContext;
         this.logger = getLogger(context);
         this.isSource = isSource;
@@ -194,6 +196,36 @@ public class ProcessorTasklet implements Tasklet {
         return context.jetInstance() != null
                 ? context.jetInstance().getHazelcastInstance().getLoggingService().getLogger(getClass() + "." + toString())
                 : Logger.getLogger(getClass());
+    }
+
+    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE",
+            justification = "jetInstance() can be null in TestProcessorContext")
+    private void removeLogger(@Nonnull Context context) {
+        // the name of the logger created for the processor context
+        String contextLoggerName = createLoggerName(processor.getClass().getName(), context.jobConfig().getName(),
+                context.vertexName(), context.globalProcessorIndex());
+        // if it is a wrapped processor, we should remove the logger
+        // created for the wrapped processor too
+        String wrappedProcessorLoggerName = null;
+        if (processor instanceof ProcessorWrapper) {
+            String wrappedProcessorClassname = ((ProcessorWrapper) processor).getWrapped().getClass().getName();
+            wrappedProcessorLoggerName = createLoggerName(wrappedProcessorClassname, context.jobConfig().getName(),
+                    context.vertexName(), context.globalProcessorIndex());
+        }
+        if (context.jetInstance() != null) {
+            LoggingService loggingService = context.jetInstance().getHazelcastInstance().getLoggingService();
+            loggingService.removeLogger(getClass() + "." + toString());
+            loggingService.removeLogger(contextLoggerName);
+            if (wrappedProcessorLoggerName != null) {
+                loggingService.removeLogger(wrappedProcessorLoggerName);
+            }
+        } else {
+            Logger.removeLogger(getClass());
+            Logger.removeLogger(contextLoggerName);
+            if (wrappedProcessorLoggerName != null) {
+                Logger.removeLogger(wrappedProcessorLoggerName);
+            }
+        }
     }
 
     private OutboxImpl createOutbox(@Nonnull OutboundCollector ssCollector) {
@@ -233,7 +265,8 @@ public class ProcessorTasklet implements Tasklet {
         }
     }
 
-    @Override @Nonnull
+    @Override
+    @Nonnull
     public ProgressState call() {
         assert state != END : "already in terminal state";
         progTracker.reset();
@@ -540,8 +573,8 @@ public class ProcessorTasklet implements Tasklet {
 
     private CircularListCursor<InboundEdgeStream> popInstreamGroup() {
         return Optional.ofNullable(instreamGroupQueue.poll())
-                       .map(CircularListCursor::new)
-                       .orElse(null);
+                .map(CircularListCursor::new)
+                .orElse(null);
     }
 
     @Override
@@ -599,6 +632,7 @@ public class ProcessorTasklet implements Tasklet {
 
     @Override
     public void close() {
+        removeLogger(context);
         if (state == CLOSE) {
             try {
                 closeFuture.get();
@@ -613,8 +647,8 @@ public class ProcessorTasklet implements Tasklet {
     @Override
     public void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
         descriptor = descriptor.withTag(MetricTags.VERTEX, this.context.vertexName())
-                       .withTag(MetricTags.PROCESSOR_TYPE, this.processor.getClass().getSimpleName())
-                       .withTag(MetricTags.PROCESSOR, Integer.toString(this.context.globalProcessorIndex()));
+                .withTag(MetricTags.PROCESSOR_TYPE, this.processor.getClass().getSimpleName())
+                .withTag(MetricTags.PROCESSOR, Integer.toString(this.context.globalProcessorIndex()));
 
         if (isSource) {
             descriptor = descriptor.withTag(MetricTags.SOURCE, "true");

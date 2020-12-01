@@ -23,18 +23,27 @@ import com.hazelcast.logging.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.logging.Level;
+
+import static com.hazelcast.internal.util.ConcurrencyUtil.getOrPutIfAbsent;
 
 public class MockLoggingFactory implements LoggerFactory {
 
     static List<String> capturedMessages = new ArrayList<>();
+    static ConcurrentMap<String, ILogger> loggersMap = new ConcurrentHashMap<>();
 
     @Override
     public ILogger getLogger(String name) {
+        return getOrPutIfAbsent(loggersMap, name, this::createLogger);
+    }
+
+    private ILogger createLogger(String name) {
         return new AbstractLogger() {
             @Override
             public void log(Level level, String message) {
-               log(level, message, null);
+                log(level, message, null);
             }
 
             @Override
@@ -62,5 +71,10 @@ public class MockLoggingFactory implements LoggerFactory {
             }
 
         };
+    }
+
+    @Override
+    public void removeLogger(String name) {
+        loggersMap.remove(name);
     }
 }
