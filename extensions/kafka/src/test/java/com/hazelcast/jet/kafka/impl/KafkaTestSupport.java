@@ -76,7 +76,6 @@ public class KafkaTestSupport {
     private static final int CONNECTION_TIMEOUT = 30_000;
 
     private EmbeddedZookeeper zkServer;
-    private String zkConnect;
     private ZkUtils zkUtils;
 
     private KafkaServer kafkaServer;
@@ -87,7 +86,7 @@ public class KafkaTestSupport {
     public void createKafkaCluster() throws IOException {
         System.setProperty("zookeeper.preAllocSize", Integer.toString(128));
         zkServer = new EmbeddedZookeeper();
-        zkConnect = ZK_HOST + ':' + zkServer.port();
+        String zkConnect = ZK_HOST + ':' + zkServer.port();
         ZkClient zkClient = new ZkClient(zkConnect, SESSION_TIMEOUT, CONNECTION_TIMEOUT, ZKStringSerializer$.MODULE$);
         zkUtils = ZkUtils.apply(zkClient, false);
 
@@ -134,10 +133,6 @@ public class KafkaTestSupport {
             zkUtils = null;
             zkServer = null;
         }
-    }
-
-    public String getZookeeperConnectionString() {
-        return zkConnect;
     }
 
     public String getBrokerConnectionString() {

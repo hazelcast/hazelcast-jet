@@ -23,8 +23,6 @@ import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
 import com.hazelcast.sql.HazelcastSqlException;
 import com.hazelcast.sql.SqlService;
-import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
-import io.confluent.kafka.schemaregistry.rest.SchemaRegistryRestApplication;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import org.apache.avro.Schema;
@@ -35,11 +33,12 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
-import org.eclipse.jetty.server.Server;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -52,7 +51,6 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
@@ -71,7 +69,7 @@ public class SqlAvroTest extends SqlTestSupport {
     private static final int INITIAL_PARTITION_COUNT = 4;
 
     private static KafkaTestSupport kafkaTestSupport;
-    private static Server schemaRegistry;
+    private static SchemaRegistryContainer schemaRegistry;
 
     private static SqlService sqlService;
 
@@ -83,17 +81,12 @@ public class SqlAvroTest extends SqlTestSupport {
         kafkaTestSupport = new KafkaTestSupport();
         kafkaTestSupport.createKafkaCluster();
 
-        Properties properties = new Properties();
-        properties.put("listeners", "http://0.0.0.0:" + randomPort());
-        properties.put("kafkastore.connection.url", kafkaTestSupport.getZookeeperConnectionString());
-        SchemaRegistryConfig config = new SchemaRegistryConfig(properties);
-        SchemaRegistryRestApplication schemaRegistryApplication = new SchemaRegistryRestApplication(config);
-        schemaRegistry = schemaRegistryApplication.createServer();
+        schemaRegistry = new SchemaRegistryContainer().withKafka(kafkaTestSupport.getBrokerConnectionString());
         schemaRegistry.start();
     }
 
     @AfterClass
-    public static void tearDownClass() throws Exception {
+    public static void tearDownClass() {
         schemaRegistry.stop();
         kafkaTestSupport.shutdownKafkaCluster();
     }
@@ -109,7 +102,7 @@ public class SqlAvroTest extends SqlTestSupport {
                 + '\'' + OPTION_KEY_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", '" + OPTION_VALUE_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", 'schema.registry.url'='" + schemaRegistry.getURI() + '\''
+                + ", 'schema.registry.url'='" + schemaRegistry.getUrl() + '\''
                 + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
@@ -139,7 +132,7 @@ public class SqlAvroTest extends SqlTestSupport {
                 + '\'' + OPTION_KEY_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", '" + OPTION_VALUE_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", 'schema.registry.url'='" + schemaRegistry.getURI() + '\''
+                + ", 'schema.registry.url'='" + schemaRegistry.getUrl() + '\''
                 + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
@@ -169,7 +162,7 @@ public class SqlAvroTest extends SqlTestSupport {
                 + '\'' + OPTION_KEY_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", '" + OPTION_VALUE_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", 'schema.registry.url'='" + schemaRegistry.getURI() + '\''
+                + ", 'schema.registry.url'='" + schemaRegistry.getUrl() + '\''
                 + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
@@ -187,7 +180,7 @@ public class SqlAvroTest extends SqlTestSupport {
                 + '\'' + OPTION_KEY_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", '" + OPTION_VALUE_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", 'schema.registry.url'='" + schemaRegistry.getURI() + '\''
+                + ", 'schema.registry.url'='" + schemaRegistry.getUrl() + '\''
                 + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
@@ -232,7 +225,7 @@ public class SqlAvroTest extends SqlTestSupport {
                 + '\'' + OPTION_KEY_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", '" + OPTION_VALUE_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", 'schema.registry.url'='" + schemaRegistry.getURI() + '\''
+                + ", 'schema.registry.url'='" + schemaRegistry.getUrl() + '\''
                 + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
@@ -293,7 +286,7 @@ public class SqlAvroTest extends SqlTestSupport {
                 + ", 'keyJavaClass'='java.lang.Integer'"
                 + ", 'valueFormat'='avro'"
                 + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", 'schema.registry.url'='" + schemaRegistry.getURI() + '\''
+                + ", 'schema.registry.url'='" + schemaRegistry.getUrl() + '\''
                 + ", 'auto.offset.reset'='earliest')"
         );
 
@@ -364,7 +357,7 @@ public class SqlAvroTest extends SqlTestSupport {
                 + '\'' + OPTION_KEY_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", '" + OPTION_VALUE_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", 'schema.registry.url'='" + schemaRegistry.getURI() + '\''
+                + ", 'schema.registry.url'='" + schemaRegistry.getUrl() + '\''
                 + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
@@ -394,7 +387,7 @@ public class SqlAvroTest extends SqlTestSupport {
                 + ", 'value.serializer'='" + KafkaAvroSerializer.class.getCanonicalName() + '\''
                 + ", 'value.deserializer'='" + KafkaAvroDeserializer.class.getCanonicalName() + '\''
                 + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", 'schema.registry.url'='" + schemaRegistry.getURI() + '\''
+                + ", 'schema.registry.url'='" + schemaRegistry.getUrl() + '\''
                 + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
@@ -427,7 +420,7 @@ public class SqlAvroTest extends SqlTestSupport {
                 expected,
                 KafkaAvroDeserializer.class,
                 KafkaAvroDeserializer.class,
-                ImmutableMap.of("schema.registry.url", schemaRegistry.getURI().toString())
+                ImmutableMap.of("schema.registry.url", schemaRegistry.getUrl())
         );
     }
 
@@ -445,9 +438,40 @@ public class SqlAvroTest extends SqlTestSupport {
                             .endRecord();
     }
 
-    private static int randomPort() throws IOException {
-        try (ServerSocket server = new ServerSocket(0)) {
-            return server.getLocalPort();
+    private static final class SchemaRegistryContainer extends GenericContainer<SchemaRegistryContainer> {
+
+        private static final String DOCKER_IMAGE_NAME = "confluentinc/cp-schema-registry:4.1.4";
+
+        private final int port;
+
+        private SchemaRegistryContainer() throws IOException {
+            super(DOCKER_IMAGE_NAME);
+            port = randomPort();
+        }
+
+        public SchemaRegistryContainer withKafka(String brokerConnectionString) {
+            withNetworkMode("host");
+            withExposedPorts(port);
+            withEnv("SCHEMA_REGISTRY_HOST_NAME", "localhost");
+            withEnv("SCHEMA_REGISTRY_LISTENERS", "http://0.0.0.0:" + port);
+            withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", "PLAINTEXT://" + brokerConnectionString);
+            waitingFor(Wait.forHttp("/subjects").forStatusCode(200));
+            return self();
+        }
+
+        private static int randomPort() throws IOException {
+            try (ServerSocket server = new ServerSocket(0)) {
+                return server.getLocalPort();
+            }
+        }
+
+        @Override
+        public Integer getMappedPort(int originalPort) {
+            return port;
+        }
+
+        private String getUrl() {
+            return "http://" + "localhost" + ":" + port;
         }
     }
 }
