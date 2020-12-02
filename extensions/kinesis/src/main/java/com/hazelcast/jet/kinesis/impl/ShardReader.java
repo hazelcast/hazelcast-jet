@@ -85,7 +85,7 @@ class ShardReader extends AbstractShardWorker {
         this.shard = shard;
     }
 
-    public Result run() {
+    public Result probe() {
         switch (state) {
             case NO_SHARD_ITERATOR:
                 return handleNoShardIterator();

@@ -100,10 +100,9 @@ public class KinesisSourceP extends AbstractProcessor {
     }
 
     private void runMonitor() {
-        RangeMonitor.Result result = rangeMonitor.run();
-        if (RangeMonitor.Result.NEW_SHARDS.equals(result)) {
-            Collection<Shard> shards = rangeMonitor.getNewShards();
-            addShardReaders(shards);
+        Collection<Shard> newShards = rangeMonitor.probe();
+        if (!newShards.isEmpty()) {
+            addShardReaders(newShards);
         }
     }
 
@@ -113,7 +112,7 @@ public class KinesisSourceP extends AbstractProcessor {
             ShardReader reader = shardReaders.get(currentReader);
             nextReader = incrCircular(currentReader, shardReaders.size());
 
-            ShardReader.Result result = reader.run();
+            ShardReader.Result result = reader.probe();
             if (ShardReader.Result.HAS_DATA.equals(result)) {
                 Record[] records = reader.getData();
                 traverser = Traversers.traverseArray(records)

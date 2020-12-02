@@ -22,18 +22,19 @@ import com.amazonaws.services.kinesis.model.Shard;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.kinesis.impl.KinesisHelper.shardBelongsToRange;
+import static java.util.Collections.emptySet;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 
 public class RangeMonitor extends AbstractShardWorker {
 
@@ -62,7 +63,6 @@ public class RangeMonitor extends AbstractShardWorker {
     private final Set<String> knownShards;
     private final RandomizedRateTracker listShardsRateTracker;
     private final ILogger logger;
-    private final List<Shard> newShards = new ArrayList<>();
 
     private State state = State.READY_TO_LIST_SHARDS;
     private String nextToken;
@@ -80,27 +80,25 @@ public class RangeMonitor extends AbstractShardWorker {
         super(kinesis, stream, logger);
         this.logger = logger;
         this.hashRange = hashRange;
-        this.knownShards = knownShards.stream().map(Shard::getShardId).collect(toSet());
+        this.knownShards = knownShards.stream().map(Shard::getShardId).collect(toCollection(HashSet::new));
         this.listShardsRateTracker = initRandomizedTracker(totalInstances);
         this.nextListShardsTime = System.nanoTime() + listShardsRateTracker.next();
     }
 
-    public Result run() {
+    public Collection<Shard> probe() {
         switch (state) {
             case READY_TO_LIST_SHARDS:
                 return handleReadyToListShards();
             case WAITING_FOR_SHARD_LIST:
                 return handleWaitingForShardList();
-            case NEW_SHARDS_FOUND:
-                return handleNewShardsFound();
             default:
                 throw new RuntimeException("Programming error, unhandled state: " + state);
         }
     }
 
-    private Result handleReadyToListShards() {
+    private Collection<Shard> handleReadyToListShards() {
         if (System.nanoTime() < nextListShardsTime) {
-            return Result.NOTHING;
+            return emptySet();
         }
 
         listShardResult = helper.listShardsAsync(nextToken);
@@ -108,10 +106,10 @@ public class RangeMonitor extends AbstractShardWorker {
 
         nextListShardsTime = System.nanoTime() + listShardsRateTracker.next();
 
-        return Result.NOTHING;
+        return emptySet();
     }
 
-    private Result handleWaitingForShardList() {
+    private Collection<Shard> handleWaitingForShardList() {
         if (listShardResult.isDone()) {
             try {
                 ListShardsResult result = helper.readResult(listShardResult);
@@ -119,58 +117,29 @@ public class RangeMonitor extends AbstractShardWorker {
 
                 List<Shard> shards = result.getShards();
 
-                List<Shard> unknownShards = shards.stream()
+                Set<Shard> unknownShards = shards.stream()
                         .filter(shard -> shardBelongsToRange(shard, hashRange))
-                        .filter(shard -> !knownShards.contains(shard.getShardId())).collect(toList());
+                        .filter(shard -> !knownShards.contains(shard.getShardId())).collect(toCollection(HashSet::new));
 
-                if (unknownShards.isEmpty()) {
-                    state = State.READY_TO_LIST_SHARDS;
-                    return Result.NOTHING;
-                } else {
-                    knownShards.addAll(unknownShards.stream().map(Shard::getShardId).collect(toList()));
-                    newShards.addAll(unknownShards);
+                state = State.READY_TO_LIST_SHARDS;
+                if (!unknownShards.isEmpty()) {
                     logger.info("New shards detected: " +
                             unknownShards.stream().map(Shard::getShardId).collect(joining(", ")));
-                    state = State.NEW_SHARDS_FOUND;
-                    return Result.NEW_SHARDS;
+                    knownShards.addAll(unknownShards.stream().map(Shard::getShardId).collect(toList()));
                 }
+                return unknownShards;
             } catch (SdkClientException e) {
                 logger.warning("Failed listing shards, retrying. Cause: " + e.getMessage());
                 nextToken = null;
                 nextListShardsTime = System.nanoTime() + PAUSE_AFTER_FAILURE;
                 state = State.READY_TO_LIST_SHARDS;
-                return Result.NOTHING;
+                return emptySet();
             } catch (Throwable t) {
                 throw rethrow(t);
             }
         } else {
-            return Result.NOTHING;
+            return emptySet();
         }
-    }
-
-    private Result handleNewShardsFound() {
-        newShards.clear();
-        state = State.READY_TO_LIST_SHARDS;
-        return Result.NOTHING;
-    }
-
-    public Collection<Shard> getNewShards() {
-        if (newShards.isEmpty()) {
-            throw new IllegalStateException("Can't ask for new shards observed when there are none");
-        }
-        return newShards;
-    }
-
-    enum Result {
-        /**
-         * Running the monitor has not produced any events that need handling.
-         */
-        NOTHING,
-
-        /**
-         * Running the monitor has led to noticing new shards that need handling.
-         */
-        NEW_SHARDS
     }
 
     private enum State {
@@ -183,11 +152,6 @@ public class RangeMonitor extends AbstractShardWorker {
          * Reading shard list initiated, waiting for the result.
          */
         WAITING_FOR_SHARD_LIST,
-
-        /**
-         * Monitor has discovered shards that aren't yet assigned to readers.
-         */
-        NEW_SHARDS_FOUND,
     }
 
     @Nonnull
