@@ -23,9 +23,13 @@ import com.amazonaws.services.kinesis.model.GetShardIteratorResult;
 import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.Shard;
+import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.logging.ILogger;
 
-import java.util.LinkedList;
+import javax.annotation.Nonnull;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
@@ -60,14 +64,6 @@ class ShardReader extends AbstractShardWorker {
      * */
     private static final long PAUSE_AFTER_FAILURE = SECONDS.toNanos(1); //todo: exponential backoff
 
-    /**
-     * Maximum number of records returned by this reader in a single batch. Is
-     * limited due to being used from a cooperative processor. Should not pose
-     * a performance bottleneck, because while available data is being processed
-     * the asynchronous request for more will already be issued in the background.
-     */
-    private static final int DATA_BATCH_SIZE = 100;
-
     private final Shard shard;
     private final RandomizedRateTracker getRecordsRateTracker =
             new RandomizedRateTracker(1000, GET_RECORD_OPS_PER_SECOND);
@@ -78,7 +74,8 @@ class ShardReader extends AbstractShardWorker {
     private Future<GetRecordsResult> recordsResult;
     private long nextGetRecordsTime = System.nanoTime();
 
-    private final LinkedList<Record> data = new LinkedList<>();
+    @Nonnull
+    private List<Record> data = Collections.emptyList();
 
     ShardReader(AmazonKinesisAsync kinesis, String stream, Shard shard, ILogger logger) {
         super(kinesis, stream, logger);
@@ -141,11 +138,11 @@ class ShardReader extends AbstractShardWorker {
             try {
                 GetRecordsResult result = helper.readResult(recordsResult);
                 shardIterator = result.getNextShardIterator();
-                data.addAll(result.getRecords());
+                data = result.getRecords();
                 if (shardIterator == null) {
                     state = State.SHARD_CLOSED;
-                    return data.size() > 0 ? Result.HAS_DATA : Result.CLOSED;
-                } else if (data.size() > 0) {
+                    return data.isEmpty() ? Result.CLOSED : Result.HAS_DATA;
+                } else if (!data.isEmpty()) {
                     state = State.HAS_DATA_NEED_TO_REQUEST_RECORDS;
                     return Result.HAS_DATA;
                 } else {
@@ -176,19 +173,19 @@ class ShardReader extends AbstractShardWorker {
 
     private Result handleHasDataNeedToRequestRecords(long currentTime) {
         if (attemptToSendGetRecordsRequest(currentTime)) {
-            state = data.size() > 0 ? State.HAS_DATA : State.WAITING_FOR_RECORDS;
+            state = data.isEmpty() ? State.WAITING_FOR_RECORDS : State.HAS_DATA;
         }
 
-        return data.size() > 0 ? Result.HAS_DATA : Result.NOTHING;
+        return data.isEmpty() ? Result.NOTHING : Result.HAS_DATA;
     }
 
     private Result handleHasData() {
-        state = data.size() > 0 ? State.HAS_DATA : State.WAITING_FOR_RECORDS;
-        return data.size() > 0 ? Result.HAS_DATA : Result.NOTHING;
+        state = data.isEmpty() ? State.WAITING_FOR_RECORDS : State.HAS_DATA;
+        return data.isEmpty() ? Result.NOTHING : Result.HAS_DATA;
     }
 
     private Result handleShardClosed() {
-        return data.size() > 0 ? Result.HAS_DATA : Result.CLOSED;
+        return data.isEmpty() ? Result.CLOSED : Result.HAS_DATA;
     }
 
     private boolean attemptToSendGetRecordsRequest(long currentTime) {
@@ -206,17 +203,14 @@ class ShardReader extends AbstractShardWorker {
         return shard;
     }
 
-    public Record[] getData() {
+    public Traverser<Record> getData() {
         if (data.isEmpty()) {
             throw new IllegalStateException("Can't ask for data when none is available");
         }
 
-        Record[] records = new Record[Math.min(data.size(), DATA_BATCH_SIZE)];
-        for (int i = 0; i < records.length; i++) {
-            records[i] = data.remove();
-        }
-
-        return records;
+        Traverser<Record> traverser = Traversers.traverseIterable(data);
+        data = Collections.emptyList();
+        return traverser;
     }
 
     enum Result {

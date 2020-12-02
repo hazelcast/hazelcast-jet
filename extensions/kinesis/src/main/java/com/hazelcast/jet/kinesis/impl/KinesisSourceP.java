@@ -16,7 +16,6 @@
 package com.hazelcast.jet.kinesis.impl;
 
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
-import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
@@ -115,8 +114,7 @@ public class KinesisSourceP extends AbstractProcessor {
 
             ShardReader.Result result = reader.probe(currentTime);
             if (ShardReader.Result.HAS_DATA.equals(result)) {
-                Record[] records = reader.getData();
-                traverser = Traversers.traverseArray(records)
+                traverser = reader.getData()
                         .flatMap(record -> eventTimeMapper.flatMapEvent(
                                 entry(record.getPartitionKey(), record.getData().array()), //todo: shady?
                                 currentReader,
@@ -144,7 +142,7 @@ public class KinesisSourceP extends AbstractProcessor {
         }
 
         //todo: actual snapshot saving; we will be saving the sequence numbers of last seen messages, per shard
-
+        //todo: should we also save the list of closed shards?
         //todo: save watermark, see StreamKafkaP
         return true;
     }
