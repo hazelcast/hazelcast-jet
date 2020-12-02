@@ -39,7 +39,6 @@ public interface FileFormat<T> extends Serializable {
     @Nonnull
     String format();
 
-
     // Factory methods for supported file formats are here for easy discoverability.
 
     /**
@@ -65,13 +64,31 @@ public interface FileFormat<T> extends Serializable {
 
     /**
      * Returns a file format for CSV files which specifies to deserialize each
+     * line into {@code String[]}. {@code includesHeader} specifies whether
+     * source includes header.
+     */
+    @Nonnull
+    static <T> CsvFileFormat<T> csv(boolean includesHeader) {
+        return new CsvFileFormat<>(includesHeader);
+    }
+
+    /**
+     * Returns a file format for CSV files which specifies to deserialize each
      * line into an instance of the given class. It assumes the CSV has a
      * header line and specifies to use it as the column names that map to the
      * object's fields.
      */
     @Nonnull
     static <T> CsvFileFormat<T> csv(@Nonnull Class<T> clazz) {
-        return new CsvFileFormat<T>(clazz);
+        return new CsvFileFormat<>(clazz);
+    }
+
+    /**
+     * Returns a file format for JSON Lines files.
+     */
+    @Nonnull
+    static <T> JsonFileFormat<T> json() {
+        return json(null);
     }
 
     /**
@@ -81,10 +98,13 @@ public interface FileFormat<T> extends Serializable {
      * href="https://github.com/FasterXML/jackson-jr">Jackson jr</a>, which
      * supports the basic data types such as strings, numbers, lists and maps,
      * objects with JavaBeans-style getters/setters, as well as public fields.
+     * If parameter is {@code null} data is deserialized into
+     * {@link com.fasterxml.jackson.jr.stree.JrsObject} but for that case you
+     * should prefer the no-argument {@link #json()} call.
      */
     @Nonnull
-    static <T> JsonFileFormat<T> json(@Nonnull Class<T> clazz) {
-        return new JsonFileFormat<>(clazz);
+    static <T> JsonFileFormat<T> json(@Nullable Class<T> clazz) {
+        return new JsonFileFormat<T>().withClass(clazz);
     }
 
     /**

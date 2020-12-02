@@ -68,7 +68,6 @@ public class SqlCsvTest extends SqlTestSupport {
                 + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
                 + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.csv" + '\''
-                + ", '" + FileSqlConnector.OPTION_HEADER + "'='" + Boolean.TRUE + '\''
                 + ")"
         );
 
@@ -102,7 +101,6 @@ public class SqlCsvTest extends SqlTestSupport {
                 + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
                 + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.csv" + '\''
-                + ", '" + FileSqlConnector.OPTION_HEADER + "'='" + Boolean.TRUE + '\''
                 + ")"
         );
 
@@ -161,7 +159,6 @@ public class SqlCsvTest extends SqlTestSupport {
                         + "csv_file ("
                         + "path => '" + RESOURCES_PATH + "'"
                         + ", glob => 'file.csv'"
-                        + ", header => 'true'"
                         + ")"
                         + ")",
                 singletonList(new Row(

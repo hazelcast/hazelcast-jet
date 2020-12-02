@@ -16,6 +16,9 @@
 
 package com.hazelcast.jet.sql.impl.connector;
 
+import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
+import com.hazelcast.jet.sql.impl.extract.CsvQueryTarget;
 import com.hazelcast.sql.impl.expression.ColumnExpression;
 import com.hazelcast.sql.impl.expression.ConstantExpression;
 import com.hazelcast.sql.impl.expression.Expression;
@@ -27,7 +30,9 @@ import org.junit.Test;
 
 import static com.hazelcast.sql.impl.type.QueryDataType.BOOLEAN;
 import static com.hazelcast.sql.impl.type.QueryDataType.INT;
+import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -64,6 +69,24 @@ public class RowProjectorTest {
         Object[] row = projector.project(1);
 
         assertThat(row).isNull();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void test_supplierSerialization() {
+        InternalSerializationService serializationService = new DefaultSerializationServiceBuilder().build();
+
+        RowProjector.Supplier original = RowProjector.supplier(
+                new String[]{"field"},
+                new QueryDataType[]{QueryDataType.INT, QueryDataType.INT},
+                () -> new CsvQueryTarget(emptyMap()),
+                (Expression<Boolean>) ConstantExpression.create(Boolean.FALSE, QueryDataType.BOOLEAN),
+                asList(ConstantExpression.create(1, QueryDataType.INT), ConstantExpression.create("2", QueryDataType.INT))
+        );
+
+        RowProjector.Supplier serialized = serializationService.toObject(serializationService.toData(original));
+
+        assertThat(serialized).isEqualToIgnoringGivenFields(original, "targetSupplier");
     }
 
     private static final class IdentityTarget implements QueryTarget {

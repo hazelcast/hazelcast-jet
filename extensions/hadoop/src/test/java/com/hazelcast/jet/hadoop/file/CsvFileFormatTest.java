@@ -25,7 +25,34 @@ import org.junit.Test;
 public class CsvFileFormatTest extends BaseFileFormatTest {
 
     @Test
-    public void shouldReadCsvFile() throws Exception {
+    public void shouldReadCsvFile() {
+
+        FileSourceBuilder<String[]> source = FileSources.files(currentDir + "/src/test/resources")
+                                                    .glob("file.csv")
+                                                    .format(FileFormat.csv(true));
+
+        assertItemsInSource(source,
+                new String[]{"Frantisek", "7"},
+                new String[]{"Ali", "42"}
+        );
+    }
+
+    @Test
+    public void shouldReadCsvFileWithHeader() {
+
+        FileSourceBuilder<String[]> source = FileSources.files(currentDir + "/src/test/resources")
+                                                        .glob("file.csv")
+                                                        .format(FileFormat.csv(false));
+
+        assertItemsInSource(source,
+                new String[]{"name", "favoriteNumber"},
+                new String[]{"Frantisek", "7"},
+                new String[]{"Ali", "42"}
+        );
+    }
+
+    @Test
+    public void shouldReadCsvFileToObject() {
 
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
                                                     .glob("file.csv")
@@ -38,7 +65,7 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
     }
 
     @Test
-    public void shouldReadCsvFileWithMoreColumnsThanTargetClass() throws Exception {
+    public void shouldReadCsvFileWithMoreColumnsThanTargetClass() {
 
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
                                                     .glob("file-more-columns.csv")

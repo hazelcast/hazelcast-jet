@@ -32,13 +32,10 @@ import java.util.Map;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.CSV_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSONL_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PARQUET_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_CHARSET;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_DELIMITER;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_GLOB;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_HEADER;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_PATH;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_SHARED_FILE_SYSTEM;
 import static java.util.Arrays.asList;
@@ -48,32 +45,28 @@ public final class FileTableFunction extends JetTableFunction {
 
     public static final FileTableFunction CSV = new FileTableFunction(CSV_FORMAT, asList(
             new JetTableFunctionParameter(0, OPTION_PATH, true),
-            new JetTableFunctionParameter(1, OPTION_GLOB, false),
-            new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, false),
-            new JetTableFunctionParameter(3, OPTION_CHARSET, false),
-            new JetTableFunctionParameter(4, OPTION_HEADER, false),
-            new JetTableFunctionParameter(5, OPTION_DELIMITER, false)
+            new JetTableFunctionParameter(1, OPTION_GLOB, true),
+            new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, false)
             // TODO: cloud credentials
     ));
 
-    public static final FileTableFunction JSON = new FileTableFunction(JSON_FORMAT, asList(
+    public static final FileTableFunction JSONL = new FileTableFunction(JSONL_FORMAT, asList(
             new JetTableFunctionParameter(0, OPTION_PATH, true),
-            new JetTableFunctionParameter(1, OPTION_GLOB, false),
-            new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, false),
-            new JetTableFunctionParameter(3, OPTION_CHARSET, false)
+            new JetTableFunctionParameter(1, OPTION_GLOB, true),
+            new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, false)
             // TODO: cloud credentials
     ));
 
     public static final FileTableFunction AVRO = new FileTableFunction(AVRO_FORMAT, asList(
             new JetTableFunctionParameter(0, OPTION_PATH, true),
-            new JetTableFunctionParameter(1, OPTION_GLOB, false),
+            new JetTableFunctionParameter(1, OPTION_GLOB, true),
             new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, false)
             // TODO: cloud credentials
     ));
 
     public static final FileTableFunction PARQUET = new FileTableFunction(PARQUET_FORMAT, asList(
             new JetTableFunctionParameter(0, OPTION_PATH, true),
-            new JetTableFunctionParameter(1, OPTION_GLOB, false),
+            new JetTableFunctionParameter(1, OPTION_GLOB, true),
             new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, false)
             // TODO: cloud credentials
     ));

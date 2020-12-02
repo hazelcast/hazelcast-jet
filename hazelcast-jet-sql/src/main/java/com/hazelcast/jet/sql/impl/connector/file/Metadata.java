@@ -16,25 +16,40 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
+import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.sql.impl.extract.QueryTarget;
 import com.hazelcast.sql.impl.schema.TableField;
 
 import java.util.List;
 
+import static java.util.Objects.requireNonNull;
+
 class Metadata {
 
-    private final TargetDescriptor targetDescriptor;
     private final List<TableField> fields;
+    private final ProcessorMetaSupplier processorMetaSupplier;
+    private final SupplierEx<QueryTarget> queryTargetSupplier;
 
-    Metadata(TargetDescriptor targetDescriptor, List<TableField> fields) {
-        this.targetDescriptor = targetDescriptor;
-        this.fields = fields;
-    }
-
-    TargetDescriptor targetDescriptor() {
-        return targetDescriptor;
+    Metadata(
+            List<TableField> fields,
+            ProcessorMetaSupplier processorMetaSupplier,
+            SupplierEx<QueryTarget> queryTargetSupplier
+    ) {
+        this.fields = requireNonNull(fields);
+        this.processorMetaSupplier = requireNonNull(processorMetaSupplier);
+        this.queryTargetSupplier = requireNonNull(queryTargetSupplier);
     }
 
     List<TableField> fields() {
         return fields;
+    }
+
+    ProcessorMetaSupplier processorMetaSupplier() {
+        return processorMetaSupplier;
+    }
+
+    SupplierEx<QueryTarget> queryTargetSupplier() {
+        return queryTargetSupplier;
     }
 }

@@ -38,10 +38,9 @@ import java.time.OffsetDateTime;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.CSV_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSONL_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PARQUET_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_HEADER;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -75,7 +74,7 @@ public class SqlHadoopTest extends SqlTestSupport {
 
     @Test
     public void test_csv() throws IOException {
-        store("/csv/file.csv", "1,Alice\n2,Bob");
+        store("/csv/file.csv", "id,name\n1,Alice\n2,Bob");
 
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
@@ -85,6 +84,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("csv") + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -107,7 +107,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("discovered-csv") + '\''
-                + ", '" + OPTION_HEADER + "'='" + Boolean.TRUE + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -130,8 +130,9 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", name VARCHAR"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSONL_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("json") + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -152,16 +153,17 @@ public class SqlHadoopTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSONL_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("discovered-json") + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
         assertRowsAnyOrder(
                 "SELECT name, id FROM " + name,
                 asList(
-                        new Row("Alice", 1)
-                        , new Row("Bob", 2)
+                        new Row("Alice", 1D)
+                        , new Row("Bob", 2D)
                 )
         );
     }
@@ -178,6 +180,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '\'' + OPTION_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("avro") + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -197,6 +200,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '\'' + OPTION_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("discovered-avro") + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -217,6 +221,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '\'' + OPTION_FORMAT + "'='" + PARQUET_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("parquet-nulls") + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -238,6 +243,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '\'' + OPTION_FORMAT + "'='" + PARQUET_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("parquet-fields-mapping") + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -270,6 +276,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ( "
                 + '\'' + OPTION_FORMAT + "'='" + PARQUET_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("parquet-all-types") + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -303,11 +310,11 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ( "
                 + '\'' + OPTION_FORMAT + "'='" + PARQUET_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("parquet-schema-discovery") + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
-        assertRowsAnyOrder(
-                "SELECT "
+        assertRowsAnyOrder("SELECT "
                         + "string"
                         + ", \"boolean\""
                         + ", byte"
@@ -344,8 +351,7 @@ public class SqlHadoopTest extends SqlTestSupport {
     public void test_parquet_tableFunction() throws IOException {
         store("/parquet-table-function/file.parquet", Files.readAllBytes(Paths.get("src/test/resources/file.parquet")));
 
-        assertRowsAnyOrder(
-                "SELECT "
+        assertRowsAnyOrder("SELECT "
                         + "string"
                         + ", \"boolean\""
                         + ", byte"
@@ -360,7 +366,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                         + ", \"timestamp\""
                         + ", \"timestampTz\""
                         + " FROM TABLE ("
-                        + "PARQUET_FILE ('" + path("parquet-table-function") + "')"
+                        + "PARQUET_FILE ('" + path("parquet-table-function") + "', '*')"
                         + ")",
                 singletonList(new Row(
                         "string",

@@ -16,93 +16,54 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.jr.stree.JrsObject;
+import com.hazelcast.jet.pipeline.file.FileFormat;
+import com.hazelcast.jet.pipeline.file.JsonFileFormat;
+import com.hazelcast.jet.sql.impl.extract.JsonQueryTarget;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
-import com.hazelcast.sql.impl.schema.TableField;
-import com.hazelcast.sql.impl.type.QueryDataType;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static com.hazelcast.jet.impl.util.Util.toList;
+final class JsonMetadataResolver extends MetadataResolver {
 
-interface JsonMetadataResolver {
+    static final JsonMetadataResolver INSTANCE = new JsonMetadataResolver();
 
-    ObjectMapper MAPPER = new ObjectMapper(); // TODO
+    private JsonMetadataResolver() {
+    }
 
-    /**
-     * Validates the field list. Returns a field list that has non-null
-     * externalName for each field.
-     */
-    static void validateFields(List<MappingField> userFields) {
-        for (MappingField field : userFields) {
-            String path = field.externalName() == null ? field.name() : field.externalName();
+    @Override
+    public String supportedFormat() {
+        return JsonFileFormat.FORMAT_JSONL;
+    }
+
+    @Override
+    public List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, String> options) {
+        return !userFields.isEmpty() ? validateFields(userFields) : resolveFieldsFromSample(options);
+    }
+
+    private List<MappingField> validateFields(List<MappingField> userFields) {
+        for (MappingField userField : userFields) {
+            String path = userField.externalName() == null ? userField.name() : userField.externalName();
             if (path.indexOf('.') >= 0) {
                 throw QueryException.error("Invalid field name - '" + path + "'. Nested fields are not supported.");
             }
         }
+        return userFields;
     }
 
-    static List<MappingField> resolveFieldsFromSample(String line) {
-        ObjectNode object;
-        try {
-            object = (ObjectNode) MAPPER.readTree(line);
-        } catch (Exception e) {
-            throw sneakyThrow(e);
-        }
-
-        Map<String, MappingField> fields = new LinkedHashMap<>();
-        Iterator<Entry<String, JsonNode>> iterator = object.fields();
-        while (iterator.hasNext()) {
-            Entry<String, JsonNode> entry = iterator.next();
-
-            String name = entry.getKey();
-            QueryDataType type = resolveType(entry.getValue());
-
-            MappingField field = new MappingField(name, type);
-
-            fields.putIfAbsent(field.name(), field);
-        }
-        return new ArrayList<>(fields.values());
+    private List<MappingField> resolveFieldsFromSample(Map<String, String> options) {
+        JrsObject object = fetchRecord(FileFormat.json(), options);
+        return JsonResolver.resolveFields(object);
     }
 
-    static List<TableField> toTableFields(List<MappingField> mappingFields) {
-        return toList(mappingFields,
-                f -> new FileTableField(f.name(), f.type(), f.externalName() == null ? f.name() : f.externalName()));
-    }
-
-    static QueryDataType resolveType(JsonNode value) {
-        if (value == null || value.isNull()) {
-            return QueryDataType.NULL;
-        } else if (value.isBoolean()) {
-            return QueryDataType.BOOLEAN;
-        } else if (value.isInt()) {
-            return QueryDataType.INT;
-        } else if (value.isLong()) {
-            return QueryDataType.BIGINT;
-        } else if (value.isFloat() || value.isDouble()) {
-            return QueryDataType.DOUBLE;
-        } else if (value.isTextual()) {
-            return QueryDataType.VARCHAR;
-        } else {
-            return QueryDataType.OBJECT;
-        }
-    }
-
-    static String[] paths(List<TableField> fields) {
-        // TODO: get rid of casting ???
-        return fields.stream().map(field -> ((FileTableField) field).getPath()).toArray(String[]::new);
-    }
-
-    static QueryDataType[] types(List<TableField> fields) {
-        return fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
+    @Override
+    public Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, String> options) {
+        return new Metadata(
+                toFields(resolvedFields),
+                toProcessorMetaSupplier(FileFormat.json(), options),
+                JsonQueryTarget::new
+        );
     }
 }

@@ -30,7 +30,6 @@ import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.spi.impl.NodeEngine;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -41,10 +40,8 @@ import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -55,7 +52,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -551,27 +547,5 @@ public final class Util {
         durationMs /= 24;
         String textUpToHours = String.format("%02d:%02d:%02d.%03d", hours, minutes, seconds, millis);
         return sign + (durationMs > 0 ? durationMs + "d " : "") + textUpToHours;
-    }
-
-    /**
-     * Scans files in the directory matching the {@code glob} and reads the
-     * first line from the first file that has a line.
-     *
-     * @return null in case there's no file that has at least a single line
-     * @throws IOException
-     */
-    @Nullable
-    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
-            justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
-    public static String firstLineFromFirstFile(String directory, String glob) throws IOException {
-        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get(directory), glob)) {
-            for (Path path : directoryStream) { // TODO: directory check
-                Optional<String> line = Files.lines(path).findFirst();
-                if (line.isPresent()) {
-                    return line.get();
-                }
-            }
-        }
-        return null;
     }
 }

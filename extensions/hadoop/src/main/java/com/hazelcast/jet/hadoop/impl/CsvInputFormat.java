@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvParser.Feature;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import com.hazelcast.jet.impl.util.ReflectionUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +40,7 @@ import java.io.InputStream;
 public class CsvInputFormat extends FileInputFormat<NullWritable, Object> {
 
     public static final String CSV_INPUT_FORMAT_BEAN_CLASS = "csv.bean.class";
+    public static final String CSV_INPUT_FORMAT_HEADER = "csv.header";
 
     @Override
     public RecordReader<NullWritable, Object> createRecordReader(InputSplit split, TaskAttemptContext context) {
@@ -50,20 +52,14 @@ public class CsvInputFormat extends FileInputFormat<NullWritable, Object> {
 
             @Override
             public void initialize(InputSplit split, TaskAttemptContext context) throws IOException {
-
                 FileSplit fileSplit = (FileSplit) split;
                 Configuration conf = context.getConfiguration();
 
                 Configuration configuration = context.getConfiguration();
                 String className = configuration.get(CSV_INPUT_FORMAT_BEAN_CLASS);
-                Class<?> clazz = ReflectionUtils.loadClass(className);
-
-                CsvMapper mapper = new CsvMapper();
-
-                CsvSchema schema = CsvSchema.emptySchema().withHeader();
-                ObjectReader reader = mapper.readerFor(clazz)
-                                            .withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                                            .with(schema);
+                Class<?> clazz = className == null ? null : ReflectionUtils.loadClass(className);
+                boolean includesHeader = configuration.getBoolean(CSV_INPUT_FORMAT_HEADER, false);
+                ObjectReader reader = reader(clazz, includesHeader);
 
                 Path file = fileSplit.getPath();
                 FileSystem fs = file.getFileSystem(conf);
@@ -100,5 +96,19 @@ public class CsvInputFormat extends FileInputFormat<NullWritable, Object> {
                 iterator.close();
             }
         };
+    }
+
+    private static <T> ObjectReader reader(Class<T> clazz, boolean includesHeader) {
+        if (clazz == null) {
+            return new CsvMapper().enable(Feature.WRAP_AS_ARRAY)
+                                  .readerFor(String[].class)
+                                  .withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                                  .with(CsvSchema.emptySchema().withSkipFirstDataRow(includesHeader));
+        } else {
+            assert includesHeader;
+            return new CsvMapper().readerFor(clazz)
+                                  .withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                                  .with(CsvSchema.emptySchema().withHeader());
+        }
     }
 }

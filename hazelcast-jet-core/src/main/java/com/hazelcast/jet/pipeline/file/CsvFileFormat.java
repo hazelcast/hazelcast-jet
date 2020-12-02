@@ -17,6 +17,7 @@
 package com.hazelcast.jet.pipeline.file;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import static java.util.Objects.requireNonNull;
 
@@ -35,6 +36,7 @@ public class CsvFileFormat<T> implements FileFormat<T> {
     public static final String FORMAT_CSV = "csv";
 
     private final Class<T> clazz;
+    private final boolean includesHeader;
 
     /**
      * Creates a {@code CsvFileFormat}. See {@link FileFormat#csv} for more
@@ -43,16 +45,38 @@ public class CsvFileFormat<T> implements FileFormat<T> {
      * @param clazz type of the object to deserialize CSV lines into
      */
     CsvFileFormat(@Nonnull Class<T> clazz) {
-        this.clazz = requireNonNull(clazz, "clazz must not be null");
+        this(requireNonNull(clazz, "clazz must not be null"), true);
+    }
+
+    /**
+     * Creates a {@code CsvFileFormat}. See {@link FileFormat#csv} for more
+     * details.
+     *
+     * @param includesHeader whether source includes header
+     */
+    CsvFileFormat(boolean includesHeader) {
+        this(null, includesHeader);
+    }
+
+    private CsvFileFormat(Class<T> clazz, boolean includesHeader) {
+        this.clazz = clazz;
+        this.includesHeader = includesHeader;
     }
 
     /**
      * Returns the type of the object the data source using this format will
      * emit.
      */
-    @Nonnull
+    @Nullable
     public Class<T> clazz() {
         return clazz;
+    }
+
+    /**
+     * Returns whether source includes header.
+     */
+    public boolean includesHeader() {
+        return includesHeader;
     }
 
     @Nonnull @Override

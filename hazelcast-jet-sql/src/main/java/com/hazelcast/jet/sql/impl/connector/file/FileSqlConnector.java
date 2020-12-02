@@ -18,6 +18,7 @@ package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.sql.impl.connector.Processors;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -26,8 +27,12 @@ import com.hazelcast.sql.impl.schema.Table;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import static com.hazelcast.jet.core.Edge.between;
 
 public class FileSqlConnector implements SqlConnector {
 
@@ -36,14 +41,22 @@ public class FileSqlConnector implements SqlConnector {
     public static final String OPTION_PATH = "path";
     public static final String OPTION_GLOB = "glob";
     public static final String OPTION_SHARED_FILE_SYSTEM = "sharedFileSystem";
-    public static final String OPTION_CHARSET = "charset";
-    public static final String OPTION_HEADER = "header";
-    public static final String OPTION_DELIMITER = "delimiter";
 
-    //public static final String OPTION_S3_ACCESS_KEY = "file.s3a.access.key";
-    //public static final String OPTION_S3_SECRET_KEY = "file.s3a.secret.key";
+    public static final Set<String> OPTIONS = new HashSet<String>() {{
+        add(OPTION_FORMAT);
+        add(OPTION_PATH);
+        add(OPTION_GLOB);
+        add(OPTION_SHARED_FILE_SYSTEM);
+    }};
 
     static final FileSqlConnector INSTANCE = new FileSqlConnector();
+
+    private static final MetadataResolvers METADATA_RESOLVERS = new MetadataResolvers(
+            CsvMetadataResolver.INSTANCE,
+            JsonMetadataResolver.INSTANCE,
+            AvroMetadataResolver.INSTANCE,
+            ParquetMetadataResolver.INSTANCE
+    );
 
     @Override
     public String typeName() {
@@ -62,7 +75,7 @@ public class FileSqlConnector implements SqlConnector {
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> userFields
     ) {
-        return resolveAndValidateFields(options, userFields);
+        return METADATA_RESOLVERS.resolveAndValidateFields(userFields, options);
     }
 
     @Nonnull
@@ -70,7 +83,7 @@ public class FileSqlConnector implements SqlConnector {
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> userFields
     ) {
-        return MetadataResolver.resolveAndValidateFields(userFields, FileOptions.from(options));
+        return METADATA_RESOLVERS.resolveAndValidateFields(userFields, options);
     }
 
     @Nonnull
@@ -92,14 +105,15 @@ public class FileSqlConnector implements SqlConnector {
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
-        Metadata metadata = MetadataResolver.resolveMetadata(resolvedFields, FileOptions.from(options));
+        Metadata metadata = METADATA_RESOLVERS.resolveMetadata(resolvedFields, options);
 
         return new FileTable(
                 INSTANCE,
                 schemaName,
                 name,
                 metadata.fields(),
-                metadata.targetDescriptor()
+                metadata.processorMetaSupplier(),
+                metadata.queryTargetSupplier()
         );
     }
 
@@ -114,10 +128,24 @@ public class FileSqlConnector implements SqlConnector {
             @Nonnull DAG dag,
             @Nonnull Table table0,
             @Nullable Expression<Boolean> predicate,
-            @Nonnull List<Expression<?>> projection
+            @Nonnull List<Expression<?>> projections
     ) {
         FileTable table = (FileTable) table0;
 
-        return dag.newVertex(table.toString(), table.readProcessor(predicate, projection));
+        Vertex vStart = dag.newVertex(table.toString(), table.processorMetaSupplier());
+
+        Vertex vEnd = dag.newVertex(
+                "Project(" + table.toString() + ")",
+                Processors.rowProjector(
+                        table.paths(),
+                        table.types(),
+                        table.queryTargetSupplier(),
+                        predicate,
+                        projections
+                )
+        );
+
+        dag.edge(between(vStart, vEnd).isolated());
+        return vEnd;
     }
 }

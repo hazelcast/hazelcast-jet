@@ -16,8 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.jr.stree.JrsObject;
 import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
@@ -30,9 +29,10 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSONL_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_FORMAT;
 import static java.time.ZoneOffset.UTC;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 
 public class SqlJsonTest extends SqlTestSupport {
@@ -54,7 +54,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + "nonExistingField VARCHAR"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSONL_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
                 + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.json" + '\''
                 + ")"
@@ -74,7 +74,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", name VARCHAR EXTERNAL NAME string"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSONL_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
                 + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.json" + '\''
                 + ")"
@@ -106,13 +106,13 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", object OBJECT"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSONL_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
                 + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.json" + '\''
                 + ")"
         );
 
-        assertRowsAnyOrder(
+        assertComparingFieldByFieldRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(
                         "string",
@@ -128,7 +128,7 @@ public class SqlJsonTest extends SqlTestSupport {
                         LocalDate.of(2020, 4, 15),
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
                         OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC),
-                        new ObjectNode(JsonNodeFactory.instance)
+                        new JrsObject(emptyMap())
                 ))
         );
     }
@@ -139,13 +139,13 @@ public class SqlJsonTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSONL_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
                 + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.json" + '\''
                 + ")"
         );
 
-        assertRowsAnyOrder(
+        assertComparingFieldByFieldRowsAnyOrder(
                 "SELECT "
                         + "string"
                         + ", \"boolean\""
@@ -161,15 +161,15 @@ public class SqlJsonTest extends SqlTestSupport {
                         + ", \"timestamp\""
                         + ", \"timestampTz\""
                         + ", \"null\""
-                        + ", object IS NOT NULL"
+                        + ", object"
                         + " FROM " + name,
                 singletonList(new Row(
                         "string",
                         true,
-                        127,
-                        32767,
-                        2147483647,
-                        9223372036854775807L,
+                        127D,
+                        32767D,
+                        2147483647D,
+                        9223372036854775807D,
                         1234567890.1D,
                         123451234567890.1D,
                         "9223372036854775.123",
@@ -178,7 +178,7 @@ public class SqlJsonTest extends SqlTestSupport {
                         "2020-04-15T12:23:34.001",
                         "2020-04-15T12:23:34.200Z",
                         null,
-                        true
+                        new JrsObject(emptyMap())
                 ))
         );
     }
@@ -203,15 +203,15 @@ public class SqlJsonTest extends SqlTestSupport {
                         + ", \"null\""
                         + ", object IS NOT NULL"
                         + " FROM TABLE ("
-                        + "JSON_FILE ('" + RESOURCES_PATH + "', 'file.json')"
+                        + "JSONL_FILE ('" + RESOURCES_PATH + "', 'file.json')"
                         + ")",
                 singletonList(new Row(
                         "string",
                         true,
-                        127,
-                        32767,
-                        2147483647,
-                        9223372036854775807L,
+                        127D,
+                        32767D,
+                        2147483647D,
+                        9223372036854775807D,
                         1234567890.1D,
                         123451234567890.1D,
                         "9223372036854775.123",

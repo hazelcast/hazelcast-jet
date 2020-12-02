@@ -14,19 +14,11 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.file;
+package com.hazelcast.jet.pipeline.file.impl;
 
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.sql.impl.expression.Expression;
-import com.hazelcast.sql.impl.schema.TableField;
 
-import java.util.List;
+public interface FileProcessorMetaSupplier<R> extends ProcessorMetaSupplier {
 
-interface TargetDescriptor {
-
-    ProcessorMetaSupplier readProcessor(
-            List<TableField> fields,
-            Expression<Boolean> predicate,
-            List<Expression<?>> projection
-    );
+    FileTraverser<R> traverser() throws Exception;
 }

@@ -16,37 +16,49 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
-import com.hazelcast.sql.impl.expression.Expression;
+import com.hazelcast.sql.impl.extract.QueryTarget;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.TableField;
+import com.hazelcast.sql.impl.type.QueryDataType;
 
 import java.util.List;
 
 class FileTable extends JetTable {
 
-    private final TargetDescriptor targetDescriptor;
+    private final ProcessorMetaSupplier processorMetaSupplier;
+    private final SupplierEx<QueryTarget> queryTargetSupplier;
 
     FileTable(
             SqlConnector sqlConnector,
             String schemaName,
             String name,
             List<TableField> fields,
-            TargetDescriptor targetDescriptor
+            ProcessorMetaSupplier processorMetaSupplier,
+            SupplierEx<QueryTarget> queryTargetSupplier
     ) {
         super(sqlConnector, fields, schemaName, name, new ConstantTableStatistics(0));
 
-        this.targetDescriptor = targetDescriptor;
+        this.processorMetaSupplier = processorMetaSupplier;
+        this.queryTargetSupplier = queryTargetSupplier;
     }
 
-    ProcessorMetaSupplier readProcessor(Expression<Boolean> predicate, List<Expression<?>> projection) {
-        return targetDescriptor.readProcessor(getFields(), predicate, projection);
+    public ProcessorMetaSupplier processorMetaSupplier() {
+        return processorMetaSupplier;
     }
 
-    @Override
-    public String toString() {
-        return "File[" + getSchemaName() + "." + getSqlName() + "]";
+    SupplierEx<QueryTarget> queryTargetSupplier() {
+        return queryTargetSupplier;
+    }
+
+    String[] paths() {
+        return getFields().stream().map(field -> ((FileTableField) field).getPath()).toArray(String[]::new);
+    }
+
+    QueryDataType[] types() {
+        return getFields().stream().map(TableField::getType).toArray(QueryDataType[]::new);
     }
 }

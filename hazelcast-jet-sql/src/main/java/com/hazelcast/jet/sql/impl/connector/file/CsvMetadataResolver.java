@@ -16,55 +16,71 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
+import com.hazelcast.jet.pipeline.file.CsvFileFormat;
+import com.hazelcast.jet.pipeline.file.FileFormat;
+import com.hazelcast.jet.sql.impl.extract.CsvQueryTarget;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
-import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.impl.util.Util.toList;
-import static java.util.stream.Collectors.toMap;
+final class CsvMetadataResolver extends MetadataResolver {
 
-interface CsvMetadataResolver {
+    static final CsvMetadataResolver INSTANCE = new CsvMetadataResolver();
 
-    static void validateFields(List<MappingField> userFields) {
-        for (MappingField field : userFields) {
-            if (field.externalName() != null) {
+    private CsvMetadataResolver() {
+    }
+
+    @Override
+    public String supportedFormat() {
+        return CsvFileFormat.FORMAT_CSV;
+    }
+
+    @Override
+    public List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, String> options) {
+        return !userFields.isEmpty() ? validateFields(userFields) : resolveFieldsFromSample(options);
+    }
+
+    private List<MappingField> validateFields(List<MappingField> userFields) {
+        for (MappingField userField : userFields) {
+            if (userField.externalName() != null) {
                 throw QueryException.error("EXTERNAL NAME not supported");
             }
         }
+        return userFields;
     }
 
-    static List<MappingField> resolveFieldsFromSample(String line, String delimiter) {
-        String[] headers = line.split(delimiter);
+    private List<MappingField> resolveFieldsFromSample(Map<String, String> options) {
+        String[] header = fetchRecord(FileFormat.csv(false), options);
+        return resolveFields(header);
+    }
 
+    private static List<MappingField> resolveFields(String[] header) {
         Map<String, MappingField> fields = new LinkedHashMap<>();
-        for (String header : headers) {
-            MappingField field = new MappingField(header, QueryDataType.VARCHAR);
-
+        for (String name : header) {
+            MappingField field = new MappingField(name, QueryDataType.VARCHAR);
             fields.putIfAbsent(field.name(), field);
         }
         return new ArrayList<>(fields.values());
     }
 
-    static List<TableField> toTableFields(List<MappingField> mappingFields) {
-        return toList(mappingFields, f -> new FileTableField(f.name(), f.type()));
-    }
+    @Override
+    public Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, String> options) {
+        Map<String, Integer> indicesByNames = new HashMap<>();
+        for (int i = 0; i < resolvedFields.size(); i++) {
+            MappingField field = resolvedFields.get(i);
+            indicesByNames.put(field.name(), i);
+        }
 
-    static Map<String, Integer> indices(List<TableField> fields) {
-        return IntStream.range(0, fields.size()).boxed().collect(toMap(i -> fields.get(i).getName(), i -> i));
-    }
-
-    static String[] paths(List<TableField> fields) {
-        return fields.stream().map(TableField::getName).toArray(String[]::new);
-    }
-
-    static QueryDataType[] types(List<TableField> fields) {
-        return fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
+        return new Metadata(
+                toFields(resolvedFields),
+                toProcessorMetaSupplier(FileFormat.csv(true), options),
+                () -> new CsvQueryTarget(indicesByNames)
+        );
     }
 }

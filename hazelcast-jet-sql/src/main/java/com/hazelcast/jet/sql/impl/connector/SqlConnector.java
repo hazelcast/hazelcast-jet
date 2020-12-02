@@ -39,7 +39,7 @@ import java.util.Map;
 public interface SqlConnector {
 
     /**
-     * TODO
+     * The serialization format for connectors.
      */
     String OPTION_FORMAT = "format";
 
@@ -120,18 +120,23 @@ public interface SqlConnector {
     String JSON_FORMAT = "json";
 
     /**
-     * TODO
+     * Value for {@value #OPTION_FORMAT} for JSON serialization.
+     */
+    String JSONL_FORMAT = "jsonl";
+
+    /**
+     * Value for {@value #OPTION_FORMAT} for CSV serialization.
      */
     String CSV_FORMAT = "csv";
 
     /**
-     * Value for {@value #OPTION_KEY_FORMAT} and {@value #OPTION_VALUE_FORMAT}
-     * for Avro serialization.
+     * Value for {@value #OPTION_FORMAT}, {@value #OPTION_KEY_FORMAT} and
+     * {@value #OPTION_VALUE_FORMAT} for Avro serialization.
      */
     String AVRO_FORMAT = "avro";
 
     /**
-     * TODO
+     * Value for {@value #OPTION_FORMAT} for Parquet serialization.
      */
     String PARQUET_FORMAT = "parquet";
 

@@ -16,142 +16,68 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.pipeline.file.FileFormat;
+import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
+import com.hazelcast.jet.pipeline.file.impl.FileProcessorMetaSupplier;
+import com.hazelcast.jet.pipeline.file.impl.FileTraverser;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
-import com.hazelcast.sql.impl.QueryException;
-import org.apache.hadoop.mapreduce.Job;
+import com.hazelcast.sql.impl.schema.TableField;
 
-import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.CSV_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PARQUET_FORMAT;
-import static java.util.Objects.requireNonNull;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.jet.impl.util.Util.toList;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTIONS;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_GLOB;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_PATH;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_SHARED_FILE_SYSTEM;
+import static java.util.Map.Entry;
 
-// TODO: smarter/cleaner dispatch ?
-final class MetadataResolver {
+abstract class MetadataResolver {
 
-    private static final String HDFS_SCHEMA = "hdfs://";
+    abstract String supportedFormat();
 
-    private static final String S3_SCHEMA = "s3a://";
-    //private static final String S3_ACCESS_KEY = "fs.s3a.access.key";
-    //private static final String S3_SECRET_KEY = "fs.s3a.secret.key";
+    abstract List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, String> options);
 
-    private MetadataResolver() {
+    abstract Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, String> options);
+
+    @SuppressWarnings("unchecked")
+    protected <T> T fetchRecord(FileFormat<T> format, Map<String, String> options) {
+        FileProcessorMetaSupplier<T> fileProcessorMetaSupplier =
+                (FileProcessorMetaSupplier<T>) toProcessorMetaSupplier(format, options);
+
+        try (FileTraverser<T> traverser = fileProcessorMetaSupplier.traverser()) {
+            return traverser.next();
+        } catch (Exception e) {
+            throw sneakyThrow(e);
+        }
     }
 
-    static List<MappingField> resolveAndValidateFields(List<MappingField> mappingFields, FileOptions options) {
-        try {
-            String path = options.path();
-            if (path.startsWith(HDFS_SCHEMA)) {
-                Job job = Job.getInstance();
-                return requireNonNull(resolveRemoteFileFields(mappingFields, options, job));
-            } else if (path.startsWith(S3_SCHEMA)) {
-                Job job = createS3Job(options);
-                return requireNonNull(resolveRemoteFileFields(mappingFields, options, job));
-                // adl, gs, wasbs
-            } else {
-                return requireNonNull(resolveLocalFileFields(mappingFields, options));
+    protected List<TableField> toFields(List<MappingField> resolvedFields) {
+        return toList(
+                resolvedFields,
+                field -> new FileTableField(
+                        field.name(),
+                        field.type(),
+                        field.externalName() == null ? field.name() : field.externalName()
+                )
+        );
+    }
+
+    protected <T> ProcessorMetaSupplier toProcessorMetaSupplier(FileFormat<T> format, Map<String, String> options) {
+        FileSourceBuilder<?> builder = new FileSourceBuilder<>(options.get(OPTION_PATH))
+                .format(format)
+                .glob(options.get(OPTION_GLOB))
+                .sharedFileSystem(Boolean.parseBoolean(options.get(OPTION_SHARED_FILE_SYSTEM)));
+        for (Entry<String, String> entry : options.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+            if (!OPTIONS.contains(key)) {
+                builder.option(key, value);
             }
-        } catch (IOException e) {
-            throw QueryException.error("Unable to resolve table metadata : " + e.getMessage(), e);
         }
-    }
-
-    private static List<MappingField> resolveLocalFileFields(
-            List<MappingField> mappingFields,
-            FileOptions options
-    ) throws IOException {
-        String format = options.format();
-        switch (format) {
-            case CSV_FORMAT:
-                return LocalCsvMetadataResolver.resolveFields(mappingFields, options);
-            case JSON_FORMAT:
-                return LocalJsonMetadataResolver.resolveFields(mappingFields, options);
-            case AVRO_FORMAT:
-                return LocalAvroMetadataResolver.resolveFields(mappingFields, options);
-            default:
-                throw QueryException.error("Unsupported serialization format - '" + format + "'");
-        }
-    }
-
-    private static List<MappingField> resolveRemoteFileFields(
-            List<MappingField> mappingFields,
-            FileOptions options,
-            Job job
-    ) throws IOException {
-        String format = options.format();
-        switch (format) {
-            case CSV_FORMAT:
-                return RemoteCsvMetadataResolver.resolveFields(mappingFields, options, job);
-            case JSON_FORMAT:
-                return RemoteJsonMetadataResolver.resolveFields(mappingFields, options, job);
-            case AVRO_FORMAT:
-                return RemoteAvroMetadataResolver.resolveFields(mappingFields, options, job);
-            case PARQUET_FORMAT:
-                return RemoteParquetMetadataResolver.resolveFields(mappingFields, options, job);
-            default:
-                throw QueryException.error("Unsupported serialization format - '" + format + "'");
-        }
-    }
-
-    static Metadata resolveMetadata(List<MappingField> mappingFields, FileOptions options) {
-        try {
-            String path = options.path();
-            if (path.startsWith(HDFS_SCHEMA)) {
-                Job job = Job.getInstance();
-                return requireNonNull(resolveRemoteFileMetadata(mappingFields, options, job));
-            } else if (path.startsWith(S3_SCHEMA)) {
-                Job job = createS3Job(options);
-                return requireNonNull(resolveRemoteFileMetadata(mappingFields, options, job));
-                // adl, gs, wasbs
-            } else {
-                return requireNonNull(resolveLocalFileMetadata(mappingFields, options));
-            }
-        } catch (IOException e) {
-            throw QueryException.error("Unable to resolve table metadata : " + e.getMessage(), e);
-        }
-    }
-
-    private static Metadata resolveLocalFileMetadata(List<MappingField> mappingFields, FileOptions options) {
-        String format = options.format();
-        switch (format) {
-            case CSV_FORMAT:
-                return LocalCsvMetadataResolver.resolveMetadata(mappingFields, options);
-            case JSON_FORMAT:
-                return LocalJsonMetadataResolver.resolveMetadata(mappingFields, options);
-            case AVRO_FORMAT:
-                return LocalAvroMetadataResolver.resolveMetadata(mappingFields, options);
-            default:
-                throw QueryException.error("Unsupported serialization format - '" + format + "'");
-        }
-    }
-
-    private static Metadata resolveRemoteFileMetadata(
-            List<MappingField> mappingFields,
-            FileOptions options,
-            Job job
-    ) throws IOException {
-        String format = options.format();
-        switch (format) {
-            case CSV_FORMAT:
-                return RemoteCsvMetadataResolver.resolveMetadata(mappingFields, options, job);
-            case JSON_FORMAT:
-                return RemoteJsonMetadataResolver.resolveMetadata(mappingFields, options, job);
-            case AVRO_FORMAT:
-                return RemoteAvroMetadataResolver.resolveMetadata(mappingFields, options, job);
-            case PARQUET_FORMAT:
-                return RemoteParquetMetadataResolver.resolveMetadata(mappingFields, options, job);
-            default:
-                throw QueryException.error("Unsupported serialization format - '" + format + "'");
-        }
-    }
-
-    private static Job createS3Job(FileOptions options) throws IOException {
-        Job job = Job.getInstance();
-        //job.getConfiguration().set(S3_ACCESS_KEY, options.s3AccessKey());
-        //job.getConfiguration().set(S3_SECRET_KEY, options.s3SecretKey());
-        return job;
+        return builder.buildMetaSupplier();
     }
 }

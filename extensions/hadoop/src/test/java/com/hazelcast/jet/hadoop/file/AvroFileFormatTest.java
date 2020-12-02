@@ -42,7 +42,6 @@ public class AvroFileFormatTest extends BaseFileFormatTest {
                 new SpecificUser("Frantisek", 7),
                 new SpecificUser("Ali", 42)
         );
-
     }
 
     @Test

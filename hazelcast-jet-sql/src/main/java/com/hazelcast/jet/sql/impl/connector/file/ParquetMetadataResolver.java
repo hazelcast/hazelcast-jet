@@ -16,75 +16,54 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
+import com.hazelcast.jet.pipeline.file.FileFormat;
+import com.hazelcast.jet.pipeline.file.ParquetFileFormat;
+import com.hazelcast.jet.sql.impl.extract.AvroQueryTarget;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
-import com.hazelcast.sql.impl.schema.TableField;
-import com.hazelcast.sql.impl.type.QueryDataType;
-import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericRecord;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.hazelcast.jet.impl.util.Util.toList;
+final class ParquetMetadataResolver extends MetadataResolver {
 
-interface ParquetMetadataResolver {
+    static final ParquetMetadataResolver INSTANCE = new ParquetMetadataResolver();
 
-    static void validateFields(List<MappingField> userFields) {
-        for (MappingField field : userFields) {
-            String path = field.externalName() == null ? field.name() : field.externalName();
+    private ParquetMetadataResolver() {
+    }
+
+    @Override
+    public String supportedFormat() {
+        return ParquetFileFormat.FORMAT_PARQUET;
+    }
+
+    @Override
+    public List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, String> options) {
+        return !userFields.isEmpty() ? validateFields(userFields) : resolveFieldsFromSample(options);
+    }
+
+    private List<MappingField> validateFields(List<MappingField> userFields) {
+        for (MappingField userField : userFields) {
+            String path = userField.externalName() == null ? userField.name() : userField.externalName();
             if (path.indexOf('.') >= 0) {
                 throw QueryException.error("Invalid field name - '" + path + "'. Nested fields are not supported.");
             }
         }
+        return userFields;
     }
 
-    static List<MappingField> resolveFieldsFromSchema(Schema schema) {
-        Map<String, MappingField> fields = new LinkedHashMap<>();
-        for (Schema.Field avroField : schema.getFields()) {
-            String name = avroField.name();
-            QueryDataType type = resolveType(avroField.schema().getType());
-
-            MappingField field = new MappingField(name, type);
-
-            fields.putIfAbsent(field.name(), field);
-        }
-        return new ArrayList<>(fields.values());
+    private List<MappingField> resolveFieldsFromSample(Map<String, String> options) {
+        GenericRecord record = fetchRecord(FileFormat.parquet(), options);
+        return AvroResolver.resolveFields(record.getSchema());
     }
 
-    static QueryDataType resolveType(Schema.Type type) {
-        switch (type) {
-            case STRING:
-                return QueryDataType.VARCHAR;
-            case BOOLEAN:
-                return QueryDataType.BOOLEAN;
-            case INT:
-                return QueryDataType.INT;
-            case LONG:
-                return QueryDataType.BIGINT;
-            case FLOAT:
-                return QueryDataType.REAL;
-            case DOUBLE:
-                return QueryDataType.DOUBLE;
-            case NULL:
-                return QueryDataType.NULL;
-            default:
-                return QueryDataType.OBJECT;
-        }
-    }
-
-    static List<TableField> toTableFields(List<MappingField> mappingFields) {
-        return toList(mappingFields,
-                f -> new FileTableField(f.name(), f.type(), f.externalName() == null ? f.name() : f.externalName()));
-    }
-
-    static String[] paths(List<TableField> fields) {
-        // TODO: get rid of casting ???
-        return fields.stream().map(field -> ((FileTableField) field).getPath()).toArray(String[]::new);
-    }
-
-    static QueryDataType[] types(List<TableField> fields) {
-        return fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
+    @Override
+    Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, String> options) {
+        return new Metadata(
+                toFields(resolvedFields),
+                toProcessorMetaSupplier(FileFormat.parquet(), options),
+                AvroQueryTarget::new
+        );
     }
 }

@@ -16,16 +16,43 @@
 
 package com.hazelcast.jet.hadoop.file;
 
+import com.fasterxml.jackson.jr.stree.JrsNumber;
+import com.fasterxml.jackson.jr.stree.JrsObject;
+import com.fasterxml.jackson.jr.stree.JrsString;
+import com.google.common.collect.ImmutableMap;
 import com.hazelcast.jet.hadoop.file.model.User;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.file.FileSources;
 import org.junit.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class JsonFileFormatTest extends BaseFileFormatTest {
 
     @Test
-    public void shouldReadJsonLinesFile() throws Exception {
+    public void shouldReadJsonLinesFile() {
+        FileSourceBuilder<JrsObject> source = FileSources.files(currentDir + "/src/test/resources")
+                                                         .glob("file.jsonl")
+                                                         .format(FileFormat.json());
+
+        assertItemsInSource(source,
+                collected -> assertThat(collected).usingRecursiveFieldByFieldElementComparator()
+                                                  .containsOnly(
+                                                          new JrsObject(ImmutableMap.of(
+                                                                  "name", new JrsString("Frantisek"),
+                                                                  "favoriteNumber", new JrsNumber(7))
+                                                          ),
+                                                          new JrsObject(ImmutableMap.of(
+                                                                  "name", new JrsString("Ali"),
+                                                                  "favoriteNumber", new JrsNumber(42))
+                                                          )
+                                                  )
+        );
+    }
+
+    @Test
+    public void shouldReadJsonLinesFileToObject() {
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
                                                     .glob("file.jsonl")
                                                     .format(FileFormat.json(User.class));
