@@ -29,8 +29,8 @@ import java.util.Map;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.toList;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTIONS;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_GLOB;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_OPTIONS;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_PATH;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_SHARED_FILE_SYSTEM;
 import static java.util.Map.Entry;
@@ -39,12 +39,12 @@ abstract class MetadataResolver {
 
     abstract String supportedFormat();
 
-    abstract List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, String> options);
+    abstract List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, ?> options);
 
-    abstract Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, String> options);
+    abstract Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options);
 
     @SuppressWarnings("unchecked")
-    protected <T> T fetchRecord(FileFormat<T> format, Map<String, String> options) {
+    protected <T> T fetchRecord(FileFormat<T> format, Map<String, ?> options) {
         FileProcessorMetaSupplier<T> fileProcessorMetaSupplier =
                 (FileProcessorMetaSupplier<T>) toProcessorMetaSupplier(format, options);
 
@@ -66,18 +66,22 @@ abstract class MetadataResolver {
         );
     }
 
-    protected <T> ProcessorMetaSupplier toProcessorMetaSupplier(FileFormat<T> format, Map<String, String> options) {
-        FileSourceBuilder<?> builder = new FileSourceBuilder<>(options.get(OPTION_PATH))
+    @SuppressWarnings("unchecked")
+    protected <T> ProcessorMetaSupplier toProcessorMetaSupplier(FileFormat<T> format, Map<String, ?> options) {
+        FileSourceBuilder<?> builder = new FileSourceBuilder<>(valueOf(options, OPTION_PATH))
                 .format(format)
-                .glob(options.get(OPTION_GLOB))
-                .sharedFileSystem(Boolean.parseBoolean(options.get(OPTION_SHARED_FILE_SYSTEM)));
-        for (Entry<String, String> entry : options.entrySet()) {
-            String key = entry.getKey();
-            String value = entry.getValue();
-            if (!OPTIONS.contains(key)) {
-                builder.option(key, value);
+                .glob(valueOf(options, OPTION_GLOB))
+                .sharedFileSystem(Boolean.parseBoolean(valueOf(options, OPTION_SHARED_FILE_SYSTEM)));
+        Map<String, String> fileOptions = (Map<String, String>) options.get(OPTION_OPTIONS);
+        if (fileOptions != null) {
+            for (Entry<String, String> entry : fileOptions.entrySet()) {
+                builder.option(entry.getKey(), entry.getValue());
             }
         }
         return builder.buildMetaSupplier();
+    }
+
+    private static String valueOf(Map<?, ?> options, String key) {
+        return (String) options.get(key);
     }
 }

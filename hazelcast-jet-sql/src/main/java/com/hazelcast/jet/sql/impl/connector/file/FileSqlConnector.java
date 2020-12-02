@@ -27,10 +27,8 @@ import com.hazelcast.sql.impl.schema.Table;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static com.hazelcast.jet.core.Edge.between;
 
@@ -41,13 +39,7 @@ public class FileSqlConnector implements SqlConnector {
     public static final String OPTION_PATH = "path";
     public static final String OPTION_GLOB = "glob";
     public static final String OPTION_SHARED_FILE_SYSTEM = "sharedFileSystem";
-
-    public static final Set<String> OPTIONS = new HashSet<String>() {{
-        add(OPTION_FORMAT);
-        add(OPTION_PATH);
-        add(OPTION_GLOB);
-        add(OPTION_SHARED_FILE_SYSTEM);
-    }};
+    public static final String OPTION_OPTIONS = "options";
 
     static final FileSqlConnector INSTANCE = new FileSqlConnector();
 
@@ -80,7 +72,7 @@ public class FileSqlConnector implements SqlConnector {
 
     @Nonnull
     static List<MappingField> resolveAndValidateFields(
-            @Nonnull Map<String, String> options,
+            @Nonnull Map<String, ?> options,
             @Nonnull List<MappingField> userFields
     ) {
         return METADATA_RESOLVERS.resolveAndValidateFields(userFields, options);
@@ -102,7 +94,7 @@ public class FileSqlConnector implements SqlConnector {
     static Table createTable(
             @Nonnull String schemaName,
             @Nonnull String name,
-            @Nonnull Map<String, String> options,
+            @Nonnull Map<String, ?> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
         Metadata metadata = METADATA_RESOLVERS.resolveMetadata(resolvedFields, options);

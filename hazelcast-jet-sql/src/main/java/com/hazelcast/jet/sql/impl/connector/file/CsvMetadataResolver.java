@@ -42,7 +42,7 @@ final class CsvMetadataResolver extends MetadataResolver {
     }
 
     @Override
-    public List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, String> options) {
+    public List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, ?> options) {
         return !userFields.isEmpty() ? validateFields(userFields) : resolveFieldsFromSample(options);
     }
 
@@ -55,7 +55,7 @@ final class CsvMetadataResolver extends MetadataResolver {
         return userFields;
     }
 
-    private List<MappingField> resolveFieldsFromSample(Map<String, String> options) {
+    private List<MappingField> resolveFieldsFromSample(Map<String, ?> options) {
         String[] header = fetchRecord(FileFormat.csv(false), options);
         return resolveFields(header);
     }
@@ -70,7 +70,7 @@ final class CsvMetadataResolver extends MetadataResolver {
     }
 
     @Override
-    public Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, String> options) {
+    public Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
         Map<String, Integer> indicesByNames = new HashMap<>();
         for (int i = 0; i < resolvedFields.size(); i++) {
             MappingField field = resolvedFields.get(i);

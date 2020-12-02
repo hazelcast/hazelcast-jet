@@ -134,6 +134,7 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
 
         SUPPORTED_KINDS.add(SqlKind.COLLECTION_TABLE);
         SUPPORTED_KINDS.add(SqlKind.ARGUMENT_ASSIGNMENT);
+        SUPPORTED_KINDS.add(SqlKind.MAP_VALUE_CONSTRUCTOR); // TODO better validation ???
 
         // Supported operators
         SUPPORTED_OPERATORS = new HashSet<>();

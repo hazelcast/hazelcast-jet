@@ -16,27 +16,32 @@
 
 package com.hazelcast.jet.sql.impl.schema;
 
-import com.hazelcast.sql.impl.calcite.SqlToQueryType;
-import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.sql.type.SqlTypeName;
 
-public class JetTableFunctionParameter implements FunctionParameter {
+import static com.hazelcast.internal.util.Preconditions.checkTrue;
+import static org.apache.calcite.sql.type.SqlTypeName.MAP;
+import static org.apache.calcite.sql.type.SqlTypeName.VARCHAR;
 
-    // supporting just string parameters for now
-    // allowing other types requires at least proper validation
-    // if/when implemented, consider using it in SqlOption as well
-    private static final SqlTypeName TYPE = SqlToQueryType.map(QueryDataType.VARCHAR.getTypeFamily());
+public class JetTableFunctionParameter implements FunctionParameter {
 
     private final int ordinal;
     private final String name;
+    private final SqlTypeName type;
     private final boolean required;
 
-    public JetTableFunctionParameter(int ordinal, String name, boolean required) {
+    public JetTableFunctionParameter(int ordinal, String name, SqlTypeName type, boolean required) {
         this.ordinal = ordinal;
         this.name = name;
+
+        // supporting just string & map[string, string] parameters for now
+        // allowing other types requires at least proper validation
+        // if/when implemented, consider using it in SqlOption as well
+        checkTrue(type == VARCHAR || type == MAP, "Unsupported type: " + type);
+        this.type = type;
+
         this.required = required;
     }
 
@@ -52,7 +57,9 @@ public class JetTableFunctionParameter implements FunctionParameter {
 
     @Override
     public RelDataType getType(RelDataTypeFactory typeFactory) {
-        return typeFactory.createSqlType(TYPE);
+        return type == VARCHAR
+                ? typeFactory.createSqlType(type)
+                : typeFactory.createMapType(typeFactory.createSqlType(VARCHAR), typeFactory.createSqlType(VARCHAR));
     }
 
     @Override

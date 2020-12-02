@@ -39,7 +39,7 @@ final class JsonMetadataResolver extends MetadataResolver {
     }
 
     @Override
-    public List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, String> options) {
+    public List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, ?> options) {
         return !userFields.isEmpty() ? validateFields(userFields) : resolveFieldsFromSample(options);
     }
 
@@ -53,13 +53,13 @@ final class JsonMetadataResolver extends MetadataResolver {
         return userFields;
     }
 
-    private List<MappingField> resolveFieldsFromSample(Map<String, String> options) {
+    private List<MappingField> resolveFieldsFromSample(Map<String, ?> options) {
         JrsObject object = fetchRecord(FileFormat.json(), options);
         return JsonResolver.resolveFields(object);
     }
 
     @Override
-    public Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, String> options) {
+    public Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
         return new Metadata(
                 toFields(resolvedFields),
                 toProcessorMetaSupplier(FileFormat.json(), options),

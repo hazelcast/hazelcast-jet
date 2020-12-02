@@ -32,7 +32,7 @@ import static java.util.stream.Collectors.toMap;
 
 class MetadataResolvers {
 
-    private final Map<String, MetadataResolver> resolvers;
+    private final Map<Object, MetadataResolver> resolvers;
 
     MetadataResolvers(MetadataResolver... resolvers) {
         this.resolvers = Arrays.stream(resolvers).collect(toMap(MetadataResolver::supportedFormat, identity()));
@@ -42,7 +42,7 @@ class MetadataResolvers {
      * A utility to implement {@link SqlConnector#resolveAndValidateFields} in
      * the connector.
      */
-    List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, String> options) {
+    List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, ?> options) {
         if (options.get(OPTION_FORMAT) == null) {
             throw QueryException.error("Missing '" + OPTION_FORMAT + "' option");
         }
@@ -64,12 +64,12 @@ class MetadataResolvers {
      * A utility to implement {@link SqlConnector#createTable} in the
      * connector.
      */
-    Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, String> options) {
+    Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
         return findMetadataResolver(options).resolveMetadata(resolvedFields, options);
     }
 
-    private MetadataResolver findMetadataResolver(Map<String, String> options) {
-        String format = options.get(OPTION_FORMAT);
+    private MetadataResolver findMetadataResolver(Map<String, ?> options) {
+        Object format = options.get(OPTION_FORMAT);
         MetadataResolver resolver = resolvers.get(format);
         if (resolver == null) {
             throw QueryException.error("Unsupported serialization format: " + format);

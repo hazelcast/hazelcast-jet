@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.validate;
 
+import com.google.common.collect.ImmutableMap;
 import com.hazelcast.jet.sql.impl.schema.JetTableFunctionParameter;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.calcite.validate.operators.HazelcastSqlCastFunction;
@@ -59,22 +60,16 @@ public class JetSqlOperatorTableTest {
 
     @Before
     public void setUp() {
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
     }
 
     @SuppressWarnings({"unused", "checkstyle:LineLength"})
     private Object[] invalidNodes() {
         return new Object[]{
-                new Object[]{new SqlBasicCall(new SqlMapValueConstructor(), new SqlNode[]{literal("key"), literal("value")}, ZERO)},
                 new Object[]{new SqlBasicCall(new SqlArrayValueConstructor(), new SqlNode[]{literal("value")}, ZERO)},
                 new Object[]{new SqlBasicCall(new HazelcastSqlCastFunction(), new SqlNode[]{literal("true"), new SqlDataTypeSpec(new SqlBasicTypeNameSpec(SqlTypeName.BOOLEAN, ZERO), ZERO)}, ZERO)},
                 new Object[]{SqlLiteral.createBoolean(true, ZERO)},
-                new Object[]{SqlLiteral.createExactNumeric("127", ZERO)},
-                new Object[]{SqlLiteral.createExactNumeric("32767", ZERO)},
-                new Object[]{SqlLiteral.createExactNumeric("2147483647", ZERO)},
-                new Object[]{SqlLiteral.createExactNumeric("9223372036854775807", ZERO)},
-                new Object[]{SqlLiteral.createApproxNumeric("1234567890.1", ZERO)},
-                new Object[]{SqlLiteral.createApproxNumeric("123451234567890.1", ZERO)},
+                new Object[]{SqlLiteral.createExactNumeric("9223372036854775", ZERO)},
                 new Object[]{SqlLiteral.createApproxNumeric("9223372036854775.123", ZERO)}
         };
     }
@@ -82,26 +77,43 @@ public class JetSqlOperatorTableTest {
     @Test
     @Parameters(method = "invalidNodes")
     public void when_getRowTypeWithInvalidNode_then_throws(SqlNode node) {
-        SqlUserDefinedTableFunction sqlFunction = function("invalid");
+        SqlUserDefinedTableFunction sqlFunction = function("invalid", SqlTypeName.VARCHAR);
 
         assertThatThrownBy(() -> sqlFunction.getRowType(TYPE_FACTORY, singletonList(node)))
                 .isInstanceOf(QueryException.class)
                 .hasMessageContaining("All arguments of call to function test_function should be VARCHAR literals");
     }
 
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "checkstyle:LineLength"})
     private Object[] validNodes() {
         return new Object[]{
-                new Object[]{new SqlBasicCall(SqlStdOperatorTable.DEFAULT, new SqlNode[0], ZERO), null},
-                new Object[]{SqlLiteral.createNull(ZERO), null},
-                new Object[]{SqlLiteral.createCharString("string", ZERO), "string"},
+                new Object[]{
+                        new SqlBasicCall(new SqlMapValueConstructor(), new SqlNode[]{literal("key"), literal("value")}, ZERO),
+                        SqlTypeName.MAP,
+                        ImmutableMap.of("key", "value")
+                },
+                new Object[]{
+                        new SqlBasicCall(SqlStdOperatorTable.DEFAULT, new SqlNode[0], ZERO),
+                        SqlTypeName.VARCHAR,
+                        null
+                },
+                new Object[]{
+                        SqlLiteral.createNull(ZERO),
+                        SqlTypeName.VARCHAR,
+                        null
+                },
+                new Object[]{
+                        SqlLiteral.createCharString("string", ZERO),
+                        SqlTypeName.VARCHAR,
+                        "string"
+                },
         };
     }
 
     @Test
     @Parameters(method = "validNodes")
-    public void when_getRowTypeWithValidNode_then_returnsValue(SqlNode node, Object expected) {
-        SqlUserDefinedTableFunction sqlFunction = function("valid");
+    public void when_getRowTypeWithValidNode_then_returnsValue(SqlNode node, SqlTypeName type, Object expected) {
+        SqlUserDefinedTableFunction sqlFunction = function("valid", type);
         given(tableFunction.getRowType(TYPE_FACTORY, singletonList(expected))).willReturn(HazelcastObjectType.INSTANCE);
 
         RelDataType rowType = sqlFunction.getRowType(TYPE_FACTORY, singletonList(node));
@@ -109,8 +121,8 @@ public class JetSqlOperatorTableTest {
         assertThat(rowType).isEqualTo(HazelcastObjectType.INSTANCE);
     }
 
-    private SqlUserDefinedTableFunction function(String parameterName) {
-        FunctionParameter parameter = new JetTableFunctionParameter(0, parameterName, true);
+    private SqlUserDefinedTableFunction function(String parameterName, SqlTypeName type) {
+        FunctionParameter parameter = new JetTableFunctionParameter(0, parameterName, type, true);
         given(tableFunction.getParameters()).willReturn(singletonList(parameter));
         return JetSqlOperatorTable.from(tableFunction, "test_function");
     }

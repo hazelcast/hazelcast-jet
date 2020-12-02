@@ -24,6 +24,7 @@ import com.hazelcast.jet.sql.impl.schema.UnknownStatistic;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.schema.FunctionParameter;
+import org.apache.calcite.sql.type.SqlTypeName;
 
 import java.lang.reflect.Type;
 import java.util.HashMap;
@@ -36,6 +37,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSONL_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PARQUET_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_GLOB;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_OPTIONS;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_PATH;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_SHARED_FILE_SYSTEM;
 import static java.util.Arrays.asList;
@@ -44,31 +46,31 @@ import static java.util.Collections.emptyList;
 public final class FileTableFunction extends JetTableFunction {
 
     public static final FileTableFunction CSV = new FileTableFunction(CSV_FORMAT, asList(
-            new JetTableFunctionParameter(0, OPTION_PATH, true),
-            new JetTableFunctionParameter(1, OPTION_GLOB, true),
-            new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, false)
-            // TODO: cloud credentials
+            new JetTableFunctionParameter(0, OPTION_PATH, SqlTypeName.VARCHAR, true),
+            new JetTableFunctionParameter(1, OPTION_GLOB, SqlTypeName.VARCHAR, true),
+            new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, SqlTypeName.VARCHAR, false),
+            new JetTableFunctionParameter(3, OPTION_OPTIONS, SqlTypeName.MAP, false)
     ));
 
     public static final FileTableFunction JSONL = new FileTableFunction(JSONL_FORMAT, asList(
-            new JetTableFunctionParameter(0, OPTION_PATH, true),
-            new JetTableFunctionParameter(1, OPTION_GLOB, true),
-            new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, false)
-            // TODO: cloud credentials
+            new JetTableFunctionParameter(0, OPTION_PATH, SqlTypeName.VARCHAR, true),
+            new JetTableFunctionParameter(1, OPTION_GLOB, SqlTypeName.VARCHAR, true),
+            new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, SqlTypeName.VARCHAR, false),
+            new JetTableFunctionParameter(3, OPTION_OPTIONS, SqlTypeName.MAP, false)
     ));
 
     public static final FileTableFunction AVRO = new FileTableFunction(AVRO_FORMAT, asList(
-            new JetTableFunctionParameter(0, OPTION_PATH, true),
-            new JetTableFunctionParameter(1, OPTION_GLOB, true),
-            new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, false)
-            // TODO: cloud credentials
+            new JetTableFunctionParameter(0, OPTION_PATH, SqlTypeName.VARCHAR, true),
+            new JetTableFunctionParameter(1, OPTION_GLOB, SqlTypeName.VARCHAR, true),
+            new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, SqlTypeName.VARCHAR, false),
+            new JetTableFunctionParameter(3, OPTION_OPTIONS, SqlTypeName.MAP, false)
     ));
 
     public static final FileTableFunction PARQUET = new FileTableFunction(PARQUET_FORMAT, asList(
-            new JetTableFunctionParameter(0, OPTION_PATH, true),
-            new JetTableFunctionParameter(1, OPTION_GLOB, true),
-            new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, false)
-            // TODO: cloud credentials
+            new JetTableFunctionParameter(0, OPTION_PATH, SqlTypeName.VARCHAR, true),
+            new JetTableFunctionParameter(1, OPTION_GLOB, SqlTypeName.VARCHAR, true),
+            new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, SqlTypeName.VARCHAR, false),
+            new JetTableFunctionParameter(3, OPTION_OPTIONS, SqlTypeName.MAP, false)
     ));
 
     private static final String SCHEMA_NAME_FILES = "files";
@@ -93,7 +95,7 @@ public final class FileTableFunction extends JetTableFunction {
 
     @Override
     protected HazelcastTable toTable(List<Object> arguments) {
-        Map<String, String> options = toOptions(arguments);
+        Map<String, Object> options = toOptions(arguments);
         List<MappingField> fields = FileSqlConnector.resolveAndValidateFields(options, emptyList());
         Table table = FileSqlConnector.createTable(SCHEMA_NAME_FILES, randomName(), options, fields);
 
@@ -104,14 +106,14 @@ public final class FileTableFunction extends JetTableFunction {
      * Takes a list of function arguments and converts it to equivalent options
      * that would be used if the file was declared using DDL.
      */
-    private Map<String, String> toOptions(List<Object> arguments) {
+    private Map<String, Object> toOptions(List<Object> arguments) {
         assert arguments.size() == parameters.size();
 
-        Map<String, String> options = new HashMap<>();
+        Map<String, Object> options = new HashMap<>();
         options.put(OPTION_FORMAT, format);
         for (int i = 0; i < arguments.size(); i++) {
             if (arguments.get(i) != null) {
-                options.put(parameters.get(i).getName(), arguments.get(i).toString());
+                options.put(parameters.get(i).getName(), arguments.get(i));
             }
         }
         return options;

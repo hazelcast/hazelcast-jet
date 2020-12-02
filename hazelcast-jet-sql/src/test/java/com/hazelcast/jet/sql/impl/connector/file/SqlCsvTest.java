@@ -157,8 +157,9 @@ public class SqlCsvTest extends SqlTestSupport {
                         + ", \"timestampTz\""
                         + " FROM TABLE ("
                         + "csv_file ("
-                        + "path => '" + RESOURCES_PATH + "'"
-                        + ", glob => 'file.csv'"
+                        + " path => '" + RESOURCES_PATH + "'"
+                        + " , glob => 'file.csv'"
+                        + " , options => MAP['key', 'value']"
                         + ")"
                         + ")",
                 singletonList(new Row(

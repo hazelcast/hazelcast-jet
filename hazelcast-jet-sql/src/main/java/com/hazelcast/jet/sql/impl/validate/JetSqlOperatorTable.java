@@ -23,6 +23,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.TableFunction;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -49,9 +50,12 @@ import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Util;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.calcite.sql.type.SqlTypeFamily.CHARACTER;
+import static org.apache.calcite.sql.type.SqlTypeFamily.MAP;
 
 public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
 
@@ -80,7 +84,7 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
         List<SqlTypeFamily> families = new ArrayList<>();
         for (FunctionParameter parameter : function.getParameters()) {
             RelDataType type = parameter.getType(typeFactory);
-            assert type.getSqlTypeName().getFamily() == CHARACTER;
+            assert type.getSqlTypeName().getFamily() == CHARACTER || type.getSqlTypeName().getFamily() == MAP;
 
             types.add(type);
             families.add(Util.first(type.getSqlTypeName().getFamily(), SqlTypeFamily.ANY));
@@ -146,7 +150,7 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
         }
 
         private static Object extractValue(
-                SqlIdentifier name,
+                SqlIdentifier functionName,
                 FunctionParameter parameter,
                 SqlNode node
         ) {
@@ -157,17 +161,40 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
                 return null;
             }
             if (SqlUtil.isLiteral(node)) {
-                Object value = ((SqlLiteral) node).getValue();
+                SqlLiteral literal = ((SqlLiteral) node);
+                Object value = literal.getValue();
                 if (value instanceof NlsString) {
                     return ((NlsString) value).getValue();
                 }
             }
+            if (node.getKind() == SqlKind.MAP_VALUE_CONSTRUCTOR) {
+                List<SqlNode> operands = ((SqlCall) node).getOperandList();
+                Map<Object, Object> entries = new HashMap<>();
+                for (int i = 0; i < operands.size(); i += 2) {
+                    Object key = extractValue(functionName, parameter, operands.get(i));
+                    if (key == null) {
+                        throw QueryException.error("Null MAP key in a call to function " + functionName + ". "
+                                + "Argument #" + parameter.getOrdinal() + " (" + parameter.getName() + ")");
+                    }
 
-            throw QueryException.error("All arguments of call to function "
-                    + name + " should be VARCHAR literals. Actual argument #"
-                    + parameter.getOrdinal() + " (" + parameter.getName()
-                    + ") is not VARCHAR literal: " + node
-            );
+                    Object value = extractValue(functionName, parameter, operands.get(i + 1));
+                    if (value == null) {
+                        throw QueryException.error("Null MAP value in a call to function " + functionName + ". "
+                                + "Argument #" + parameter.getOrdinal() + " (" + parameter.getName() + ")");
+                    }
+
+                    Object oldValue = entries.putIfAbsent(key, value);
+                    if (oldValue != null) {
+                        throw QueryException.error("Duplicate MAP entry in a call to function " + functionName + ". "
+                                + "Argument #" + parameter.getOrdinal() + " (" + parameter.getName() + ")");
+                    }
+                }
+                return entries;
+            }
+
+            throw QueryException.error("All arguments of call to function " + functionName + " should be VARCHAR "
+                    + "literals. Actual argument #" + parameter.getOrdinal() + " (" + parameter.getName()
+                    + ") is: " + (SqlUtil.isLiteral(node) ? ((SqlLiteral) node).getTypeName() : node.getKind()));
         }
     }
 }

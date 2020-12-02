@@ -39,7 +39,7 @@ final class AvroMetadataResolver extends MetadataResolver {
     }
 
     @Override
-    public List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, String> options) {
+    public List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, ?> options) {
         return !userFields.isEmpty() ? validateFields(userFields) : resolveFieldsFromSample(options);
     }
 
@@ -53,13 +53,13 @@ final class AvroMetadataResolver extends MetadataResolver {
         return userFields;
     }
 
-    private List<MappingField> resolveFieldsFromSample(Map<String, String> options) {
+    private List<MappingField> resolveFieldsFromSample(Map<String, ?> options) {
         GenericRecord record = fetchRecord(FileFormat.avro(), options);
         return AvroResolver.resolveFields(record.getSchema());
     }
 
     @Override
-    Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, String> options) {
+    Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
         return new Metadata(
                 toFields(resolvedFields),
                 toProcessorMetaSupplier(FileFormat.avro(), options),
