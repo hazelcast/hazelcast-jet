@@ -84,24 +84,24 @@ public class RangeMonitor extends AbstractShardWorker {
         this.nextListShardsTime = System.nanoTime() + listShardsRateTracker.next();
     }
 
-    public Collection<Shard> probe() {
+    public Collection<Shard> probe(long currentTime) {
         if (listShardResult == null) {
-            initShardListing();
+            initShardListing(currentTime);
             return emptySet();
         } else {
-            return checkForNewShards();
+            return checkForNewShards(currentTime);
         }
     }
 
-    private void initShardListing() {
-        if (System.nanoTime() < nextListShardsTime) {
+    private void initShardListing(long currentTime) {
+        if (currentTime < nextListShardsTime) {
             return;
         }
         listShardResult = helper.listShardsAsync(nextToken);
-        nextListShardsTime = System.nanoTime() + listShardsRateTracker.next();
+        nextListShardsTime = currentTime + listShardsRateTracker.next();
     }
 
-    private Collection<Shard> checkForNewShards() {
+    private Collection<Shard> checkForNewShards(long currentTime) {
         if (listShardResult.isDone()) {
             try {
                 ListShardsResult result = helper.readResult(listShardResult);
@@ -122,7 +122,7 @@ public class RangeMonitor extends AbstractShardWorker {
             } catch (SdkClientException e) {
                 logger.warning("Failed listing shards, retrying. Cause: " + e.getMessage());
                 nextToken = null;
-                nextListShardsTime = System.nanoTime() + PAUSE_AFTER_FAILURE;
+                nextListShardsTime = currentTime + PAUSE_AFTER_FAILURE;
                 return emptySet();
             } catch (Throwable t) {
                 throw rethrow(t);

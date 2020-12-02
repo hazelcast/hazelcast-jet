@@ -94,25 +94,26 @@ public class KinesisSourceP extends AbstractProcessor {
             return false;
         }
 
-        runMonitor();
-        runReaders();
+        long currentTime = System.nanoTime();
+        runMonitor(currentTime);
+        runReaders(currentTime);
         return false;
     }
 
-    private void runMonitor() {
-        Collection<Shard> newShards = rangeMonitor.probe();
+    private void runMonitor(long currentTime) {
+        Collection<Shard> newShards = rangeMonitor.probe(currentTime);
         if (!newShards.isEmpty()) {
             addShardReaders(newShards);
         }
     }
 
-    private void runReaders() {
+    private void runReaders(long currentTime) {
         for (int i = 0; i < shardReaders.size(); i++) {
             int currentReader = nextReader;
             ShardReader reader = shardReaders.get(currentReader);
             nextReader = incrCircular(currentReader, shardReaders.size());
 
-            ShardReader.Result result = reader.probe();
+            ShardReader.Result result = reader.probe(currentTime);
             if (ShardReader.Result.HAS_DATA.equals(result)) {
                 Record[] records = reader.getData();
                 traverser = Traversers.traverseArray(records)

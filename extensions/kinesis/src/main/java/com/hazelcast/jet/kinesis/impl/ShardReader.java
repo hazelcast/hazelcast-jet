@@ -85,18 +85,18 @@ class ShardReader extends AbstractShardWorker {
         this.shard = shard;
     }
 
-    public Result probe() {
+    public Result probe(long currentTime) {
         switch (state) {
             case NO_SHARD_ITERATOR:
                 return handleNoShardIterator();
             case WAITING_FOR_SHARD_ITERATOR:
                 return handleWaitingForShardIterator();
             case NEED_TO_REQUEST_RECORDS:
-                return handleNeedToRequestRecords();
+                return handleNeedToRequestRecords(currentTime);
             case WAITING_FOR_RECORDS:
-                return handleWaitingForRecords();
+                return handleWaitingForRecords(currentTime);
             case HAS_DATA_NEED_TO_REQUEST_RECORDS:
-                return handleHasDataNeedToRequestRecords();
+                return handleHasDataNeedToRequestRecords(currentTime);
             case HAS_DATA:
                 return handleHasData();
             case SHARD_CLOSED:
@@ -128,15 +128,15 @@ class ShardReader extends AbstractShardWorker {
         return Result.NOTHING;
     }
 
-    private Result handleNeedToRequestRecords() {
-        if (attemptToSendGetRecordsRequest()) {
+    private Result handleNeedToRequestRecords(long currentTime) {
+        if (attemptToSendGetRecordsRequest(currentTime)) {
             state = State.WAITING_FOR_RECORDS;
         }
 
         return Result.NOTHING;
     }
 
-    private Result handleWaitingForRecords() {
+    private Result handleWaitingForRecords(long currentTime) {
         if (recordsResult.isDone()) {
             try {
                 GetRecordsResult result = helper.readResult(recordsResult);
@@ -153,11 +153,12 @@ class ShardReader extends AbstractShardWorker {
                     return Result.NOTHING;
                 }
             } catch (ProvisionedThroughputExceededException pte) {
-                return dealWithReadRecordFailure("Data throughput rate exceeded. Backing off and retrying.");
+                return dealWithReadRecordFailure(currentTime, "Data throughput rate exceeded. Backing off and retrying.");
             } catch (ExpiredIteratorException eie) {
-                return dealWithReadRecordFailure("Record iterator expired. Retrying.");
+                return dealWithReadRecordFailure(currentTime, "Record iterator expired. Retrying.");
             } catch (SdkClientException sce) {
-                return dealWithReadRecordFailure("Failed reading records, retrying. Cause: " + sce.getMessage());
+                return dealWithReadRecordFailure(currentTime,
+                        "Failed reading records, retrying. Cause: " + sce.getMessage());
             } catch (Throwable t) {
                 throw rethrow(t);
             }
@@ -166,15 +167,15 @@ class ShardReader extends AbstractShardWorker {
         }
     }
 
-    private Result dealWithReadRecordFailure(String message) {
+    private Result dealWithReadRecordFailure(long currentTime, String message) {
         logger.warning(message);
-        nextGetRecordsTime = System.nanoTime() + PAUSE_AFTER_FAILURE;
+        nextGetRecordsTime = currentTime + PAUSE_AFTER_FAILURE;
         state = State.NEED_TO_REQUEST_RECORDS;
         return Result.NOTHING;
     }
 
-    private Result handleHasDataNeedToRequestRecords() {
-        if (attemptToSendGetRecordsRequest()) {
+    private Result handleHasDataNeedToRequestRecords(long currentTime) {
+        if (attemptToSendGetRecordsRequest(currentTime)) {
             state = data.size() > 0 ? State.HAS_DATA : State.WAITING_FOR_RECORDS;
         }
 
@@ -190,14 +191,14 @@ class ShardReader extends AbstractShardWorker {
         return data.size() > 0 ? Result.HAS_DATA : Result.CLOSED;
     }
 
-    private boolean attemptToSendGetRecordsRequest() {
-        if (System.nanoTime() < nextGetRecordsTime) {
+    private boolean attemptToSendGetRecordsRequest(long currentTime) {
+        if (currentTime < nextGetRecordsTime) {
             return false;
         }
 
         recordsResult = helper.getRecordsAsync(shardIterator);
 
-        nextGetRecordsTime = System.nanoTime() + getRecordsRateTracker.next();
+        nextGetRecordsTime = currentTime + getRecordsRateTracker.next();
         return true;
     }
 

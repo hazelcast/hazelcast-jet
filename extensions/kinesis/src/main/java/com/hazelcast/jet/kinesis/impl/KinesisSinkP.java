@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static java.lang.System.nanoTime;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class KinesisSinkP<T> implements Processor {
@@ -82,8 +83,7 @@ public class KinesisSinkP<T> implements Processor {
     private ILogger logger;
     private KinesisHelper helper;
 
-    private State state = State.READY_TO_SEND;
-    private long nextSendTime = System.nanoTime();
+    private long nextSendTime = nanoTime();
     private Future<PutRecordsResult> sendResult;
 
     public KinesisSinkP(
@@ -116,26 +116,33 @@ public class KinesisSinkP<T> implements Processor {
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
-        if (state == State.SENDING_IN_PROGRESS) {
-            handleSendingInProgress();
+        if (sendResult != null) {
+            checkIfSendingFinished();
         }
-        if (state == State.READY_TO_SEND) {
-            handleReadyToSend(inbox);
+        if (sendResult == null) {
+            initSending(inbox);
         }
     }
 
     @Override
     public boolean complete() {
-        if (state == State.SENDING_IN_PROGRESS) {
-            handleSendingInProgress();
+        if (sendResult != null) {
+            checkIfSendingFinished();
         }
-        if (state == State.READY_TO_SEND) {
+        if (sendResult == null) {
             if (buffer.isEmpty()) {
                 return true;
             }
-            handleReadyToSend(null);
+            initSending(null);
         }
         return false;
+    }
+
+    private void initSending(@Nullable Inbox inbox) {
+        if (inbox != null) {
+            bufferFromInbox(inbox);
+        }
+        attemptToDispatchBufferContent();
     }
 
     private void bufferFromInbox(@Nonnull Inbox inbox) {
@@ -160,28 +167,22 @@ public class KinesisSinkP<T> implements Processor {
         }
     }
 
-    private void handleReadyToSend(@Nullable Inbox inbox) {
-        if (inbox != null) {
-            bufferFromInbox(inbox);
+    private void attemptToDispatchBufferContent() {
+        if (buffer.isEmpty()) {
+            return;
         }
-        if (attemptToDispatchBufferContent()) {
-            state = State.SENDING_IN_PROGRESS;
-        }
-    }
 
-    private boolean attemptToDispatchBufferContent() {
-        if (buffer.isEmpty() || System.nanoTime() < nextSendTime) {
-            return false;
+        long currentTime = nanoTime();
+        if (currentTime < nextSendTime) {
+            return;
         }
 
         List<PutRecordsRequestEntry> entries = buffer.content();
         sendResult = helper.putRecordsAsync(entries);
-
-        nextSendTime = System.nanoTime(); //todo: add some wait here?
-        return true;
+        nextSendTime = currentTime; //todo: add some wait here?
     }
 
-    private void handleSendingInProgress() {
+    private void checkIfSendingFinished() {
         if (sendResult.isDone()) {
             try {
                 PutRecordsResult result = helper.readResult(this.sendResult);
@@ -189,8 +190,6 @@ public class KinesisSinkP<T> implements Processor {
                 if (result.getFailedRecordCount() > 0) {
                     dealWithSendFailure("Failed to send " + result.getFailedRecordCount() + " record(s) to stream '"
                             + stream + "'. Sending will be retried, message reordering is likely.");
-                } else {
-                    dealWithSendSuccessful();
                 }
             } catch (ProvisionedThroughputExceededException pte) {
                 dealWithSendFailure("Data throughput rate exceeded. Backing off and will retry.");
@@ -198,18 +197,15 @@ public class KinesisSinkP<T> implements Processor {
                 dealWithSendFailure("Failed to send records, will retry. Cause: " + sce.getMessage());
             } catch (Throwable t) {
                 throw rethrow(t);
+            } finally {
+                sendResult = null;
             }
         }
-    }
-
-    private void dealWithSendSuccessful() {
-        state = State.READY_TO_SEND;
     }
 
     private void dealWithSendFailure(@Nonnull String message) {
         logger.warning(message);
         nextSendTime = System.nanoTime() + PAUSE_AFTER_FAILURE;
-        state = State.READY_TO_SEND;
     }
 
     private void pruneSentFromBuffer(@Nullable PutRecordsResult result) {
@@ -228,18 +224,6 @@ public class KinesisSinkP<T> implements Processor {
         } else {
             buffer.clear();
         }
-    }
-
-    private enum State {
-        /**
-         * Ready to send data to Kinesis, if available.
-         */
-        READY_TO_SEND,
-
-        /**
-         * Data has been sent to Kinesis, waiting for a reply.
-         */
-        SENDING_IN_PROGRESS,
     }
 
     private static class Buffer<T> {
