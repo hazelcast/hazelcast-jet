@@ -64,7 +64,6 @@ public class RangeMonitor extends AbstractShardWorker {
     private final RandomizedRateTracker listShardsRateTracker;
     private final ILogger logger;
 
-    private State state = State.READY_TO_LIST_SHARDS;
     private String nextToken;
     private Future<ListShardsResult> listShardResult;
     private long nextListShardsTime;
@@ -86,30 +85,23 @@ public class RangeMonitor extends AbstractShardWorker {
     }
 
     public Collection<Shard> probe() {
-        switch (state) {
-            case READY_TO_LIST_SHARDS:
-                return handleReadyToListShards();
-            case WAITING_FOR_SHARD_LIST:
-                return handleWaitingForShardList();
-            default:
-                throw new RuntimeException("Programming error, unhandled state: " + state);
-        }
-    }
-
-    private Collection<Shard> handleReadyToListShards() {
-        if (System.nanoTime() < nextListShardsTime) {
+        if (listShardResult == null) {
+            initShardListing();
             return emptySet();
+        } else {
+            return checkForNewShards();
         }
-
-        listShardResult = helper.listShardsAsync(nextToken);
-        state = State.WAITING_FOR_SHARD_LIST;
-
-        nextListShardsTime = System.nanoTime() + listShardsRateTracker.next();
-
-        return emptySet();
     }
 
-    private Collection<Shard> handleWaitingForShardList() {
+    private void initShardListing() {
+        if (System.nanoTime() < nextListShardsTime) {
+            return;
+        }
+        listShardResult = helper.listShardsAsync(nextToken);
+        nextListShardsTime = System.nanoTime() + listShardsRateTracker.next();
+    }
+
+    private Collection<Shard> checkForNewShards() {
         if (listShardResult.isDone()) {
             try {
                 ListShardsResult result = helper.readResult(listShardResult);
@@ -121,7 +113,6 @@ public class RangeMonitor extends AbstractShardWorker {
                         .filter(shard -> shardBelongsToRange(shard, hashRange))
                         .filter(shard -> !knownShards.contains(shard.getShardId())).collect(toCollection(HashSet::new));
 
-                state = State.READY_TO_LIST_SHARDS;
                 if (!unknownShards.isEmpty()) {
                     logger.info("New shards detected: " +
                             unknownShards.stream().map(Shard::getShardId).collect(joining(", ")));
@@ -132,26 +123,15 @@ public class RangeMonitor extends AbstractShardWorker {
                 logger.warning("Failed listing shards, retrying. Cause: " + e.getMessage());
                 nextToken = null;
                 nextListShardsTime = System.nanoTime() + PAUSE_AFTER_FAILURE;
-                state = State.READY_TO_LIST_SHARDS;
                 return emptySet();
             } catch (Throwable t) {
                 throw rethrow(t);
+            } finally {
+                listShardResult = null;
             }
         } else {
             return emptySet();
         }
-    }
-
-    private enum State {
-        /**
-         * Ready to request the up-to-date list of shards.
-         */
-        READY_TO_LIST_SHARDS,
-
-        /**
-         * Reading shard list initiated, waiting for the result.
-         */
-        WAITING_FOR_SHARD_LIST,
     }
 
     @Nonnull
