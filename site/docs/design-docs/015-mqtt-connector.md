@@ -200,11 +200,17 @@ MqttSources.builder()
 
 #### Fault Tolerance
 
-MQTT protocol defines these levels of quality of service for subscribing
-to the topics: `AT_MOST_ONCE`, `AT_LEAST_ONCE`, `EXACTLY_ONCE`. But I've
-confirmed a loss of messages with `EXACTLY_ONCE` configuration even when
-the client restarted gracefully. I've tried both Paho client and HiveMQ
-client, the results are same.
+MQTT protocol defines these levels of quality of service (QoS) for
+subscribing to the topics: `AT_MOST_ONCE`, `AT_LEAST_ONCE`,
+`EXACTLY_ONCE`. For `AT_LEAST_ONCE` and `EXACTLY_ONCE`, client keeps
+in-flight messages in a persistence layer. The source uses an in-memory
+persistence implementation which does not survive restarts.
+
+We've explored other options for persistence, like using IMap to keep
+the in-flight messages. Although this helps to survive the in-flight
+messages between restarts, it does not provide a real fault-tolerence
+for the job. Besides, it adds a sync call to IMap for each message
+which slows down the source.
 
 If a client subscribes to a topic with quality of service `AT_LEAST_ONCE`
 or `EXACTLY_ONCE` and connects to the broker with `cleanSession=false`,
