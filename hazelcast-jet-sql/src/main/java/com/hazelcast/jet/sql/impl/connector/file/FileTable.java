@@ -46,7 +46,7 @@ class FileTable extends JetTable {
         this.queryTargetSupplier = queryTargetSupplier;
     }
 
-    public ProcessorMetaSupplier processorMetaSupplier() {
+    ProcessorMetaSupplier processorMetaSupplier() {
         return processorMetaSupplier;
     }
 

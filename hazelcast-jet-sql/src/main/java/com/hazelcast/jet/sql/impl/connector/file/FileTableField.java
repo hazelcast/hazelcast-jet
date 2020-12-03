@@ -27,13 +27,6 @@ class FileTableField extends TableField {
 
     FileTableField(
             String name,
-            QueryDataType type
-    ) {
-        this(name, type, name);
-    }
-
-    FileTableField(
-            String name,
             QueryDataType type,
             String path
     ) {

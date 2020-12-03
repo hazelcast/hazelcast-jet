@@ -77,14 +77,13 @@ public class LocalFileSourceFactory implements FileSourceFactory {
         mapFns.put(provider.format(), provider);
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public <T> ProcessorMetaSupplier create(@Nonnull FileSourceConfiguration<T> fsc) {
         FileFormat<T> format = requireNonNull(fsc.getFormat());
         ReadFileFnProvider readFileFnProvider = readFileFnProviders.get(format.format());
         if (readFileFnProvider == null) {
             throw new JetException("Could not find ReadFileFnProvider for FileFormat: " + format.format() + ". " +
-                                   "Did you provide correct modules on classpath?");
+                    "Did you provide correct modules on classpath?");
         }
         FunctionEx<Path, Stream<T>> mapFn = readFileFnProvider.createReadFileFn(format);
         return SourceProcessors.readFilesP(fsc.getPath(), fsc.getGlob(), fsc.isSharedFileSystem(), mapFn);

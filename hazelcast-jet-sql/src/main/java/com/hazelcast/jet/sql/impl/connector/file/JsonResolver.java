@@ -44,7 +44,6 @@ final class JsonResolver {
             QueryDataType type = resolveType(entry.getValue());
 
             MappingField field = new MappingField(name, type);
-
             fields.putIfAbsent(field.name(), field);
         }
         return new ArrayList<>(fields.values());

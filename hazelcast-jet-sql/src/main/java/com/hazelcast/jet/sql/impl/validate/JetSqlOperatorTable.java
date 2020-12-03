@@ -54,6 +54,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.hazelcast.internal.util.Preconditions.checkTrue;
 import static org.apache.calcite.sql.type.SqlTypeFamily.CHARACTER;
 import static org.apache.calcite.sql.type.SqlTypeFamily.MAP;
 
@@ -84,10 +85,15 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
         List<SqlTypeFamily> families = new ArrayList<>();
         for (FunctionParameter parameter : function.getParameters()) {
             RelDataType type = parameter.getType(typeFactory);
-            assert type.getSqlTypeName().getFamily() == CHARACTER || type.getSqlTypeName().getFamily() == MAP;
+            SqlTypeFamily typeFamily = type.getSqlTypeName().getFamily();
+
+            // supporting just string & map[string, string] parameters for now
+            // allowing other types requires at least proper validation
+            // if/when implemented, consider using it in SqlOption as well
+            checkTrue(typeFamily == CHARACTER || typeFamily == MAP, "Unsupported type: " + type);
 
             types.add(type);
-            families.add(Util.first(type.getSqlTypeName().getFamily(), SqlTypeFamily.ANY));
+            families.add(Util.first(typeFamily, SqlTypeFamily.ANY));
         }
         FamilyOperandTypeChecker typeChecker =
                 OperandTypes.family(families, index -> function.getParameters().get(index).isOptional());
@@ -171,57 +177,58 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
                     "MAP constructors. Actual argument #" + parameter.getOrdinal() + " (" + parameter.getName() + ") is: "
                     + node.getKind());
         }
-    }
 
-    private static String extractLiteralValue(
-            SqlIdentifier functionName,
-            FunctionParameter parameter,
-            SqlLiteral literal
-    ) {
-        Object value = literal.getValue();
-        if (value instanceof NlsString) {
-            return ((NlsString) value).getValue();
-        }
-        throw QueryException.error(
-                "All literals of call to function " + functionName + " should be VARCHAR literals. " +
-                "Actual argument #" + parameter.getOrdinal() + " (" + parameter.getName() + ") is: " +
-                literal.getTypeName());
-    }
-
-    private static Map<String, String> extractMapValue(
-            SqlIdentifier functionName,
-            FunctionParameter parameter,
-            SqlCall call
-    ) {
-        List<SqlNode> operands = call.getOperandList();
-        Map<String, String> entries = new HashMap<>();
-        for (int i = 0; i < operands.size(); i += 2) {
-            String key = extractMapLiteralValue(functionName, parameter, operands.get(i));
-            String value = extractMapLiteralValue(functionName, parameter, operands.get(i + 1));
-            if (entries.putIfAbsent(key, value) != null) {
-                throw QueryException.error(
-                        "Duplicate entry in MAP constructor of call to function " + functionName + " - " +
-                        "argument #" + parameter.getOrdinal() + " (" + parameter.getName() + ")");
-            }
-        }
-        return entries;
-    }
-
-    private static String extractMapLiteralValue(
-            SqlIdentifier functionName,
-            FunctionParameter parameter,
-            SqlNode node
-    ) {
-        if (SqlUtil.isLiteral(node)) {
-            SqlLiteral literal = (SqlLiteral) node;
+        private static String extractLiteralValue(
+                SqlIdentifier functionName,
+                FunctionParameter parameter,
+                SqlLiteral literal
+        ) {
             Object value = literal.getValue();
             if (value instanceof NlsString) {
                 return ((NlsString) value).getValue();
             }
+            throw QueryException.error(
+                    "All literals of call to function " + functionName + " should be VARCHAR literals. " +
+                    "Actual argument #" + parameter.getOrdinal() + " (" + parameter.getName() + ") is: " +
+                    literal.getTypeName());
         }
-        throw QueryException.error(
-                "All literals in MAP constructor of call to function " + functionName + " - " +
-                "argument #" + parameter.getOrdinal() + " (" + parameter.getName() + ") - should be VARCHAR literals. " +
-                "Actual argument is: " + (SqlUtil.isLiteral(node) ? ((SqlLiteral) node).getTypeName() : node.getKind()));
+
+        private static Map<String, String> extractMapValue(
+                SqlIdentifier functionName,
+                FunctionParameter parameter,
+                SqlCall call
+        ) {
+            List<SqlNode> operands = call.getOperandList();
+            Map<String, String> entries = new HashMap<>();
+            for (int i = 0; i < operands.size(); i += 2) {
+                String key = extractMapLiteralValue(functionName, parameter, operands.get(i));
+                String value = extractMapLiteralValue(functionName, parameter, operands.get(i + 1));
+                if (entries.putIfAbsent(key, value) != null) {
+                    throw QueryException.error(
+                            "Duplicate entry in MAP constructor of call to function " + functionName + " - " +
+                            "argument #" + parameter.getOrdinal() + " (" + parameter.getName() + ")");
+                }
+            }
+            return entries;
+        }
+
+        private static String extractMapLiteralValue(
+                SqlIdentifier functionName,
+                FunctionParameter parameter,
+                SqlNode node
+        ) {
+            if (SqlUtil.isLiteral(node)) {
+                SqlLiteral literal = (SqlLiteral) node;
+                Object value = literal.getValue();
+                if (value instanceof NlsString) {
+                    return ((NlsString) value).getValue();
+                }
+            }
+            throw QueryException.error(
+                    "All literals in MAP constructor of call to function " + functionName + " - argument #"
+                    + parameter.getOrdinal() + " (" + parameter.getName() + ") - should be VARCHAR " + "literals. "
+                    + "Actual argument is: "
+                    + (SqlUtil.isLiteral(node) ? ((SqlLiteral) node).getTypeName() : node.getKind()));
+        }
     }
 }

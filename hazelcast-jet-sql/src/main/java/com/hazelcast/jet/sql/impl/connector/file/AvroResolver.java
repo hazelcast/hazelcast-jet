@@ -37,7 +37,6 @@ final class AvroResolver {
             QueryDataType type = resolveType(avroField.schema().getType());
 
             MappingField field = new MappingField(name, type);
-
             fields.putIfAbsent(field.name(), field);
         }
         return new ArrayList<>(fields.values());
