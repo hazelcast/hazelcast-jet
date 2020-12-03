@@ -60,6 +60,8 @@ import org.jline.reader.EndOfFileException;
 import org.jline.reader.impl.DefaultParser;
 import org.jline.terminal.Terminal;
 import org.jline.utils.AttributedStringBuilder;
+import org.jline.utils.AttributedStyle;
+import org.jline.utils.InfoCmp;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.DefaultExceptionHandler;
@@ -217,6 +219,10 @@ public class JetCommandLine implements Runnable {
                     .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
                     .appName("hazelcast-jet-sql")
                     .build();
+            PrintWriter writer = reader.getTerminal().writer();
+            writer.println(CliPrompts.STARTING_PROMPT);
+            writer.flush();
+
             for (; ; ) {
                 String command;
                 try {
@@ -226,14 +232,25 @@ public class JetCommandLine implements Runnable {
                     break;
                 }
 
-                if (command.lastIndexOf(";") > 0) {
+                if (command.lastIndexOf(";") >= 0) {
                     command = command.substring(0, command.lastIndexOf(";"));
                 }
 
                 if ("".equals(command.trim())) {
                     continue;
                 }
-                if ("exit".equals(command)) {
+                if ("clear".equalsIgnoreCase(command)) {
+                    reader.getTerminal().puts(InfoCmp.Capability.clear_screen);
+                    continue;
+                }
+                if ("help".equalsIgnoreCase(command)) {
+                    writer.println(CliPrompts.HELP_PROMPT);
+                    writer.flush();
+                    continue;
+                }
+                if ("exit".equalsIgnoreCase(command)) {
+                    writer.println(CliPrompts.EXIT_PROMPT);
+                    writer.flush();
                     break;
                 }
                 executeSqlCmd(jet, command, reader.getTerminal());
@@ -856,11 +873,11 @@ public class JetCommandLine implements Runnable {
             }
 
             if (squareBracketsBalance[0] != 0 || squareBracketsBalance[1] != 0) {
-                throw new EOFError(-1, cursor, "Square brackets balance fails");
+                throw new EOFError(-1, cursor, "Square brackets balance fails", "'[' != ']'");
             }
 
             if (roundBracketsBalance[0] != 0 || roundBracketsBalance[1] != 0) {
-                throw new EOFError(-1, cursor, "Round brackets balance fails");
+                throw new EOFError(-1, cursor, "Round brackets balance fails", "'(' != ')'");
             }
             final int lastNonQuoteCommentIndex1 =
                     lastNonQuoteCommentIndex == line.length() - 1
@@ -979,9 +996,7 @@ public class JetCommandLine implements Runnable {
         final int colWidth = 15;
         AtomicReference<SqlResult> res = new AtomicReference<>();
         AtomicInteger rowCount = new AtomicInteger();
-
-        ExecutorService executor
-                = Executors.newSingleThreadExecutor();
+        ExecutorService executor = Executors.newSingleThreadExecutor();
         Future<?> resultFuture = executor.submit(() -> {
             try {
                 res.set(jet.getSql().execute(command));
@@ -1040,7 +1055,6 @@ public class JetCommandLine implements Runnable {
             centralize(colWidth, builder, colValue);
         }
         out.println(builder.toAnsi());
-        printSeparatorLine(colSize, colWidth, out);
         out.flush();
     }
 
@@ -1072,5 +1086,27 @@ public class JetCommandLine implements Runnable {
             builder.append('+');
         }
         out.println(builder.toAnsi());
+    }
+
+    private static class CliPrompts {
+        static final String STARTING_PROMPT = new AttributedStringBuilder()
+                .append( "\to   o   o   o---o o---o o     o---o   o   o---o o-o-o        o o---o o-o-o   o---o   o---o   o\n" +
+                        "\t|   |  / \\     /  |     |     |      / \\  |       |          | |       |     |       |   |   |\n" +
+                        "\to---o o---o   o   o-o   |     o     o---o o---o   |          | o-o     |     o---o   o   o   o\n" +
+                        "\t|   | |   |  /    |     |     |     |   |     |   |      \\   | |       |         |   |   |   |\n" +
+                        "\to   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o     o---o   o---\\\\  o---\n")
+                .style(AttributedStyle.BOLD)
+                .toAnsi();
+        static final String HELP_PROMPT = new AttributedStringBuilder()
+                .append("AVAILABLE COMMANDS:\n\n")
+                .append("CLEAR\t-\tClear the terminal screen\n")
+                .append("EXIT\t-\tExit from the SQL console.\n")
+                .append("HELP\t-\tProvides information about available commands.\n")
+                .append("\nHints:\n")
+                .append("\tPress Ctrl+C to cancel streaming queries.\n")
+                .toAnsi();
+        static final String EXIT_PROMPT = new AttributedStringBuilder()
+                .append("Exiting from SQL console")
+                .toAnsi();
     }
 }
