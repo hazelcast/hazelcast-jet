@@ -92,8 +92,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -810,8 +810,6 @@ public class JetCommandLine implements Runnable {
             int quoteStart = -1;
             int oneLineCommentStart = -1;
             int multiLineCommentStart = -1;
-            final int[] roundBracketsBalance = new int[2];
-            final int[] squareBracketsBalance = new int[2];
             int lastNonQuoteCommentIndex = 0;
 
             for (int i = 0; i < line.length(); i++) {
@@ -849,8 +847,6 @@ public class JetCommandLine implements Runnable {
                         }
                     } else {
                         // Not in a quote or comment block
-                        checkBracketBalance(roundBracketsBalance, currentChar, '(', ')');
-                        checkBracketBalance(squareBracketsBalance, currentChar, '[', ']');
                         containsNonCommentData = true;
                         if (!Character.isWhitespace(currentChar)) {
                             lastNonQuoteCommentIndex = i;
@@ -872,13 +868,6 @@ public class JetCommandLine implements Runnable {
                 throw new EOFError(-1, cursor, "Missing end of comment", "**");
             }
 
-            if (squareBracketsBalance[0] != 0 || squareBracketsBalance[1] != 0) {
-                throw new EOFError(-1, cursor, "Square brackets balance fails", "'[' != ']'");
-            }
-
-            if (roundBracketsBalance[0] != 0 || roundBracketsBalance[1] != 0) {
-                throw new EOFError(-1, cursor, "Round brackets balance fails", "'(' != ')'");
-            }
             final int lastNonQuoteCommentIndex1 =
                     lastNonQuoteCommentIndex == line.length() - 1
                             && lastNonQuoteCommentIndex - 1 >= 0
@@ -946,20 +935,6 @@ public class JetCommandLine implements Runnable {
             return !requiredSemicolon || lineEmptyOrFinishedWithSemicolon;
         }
 
-        private void checkBracketBalance(int[] balance, char actual,
-                                         char openBracket, char closeBracket) {
-            if (actual == openBracket) {
-                balance[0]++;
-            } else if (actual == closeBracket) {
-                if (balance[0] > 0) {
-                    balance[0]--;
-                } else {
-                    // closed bracket without open
-                    balance[1]++;
-                }
-            }
-        }
-
         private boolean isMultiLineComment(final CharSequence buffer, final int pos) {
             return pos < buffer.length() - 1
                     && buffer.charAt(pos) == '/'
@@ -996,7 +971,7 @@ public class JetCommandLine implements Runnable {
         final int colWidth = 15;
         AtomicReference<SqlResult> res = new AtomicReference<>();
         AtomicInteger rowCount = new AtomicInteger();
-        ExecutorService executor = Executors.newSingleThreadExecutor();
+        ExecutorService executor = ForkJoinPool.commonPool();
         Future<?> resultFuture = executor.submit(() -> {
             try {
                 res.set(jet.getSql().execute(command));
@@ -1089,14 +1064,14 @@ public class JetCommandLine implements Runnable {
     }
 
     private static class CliPrompts {
-        static final String STARTING_PROMPT = new AttributedStringBuilder()
-                .append( "\to   o   o   o---o o---o o     o---o   o   o---o o-o-o        o o---o o-o-o   o---o   o---o   o\n" +
-                        "\t|   |  / \\     /  |     |     |      / \\  |       |          | |       |     |       |   |   |\n" +
-                        "\to---o o---o   o   o-o   |     o     o---o o---o   |          | o-o     |     o---o   o   o   o\n" +
-                        "\t|   | |   |  /    |     |     |     |   |     |   |      \\   | |       |         |   |   |   |\n" +
-                        "\to   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o     o---o   o---\\\\  o---\n")
-                .style(AttributedStyle.BOLD)
-                .toAnsi();
+        static final String STARTING_PROMPT = new AttributedStringBuilder().append(
+                "\to   o   o   o---o o---o o     o---o   o   o---o o-o-o        o o---o o-o-o   o---o   o---o   o\n" +
+                "\t|   |  / \\     /  |     |     |      / \\  |       |          | |       |     |       |   |   |\n" +
+                "\to---o o---o   o   o-o   |     o     o---o o---o   |          | o-o     |     o---o   o   o   o\n" +
+                "\t|   | |   |  /    |     |     |     |   |     |   |      \\   | |       |         |   |   |   |\n" +
+                "\to   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o     o---o   o---\\\\  o---")
+    .style(AttributedStyle.BOLD)
+    .toAnsi();
         static final String HELP_PROMPT = new AttributedStringBuilder()
                 .append("AVAILABLE COMMANDS:\n\n")
                 .append("CLEAR\t-\tClear the terminal screen\n")
