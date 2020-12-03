@@ -30,7 +30,6 @@ import java.util.Map;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_GLOB;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_OPTIONS;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_PATH;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_SHARED_FILE_SYSTEM;
 import static java.util.Map.Entry;
@@ -68,20 +67,27 @@ abstract class MetadataResolver {
 
     @SuppressWarnings("unchecked")
     protected <T> ProcessorMetaSupplier toProcessorMetaSupplier(FileFormat<T> format, Map<String, ?> options) {
-        FileSourceBuilder<?> builder = new FileSourceBuilder<>(valueOf(options, OPTION_PATH))
+        FileSourceBuilder<?> builder = new FileSourceBuilder<>((String) options.get(OPTION_PATH))
                 .format(format)
-                .glob(valueOf(options, OPTION_GLOB))
-                .sharedFileSystem(Boolean.parseBoolean(valueOf(options, OPTION_SHARED_FILE_SYSTEM)));
-        Map<String, String> fileOptions = (Map<String, String>) options.get(OPTION_OPTIONS);
-        if (fileOptions != null) {
-            for (Entry<String, String> entry : fileOptions.entrySet()) {
-                builder.option(entry.getKey(), entry.getValue());
+                .glob((String) options.get(OPTION_GLOB))
+                .sharedFileSystem(Boolean.parseBoolean((String) options.get(OPTION_SHARED_FILE_SYSTEM)));
+        for (Entry<String, ?> entry : options.entrySet()) {
+            String key = entry.getKey();
+            if (OPTION_PATH.equals(key) || OPTION_GLOB.equals(key) || OPTION_SHARED_FILE_SYSTEM.equals(key)) {
+                continue;
+            }
+
+            Object value = entry.getValue();
+            if (value instanceof String) {
+                builder.option(key, (String) value);
+            } else if (value instanceof Map) {
+                for (Entry<String, String> option : ((Map<String, String>) value).entrySet()) {
+                    builder.option(option.getKey(), option.getValue());
+                }
+            } else {
+                throw new IllegalArgumentException("Unexpected option type: " + value.getClass());
             }
         }
         return builder.buildMetaSupplier();
-    }
-
-    private static String valueOf(Map<?, ?> options, String key) {
-        return (String) options.get(key);
     }
 }

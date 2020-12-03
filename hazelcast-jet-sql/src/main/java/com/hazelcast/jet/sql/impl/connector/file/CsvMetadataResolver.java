@@ -21,11 +21,8 @@ import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.sql.impl.extract.CsvQueryTarget;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
-import com.hazelcast.sql.impl.type.QueryDataType;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -57,16 +54,7 @@ final class CsvMetadataResolver extends MetadataResolver {
 
     private List<MappingField> resolveFieldsFromSample(Map<String, ?> options) {
         String[] header = fetchRecord(FileFormat.csv(false), options);
-        return resolveFields(header);
-    }
-
-    private static List<MappingField> resolveFields(String[] header) {
-        Map<String, MappingField> fields = new LinkedHashMap<>();
-        for (String name : header) {
-            MappingField field = new MappingField(name, QueryDataType.VARCHAR);
-            fields.putIfAbsent(field.name(), field);
-        }
-        return new ArrayList<>(fields.values());
+        return CsvResolver.resolveFields(header);
     }
 
     @Override

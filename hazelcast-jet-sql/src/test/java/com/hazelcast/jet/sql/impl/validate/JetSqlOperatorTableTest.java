@@ -45,6 +45,9 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static java.util.Collections.singletonList;
+import static org.apache.calcite.sql.SqlLiteral.createApproxNumeric;
+import static org.apache.calcite.sql.SqlLiteral.createBoolean;
+import static org.apache.calcite.sql.SqlLiteral.createExactNumeric;
 import static org.apache.calcite.sql.parser.SqlParserPos.ZERO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -66,11 +69,19 @@ public class JetSqlOperatorTableTest {
     @SuppressWarnings({"unused", "checkstyle:LineLength"})
     private Object[] invalidNodes() {
         return new Object[]{
-                new Object[]{new SqlBasicCall(new SqlArrayValueConstructor(), new SqlNode[]{literal("value")}, ZERO)},
-                new Object[]{new SqlBasicCall(new HazelcastSqlCastFunction(), new SqlNode[]{literal("true"), new SqlDataTypeSpec(new SqlBasicTypeNameSpec(SqlTypeName.BOOLEAN, ZERO), ZERO)}, ZERO)},
-                new Object[]{SqlLiteral.createBoolean(true, ZERO)},
-                new Object[]{SqlLiteral.createExactNumeric("9223372036854775", ZERO)},
-                new Object[]{SqlLiteral.createApproxNumeric("9223372036854775.123", ZERO)}
+                new Object[]{new SqlBasicCall(
+                        new SqlArrayValueConstructor(),
+                        new SqlNode[]{literal("value")},
+                        ZERO
+                )},
+                new Object[]{new SqlBasicCall(
+                        new HazelcastSqlCastFunction(),
+                        new SqlNode[]{literal("true"), new SqlDataTypeSpec(new SqlBasicTypeNameSpec(SqlTypeName.BOOLEAN, ZERO), ZERO)},
+                        ZERO
+                )},
+                new Object[]{createBoolean(true, ZERO)},
+                new Object[]{createExactNumeric("9223372036854775", ZERO)},
+                new Object[]{createApproxNumeric("9223372036854775.123", ZERO)}
         };
     }
 
@@ -81,7 +92,7 @@ public class JetSqlOperatorTableTest {
 
         assertThatThrownBy(() -> sqlFunction.getRowType(TYPE_FACTORY, singletonList(node)))
                 .isInstanceOf(QueryException.class)
-                .hasMessageContaining("All arguments of call to function test_function should be VARCHAR literals");
+                .hasMessageContaining("Actual argument");
     }
 
     @SuppressWarnings({"unused", "checkstyle:LineLength"})
@@ -97,16 +108,8 @@ public class JetSqlOperatorTableTest {
                         SqlTypeName.VARCHAR,
                         null
                 },
-                new Object[]{
-                        SqlLiteral.createNull(ZERO),
-                        SqlTypeName.VARCHAR,
-                        null
-                },
-                new Object[]{
-                        SqlLiteral.createCharString("string", ZERO),
-                        SqlTypeName.VARCHAR,
-                        "string"
-                },
+                new Object[]{SqlLiteral.createNull(ZERO), SqlTypeName.VARCHAR, null},
+                new Object[]{SqlLiteral.createCharString("string", ZERO), SqlTypeName.VARCHAR, "string"},
         };
     }
 
@@ -119,6 +122,44 @@ public class JetSqlOperatorTableTest {
         RelDataType rowType = sqlFunction.getRowType(TYPE_FACTORY, singletonList(node));
 
         assertThat(rowType).isEqualTo(HazelcastObjectType.INSTANCE);
+    }
+
+    @SuppressWarnings("unused")
+    private Object[] invalidMapNodes() {
+        return new Object[]{
+                new Object[]{new SqlBasicCall(
+                        new SqlMapValueConstructor(),
+                        new SqlNode[]{createExactNumeric("1", ZERO), literal("value")},
+                        ZERO
+                )},
+                new Object[]{new SqlBasicCall(
+                        new SqlMapValueConstructor(),
+                        new SqlNode[]{literal("key"), createExactNumeric("1", ZERO)},
+                        ZERO
+                )},
+        };
+    }
+
+    @Test
+    @Parameters(method = "invalidMapNodes")
+    public void when_getRowTypeWithInvalidMapNode_then_throws(SqlNode node) {
+        SqlUserDefinedTableFunction sqlFunction = function("invalidMap", SqlTypeName.MAP);
+
+        assertThatThrownBy(() -> sqlFunction.getRowType(TYPE_FACTORY, singletonList(node)))
+                .isInstanceOf(QueryException.class)
+                .hasMessageContaining("All literals in MAP constructor");
+    }
+
+    @Test
+    public void when_duplicateEntryInMap_then_throws() {
+        SqlUserDefinedTableFunction sqlFunction = function("duplicatedMap", SqlTypeName.MAP);
+
+        assertThatThrownBy(() -> sqlFunction.getRowType(TYPE_FACTORY, singletonList(new SqlBasicCall(
+                new SqlMapValueConstructor(),
+                new SqlNode[]{literal("key"), literal("value1"), literal("key"), literal("value2")},
+                ZERO
+        )))).isInstanceOf(QueryException.class)
+            .hasMessageContaining("Duplicate entry in MAP constructor");
     }
 
     private SqlUserDefinedTableFunction function(String parameterName, SqlTypeName type) {

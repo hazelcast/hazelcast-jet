@@ -70,6 +70,7 @@ public class CsvReadFileFnProvider implements ReadFileFnProvider {
                                   .with(CsvSchema.emptySchema().withSkipFirstDataRow(includesHeader));
         } else {
             assert includesHeader;
+
             return new CsvMapper().readerFor(clazz)
                                   .withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                                   .with(CsvSchema.emptySchema().withHeader());
