@@ -131,7 +131,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
     @Before
     public void before() {
         JetConfig jetConfig = new JetConfig();
-        //jetConfig.getInstanceConfig().setCooperativeThreadCount(36); //todo
+        jetConfig.getInstanceConfig().setCooperativeThreadCount(12); //todo: don't force this, let Jenkins be Jenkins
         cluster = createJetMembers(jetConfig, MEMBER_COUNT);
         results = jet().getMap(RESULTS);
     }
@@ -165,7 +165,6 @@ public class KinesisIntegrationTest extends JetTestSupport {
                     .window(WindowDefinition.tumbling(windowSize))
                     .aggregate(counting())
                     .apply(assertCollectedEventually(ASSERT_TRUE_EVENTUALLY_TIMEOUT, windowResults -> {
-                        System.out.println("windowResults = " + windowResults); //todo: remove
                         assertTrue(windowResults.size() > KEYS); //more window results than keys, so watermarks work
                     }));
 
@@ -336,7 +335,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
         job.restart();
 
-        assertMessages(expectedMessages, true);
+        assertMessages(expectedMessages, true); //todo: why does this work?
     }
 
     @Test
