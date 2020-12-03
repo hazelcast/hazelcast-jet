@@ -23,6 +23,9 @@ import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.SplitShardRequest;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
@@ -46,6 +49,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -126,7 +130,9 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
     @Before
     public void before() {
-        cluster = createJetMembers(MEMBER_COUNT);
+        JetConfig jetConfig = new JetConfig();
+        //jetConfig.getInstanceConfig().setCooperativeThreadCount(36); //todo
+        cluster = createJetMembers(jetConfig, MEMBER_COUNT);
         results = jet().getMap(RESULTS);
     }
 
@@ -159,6 +165,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
                     .window(WindowDefinition.tumbling(windowSize))
                     .aggregate(counting())
                     .apply(assertCollectedEventually(ASSERT_TRUE_EVENTUALLY_TIMEOUT, windowResults -> {
+                        System.out.println("windowResults = " + windowResults); //todo: remove
                         assertTrue(windowResults.size() > KEYS); //more window results than keys, so watermarks work
                     }));
 
@@ -309,6 +316,34 @@ public class KinesisIntegrationTest extends JetTestSupport {
         }
 
         assertMessages(expectedMessages, false);
+    }
+
+    @Test
+    @Category(SerialTest.class)
+    public void restart_staticStream() {
+        createStream(3);
+        HELPER.waitForStreamToActivate();
+
+        JobConfig jobConfig = new JobConfig()
+                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
+                .setSnapshotIntervalMillis(SECONDS.toMillis(1));
+        Job job = jet().newJob(getPipeline(), jobConfig);
+
+        Map<String, List<String>> expectedMessages = sendMessages(false);
+
+        //wait for some data to start coming out of the pipeline, before starting the splits
+        assertTrueEventually(() -> assertFalse(results.isEmpty()));
+
+        job.restart();
+
+        assertMessages(expectedMessages, true);
+    }
+
+    @Test
+    @Category(SerialTest.class)
+    @Ignore //todo
+    public void restart_dynamicStream() {
+        //todo
     }
 
     private Map<String, List<String>> sendMessages(boolean join) {

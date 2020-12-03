@@ -20,6 +20,7 @@ import com.amazonaws.services.kinesis.model.Shard;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.EventTimeMapper;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.logging.ILogger;
@@ -27,13 +28,18 @@ import com.hazelcast.logging.ILogger;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.kinesis.impl.KinesisHelper.shardBelongsToRange;
 
 public class KinesisSourceP extends AbstractProcessor {
@@ -43,14 +49,17 @@ public class KinesisSourceP extends AbstractProcessor {
     @Nonnull
     private final String stream;
     @Nonnull
-    private final EventTimeMapper<? super Map.Entry<String, byte[]>> eventTimeMapper;
+    private final EventTimeMapper<? super Entry<String, byte[]>> eventTimeMapper;
     @Nonnull
     private final HashRange hashRange;
+    @Nonnull
+    private final Offsets offsets = new Offsets();
 
     private int id;
     private ILogger logger;
 
     private Traverser<Object> traverser = Traversers.empty();
+    private Traverser<Entry<BroadcastKey<String>, Object[]>> snapshotTraverser;
 
     private KinesisHelper helper;
     private RangeMonitor rangeMonitor;
@@ -60,7 +69,7 @@ public class KinesisSourceP extends AbstractProcessor {
     public KinesisSourceP(
             @Nonnull AmazonKinesisAsync kinesis,
             @Nonnull String stream,
-            @Nonnull EventTimePolicy<? super Map.Entry<String, byte[]>> eventTimePolicy,
+            @Nonnull EventTimePolicy<? super Entry<String, byte[]>> eventTimePolicy,
             @Nonnull HashRange hashRange
     ) {
         this.kinesis = Objects.requireNonNull(kinesis, "kinesis");
@@ -114,12 +123,14 @@ public class KinesisSourceP extends AbstractProcessor {
 
             ShardReader.Result result = reader.probe(currentTime);
             if (ShardReader.Result.HAS_DATA.equals(result)) {
-                traverser = reader.getData()
+                traverser = reader.clearData()
                         .flatMap(record -> eventTimeMapper.flatMapEvent(
                                 entry(record.getPartitionKey(), record.getData().array()), //todo: shady?
                                 currentReader,
                                 record.getApproximateArrivalTimestamp().getTime()
                         ));
+                offsets.store(reader.getShard().getShardId(), reader.getLastSeenSeqNo(),
+                        eventTimeMapper.getWatermark(currentReader));
                 emitFromTraverser(traverser);
                 return;
             } else if (ShardReader.Result.CLOSED.equals(result)) {
@@ -141,18 +152,40 @@ public class KinesisSourceP extends AbstractProcessor {
             return false;
         }
 
-        //todo: actual snapshot saving; we will be saving the sequence numbers of last seen messages, per shard
-        //todo: should we also save the list of closed shards?
-        //todo: save watermark, see StreamKafkaP
-        return true;
+        if (snapshotTraverser == null) {
+            snapshotTraverser = traverseStream(offsets.snapshotEntries())
+                    .onFirstNull(() -> snapshotTraverser = null);
+        }
+        return emitFromTraverserToSnapshot(snapshotTraverser);
     }
 
     @Override
     protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
-        //todo: look for last seen sequence numbers of handled shards
-        // pass them to readers so that they can request records only from the sequence no. onward
+        String shardId = ((BroadcastKey<String>) key).key();
 
-        //todo: restore watermark, see StreamKafkaP
+        int readerIndex = getReaderIndex(shardId);
+        if (readerIndex >= 0) {
+            Object[] values = (Object[]) value;
+            String seqNo = (String) values[0];
+            Long watermark = (Long) values[1];
+
+            ShardReader reader = shardReaders.get(readerIndex);
+            reader.reset(seqNo);
+
+            eventTimeMapper.restoreWatermark(readerIndex, watermark);
+
+            offsets.store(shardId, seqNo, watermark);
+        }
+    }
+
+    private int getReaderIndex(String shardId) {
+        for (int i = 0; i < shardReaders.size(); i++) {
+            ShardReader reader = shardReaders.get(i);
+            if (reader.getShard().getShardId().equals(shardId)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private void addShardReaders(Collection<Shard> shardsInRange) {
@@ -169,7 +202,8 @@ public class KinesisSourceP extends AbstractProcessor {
 
     @Nonnull
     private ShardReader initShardReader(Shard shard) {
-        logger.info("Shard " + shard.getShardId() + " of stream " + stream + " assigned to processor instance " + id);
+        String shardId = shard.getShardId();
+        logger.info("Shard " + shardId + " of stream " + stream + " assigned to processor instance " + id);
         return new ShardReader(kinesis, stream, shard, logger);
     }
 
@@ -179,5 +213,25 @@ public class KinesisSourceP extends AbstractProcessor {
             v = 0;
         }
         return v;
+    }
+
+    private static class Offsets {
+
+        private final Map<String, Object[]> shardOffsets = new HashMap<>();
+
+        void store(String shardId, String seqNo, long watermark) {
+            Object[] offset = shardOffsets.get(shardId);
+            if (offset == null) {
+                shardOffsets.put(shardId, new Object[] {seqNo, watermark});
+            } else {
+                offset[0] = seqNo;
+                offset[1] = watermark;
+            }
+        }
+
+        Stream<Entry<BroadcastKey<String>, Object[]>> snapshotEntries() {
+            return shardOffsets.entrySet().stream()
+                    .map(e -> entry(broadcastKey(e.getKey()), e.getValue()));
+        }
     }
 }

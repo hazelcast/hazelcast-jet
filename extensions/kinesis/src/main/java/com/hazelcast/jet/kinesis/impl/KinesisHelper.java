@@ -160,13 +160,14 @@ public class KinesisHelper {
         return kinesis.listShardsAsync(request);
     }
 
-    public Future<GetShardIteratorResult> getShardIteratorAsync(Shard shard) {
-        return kinesis.getShardIteratorAsync(
-                stream,
-                shard.getShardId(),
-                "AT_SEQUENCE_NUMBER",
-                shard.getSequenceNumberRange().getStartingSequenceNumber()
-        ); //todo: proper starting sequence number will be provided from offsets restored from Jet snapshots
+    public Future<GetShardIteratorResult> getShardIteratorAsync(Shard shard, String lastSeenSeqNo) {
+        String shardId = shard.getShardId();
+        if (lastSeenSeqNo == null) {
+            return kinesis.getShardIteratorAsync(stream, shardId, "AT_SEQUENCE_NUMBER",
+                    shard.getSequenceNumberRange().getStartingSequenceNumber());
+        } else {
+            return kinesis.getShardIteratorAsync(stream, shardId, "AFTER_SEQUENCE_NUMBER", lastSeenSeqNo);
+        }
     }
 
     public Future<GetRecordsResult> getRecordsAsync(String shardIterator) {

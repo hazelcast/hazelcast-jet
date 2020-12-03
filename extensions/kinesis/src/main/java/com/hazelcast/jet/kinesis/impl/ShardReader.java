@@ -28,6 +28,7 @@ import com.hazelcast.jet.Traversers;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -76,10 +77,18 @@ class ShardReader extends AbstractShardWorker {
 
     @Nonnull
     private List<Record> data = Collections.emptyList();
+    @Nullable
+    private String lastSeenSeqNo;
 
     ShardReader(AmazonKinesisAsync kinesis, String stream, Shard shard, ILogger logger) {
         super(kinesis, stream, logger);
         this.shard = shard;
+    }
+
+    public void reset(String seqNo) {
+        lastSeenSeqNo = seqNo;
+        state = State.NO_SHARD_ITERATOR;
+        data = Collections.emptyList();
     }
 
     public Result probe(long currentTime) {
@@ -104,7 +113,7 @@ class ShardReader extends AbstractShardWorker {
     }
 
     private Result handleNoShardIterator() {
-        shardIteratorResult = helper.getShardIteratorAsync(shard);
+        shardIteratorResult = helper.getShardIteratorAsync(shard, lastSeenSeqNo);
         state = State.WAITING_FOR_SHARD_ITERATOR;
         return Result.NOTHING;
     }
@@ -139,6 +148,9 @@ class ShardReader extends AbstractShardWorker {
                 GetRecordsResult result = helper.readResult(recordsResult);
                 shardIterator = result.getNextShardIterator();
                 data = result.getRecords();
+                if (!data.isEmpty()) {
+                    lastSeenSeqNo = data.get(data.size() - 1).getSequenceNumber();
+                }
                 if (shardIterator == null) {
                     state = State.SHARD_CLOSED;
                     return data.isEmpty() ? Result.CLOSED : Result.HAS_DATA;
@@ -203,7 +215,11 @@ class ShardReader extends AbstractShardWorker {
         return shard;
     }
 
-    public Traverser<Record> getData() {
+    public String getLastSeenSeqNo() {
+        return lastSeenSeqNo;
+    }
+
+    public Traverser<Record> clearData() {
         if (data.isEmpty()) {
             throw new IllegalStateException("Can't ask for data when none is available");
         }
