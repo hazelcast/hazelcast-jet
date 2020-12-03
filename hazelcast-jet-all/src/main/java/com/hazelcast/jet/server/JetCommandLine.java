@@ -229,6 +229,8 @@ public class JetCommandLine implements Runnable {
                     command = reader.readLine("sql> ").trim();
                 } catch (UserInterruptException | EndOfFileException | IOError e) {
                     // Ctrl+C, Ctrl+D, and kill signals result in exit
+                    writer.println(CliPrompts.EXIT_PROMPT);
+                    writer.flush();
                     break;
                 }
 
