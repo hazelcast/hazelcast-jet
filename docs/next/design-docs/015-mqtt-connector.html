@@ -220,21 +220,37 @@ one:</p>
         <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <h4><a class="anchor" aria-hidden="true" id="fault-tolerance"></a><a href="#fault-tolerance" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fault Tolerance</h4>
-<p>MQTT protocol defines these levels of quality of service for subscribing
-to the topics: <code>AT_MOST_ONCE</code>, <code>AT_LEAST_ONCE</code>, <code>EXACTLY_ONCE</code>. But I've
-confirmed a loss of messages with <code>EXACTLY_ONCE</code> configuration even when
-the client restarted gracefully. I've tried both Paho client and HiveMQ
-client, the results are same.</p>
+<p>To support fault tolerance for a source, Jet needs the remote system to
+support one of these:</p>
+<ul>
+<li><p>provide an offset. After a failure, we'll use that offset and replay
+the messages</p></li>
+<li><p>support manual acknowledgement. Jet will ack the messages in the
+second phase of the snapshot</p></li>
+</ul>
+<p>MQTT provides acknowledgements, however, the Paho client we use
+acknowledges the messages automatically. There are other clients that
+support manual acknowledgements, however the whole MQTT protocol is
+designed for IoT and small resource usage. Many brokers (for example
+Mosquitto) limit the number of non-acknowledged messages to a low value
+(100 in case of Mosquitto). Therefore we can't really rely on this
+feature.</p>
+<p>We've also considered an option where Jet itself would save the messages
+received since the last snapshot. We cannot save it to the snapshot
+because the snapshot stores state created <em>before</em> the snapshot is
+taken, but we need to save messages received <em>after</em> the snapshot. We
+could save them to an IMap and maybe we could provide a persistence
+implementation for Paho that we'll be able to &quot;roll back&quot;. However, we
+didn't implement a PoC for this option. We decided to not support any
+fault tolerance for the MQTT source. It can be implemented in the future
+if there's demand. Currently, if a fault-tolerant job fails, the source
+will simply start where it left off and the messages acked since the
+last snapshot will be lost.</p>
 <p>If a client subscribes to a topic with quality of service <code>AT_LEAST_ONCE</code>
 or <code>EXACTLY_ONCE</code> and connects to the broker with <code>cleanSession=false</code>,
 then the broker keeps the messages in case of a disconnection. The broker
 serves these buffered messages once the client is re-connected. You
 need to use a unique identifier for the client.</p>
-<p>The source itself is not fault-tolerant and does not save any state. In
-case of a restart, the source does not know where it left off and relies
-on the broker. If the broker keeps a session for the client (the above
-situation), the source continues where it left off, otherwise the source
-emits messages after the subscription.</p>
 <p>Paho client has an <code>autoReconnect</code> option, in case of a disconnect, the
 client tries to reconnect to the broker. After the reconnection, source
 re-subscribes to the topics.</p>
@@ -287,8 +303,9 @@ the options one by one.</p>
         <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <h4><a class="anchor" aria-hidden="true" id="fault-tolerance-1"></a><a href="#fault-tolerance-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fault Tolerance</h4>
-<p>The sink is not fault-tolerant and does not save any state. In case of
-a restart, some messages can be duplicated.</p>
+<p>The MQTT sink provides at-least-once guarantee - it sends the messages
+synchronously. If a job fails and restarts, the same messages will be
+sent again.</p>
 <h4><a class="anchor" aria-hidden="true" id="error-handling"></a><a href="#error-handling" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Error handling</h4>
 <p>The sink uses sync client to publish the messages. Any error/exception
 encountered while publishing the messages will fail the job. User can
