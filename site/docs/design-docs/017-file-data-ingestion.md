@@ -151,7 +151,22 @@ There are examples how to read:
 
 Compression
 
-Hadoop supports various compression formats.
+Hadoop supports various compression formats, which work with built-in
+TextInputFormat, used in our `FileFormat#lines()`. Other input formats
+implemented by us do not support compression, but it is possible to
+implement. It should be straightforward for e.g. the binary files, a bit
+more complicated for splittable files without clear boundaries (e.g.
+json).
+
+Avro format has its own compression, we are able to read such compressed
+files. See [Avro documentation](https://avro.apache.org/docs/1.10.1/spec.html#Required+Codecs).
+
+Parquet format has its own compression, we are able to read such
+compressed files.
+
+Selecting subset of columns
+
+Possible for parquet only. Available with hadoop connector via option.
 
 = 4. Overlap with Jet SQL
 
