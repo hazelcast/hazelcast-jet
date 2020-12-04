@@ -235,10 +235,10 @@ public class JetCommandLine implements Runnable {
                 }
 
                 if (command.lastIndexOf(";") >= 0) {
-                    command = command.substring(0, command.lastIndexOf(";"));
+                    command = command.substring(0, command.lastIndexOf(";")).trim();
                 }
 
-                if ("".equals(command.trim())) {
+                if ("".equals(command)) {
                     continue;
                 }
                 if ("clear".equalsIgnoreCase(command)) {
@@ -970,7 +970,7 @@ public class JetCommandLine implements Runnable {
     private void executeSqlCmd(JetInstance jet, String command, Terminal terminal) {
 
         PrintWriter out = terminal.writer();
-        final int colWidth = 15;
+        final int colWidth = 20;
         AtomicReference<SqlResult> res = new AtomicReference<>();
         AtomicInteger rowCount = new AtomicInteger();
         ExecutorService executor = ForkJoinPool.commonPool();
@@ -987,6 +987,9 @@ public class JetCommandLine implements Runnable {
                 for (SqlRow row : res.get()) {
                     rowCount.getAndIncrement();
                     printRow(row, colWidth, out);
+                }
+                if (rowCount.get() > 0) {
+                    printSeparatorLine(res.get().getRowMetadata().getColumnCount(), colWidth, out);
                 }
                 out.println("\n" + rowCount.get() + " row(s) selected");
             } else {
@@ -1072,6 +1075,7 @@ public class JetCommandLine implements Runnable {
                 "\to---o o---o   o   o-o   |     o     o---o o---o   |          | o-o     |     o---o   o   o   o\n" +
                 "\t|   | |   |  /    |     |     |     |   |     |   |      \\   | |       |         |   |   |   |\n" +
                 "\to   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o     o---o   o---\\\\  o---")
+                .append("\n Welcome to the Hazelcast Jet SQL Console. 'help;' displays help for the available commands.\n\n")
     .style(AttributedStyle.BOLD)
     .toAnsi();
         static final String HELP_PROMPT = new AttributedStringBuilder()
