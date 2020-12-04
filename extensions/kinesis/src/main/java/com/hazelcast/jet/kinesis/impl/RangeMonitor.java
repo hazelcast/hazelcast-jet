@@ -22,15 +22,14 @@ import com.amazonaws.services.kinesis.model.Shard;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.kinesis.impl.KinesisHelper.shardBelongsToRange;
-import static java.util.Collections.emptySet;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toCollection;
@@ -59,8 +58,10 @@ public class RangeMonitor extends AbstractShardWorker {
     //todo: never removing from the set of known shards, because I have to read from all shards, not
     // just the active ones and I have to not read from shards that are closed and I have read from them already...
 
-    private final HashRange hashRange;
-    private final Set<String> knownShards;
+    private final Set<String> knownShards = new HashSet<>();
+    private final HashRange coveredRange;
+    private final HashRange[] rangePartitions;
+    private final Queue<Shard>[] shardQueues;
     private final RandomizedRateTracker listShardsRateTracker;
     private final ILogger logger;
 
@@ -72,24 +73,26 @@ public class RangeMonitor extends AbstractShardWorker {
             int totalInstances,
             AmazonKinesisAsync kinesis,
             String stream,
-            HashRange hashRange,
-            Collection<Shard> knownShards,
+            HashRange coveredRange,
+            HashRange[] rangePartitions,
+            Queue<Shard>[] shardQueues,
             ILogger logger
     ) {
         super(kinesis, stream, logger);
+        this.coveredRange = coveredRange;
+        this.rangePartitions = rangePartitions;
+        this.shardQueues = shardQueues;
         this.logger = logger;
-        this.hashRange = hashRange;
-        this.knownShards = knownShards.stream().map(Shard::getShardId).collect(toCollection(HashSet::new));
         this.listShardsRateTracker = initRandomizedTracker(totalInstances);
         this.nextListShardsTime = System.nanoTime() + listShardsRateTracker.next();
     }
 
-    public Collection<Shard> probe(long currentTime) {
+    public void run() {
+        long currentTime = System.nanoTime();
         if (listShardResult == null) {
             initShardListing(currentTime);
-            return emptySet();
         } else {
-            return checkForNewShards(currentTime);
+            checkForNewShards(currentTime);
         }
     }
 
@@ -101,7 +104,7 @@ public class RangeMonitor extends AbstractShardWorker {
         nextListShardsTime = currentTime + listShardsRateTracker.next();
     }
 
-    private Collection<Shard> checkForNewShards(long currentTime) {
+    private void checkForNewShards(long currentTime) {
         if (listShardResult.isDone()) {
             try {
                 ListShardsResult result = helper.readResult(listShardResult);
@@ -109,29 +112,46 @@ public class RangeMonitor extends AbstractShardWorker {
 
                 List<Shard> shards = result.getShards();
 
-                Set<Shard> unknownShards = shards.stream()
-                        .filter(shard -> shardBelongsToRange(shard, hashRange))
+                Set<Shard> newShards = shards.stream()
+                        .filter(shard -> shardBelongsToRange(shard, coveredRange))
                         .filter(shard -> !knownShards.contains(shard.getShardId())).collect(toCollection(HashSet::new));
 
-                if (!unknownShards.isEmpty()) {
+                if (!newShards.isEmpty()) {
                     logger.info("New shards detected: " +
-                            unknownShards.stream().map(Shard::getShardId).collect(joining(", ")));
-                    knownShards.addAll(unknownShards.stream().map(Shard::getShardId).collect(toList()));
+                            newShards.stream().map(Shard::getShardId).collect(joining(", ")));
+                    knownShards.addAll(newShards.stream().map(Shard::getShardId).collect(toList()));
+
+                    for (Shard shard : newShards) { //todo: ok to do for all new shards at once?
+                        int index = findOwner(shard);
+                        if (index < 0) {
+                            throw new RuntimeException("Programming error, shard not covered by any hash range");
+                        }
+                        boolean successful = shardQueues[index].offer(shard);
+                        if (!successful) {
+                            throw new RuntimeException("Programming error, shard queues should not have a capacity limit");
+                        }
+                    }
                 }
-                return unknownShards;
             } catch (SdkClientException e) {
                 logger.warning("Failed listing shards, retrying. Cause: " + e.getMessage());
                 nextToken = null;
                 nextListShardsTime = currentTime + PAUSE_AFTER_FAILURE;
-                return emptySet();
             } catch (Throwable t) {
                 throw rethrow(t);
             } finally {
                 listShardResult = null;
             }
-        } else {
-            return emptySet();
         }
+    }
+
+    private int findOwner(Shard shard) {
+        for (int i = 0; i < rangePartitions.length; i++) { //todo: could do binary search, but is it worth it?
+            HashRange range = rangePartitions[i];
+            if (KinesisHelper.shardBelongsToRange(shard, range)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     @Nonnull

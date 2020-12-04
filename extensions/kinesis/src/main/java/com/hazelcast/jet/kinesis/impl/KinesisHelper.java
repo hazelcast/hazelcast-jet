@@ -78,6 +78,10 @@ public class KinesisHelper {
 
     public static boolean shardBelongsToRange(@Nonnull Shard shard, @Nonnull HashRange range) {
         String startingHashKey = shard.getHashKeyRange().getStartingHashKey();
+        return shardBelongsToRange(startingHashKey, range);
+    }
+
+    public static boolean shardBelongsToRange(@Nonnull String startingHashKey, @Nonnull HashRange range) {
         return range.contains(new BigInteger(startingHashKey));
     }
 

@@ -21,6 +21,7 @@ import com.amazonaws.services.kinesis.model.CreateStreamRequest;
 import com.amazonaws.services.kinesis.model.MergeShardsRequest;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.SplitShardRequest;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
@@ -50,10 +51,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.containers.localstack.LocalStackContainer.Service;
@@ -81,6 +80,7 @@ import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class KinesisIntegrationTest extends JetTestSupport {
@@ -100,9 +100,6 @@ public class KinesisIntegrationTest extends JetTestSupport {
     private static AwsConfig AWS_CONFIG;
     private static AmazonKinesisAsync KINESIS;
     private static KinesisHelper HELPER;
-
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
 
     private JetInstance[] cluster;
     private IMap<String, List<String>> results;
@@ -149,29 +146,28 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
     @Test
     @Category(SerialTest.class)
-    public void timestampsAndWatermarks() throws Throwable {
+    public void timestampsAndWatermarks() {
         createStream(1);
         HELPER.waitForStreamToActivate();
 
-        expectedException.expectMessage(AssertionCompletedException.class.getName());
+        sendMessages(false);
 
         try {
-            long windowSize = SECONDS.toMillis(3);
-
             Pipeline pipeline = Pipeline.create();
             pipeline.readFrom(kinesisSource())
                     .withNativeTimestamps(0)
-                    .groupingKey(Entry::getKey)
-                    .window(WindowDefinition.tumbling(windowSize))
+                    .window(WindowDefinition.sliding(500, 100))
                     .aggregate(counting())
                     .apply(assertCollectedEventually(ASSERT_TRUE_EVENTUALLY_TIMEOUT, windowResults -> {
-                        assertTrue(windowResults.size() > KEYS); //more window results than keys, so watermarks work
+                        assertTrue(windowResults.size() > 1); //multiple windows, so watermark works
                     }));
 
-            sendMessages(false);
             jet().newJob(pipeline).join();
+            fail("Expected exception not thrown");
         } catch (CompletionException ce) {
-            throw peel(ce);
+            Throwable cause = peel(ce);
+            assertTrue(cause instanceof JetException);
+            assertTrue(cause.getCause() instanceof AssertionCompletedException);
         }
     }
 
@@ -330,20 +326,48 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
         Map<String, List<String>> expectedMessages = sendMessages(false);
 
-        //wait for some data to start coming out of the pipeline, before starting the splits
+        //wait for some data to start coming out of the pipeline
         assertTrueEventually(() -> assertFalse(results.isEmpty()));
 
         job.restart();
 
-        assertMessages(expectedMessages, true); //todo: why does this work?
+        assertMessages(expectedMessages, true);
     }
 
     @Test
     @Category(SerialTest.class)
     @Ignore //todo
     public void restart_dynamicStream() {
-        //todo
+        createStream(3);
+        HELPER.waitForStreamToActivate();
+
+        JobConfig jobConfig = new JobConfig()
+                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
+                .setSnapshotIntervalMillis(SECONDS.toMillis(1));
+        Job job = jet().newJob(getPipeline(), jobConfig);
+
+        Map<String, List<String>> expectedMessages = sendMessages(false);
+
+        //wait for some data to start coming out of the pipeline
+        assertTrueEventually(() -> assertFalse(results.isEmpty()));
+
+        Shard shardToSplit = listActiveShards().get(1);
+        splitShard(shardToSplit);
+
+        HELPER.waitForStreamToActivate();
+
+        List<Shard> shardsAfterSplit = listActiveShards();
+        Tuple2<Shard, Shard> shardsToMerge = findAdjacentPair(shardsAfterSplit.get(0), shardsAfterSplit);
+        mergeShards(shardsToMerge.f0(), shardsToMerge.f1());
+
+        HELPER.waitForStreamToActivate();
+
+        job.restart();
+
+        assertMessages(expectedMessages, true);
     }
+
+    //todo: com.hazelcast.jet.impl.connector.JmsSourceIntegrationTestBase#stressTest_exactlyOnce_graceful
 
     private Map<String, List<String>> sendMessages(boolean join) {
         List<Entry<String, String>> msgEntryList = IntStream.range(0, MESSAGES)
@@ -445,7 +469,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
     }
 
     private static void splitShard(Shard shard) {
-        HashRange range = HashRange.of(shard.getHashKeyRange());
+        HashRange range = HashRange.range(shard.getHashKeyRange());
         BigInteger middle = range.getMinInclusive().add(range.getMaxExclusive()).divide(BigInteger.valueOf(2));
 
         SplitShardRequest request = new SplitShardRequest();
@@ -493,9 +517,9 @@ public class KinesisIntegrationTest extends JetTestSupport {
     }
 
     private static Tuple2<Shard, Shard> findAdjacentPair(Shard shard, List<Shard> allShards) {
-        HashRange shardRange = HashRange.of(shard.getHashKeyRange());
+        HashRange shardRange = HashRange.range(shard.getHashKeyRange());
         for (Shard examinedShard : allShards) {
-            HashRange examinedRange = HashRange.of(examinedShard.getHashKeyRange());
+            HashRange examinedRange = HashRange.range(examinedShard.getHashKeyRange());
             if (shardRange.isAdjacent(examinedRange)) {
                 if (shardRange.getMinInclusive().compareTo(examinedRange.getMinInclusive()) <= 0) {
                     return Tuple2.tuple2(shard, examinedShard);

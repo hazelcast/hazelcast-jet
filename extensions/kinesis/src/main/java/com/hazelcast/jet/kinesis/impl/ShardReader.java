@@ -80,15 +80,10 @@ class ShardReader extends AbstractShardWorker {
     @Nullable
     private String lastSeenSeqNo;
 
-    ShardReader(AmazonKinesisAsync kinesis, String stream, Shard shard, ILogger logger) {
+    ShardReader(AmazonKinesisAsync kinesis, String stream, Shard shard, String lastSeenSeqNo, ILogger logger) {
         super(kinesis, stream, logger);
         this.shard = shard;
-    }
-
-    public void reset(String seqNo) {
-        lastSeenSeqNo = seqNo;
-        state = State.NO_SHARD_ITERATOR;
-        data = Collections.emptyList();
+        this.lastSeenSeqNo = lastSeenSeqNo;
     }
 
     public Result probe(long currentTime) {

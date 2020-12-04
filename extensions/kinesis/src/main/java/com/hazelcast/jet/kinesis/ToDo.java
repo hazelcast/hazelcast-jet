@@ -20,6 +20,8 @@ package com.hazelcast.jet.kinesis;
  */
 public class ToDo {
 
+    //todo: do not block in processor init
+
     //todo: make sure all integration tests run on real backend too
 
     //todo: merges and splits can reorder in-flight messages, document this
