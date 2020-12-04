@@ -75,19 +75,10 @@ public class MetadataResolversTest {
     }
 
     @Test
-    public void when_globIsMissing_then_throws() {
-        assertThatThrownBy(() -> resolvers.resolveAndValidateFields(
-                emptyList(),
-                ImmutableMap.of(OPTION_FORMAT, FORMAT, OPTION_PATH, "/path")
-        )).isInstanceOf(QueryException.class)
-          .hasMessageContaining("Missing 'glob");
-    }
-
-    @Test
     public void when_formatIsNotSupported_then_throws() {
         assertThatThrownBy(() -> resolvers.resolveAndValidateFields(
                 emptyList(),
-                ImmutableMap.of(OPTION_FORMAT, "some-other-format", OPTION_PATH, "/path", OPTION_GLOB, "*")
+                ImmutableMap.of(OPTION_FORMAT, "some-other-format", OPTION_PATH, "/path")
         )).isInstanceOf(QueryException.class)
           .hasMessageContaining("Unsupported serialization format");
     }

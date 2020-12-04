@@ -67,10 +67,18 @@ abstract class MetadataResolver {
 
     @SuppressWarnings("unchecked")
     protected <T> ProcessorMetaSupplier toProcessorMetaSupplier(FileFormat<T> format, Map<String, ?> options) {
-        FileSourceBuilder<?> builder = new FileSourceBuilder<>((String) options.get(OPTION_PATH))
-                .format(format)
-                .glob((String) options.get(OPTION_GLOB))
-                .sharedFileSystem(Boolean.parseBoolean((String) options.get(OPTION_SHARED_FILE_SYSTEM)));
+        FileSourceBuilder<?> builder = new FileSourceBuilder<>((String) options.get(OPTION_PATH)).format(format);
+
+        String glob = (String) options.get(OPTION_GLOB);
+        if (glob != null) {
+            builder.glob(glob);
+        }
+
+        String sharedFileSystem = (String) options.get(OPTION_SHARED_FILE_SYSTEM);
+        if (sharedFileSystem != null) {
+            builder.sharedFileSystem(Boolean.parseBoolean(sharedFileSystem));
+        }
+
         for (Entry<String, ?> entry : options.entrySet()) {
             String key = entry.getKey();
             if (OPTION_PATH.equals(key) || OPTION_GLOB.equals(key) || OPTION_SHARED_FILE_SYSTEM.equals(key)) {

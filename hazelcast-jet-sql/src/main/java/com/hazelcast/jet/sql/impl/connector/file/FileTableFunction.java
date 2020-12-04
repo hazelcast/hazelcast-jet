@@ -47,28 +47,28 @@ public final class FileTableFunction extends JetTableFunction {
 
     public static final FileTableFunction CSV = new FileTableFunction(CSV_FORMAT, asList(
             new JetTableFunctionParameter(0, OPTION_PATH, SqlTypeName.VARCHAR, true),
-            new JetTableFunctionParameter(1, OPTION_GLOB, SqlTypeName.VARCHAR, true),
+            new JetTableFunctionParameter(1, OPTION_GLOB, SqlTypeName.VARCHAR, false),
             new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, SqlTypeName.VARCHAR, false),
             new JetTableFunctionParameter(3, OPTION_OPTIONS, SqlTypeName.MAP, false)
     ));
 
     public static final FileTableFunction JSONL = new FileTableFunction(JSONL_FORMAT, asList(
             new JetTableFunctionParameter(0, OPTION_PATH, SqlTypeName.VARCHAR, true),
-            new JetTableFunctionParameter(1, OPTION_GLOB, SqlTypeName.VARCHAR, true),
+            new JetTableFunctionParameter(1, OPTION_GLOB, SqlTypeName.VARCHAR, false),
             new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, SqlTypeName.VARCHAR, false),
             new JetTableFunctionParameter(3, OPTION_OPTIONS, SqlTypeName.MAP, false)
     ));
 
     public static final FileTableFunction AVRO = new FileTableFunction(AVRO_FORMAT, asList(
             new JetTableFunctionParameter(0, OPTION_PATH, SqlTypeName.VARCHAR, true),
-            new JetTableFunctionParameter(1, OPTION_GLOB, SqlTypeName.VARCHAR, true),
+            new JetTableFunctionParameter(1, OPTION_GLOB, SqlTypeName.VARCHAR, false),
             new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, SqlTypeName.VARCHAR, false),
             new JetTableFunctionParameter(3, OPTION_OPTIONS, SqlTypeName.MAP, false)
     ));
 
     public static final FileTableFunction PARQUET = new FileTableFunction(PARQUET_FORMAT, asList(
             new JetTableFunctionParameter(0, OPTION_PATH, SqlTypeName.VARCHAR, true),
-            new JetTableFunctionParameter(1, OPTION_GLOB, SqlTypeName.VARCHAR, true),
+            new JetTableFunctionParameter(1, OPTION_GLOB, SqlTypeName.VARCHAR, false),
             new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, SqlTypeName.VARCHAR, false),
             new JetTableFunctionParameter(3, OPTION_OPTIONS, SqlTypeName.MAP, false)
     ));

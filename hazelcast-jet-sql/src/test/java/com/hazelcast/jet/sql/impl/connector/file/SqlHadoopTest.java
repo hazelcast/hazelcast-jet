@@ -84,7 +84,6 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("csv") + '\''
-                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -107,7 +106,6 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("discovered-csv") + '\''
-                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -132,7 +130,6 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '\'' + OPTION_FORMAT + "'='" + JSONL_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("json") + '\''
-                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -155,7 +152,6 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '\'' + OPTION_FORMAT + "'='" + JSONL_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("discovered-json") + '\''
-                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -180,7 +176,6 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '\'' + OPTION_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("avro") + '\''
-                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -200,7 +195,6 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '\'' + OPTION_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("discovered-avro") + '\''
-                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -221,7 +215,6 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '\'' + OPTION_FORMAT + "'='" + PARQUET_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("parquet-nulls") + '\''
-                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -243,7 +236,6 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '\'' + OPTION_FORMAT + "'='" + PARQUET_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("parquet-fields-mapping") + '\''
-                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -276,7 +268,6 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ( "
                 + '\'' + OPTION_FORMAT + "'='" + PARQUET_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("parquet-all-types") + '\''
-                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -310,7 +301,6 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "OPTIONS ( "
                 + '\'' + OPTION_FORMAT + "'='" + PARQUET_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + path("parquet-schema-discovery") + '\''
-                + ", '" + FileSqlConnector.OPTION_GLOB + "'='*'"
                 + ")"
         );
 
@@ -366,7 +356,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                         + ", \"timestamp\""
                         + ", \"timestampTz\""
                         + " FROM TABLE ("
-                        + "PARQUET_FILE ('" + path("parquet-table-function") + "', '*')"
+                        + "PARQUET_FILE ('" + path("parquet-table-function") + "')"
                         + ")",
                 singletonList(new Row(
                         "string",

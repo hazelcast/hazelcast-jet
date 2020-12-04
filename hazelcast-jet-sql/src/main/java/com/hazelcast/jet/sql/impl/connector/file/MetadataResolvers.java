@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_GLOB;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_PATH;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
@@ -48,9 +47,6 @@ class MetadataResolvers {
         }
         if (options.get(OPTION_PATH) == null) {
             throw QueryException.error("Missing '" + OPTION_PATH + "' option");
-        }
-        if (options.get(OPTION_GLOB) == null) {
-            throw QueryException.error("Missing '" + OPTION_GLOB + "' option");
         }
 
         List<MappingField> fields = findMetadataResolver(options).resolveAndValidateFields(userFields, options);
