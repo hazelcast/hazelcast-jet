@@ -38,8 +38,11 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.TimeoutException;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.AfterClass;
@@ -52,9 +55,11 @@ import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +77,7 @@ import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.IntStream.range;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -244,7 +250,7 @@ public class StreamKafkaPTest extends SimpleTestInClusterSupport {
                 .setTotalParallelism(INITIAL_PARTITION_COUNT + 1)
                 .setGlobalProcessorIndex(INITIAL_PARTITION_COUNT));
 
-        assertTrue(processor.currentAssignment.isEmpty());
+        assertTrue(processor.   currentAssignment.isEmpty());
         assertEquals(IDLE_MESSAGE, consumeEventually(processor, outbox));
 
         kafkaTestSupport.setPartitionCount(topic1Name, INITIAL_PARTITION_COUNT + 1);
@@ -424,6 +430,23 @@ public class StreamKafkaPTest extends SimpleTestInClusterSupport {
         }, 3);
         assertEquals("1", outbox.queue(0).poll());
         assertNull(outbox.queue(0).poll());
+    }
+
+    @Test
+    public void when_topicDoesNotExist_then_partitionCountGreaterThanZero() {
+        KafkaConsumer<Integer, String> c = kafkaTestSupport.createConsumer("non-existing-topic");
+        assertGreaterOrEquals("partition count", c.partitionsFor("non-existing-topic", Duration.ofSeconds(2)).size(), 1);
+    }
+    
+    @Test
+    public void when_consumerCannotConnect_then_partitionForTimeout() {
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("bootstrap.servers", "127.0.0.1:33333");
+        properties.put("key.deserializer", ByteArrayDeserializer.class.getName());
+        properties.put("value.deserializer", ByteArrayDeserializer.class.getName());
+        KafkaConsumer<Integer, String> c = new KafkaConsumer<>(properties);
+        assertThatThrownBy(() -> c.partitionsFor("t", Duration.ofMillis(100)))
+                .isInstanceOf(TimeoutException.class);
     }
 
     @SuppressWarnings("unchecked")

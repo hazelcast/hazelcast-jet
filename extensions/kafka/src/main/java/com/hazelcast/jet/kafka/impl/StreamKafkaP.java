@@ -18,7 +18,6 @@ package com.hazelcast.jet.kafka.impl;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
-import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -31,12 +30,13 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.TimeoutException;
 
 import javax.annotation.Nonnull;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -51,7 +51,6 @@ import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
-import static java.lang.System.arraycopy;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -60,7 +59,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
 
     private static final long METADATA_CHECK_INTERVAL_NANOS = SECONDS.toNanos(5);
-    private static final Duration POLL_TIMEOUT_MS = Duration.ofMillis(50);
 
     Map<TopicPartition, Integer> currentAssignment = new HashMap<>();
 
@@ -71,13 +69,11 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
     private int totalParallelism;
 
     private KafkaConsumer<K, V> consumer;
-    private final int[] partitionCounts;
     private long nextMetadataCheck = Long.MIN_VALUE;
 
     /**
      * Key: topicName<br>
      * Value: partition offsets, at index I is offset for partition I.<br>
-     * Offsets are -1 initially and remain -1 for partitions not assigned to this instance.
      */
     private final Map<String, long[]> offsets = new HashMap<>();
     private Traverser<Entry<BroadcastKey<TopicPartition>, long[]>> snapshotTraverser;
@@ -93,8 +89,11 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
         this.properties = properties;
         this.topics = topics;
         this.projectionFn = projectionFn;
+
         eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
-        partitionCounts = new int[topics.size()];
+        for (String topic : topics) {
+            offsets.put(topic, new long[0]);
+        }
     }
 
     @Override
@@ -107,60 +106,66 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
         processorIndex = context.globalProcessorIndex();
         totalParallelism = context.totalParallelism();
         consumer = new KafkaConsumer<>(properties);
-        assignPartitions(false);
     }
 
-    private void assignPartitions(boolean seekToBeginning) {
+    private void assignPartitions() {
         if (System.nanoTime() < nextMetadataCheck) {
             return;
         }
-        boolean allEqual = true;
-        for (int i = 0; i < topics.size(); i++) {
-            int newCount = consumer.partitionsFor(topics.get(i)).size();
-            allEqual &= partitionCounts[i] == newCount;
-            partitionCounts[i] = newCount;
-        }
-        if (allEqual) {
-            return;
-        }
-
-        KafkaPartitionAssigner assigner = new KafkaPartitionAssigner(topics, partitionCounts, totalParallelism);
-        Set<TopicPartition> newAssignments = assigner.topicPartitionsFor(processorIndex);
-        logFinest(getLogger(), "Currently assigned partitions: %s", newAssignments);
-
-        newAssignments.removeAll(currentAssignment.keySet());
-        if (!newAssignments.isEmpty()) {
-            getLogger().info("Partition assignments changed, added partitions: " + newAssignments);
-            for (TopicPartition tp : newAssignments) {
-                currentAssignment.put(tp, currentAssignment.size());
+        for (int topicIndex = 0; topicIndex < topics.size(); topicIndex++) {
+            int newPartitionCount;
+            String topicName = topics.get(topicIndex);
+            try {
+                newPartitionCount = consumer.partitionsFor(topicName, Duration.ofSeconds(1)).size();
+            } catch (TimeoutException e) {
+                // If we fail to get the metadata, don't try other topics (they are likely to fail too).
+                // If this was the initial assignment, `currentAssignment` will stay empty and
+                // `partitionCountsInitialized` will remain false.
+                getLogger().warning("Unable to get partition metadata, ignoring: " + e, e);
+                return;
             }
-            eventTimeMapper.addPartitions(newAssignments.size());
-            consumer.assign(currentAssignment.keySet());
-            if (seekToBeginning) {
-                // for newly detected partitions, we should always seek to the beginning
-                consumer.seekToBeginning(newAssignments);
-            }
+
+            handleNewPartitions(topicIndex, newPartitionCount);
         }
 
-        createOrExtendOffsetsArrays();
         nextMetadataCheck = System.nanoTime() + METADATA_CHECK_INTERVAL_NANOS;
     }
 
-    private void createOrExtendOffsetsArrays() {
-        for (int topicIdx = 0; topicIdx < partitionCounts.length; topicIdx++) {
-            int newPartitionCount = partitionCounts[topicIdx];
-            String topicName = topics.get(topicIdx);
-            long[] oldOffsets = offsets.get(topicName);
-            if (oldOffsets != null && oldOffsets.length == newPartitionCount) {
-                continue;
+    private void handleNewPartitions(int topicIndex, int newPartitionCount) {
+        Set<TopicPartition> newAssignments = new HashSet<>();
+        String topicName = topics.get(topicIndex);
+        long[] oldTopicOffsets = offsets.get(topicName);
+        for (int partition = oldTopicOffsets.length; partition < newPartitionCount; partition++) {
+            if (handledByThisProcessor(topicIndex, partition)) {
+                TopicPartition tp = new TopicPartition(topicName, partition);
+                currentAssignment.put(tp, currentAssignment.size());
+                getLogger().info("New partition handled: " + tp);
+                eventTimeMapper.addPartitions(1);
+                newAssignments.add(tp);
             }
-            long[] newOffsets = new long[newPartitionCount];
-            Arrays.fill(newOffsets, -1);
-            if (oldOffsets != null) {
-                arraycopy(oldOffsets, 0, newOffsets, 0, oldOffsets.length);
-            }
-            offsets.put(topicName, newOffsets);
         }
+        offsets.compute(topicName, (key, offsets) -> {
+            assert offsets != null;
+            if (offsets.length < newPartitionCount) {
+                long[] newOffsets = Arrays.copyOf(offsets, newPartitionCount);
+                Arrays.fill(newOffsets, offsets.length, newOffsets.length, -1);
+                return newOffsets;
+            } else {
+                return offsets;
+            }
+        });
+        if (newAssignments.isEmpty()) {
+            return;
+        }
+        consumer.assign(currentAssignment.keySet());
+        if (oldTopicOffsets.length > 0) {
+            // For partitions detected later after the initial partition count we seek to
+            // their beginning. It can happen that a partition is added, some messages
+            // are immediately added to it. If we started at the current position, we will
+            // miss those.
+            consumer.seekToBeginning(newAssignments);
+        }
+        logFinest(getLogger(), "Currently assigned partitions: %s", currentAssignment);
     }
 
     @Override
@@ -170,9 +175,9 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
         }
 
         ConsumerRecords<K, V> records = null;
-        assignPartitions(true);
+        assignPartitions();
         if (!currentAssignment.isEmpty()) {
-            records = consumer.poll(POLL_TIMEOUT_MS);
+            records = consumer.poll(Duration.ZERO);
         }
 
         traverser = isEmpty(records)
@@ -238,24 +243,25 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
         long[] value1 = (long[]) value;
         long offset = value1[0];
         long watermark = value1[1];
-        long[] topicOffsets = offsets.get(topicPartition.topic());
-        if (topicOffsets == null) {
+        if (!offsets.containsKey(topicPartition.topic())) {
             getLogger().warning("Offset for topic '" + topicPartition.topic()
-                    + "' is present in snapshot, but the topic is not supposed to be read");
+                    + "' is restored from the snapshot, but the topic is not supposed to be read, ignoring");
             return;
         }
-        if (topicPartition.partition() >= topicOffsets.length) {
-            getLogger().warning("Offset for partition '" + topicPartition + "' is present in snapshot," +
-                    " but that topic currently has only " + topicOffsets.length + " partitions");
+        int topicIndex = topics.indexOf(topicPartition.topic());
+        assert topicIndex >= 0;
+        if (!handledByThisProcessor(topicIndex, topicPartition.partition())) {
+            return;
         }
+        handleNewPartitions(topicIndex, topicPartition.partition() + 1);
+        long[] topicOffsets = offsets.get(topicPartition.topic());
+        assert topicOffsets[topicPartition.partition()] < 0 : "duplicate offset for topicPartition '" + topicPartition
+                + "' restored, offset1=" + topicOffsets[topicPartition.partition()] + ", offset2=" + offset;
+        topicOffsets[topicPartition.partition()] = offset;
+        consumer.seek(topicPartition, offset + 1);
         Integer partitionIndex = currentAssignment.get(topicPartition);
-        if (partitionIndex != null) {
-            assert topicOffsets[topicPartition.partition()] < 0 : "duplicate offset for topicPartition '" + topicPartition
-                    + "' restored, offset1=" + topicOffsets[topicPartition.partition()] + ", offset2=" + offset;
-            topicOffsets[topicPartition.partition()] = offset;
-            consumer.seek(topicPartition, offset + 1);
-            eventTimeMapper.restoreWatermark(partitionIndex, watermark);
-        }
+        assert partitionIndex != null;
+        eventTimeMapper.restoreWatermark(partitionIndex, watermark);
     }
 
     @Override
@@ -291,38 +297,14 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
         return () -> new StreamKafkaP<>(properties, topics, projectionFn, eventTimePolicy);
     }
 
-    /**
-     * Helper class for assigning partitions to processor indices in a round robin fashion
-     */
-    static class KafkaPartitionAssigner {
+    private boolean handledByThisProcessor(int topicIndex, int partition) {
+        return handledByThisProcessor(totalParallelism, offsets.size(), processorIndex, topicIndex, partition);
+    }
 
-        private final List<String> topics;
-        private final int[] partitionCounts;
-        private final int totalParallelism;
-
-        KafkaPartitionAssigner(List<String> topics, int[] partitionCounts, int totalParallelism) {
-            Preconditions.checkTrue(topics.size() == partitionCounts.length,
-                    "Different length between topics and partition counts");
-            this.topics = topics;
-            this.partitionCounts = partitionCounts;
-            this.totalParallelism = totalParallelism;
-        }
-
-        Set<TopicPartition> topicPartitionsFor(int processorIndex) {
-            Set<TopicPartition> assignments = new LinkedHashSet<>();
-            for (int topicIndex = 0; topicIndex < topics.size(); topicIndex++) {
-                for (int partition = 0; partition < partitionCounts[topicIndex]; partition++) {
-                    if (processorIndexFor(topicIndex, partition) == processorIndex) {
-                        assignments.add(new TopicPartition(topics.get(topicIndex), partition));
-                    }
-                }
-            }
-            return assignments;
-        }
-
-        private int processorIndexFor(int topicIndex, int partition) {
-            int startIndex = topicIndex * Math.max(1, totalParallelism / topics.size());
-            return (startIndex + partition) % totalParallelism;
-        }
+    static boolean handledByThisProcessor(
+            int totalParallelism, int topicsCount, int processorIndex, int topicIndex, int partition) {
+        int startIndex = topicIndex * Math.max(1, totalParallelism / topicsCount);
+        int topicPartitionHandledBy = (startIndex + partition) % totalParallelism;
+        return topicPartitionHandledBy == processorIndex;
     }
 }

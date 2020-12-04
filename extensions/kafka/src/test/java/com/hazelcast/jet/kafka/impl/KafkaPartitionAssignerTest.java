@@ -16,47 +16,42 @@
 
 package com.hazelcast.jet.kafka.impl;
 
-import com.hazelcast.jet.kafka.impl.StreamKafkaP.KafkaPartitionAssigner;
+import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import org.apache.kafka.common.TopicPartition;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.HashSet;
-import java.util.List;
-import java.util.stream.IntStream;
+import java.util.Set;
 
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static java.util.Arrays.asList;
-import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class KafkaPartitionAssignerTest {
 
-    private KafkaPartitionAssigner assigner;
-
     @Test
-    public void when_singleTopicMultiplePartitions() throws Exception {
-        assigner = assigner(4, 16);
-        assertAssignment(0,
+    public void when_singleTopicMultiplePartitions() {
+        assertAssignment(new int[]{16}, 0, 4,
                 tp(0, 0),
                 tp(0, 4),
                 tp(0, 8),
                 tp(0, 12)
         );
-        assertAssignment(1,
+        assertAssignment(new int[]{16}, 1, 4,
                 tp(0, 1),
                 tp(0, 5),
                 tp(0, 9),
                 tp(0, 13)
         );
-        assertAssignment(2,
+        assertAssignment(new int[]{16}, 2, 4,
                 tp(0, 2),
                 tp(0, 6),
                 tp(0, 10),
                 tp(0, 14)
         );
-        assertAssignment(3,
+        assertAssignment(new int[]{16}, 3, 4,
                 tp(0, 3),
                 tp(0, 7),
                 tp(0, 11),
@@ -65,24 +60,20 @@ public class KafkaPartitionAssignerTest {
     }
 
     @Test
-    public void when_multipleTopic_multiplePartitions() throws Exception {
-        assigner = assigner(8, 4, 4);
-
-        assertAssignment(0, tp(0, 0));
-        assertAssignment(1, tp(0, 1));
-        assertAssignment(2, tp(0, 2));
-        assertAssignment(3, tp(0, 3));
-        assertAssignment(4, tp(1, 0));
-        assertAssignment(5, tp(1, 1));
-        assertAssignment(6, tp(1, 2));
-        assertAssignment(7, tp(1, 3));
+    public void when_multipleTopic_multiplePartitions() {
+        assertAssignment(new int[]{4, 4}, 0, 8, tp(0, 0));
+        assertAssignment(new int[]{4, 4}, 1, 8, tp(0, 1));
+        assertAssignment(new int[]{4, 4}, 2, 8, tp(0, 2));
+        assertAssignment(new int[]{4, 4}, 3, 8, tp(0, 3));
+        assertAssignment(new int[]{4, 4}, 4, 8, tp(1, 0));
+        assertAssignment(new int[]{4, 4}, 5, 8, tp(1, 1));
+        assertAssignment(new int[]{4, 4}, 6, 8, tp(1, 2));
+        assertAssignment(new int[]{4, 4}, 7, 8, tp(1, 3));
     }
 
     @Test
-    public void when_singleProcessor() throws Exception {
-        assigner = assigner(1, 4, 4);
-
-        assertAssignment(0,
+    public void when_singleProcessor() {
+        assertAssignment(new int[]{4, 4}, 0, 1,
                 tp(0, 0),
                 tp(0, 1),
                 tp(0, 2),
@@ -95,40 +86,43 @@ public class KafkaPartitionAssignerTest {
     }
 
     @Test
-    public void when_multipleTopicsWithSinglePartition() throws Exception {
-        assigner = assigner(4, 1, 1, 1, 1);
-
-        assertAssignment(0, tp(0, 0));
-        assertAssignment(1, tp(1, 0));
-        assertAssignment(2, tp(2, 0));
-        assertAssignment(3, tp(3, 0));
+    public void when_multipleTopicsWithSinglePartition() {
+        assertAssignment(new int[]{1, 1, 1, 1}, 0, 4, tp(0, 0));
+        assertAssignment(new int[]{1, 1, 1, 1}, 1, 4, tp(1, 0));
+        assertAssignment(new int[]{1, 1, 1, 1}, 2, 4, tp(2, 0));
+        assertAssignment(new int[]{1, 1, 1, 1}, 3, 4, tp(3, 0));
     }
 
     @Test
-    public void when_moreTopicsThanParallelism() throws Exception {
-        assigner = assigner(2, 1, 1, 1, 1);
-
-        assertAssignment(0,
+    public void when_moreTopicsThanParallelism() {
+        assertAssignment(new int[]{1, 1, 1, 1}, 0, 2,
                 tp(0, 0),
                 tp(2, 0)
         );
-        assertAssignment(1,
+        assertAssignment(new int[]{1, 1, 1, 1}, 1, 2,
                 tp(1, 0),
                 tp(3, 0)
         );
 
     }
 
-    private void assertAssignment(int processorIdx, TopicPartition... partitions) {
-        assertEquals(new HashSet<>(asList(partitions)), assigner.topicPartitionsFor(processorIdx));
+    private static void assertAssignment(
+            int[] partitionCounts, int processorIdx, int totalParallelism,
+            Tuple2<Integer, Integer> ... expectedAssignment
+    ) {
+        Set<Tuple2<Integer, Integer>> actualAssignment = new HashSet<>();
+        for (int topicIdx = 0; topicIdx < partitionCounts.length; topicIdx++) {
+            for (int partition = 0; partition < partitionCounts[topicIdx]; partition++) {
+                if (StreamKafkaP.handledByThisProcessor(totalParallelism, partitionCounts.length, processorIdx, topicIdx, partition)) {
+                    actualAssignment.add(tp(topicIdx, partition));
+                }
+            }
+        }
+
+        assertEquals(new HashSet<>(asList(expectedAssignment)), actualAssignment);
     }
 
-    private static TopicPartition tp(int topicIndex, int partition) {
-        return new TopicPartition("topic-" + topicIndex, partition);
-    }
-
-    private static KafkaPartitionAssigner assigner(int totalParallelism, int... partitionCounts) {
-        List<String> topics = IntStream.range(0, partitionCounts.length).mapToObj(i -> "topic-" + i).collect(toList());
-        return new KafkaPartitionAssigner(topics, partitionCounts, totalParallelism);
+    private static Tuple2<Integer, Integer> tp(int topicIndex, int partition) {
+        return tuple2(topicIndex, partition);
     }
 }
