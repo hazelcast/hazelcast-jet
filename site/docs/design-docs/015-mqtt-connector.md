@@ -209,8 +209,15 @@ persistence implementation which does not survive restarts.
 We've explored other options for persistence, like using IMap to keep
 the in-flight messages. Although this helps to survive the in-flight
 messages between restarts, it does not provide a real fault-tolerence
-for the job. Besides, it adds a sync call to IMap for each message
-which slows down the source.
+for the job. To achieve that, we need to persist everything to IMap
+between each snapshot. Besides, it adds a sync call to IMap for each
+message which slows down the source.
+
+We've also explored manual acknowledgement of messages. This would
+achieve exactly-once behavior but most of the brokers has a limit for
+non-acknowledged messages with a very low default value. For example,
+Mosquitto has `max_queued_messages` as `100` which is not per topic or
+per client but globally.
 
 If a client subscribes to a topic with quality of service `AT_LEAST_ONCE`
 or `EXACTLY_ONCE` and connects to the broker with `cleanSession=false`,
