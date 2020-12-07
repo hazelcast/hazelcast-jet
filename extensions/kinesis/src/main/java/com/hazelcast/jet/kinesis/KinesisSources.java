@@ -52,14 +52,8 @@ public final class KinesisSources {
         @Nonnull
         private final String stream;
 
-        @Nullable
-        private String endpoint;
-        @Nullable
-        private String region;
-        @Nullable
-        private String accessKey;
-        @Nullable
-        private String secretKey;
+        @Nonnull
+        private final AwsConfig config = new AwsConfig();
 
         /**
          * TODO: javadoc
@@ -73,7 +67,7 @@ public final class KinesisSources {
          */
         @Nonnull
         public Builder withEndpoint(@Nullable String endpoint) {
-            this.endpoint = endpoint;
+            config.setEndpoint(endpoint);
             return this;
         }
 
@@ -82,7 +76,7 @@ public final class KinesisSources {
          */
         @Nonnull
         public Builder withRegion(@Nullable String region) {
-            this.region = region;
+            config.setRegion(region);
             return this;
         }
 
@@ -91,8 +85,7 @@ public final class KinesisSources {
          */
         @Nonnull
         public Builder withCredentials(@Nullable String accessKey, @Nullable String secretKey) {
-            this.accessKey = accessKey;
-            this.secretKey = secretKey;
+            config.setCredentials(accessKey, secretKey);
             return this;
         }
 
@@ -101,12 +94,12 @@ public final class KinesisSources {
          */
         @Nonnull
         public StreamSource<Map.Entry<String, byte[]>> build() {
-            AwsConfig awsConfig = new AwsConfig(endpoint, region, accessKey, secretKey);
             String stream = this.stream;
+            AwsConfig config = this.config;
             return Sources.streamFromProcessorWithWatermarks(
                     "Kinesis Source (" + stream + ")",
                     true,
-                    eventTimePolicy -> new KinesisSourcePMetaSupplier(awsConfig, stream, eventTimePolicy));
+                    eventTimePolicy -> new KinesisSourcePMetaSupplier(config, stream, eventTimePolicy));
         }
     }
 

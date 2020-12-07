@@ -70,15 +70,8 @@ public final class KinesisSinks {
         private final FunctionEx<T, String> keyFn;
         @Nonnull
         private final FunctionEx<T, byte[]> valueFn;
-
-        @Nullable
-        private String endpoint;
-        @Nullable
-        private String region;
-        @Nullable
-        private String accessKey;
-        @Nullable
-        private String secretKey;
+        @Nonnull
+        private final AwsConfig config = new AwsConfig();
 
         /**
          * TODO: javadoc
@@ -98,7 +91,7 @@ public final class KinesisSinks {
          */
         @Nonnull
         public Builder<T> withEndpoint(@Nullable String endpoint) {
-            this.endpoint = endpoint;
+            this.config.setEndpoint(endpoint);
             return this;
         }
 
@@ -107,7 +100,7 @@ public final class KinesisSinks {
          */
         @Nonnull
         public Builder<T> withRegion(@Nullable String region) {
-            this.region = region;
+            this.config.setRegion(region);
             return this;
         }
 
@@ -116,8 +109,7 @@ public final class KinesisSinks {
          */
         @Nonnull
         public Builder<T> withCredentials(@Nullable String accessKey, @Nullable String secretKey) {
-            this.accessKey = accessKey;
-            this.secretKey = secretKey;
+            this.config.setCredentials(accessKey, secretKey);
             return this;
         }
 
@@ -126,9 +118,8 @@ public final class KinesisSinks {
          */
         @Nonnull
         public Sink<T> build() {
-            AwsConfig awsConfig = new AwsConfig(endpoint, region, accessKey, secretKey);
             String name = "Kinesis Sink (" + stream + ")";
-            KinesisSinkPSupplier<T> supplier = new KinesisSinkPSupplier<>(awsConfig, stream, keyFn, valueFn);
+            KinesisSinkPSupplier<T> supplier = new KinesisSinkPSupplier<>(config, stream, keyFn, valueFn);
             return new SinkImpl<>(name, ProcessorMetaSupplier.of(supplier), DISTRIBUTED_PARTITIONED, keyFn);
         }
     }

@@ -31,16 +31,17 @@ public class AwsConfig implements Serializable {
     private static final int CONNECTION_TIMEOUT = 1000;
 
     @Nullable
-    private final String endpoint;
-
+    private String endpoint;
     @Nullable
-    private final String region;
-
+    private String region;
     @Nullable
-    private final String accessKey;
-
+    private String accessKey;
     @Nullable
-    private final String secretKey;
+    private String secretKey;
+
+    public AwsConfig() {
+        this(null, null, null, null);
+    }
 
     public AwsConfig(
             @Nullable String endpoint,
@@ -50,12 +51,12 @@ public class AwsConfig implements Serializable {
     ) {
         this.endpoint = endpoint;
         this.region = region;
-
-        if (accessKey == null ^ secretKey == null) {
-            throw new IllegalArgumentException("AWS access and secret keys must be specified together");
-        }
         this.accessKey = accessKey;
         this.secretKey = secretKey;
+    }
+
+    public void setEndpoint(@Nullable String endpoint) {
+        this.endpoint = endpoint;
     }
 
     @Nullable
@@ -63,9 +64,21 @@ public class AwsConfig implements Serializable {
         return endpoint;
     }
 
+    public void setRegion(@Nullable String region) {
+        this.region = region;
+    }
+
     @Nullable
     public String getRegion() {
         return region;
+    }
+
+    public void setCredentials(@Nullable String accessKey, @Nullable String secretKey) {
+        if (accessKey == null ^ secretKey == null) {
+            throw new IllegalArgumentException("AWS access and secret keys must be specified together");
+        }
+        this.accessKey = accessKey;
+        this.secretKey = secretKey;
     }
 
     @Nullable
@@ -92,10 +105,7 @@ public class AwsConfig implements Serializable {
                 new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey))
         );
 
-        builder.withClientConfiguration(
-                new ClientConfiguration()
-                        .withMaxErrorRetry(0)
-                        .withConnectionTimeout(CONNECTION_TIMEOUT)); //todo: need to have proper retry policy
+        builder.withClientConfiguration(new ClientConfiguration());
 
         return builder.build();
     }
