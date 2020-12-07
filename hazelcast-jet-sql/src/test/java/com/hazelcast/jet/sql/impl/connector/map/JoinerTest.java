@@ -23,8 +23,6 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector.NestedLoopJoin;
 import com.hazelcast.sql.impl.extract.QueryPath;
-import com.hazelcast.sql.impl.schema.map.MapTableField;
-import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.junit.Before;
@@ -34,24 +32,16 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static com.hazelcast.sql.impl.extract.QueryPath.KEY_PATH;
-import static com.hazelcast.sql.impl.type.QueryDataType.VARCHAR;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.BDDMockito.given;
 
 @RunWith(JUnitParamsRunner.class)
-public class IMapSqlConnectorTest {
-
-    private IMapSqlConnector connector;
+public class JoinerTest {
 
     @Mock
     private DAG dag;
-
-    @Mock
-    private PartitionedMapTable table;
 
     @Mock
     private Vertex ingress;
@@ -62,8 +52,6 @@ public class IMapSqlConnectorTest {
     @Before
     public void setUp() {
         MockitoAnnotations.openMocks(this);
-
-        connector = new IMapSqlConnector();
     }
 
     @SuppressWarnings("unused")
@@ -75,12 +63,17 @@ public class IMapSqlConnectorTest {
     @Parameters(method = "joinTypes")
     public void test_joinByPrimitiveKey(boolean inner) {
         // given
-        given(table.getFields()).willReturn(singletonList(new MapTableField("field", VARCHAR, false, KEY_PATH)));
         given(dag.newUniqueVertex(contains("Lookup"), isA(JoinByPrimitiveKeyProcessorSupplier.class))).willReturn(ingress);
 
         // when
-        NestedLoopJoin join =
-                connector.nestedLoopReader(dag, table, null, emptyList(), joinInfo(inner, new int[]{0}, new int[]{0}));
+        NestedLoopJoin join = Joiner.join(
+                dag,
+                "imap-name",
+                "table-name",
+                joinInfo(inner, new int[]{0}, new int[]{0}),
+                new QueryPath[]{KEY_PATH},
+                null
+        );
 
         // then
         assertThat(join.ingress()).isNotNull();
@@ -91,15 +84,19 @@ public class IMapSqlConnectorTest {
     @SuppressWarnings("unchecked")
     public void test_joinByPredicateInner() {
         // given
-        given(table.getFields())
-                .willReturn(singletonList(new MapTableField("field", VARCHAR, false, QueryPath.create("path"))));
         given(dag.newUniqueVertex(contains("Broadcast"), isA(SupplierEx.class))).willReturn(ingress);
         given(ingress.localParallelism(1)).willReturn(ingress);
         given(dag.newUniqueVertex(contains("Predicate"), isA(ProcessorMetaSupplier.class))).willReturn(egress);
 
         // when
-        NestedLoopJoin join =
-                connector.nestedLoopReader(dag, table, null, emptyList(), joinInfo(true, new int[]{0}, new int[]{0}));
+        NestedLoopJoin join = Joiner.join(
+                dag,
+                "imap-name",
+                "table-name",
+                joinInfo(true, new int[]{0}, new int[]{0}),
+                new QueryPath[]{QueryPath.create("path")},
+                null
+        );
 
         // then
         assertThat(join.ingress()).isNotNull();
@@ -110,14 +107,18 @@ public class IMapSqlConnectorTest {
     @Test
     public void test_joinByPredicateOuter() {
         // given
-        given(table.getFields())
-                .willReturn(singletonList(new MapTableField("field", VARCHAR, false, QueryPath.create("path"))));
         given(dag.newUniqueVertex(contains("Predicate"), isA(JoinByPredicateOuterProcessorSupplier.class)))
                 .willReturn(ingress);
 
         // when
-        NestedLoopJoin join =
-                connector.nestedLoopReader(dag, table, null, emptyList(), joinInfo(false, new int[]{0}, new int[]{0}));
+        NestedLoopJoin join = Joiner.join(
+                dag,
+                "imap-name",
+                "table-name",
+                joinInfo(false, new int[]{0}, new int[]{0}),
+                new QueryPath[]{QueryPath.create("path")},
+                null
+        );
 
         // then
         assertThat(join.ingress()).isNotNull();
@@ -128,12 +129,17 @@ public class IMapSqlConnectorTest {
     @Parameters(method = "joinTypes")
     public void test_joinByScan(boolean inner) {
         // given
-        given(table.getFields()).willReturn(singletonList(new MapTableField("field", VARCHAR, false, KEY_PATH)));
         given(dag.newUniqueVertex(contains("Scan"), isA(JoinScanProcessorSupplier.class))).willReturn(ingress);
 
         // when
-        NestedLoopJoin join =
-                connector.nestedLoopReader(dag, table, null, emptyList(), joinInfo(inner, new int[0], new int[0]));
+        NestedLoopJoin join = Joiner.join(
+                dag,
+                "imap-name",
+                "table-name",
+                joinInfo(inner, new int[0], new int[0]),
+                new QueryPath[]{KEY_PATH},
+                null
+        );
 
         // then
         assertThat(join.ingress()).isNotNull();
