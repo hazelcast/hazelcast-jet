@@ -106,7 +106,6 @@ public class KinesisSinkP<T> implements Processor {
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         logger = context.logger();
         helper = new KinesisHelper(kinesis, stream, logger);
-        helper.waitForStreamToActivate();
     }
 
     @Override
@@ -136,6 +135,14 @@ public class KinesisSinkP<T> implements Processor {
             initSending(null);
         }
         return false;
+    }
+
+    @Override
+    public boolean saveToSnapshot() {
+        if (sendResult != null) {
+            checkIfSendingFinished();
+        }
+        return sendResult == null;
     }
 
     private void initSending(@Nullable Inbox inbox) {

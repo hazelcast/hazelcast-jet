@@ -25,7 +25,7 @@ import java.util.Objects;
 import static java.math.BigInteger.ZERO;
 import static java.math.BigInteger.valueOf;
 
-public class HashRange implements Serializable { //todo: is it worth to use better serialization?
+public class HashRange implements Serializable {
 
     private final BigInteger minInclusive;
     private final BigInteger maxExclusive;

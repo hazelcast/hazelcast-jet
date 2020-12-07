@@ -20,17 +20,12 @@ package com.hazelcast.jet.kinesis;
  */
 public class ToDo {
 
-    //todo: do not block in processor init
-
     //todo: make sure all integration tests run on real backend too
 
     //todo: merges and splits can reorder in-flight messages, document this
     //todo: offer option for single instance sources to fix reordering; test this
 
     //todo: test stream when shard count is more than 100 (manually, mock won't allow for it)
-
-    //todo: saved shard offsets for recovery, maybe as shard id -- offset last seen map?
-    // what happens after split/merge, should we delete the offset of CLOSED shards?
 
     //todo: clarify what license to use
 

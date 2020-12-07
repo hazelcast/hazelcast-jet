@@ -26,7 +26,7 @@ import com.amazonaws.services.kinesis.AmazonKinesisAsyncClientBuilder;
 import javax.annotation.Nullable;
 import java.io.Serializable;
 
-public class AwsConfig implements Serializable { //todo: is it worth to use better serialization?
+public class AwsConfig implements Serializable {
 
     private static final int CONNECTION_TIMEOUT = 1000;
 

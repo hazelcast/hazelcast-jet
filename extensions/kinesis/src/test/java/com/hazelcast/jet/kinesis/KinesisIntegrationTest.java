@@ -29,6 +29,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.impl.JobProxy;
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
 import com.hazelcast.jet.kinesis.impl.HashRange;
 import com.hazelcast.jet.kinesis.impl.KinesisHelper;
@@ -195,7 +196,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
         jet().newJob(getPipeline());
 
         Map<String, List<String>> expectedMessages = sendMessages(true);
-        assertMessages(expectedMessages, true);
+        assertMessages(expectedMessages, true, false);
     }
 
     @Test
@@ -210,7 +211,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
         jet().newJob(getPipeline());
 
         Map<String, List<String>> expectedMessages = sendMessages(true);
-        assertMessages(expectedMessages, true);
+        assertMessages(expectedMessages, true, false);
     }
 
     @Test
@@ -253,7 +254,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
             HELPER.waitForStreamToActivate();
         }
 
-        assertMessages(expectedMessages, false);
+        assertMessages(expectedMessages, false, false);
     }
 
     @Test
@@ -268,7 +269,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
         jet().newJob(getPipeline());
 
         Map<String, List<String>> expectedMessages = sendMessages(true);
-        assertMessages(expectedMessages, true);
+        assertMessages(expectedMessages, true, false);
     }
 
     @Test
@@ -309,17 +310,27 @@ public class KinesisIntegrationTest extends JetTestSupport {
             HELPER.waitForStreamToActivate();
         }
 
-        assertMessages(expectedMessages, false);
+        assertMessages(expectedMessages, false, false);
     }
 
     @Test
     @Category(SerialTest.class)
-    public void restart_staticStream() {
+    public void restart_staticStream_graceful() {
+        restart_staticStream(true);
+    }
+
+    @Test
+    @Category(SerialTest.class)
+    public void restart_staticStream_non_graceful() {
+        restart_staticStream(false);
+    }
+
+    private void restart_staticStream(boolean graceful) {
         createStream(3);
         HELPER.waitForStreamToActivate();
 
         JobConfig jobConfig = new JobConfig()
-                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
+                .setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE)
                 .setSnapshotIntervalMillis(SECONDS.toMillis(1));
         Job job = jet().newJob(getPipeline(), jobConfig);
 
@@ -328,19 +339,29 @@ public class KinesisIntegrationTest extends JetTestSupport {
         //wait for some data to start coming out of the pipeline
         assertTrueEventually(() -> assertFalse(results.isEmpty()));
 
-        job.restart();
+        ((JobProxy) job).restart(graceful);
 
-        assertMessages(expectedMessages, true);
+        assertMessages(expectedMessages, true, !graceful);
     }
 
     @Test
     @Category(SerialTest.class)
-    public void restart_dynamicStream() {
+    public void restart_dynamicStream_graceful() {
+        restart_dynamicStream(true);
+    }
+
+    @Test
+    @Category({SerialTest.class, NightlyTest.class})
+    public void restart_dynamicStream_non_graceful() {
+        restart_dynamicStream(false);
+    }
+
+    private void restart_dynamicStream(boolean graceful) {
         createStream(3);
         HELPER.waitForStreamToActivate();
 
         JobConfig jobConfig = new JobConfig()
-                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
+                .setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE)
                 .setSnapshotIntervalMillis(SECONDS.toMillis(1));
         Job job = jet().newJob(getPipeline(), jobConfig);
 
@@ -360,12 +381,10 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
         HELPER.waitForStreamToActivate();
 
-        job.restart();
+        ((JobProxy) job).restart(graceful);
 
-        assertMessages(expectedMessages, false);
+        assertMessages(expectedMessages, false, !graceful);
     }
-
-    //todo: com.hazelcast.jet.impl.connector.JmsSourceIntegrationTestBase#stressTest_exactlyOnce_graceful
 
     private Map<String, List<String>> sendMessages(boolean join) {
         List<Entry<String, String>> msgEntryList = IntStream.range(0, MESSAGES)
@@ -405,7 +424,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
     private Pipeline getPipeline() {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(kinesisSource())
-                .withoutTimestamps() //todo: switch it to using timestamps, once possible
+                .withNativeTimestamps(0)
                 .rebalance(Entry::getKey)
                 .map(e -> entry(e.getKey(), Collections.singletonList(new String(e.getValue()))))
                 .writeTo(Sinks.mapWithMerging(results, Entry::getKey, Entry::getValue, (l1, l2) -> {
@@ -417,7 +436,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
         return pipeline;
     }
 
-    private void assertMessages(Map<String, List<String>> expected, boolean checkOrder) {
+    private void assertMessages(Map<String, List<String>> expected, boolean checkOrder, boolean deduplicate) {
         assertTrueEventually(() -> {
             assertEquals(getKeySetsDifferDescription(expected, results), expected.keySet(), results.keySet());
 
@@ -426,6 +445,9 @@ public class KinesisIntegrationTest extends JetTestSupport {
                 List<String> expectedMessages = entry.getValue();
 
                 List<String> actualMessages = results.get(key);
+                if (deduplicate) {
+                    actualMessages = actualMessages.stream().distinct().collect(toList());
+                }
                 if (!checkOrder) {
                     actualMessages = new ArrayList<>(actualMessages);
                     actualMessages.sort(String::compareTo);
