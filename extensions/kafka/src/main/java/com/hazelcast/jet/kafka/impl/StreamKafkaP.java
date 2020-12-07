@@ -34,14 +34,14 @@ import org.apache.kafka.common.errors.TimeoutException;
 
 import javax.annotation.Nonnull;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -118,9 +118,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
             try {
                 newPartitionCount = consumer.partitionsFor(topicName, Duration.ofSeconds(1)).size();
             } catch (TimeoutException e) {
-                // If we fail to get the metadata, don't try other topics (they are likely to fail too).
-                // If this was the initial assignment, `currentAssignment` will stay empty and
-                // `partitionCountsInitialized` will remain false.
+                // If we fail to get the metadata, don't try other topics (they are likely to fail too)
                 getLogger().warning("Unable to get partition metadata, ignoring: " + e, e);
                 return;
             }
@@ -132,37 +130,36 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
     }
 
     private void handleNewPartitions(int topicIndex, int newPartitionCount) {
-        Set<TopicPartition> newAssignments = new HashSet<>();
         String topicName = topics.get(topicIndex);
         long[] oldTopicOffsets = offsets.get(topicName);
+        if (oldTopicOffsets.length >= newPartitionCount) {
+            return;
+        }
+        // extend the offsets array for this topic
+        long[] newOffsets = Arrays.copyOf(oldTopicOffsets, newPartitionCount);
+        Arrays.fill(newOffsets, oldTopicOffsets.length, newOffsets.length, -1);
+        offsets.put(topicName, newOffsets);
+        Collection<TopicPartition> newAssignments = new ArrayList<>();
         for (int partition = oldTopicOffsets.length; partition < newPartitionCount; partition++) {
             if (handledByThisProcessor(topicIndex, partition)) {
                 TopicPartition tp = new TopicPartition(topicName, partition);
                 currentAssignment.put(tp, currentAssignment.size());
-                getLogger().info("New partition handled: " + tp);
-                eventTimeMapper.addPartitions(1);
                 newAssignments.add(tp);
             }
         }
-        offsets.compute(topicName, (key, offsets) -> {
-            assert offsets != null;
-            if (offsets.length < newPartitionCount) {
-                long[] newOffsets = Arrays.copyOf(offsets, newPartitionCount);
-                Arrays.fill(newOffsets, offsets.length, newOffsets.length, -1);
-                return newOffsets;
-            } else {
-                return offsets;
-            }
-        });
         if (newAssignments.isEmpty()) {
             return;
         }
+        getLogger().info("New partition(s) handled: " + newAssignments);
+        eventTimeMapper.addPartitions(newAssignments.size());
         consumer.assign(currentAssignment.keySet());
         if (oldTopicOffsets.length > 0) {
-            // For partitions detected later after the initial partition count we seek to
-            // their beginning. It can happen that a partition is added, some messages
-            // are immediately added to it. If we started at the current position, we will
-            // miss those.
+            // For partitions detected later during the runtime we seek to their
+            // beginning. It can happen that a partition is added, and some messages
+            // are added to it before we start consuming from it. If we started at the
+            // current position, we will miss those, so we explicitly seek to the
+            // beginning.
+            getLogger().info("Seeking to the beginning of newly-discovered partitions: " + newAssignments);
             consumer.seekToBeginning(newAssignments);
         }
         logFinest(getLogger(), "Currently assigned partitions: %s", currentAssignment);
@@ -250,10 +247,10 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
         }
         int topicIndex = topics.indexOf(topicPartition.topic());
         assert topicIndex >= 0;
+        handleNewPartitions(topicIndex, topicPartition.partition() + 1);
         if (!handledByThisProcessor(topicIndex, topicPartition.partition())) {
             return;
         }
-        handleNewPartitions(topicIndex, topicPartition.partition() + 1);
         long[] topicOffsets = offsets.get(topicPartition.topic());
         assert topicOffsets[topicPartition.partition()] < 0 : "duplicate offset for topicPartition '" + topicPartition
                 + "' restored, offset1=" + topicOffsets[topicPartition.partition()] + ", offset2=" + offset;

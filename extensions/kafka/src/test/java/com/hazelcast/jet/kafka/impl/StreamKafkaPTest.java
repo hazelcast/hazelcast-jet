@@ -48,9 +48,7 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
@@ -69,6 +67,7 @@ import java.util.Set;
 import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.WatermarkPolicy.limitingLag;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
@@ -91,9 +90,6 @@ public class StreamKafkaPTest extends SimpleTestInClusterSupport {
     private static final long LAG = 3;
 
     private static KafkaTestSupport kafkaTestSupport;
-
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
 
     private String topic1Name;
     private String topic2Name;
@@ -149,7 +145,7 @@ public class StreamKafkaPTest extends SimpleTestInClusterSupport {
 
     @Test
     public void integrationTest_withSnapshotting() throws Exception {
-        integrationTest(ProcessingGuarantee.EXACTLY_ONCE);
+        integrationTest(EXACTLY_ONCE);
     }
 
     private void integrationTest(ProcessingGuarantee guarantee) throws Exception {
@@ -293,14 +289,14 @@ public class StreamKafkaPTest extends SimpleTestInClusterSupport {
     public void when_snapshotSaved_then_offsetsRestored() throws Exception {
         StreamKafkaP processor = createProcessor(properties(), 2, r -> entry(r.key(), r.value()), 10_000);
         TestOutbox outbox = new TestOutbox(new int[]{10}, 10);
-        processor.init(outbox, new TestProcessorContext().setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE));
+        processor.init(outbox, new TestProcessorContext().setProcessingGuarantee(EXACTLY_ONCE));
 
         kafkaTestSupport.produce(topic1Name, 0, "0");
         assertEquals(entry(0, "0"), consumeEventually(processor, outbox));
 
         // create snapshot
         TestInbox snapshot = saveSnapshot(processor, outbox);
-        Set snapshotItems = unwrapBroadcastKey(snapshot.queue());
+        Set<Entry<TopicPartition, String>> snapshotItems = unwrapBroadcastKey(snapshot.queue());
 
         // consume one more item
         kafkaTestSupport.produce(topic1Name, 1, "1");
@@ -309,7 +305,7 @@ public class StreamKafkaPTest extends SimpleTestInClusterSupport {
         // create new processor and restore snapshot
         processor = createProcessor(properties(), 2, r -> entry(r.key(), r.value()), 10_000);
         outbox = new TestOutbox(new int[]{10}, 10);
-        processor.init(outbox, new TestProcessorContext().setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE));
+        processor.init(outbox, new TestProcessorContext().setProcessingGuarantee(EXACTLY_ONCE));
 
         // restore snapshot
         processor.restoreFromSnapshot(snapshot);
@@ -357,7 +353,6 @@ public class StreamKafkaPTest extends SimpleTestInClusterSupport {
         assertEquals(entry(0, "0"), consumeEventually(processor, outbox));
 
         kafkaTestSupport.setPartitionCount(topic1Name, INITIAL_PARTITION_COUNT + 2);
-        Thread.sleep(1000);
         kafkaTestSupport.resetProducer(); // this allows production to the added partition
 
         boolean somethingInPartition1 = false;
@@ -377,6 +372,54 @@ public class StreamKafkaPTest extends SimpleTestInClusterSupport {
             }
         }
         assertEquals(range(1, 11).mapToObj(i -> entry(i, Integer.toString(i))).collect(toSet()), receivedEvents);
+    }
+
+    @Test
+    public void when_partitionAddedWhileJobDown_then_consumedFromBeginning() throws Exception {
+        IList<Entry<Integer, String>> sinkList = instance().getList("sinkList");
+        Pipeline p = Pipeline.create();
+        Properties properties = properties();
+        properties.setProperty("auto.offset.reset", "latest");
+        p.readFrom(KafkaSources.<Integer, String>kafka(properties, topic1Name))
+         .withoutTimestamps()
+         .writeTo(Sinks.list(sinkList));
+
+        Job job = instance().newJob(p, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE));
+        assertTrueEventually(() -> {
+            kafkaTestSupport.produce(topic1Name, 0, "0");
+            assertFalse(sinkList.isEmpty());
+            assertEquals(entry(0, "0"), sinkList.get(0));
+        });
+        job.suspend();
+        sinkList.clear();
+
+        // When
+        kafkaTestSupport.setPartitionCount(topic1Name, INITIAL_PARTITION_COUNT + 2);
+        kafkaTestSupport.resetProducer(); // this allows production to the added partition
+
+        kafkaTestSupport.produce(topic1Name, INITIAL_PARTITION_COUNT, null, 1, "1")
+                        .get();
+
+        job.resume();
+        assertTrueEventually(() -> {
+            assertEquals(1, sinkList.size());
+            assertEquals(entry(1, "1"), sinkList.get(0));
+        });
+    }
+
+    @Test
+    public void when_autoOffsetResetLatest_then_doesNotReadOldMessages() throws Exception {
+        IList<Entry<Integer, String>> sinkList = instance().getList("sinkList");
+        Pipeline p = Pipeline.create();
+        Properties properties = properties();
+        properties.setProperty("auto.offset.reset", "latest");
+        p.readFrom(KafkaSources.<Integer, String>kafka(properties, topic1Name))
+         .withoutTimestamps()
+         .writeTo(Sinks.list(sinkList));
+
+        kafkaTestSupport.produce(topic1Name, 0, "0").get();
+        instance().newJob(p);
+        assertTrueAllTheTime(() -> assertTrue(sinkList.isEmpty()), 2);
     }
 
     @Test
@@ -437,7 +480,7 @@ public class StreamKafkaPTest extends SimpleTestInClusterSupport {
         KafkaConsumer<Integer, String> c = kafkaTestSupport.createConsumer("non-existing-topic");
         assertGreaterOrEquals("partition count", c.partitionsFor("non-existing-topic", Duration.ofSeconds(2)).size(), 1);
     }
-    
+
     @Test
     public void when_consumerCannotConnect_then_partitionForTimeout() {
         Map<String, Object> properties = new HashMap<>();

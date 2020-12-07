@@ -29,7 +29,7 @@ import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastParallelClassRunner.class)
-public class KafkaPartitionAssignerTest {
+public class KafkaPartitionAssignmentTest {
 
     @Test
     public void when_singleTopicMultiplePartitions() {
@@ -113,7 +113,8 @@ public class KafkaPartitionAssignerTest {
         Set<Tuple2<Integer, Integer>> actualAssignment = new HashSet<>();
         for (int topicIdx = 0; topicIdx < partitionCounts.length; topicIdx++) {
             for (int partition = 0; partition < partitionCounts[topicIdx]; partition++) {
-                if (StreamKafkaP.handledByThisProcessor(totalParallelism, partitionCounts.length, processorIdx, topicIdx, partition)) {
+                if (StreamKafkaP.handledByThisProcessor(
+                        totalParallelism, partitionCounts.length, processorIdx, topicIdx, partition)) {
                     actualAssignment.add(tp(topicIdx, partition));
                 }
             }
