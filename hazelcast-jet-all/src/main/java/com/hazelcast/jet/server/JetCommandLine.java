@@ -1076,7 +1076,8 @@ public class JetCommandLine implements Runnable {
                 "\t|   | |   |  /    |     |     |     |   |     |   |      \\   | |       |         |   |   |   |\n" +
                 "\to   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o     o---o   o---\\\\  o---")
                 .append("\n\t\t\t\t\t Welcome to the Hazelcast Jet SQL Console")
-                .append("\n\t\t\t\t\t 'help;' to display the available commands\n\n")
+                .append("\n\t\t\t\t\t Commands end with semicolon")
+                .append("\n\t\t\t\t\t Type 'help;' to display the available commands\n\n")
     .style(AttributedStyle.BOLD)
     .toAnsi();
         static final String HELP_PROMPT = new AttributedStringBuilder()
