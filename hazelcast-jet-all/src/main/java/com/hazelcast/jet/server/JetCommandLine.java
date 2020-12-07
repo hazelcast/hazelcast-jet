@@ -126,6 +126,8 @@ public class JetCommandLine implements Runnable {
     private static final int MAX_STR_LENGTH = 24;
     private static final int WAIT_INTERVAL_MILLIS = 100;
     private static final int SQL_LIST_MAX = 100;
+    private static final int PRIMARY_COLOR = AttributedStyle.YELLOW;
+    private static final int SECONDARY_COLOR = 12;
 
     private final Function<ClientConfig, JetInstance> jetClientFn;
     private final PrintStream out;
@@ -226,7 +228,9 @@ public class JetCommandLine implements Runnable {
             for (; ; ) {
                 String command;
                 try {
-                    command = reader.readLine("sql> ").trim();
+                    command = reader.readLine(new AttributedStringBuilder()
+                            .style(AttributedStyle.DEFAULT.foreground(SECONDARY_COLOR))
+                            .append("JET SQL> ").toAnsi()).trim();
                 } catch (UserInterruptException | EndOfFileException | IOError e) {
                     // Ctrl+C, Ctrl+D, and kill signals result in exit
                     writer.println(CliPrompts.EXIT_PROMPT);
@@ -991,9 +995,21 @@ public class JetCommandLine implements Runnable {
                 if (rowCount.get() > 0) {
                     printSeparatorLine(res.get().getRowMetadata().getColumnCount(), colWidth, out);
                 }
-                out.println("\n" + rowCount.get() + " row(s) selected");
+                String prompt = new AttributedStringBuilder()
+                        .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
+                        .append("\n")
+                        .append(String.valueOf(rowCount.get()))
+                        .append(" rows selected.")
+                        .toAnsi();
+                out.println(prompt);
             } else {
-                out.println(res.get().updateCount() + " row(s) affected");
+                String prompt = new AttributedStringBuilder()
+                        .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
+                        .append("\n")
+                        .append(String.valueOf(res.get().updateCount()))
+                        .append(" row(s) affected")
+                        .toAnsi();
+                out.println(prompt);
             }
         });
 
@@ -1003,7 +1019,12 @@ public class JetCommandLine implements Runnable {
             resultFuture.get();
         } catch (CancellationException e) {
             res.get().close();
-            out.println("\nQuery is cancelled. Until now, total " + rowCount.get() + " rows received.");
+            String cancellationPrompt = new AttributedStringBuilder()
+                    .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
+                    .append("\nQuery is cancelled. Until now, total " )
+                    .append(" rows received.")
+                    .toAnsi();
+            out.println(cancellationPrompt);
             out.flush();
         } catch (InterruptedException | java.util.concurrent.ExecutionException e) {
             res.get().close();
@@ -1015,7 +1036,8 @@ public class JetCommandLine implements Runnable {
     private static void printMetadataInfo(SqlRowMetadata metadata, int colWidth, PrintWriter out) {
         int colSize = metadata.getColumnCount();
         printSeparatorLine(colSize, colWidth, out);
-        AttributedStringBuilder builder = new AttributedStringBuilder();
+        AttributedStringBuilder builder = new AttributedStringBuilder()
+                .style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
         builder.append("|");
         for (int i = 0; i < colSize; i++) {
             String colName = metadata.getColumn(i).getName();
@@ -1027,7 +1049,8 @@ public class JetCommandLine implements Runnable {
     }
 
     private static void printRow(SqlRow row, int colWidth, PrintWriter out) {
-        AttributedStringBuilder builder = new AttributedStringBuilder();
+        AttributedStringBuilder builder = new AttributedStringBuilder()
+                .style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
         builder.append("|");
         int colSize = row.getMetadata().getColumnCount();
         for (int i = 0; i < colSize; i++) {
@@ -1039,6 +1062,7 @@ public class JetCommandLine implements Runnable {
     }
 
     private static void centralize(int colWidth, AttributedStringBuilder builder, String colValue) {
+        builder.style(AttributedStyle.DEFAULT.foreground(PRIMARY_COLOR));
         int wsLen = 0;
         if (colValue.length() < colWidth) {
             wsLen = colWidth - colValue.length();
@@ -1053,11 +1077,13 @@ public class JetCommandLine implements Runnable {
         for (int j = 0; j < wsLen / 2 + wsLen % 2; j++) {
             builder.append(' ');
         }
+        builder.style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
         builder.append('|');
     }
 
     private static void printSeparatorLine(int colSize, int colWidth, PrintWriter out) {
-        AttributedStringBuilder builder = new AttributedStringBuilder();
+        AttributedStringBuilder builder = new AttributedStringBuilder()
+                .style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
         builder.append('+');
         for (int i = 0; i < colSize; i++) {
             for (int j = 0; j < colWidth; j++) {
@@ -1069,18 +1095,22 @@ public class JetCommandLine implements Runnable {
     }
 
     private static class CliPrompts {
-        static final String STARTING_PROMPT = new AttributedStringBuilder().append(
+        static final String STARTING_PROMPT = new AttributedStringBuilder()
+                .style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR))
+                .append(
                 "\to   o   o   o---o o---o o     o---o   o   o---o o-o-o        o o---o o-o-o   o---o   o---o   o\n" +
                 "\t|   |  / \\     /  |     |     |      / \\  |       |          | |       |     |       |   |   |\n" +
                 "\to---o o---o   o   o-o   |     o     o---o o---o   |          | o-o     |     o---o   o   o   o\n" +
                 "\t|   | |   |  /    |     |     |     |   |     |   |      \\   | |       |         |   |   |   |\n" +
                 "\to   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o     o---o   o---\\\\  o---")
+                .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("\n\t\t\t\t\t Welcome to the Hazelcast Jet SQL Console")
                 .append("\n\t\t\t\t\t Commands end with semicolon")
                 .append("\n\t\t\t\t\t Type 'help;' to display the available commands\n\n")
-    .style(AttributedStyle.BOLD)
+
     .toAnsi();
         static final String HELP_PROMPT = new AttributedStringBuilder()
+                .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("AVAILABLE COMMANDS:\n\n")
                 .append("CLEAR\t-\tClear the terminal screen\n")
                 .append("EXIT\t-\tExit from the SQL console.\n")
@@ -1089,6 +1119,7 @@ public class JetCommandLine implements Runnable {
                 .append("\tPress Ctrl+C to cancel streaming queries.\n")
                 .toAnsi();
         static final String EXIT_PROMPT = new AttributedStringBuilder()
+                .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("Exiting from SQL console")
                 .toAnsi();
     }
