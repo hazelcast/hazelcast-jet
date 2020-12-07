@@ -38,8 +38,8 @@ import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.Spliterator.ORDERED;
 
 /**
- * ReadFileFnProvider for CSV files, reading given path and deserializing using
- * Jackson CsvMapper
+ * {@link ReadFileFnProvider} for CSV files, reading the given path and
+ * deserializing using Jackson {@link CsvMapper}.
  */
 @SuppressFBWarnings(
         value = "OBL_UNSATISFIED_OBLIGATION",

@@ -64,8 +64,8 @@ public interface FileFormat<T> extends Serializable {
 
     /**
      * Returns a file format for CSV files which specifies to deserialize each
-     * line into {@code String[]}. {@code includesHeader} specifies whether
-     * source includes header.
+     * line into {@code String[]}. {@code includesHeader} specifies whether the
+     * source includes a header.
      */
     @Nonnull
     static <T> CsvFileFormat<T> csv(boolean includesHeader) {
