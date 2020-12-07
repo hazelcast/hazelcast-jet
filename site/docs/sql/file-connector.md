@@ -31,6 +31,21 @@ above is considered local (i.e. files residing on Jet members), e.g.
 `glob` is a pattern to filter the files in the specified directory.
 The default value is '*', matching all files.
 
+## Using a Sample to List Columns
+
+If you omit a file list from the `CREATE MAPPING` command, Jet will read
+a sample file and try to determine column names and types from it. In
+some cases you can use a different type if you specify the columns
+explicitly. For example, the CSV format uses `VARCHAR` for all fields -
+if you specify `DATE` manually, the behavior would be as if `CAST(column
+AS DATE)` was used, using the same rules for conversion from `VARCHAR`
+to `DATE`.
+
+Also if you don't specify the columns, the directory needs to be
+available at the time you execute the `CREATE MAPPING` and it must not
+be empty. In case of local files, every cluster member must have some
+file, otherwise an empty directory is OK.
+
 ## Serialization options
 
 `format` defines the serialization used to read the files. We assume all
@@ -51,10 +66,10 @@ See the examples for individual serialization options below.
 
 ### CSV Serialization
 
-The `csv` files are expected to be comma separated and `UTF-8` encoded.
-If you skip mapping columns from the declaration, your files must
-have a header as we infer column names from there. All inferred columns
-are of `VARCHAR` type.
+The `csv` files are expected to be comma-separated and `UTF-8` encoded.
+Each file must have a header on the first line. If you omit the column
+list from the mapping declaration, Jet will try to infer the column
+names from the file header. All columns will have `VARCHAR` type.
 
 ```sql
 CREATE MAPPING my_files
