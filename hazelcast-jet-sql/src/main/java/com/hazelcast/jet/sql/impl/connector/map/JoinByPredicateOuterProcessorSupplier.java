@@ -56,7 +56,6 @@ final class JoinByPredicateOuterProcessorSupplier implements ProcessorSupplier, 
 
     private JetJoinInfo joinInfo;
     private String mapName;
-    private QueryPath[] rightPaths;
     private KvRowProjector.Supplier rightRowProjectorSupplier;
 
     private transient IMap<Object, Object> map;
@@ -70,14 +69,12 @@ final class JoinByPredicateOuterProcessorSupplier implements ProcessorSupplier, 
     JoinByPredicateOuterProcessorSupplier(
             JetJoinInfo joinInfo,
             String mapName,
-            QueryPath[] rightPaths,
             KvRowProjector.Supplier rightRowProjectorSupplier
     ) {
         assert joinInfo.isEquiJoin() && joinInfo.isOuter();
 
         this.joinInfo = joinInfo;
         this.mapName = mapName;
-        this.rightPaths = rightPaths;
         this.rightRowProjectorSupplier = rightRowProjectorSupplier;
     }
 
@@ -93,6 +90,7 @@ final class JoinByPredicateOuterProcessorSupplier implements ProcessorSupplier, 
     public Collection<? extends Processor> get(int count) {
         List<Processor> processors = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
+            QueryPath[] rightPaths = rightRowProjectorSupplier.paths();
             KvRowProjector rightProjector = rightRowProjectorSupplier.get(serializationService, extractors);
             Processor processor =
                     new TransformP<Object[], Object[]>(joinFn(joinInfo, map, rightPaths, rightProjector)
@@ -156,10 +154,6 @@ final class JoinByPredicateOuterProcessorSupplier implements ProcessorSupplier, 
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeObject(joinInfo);
         out.writeObject(mapName);
-        out.writeInt(rightPaths.length);
-        for (QueryPath rightPath : rightPaths) {
-            out.writeObject(rightPath);
-        }
         out.writeObject(rightRowProjectorSupplier);
     }
 
@@ -167,10 +161,6 @@ final class JoinByPredicateOuterProcessorSupplier implements ProcessorSupplier, 
     public void readData(ObjectDataInput in) throws IOException {
         joinInfo = in.readObject();
         mapName = in.readObject();
-        rightPaths = new QueryPath[in.readInt()];
-        for (int i = 0; i < rightPaths.length; i++) {
-            rightPaths[i] = in.readObject();
-        }
         rightRowProjectorSupplier = in.readObject();
     }
 }

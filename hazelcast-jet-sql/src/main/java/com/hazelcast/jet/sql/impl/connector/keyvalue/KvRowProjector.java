@@ -149,6 +149,10 @@ public class KvRowProjector implements Row {
             this.projections = projections;
         }
 
+        public QueryPath[] paths() {
+            return paths;
+        }
+
         public KvRowProjector get(InternalSerializationService serializationService, Extractors extractors) {
             return new KvRowProjector(
                     paths,

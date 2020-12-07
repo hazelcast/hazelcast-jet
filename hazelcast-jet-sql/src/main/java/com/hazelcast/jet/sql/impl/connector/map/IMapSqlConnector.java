@@ -152,7 +152,7 @@ public class IMapSqlConnector implements SqlConnector {
         KvRowProjector.Supplier rightRowProjectorSupplier =
                 KvRowProjector.supplier(paths, types, keyDescriptor, valueDescriptor, predicate, projections);
 
-        return Joiner.join(dag, name, toString(table), joinInfo, paths, rightRowProjectorSupplier);
+        return Joiner.join(dag, name, toString(table), joinInfo, rightRowProjectorSupplier);
     }
 
     @Override

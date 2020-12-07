@@ -68,7 +68,6 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
     private String mapName;
     private int partitionCount;
     private List<Integer> partitions;
-    private QueryPath[] rightPaths;
     private KvRowProjector.Supplier rightRowProjectorSupplier;
 
     private transient MapProxyImpl<Object, Object> map;
@@ -84,7 +83,6 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
             String mapName,
             int partitionCount,
             List<Integer> partitions,
-            QueryPath[] rightPaths,
             KvRowProjector.Supplier rightRowProjectorSupplier
     ) {
         assert joinInfo.isEquiJoin() && joinInfo.isInner();
@@ -93,7 +91,6 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
         this.mapName = mapName;
         this.partitionCount = partitionCount;
         this.partitions = partitions;
-        this.rightPaths = rightPaths;
         this.rightRowProjectorSupplier = rightRowProjectorSupplier;
     }
 
@@ -110,6 +107,7 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
         List<Processor> processors = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             PartitionIdSet partitions = new PartitionIdSet(partitionCount, this.partitions);
+            QueryPath[] rightPaths = rightRowProjectorSupplier.paths();
             KvRowProjector rightProjector = rightRowProjectorSupplier.get(serializationService, extractors);
             Processor processor =
                     new TransformP<Object[], Object[]>(joinFn(joinInfo, map, partitions, rightPaths, rightProjector)
@@ -174,10 +172,6 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
         out.writeObject(mapName);
         out.writeInt(partitionCount);
         out.writeObject(partitions);
-        out.writeInt(rightPaths.length);
-        for (QueryPath rightPath : rightPaths) {
-            out.writeObject(rightPath);
-        }
         out.writeObject(rightRowProjectorSupplier);
     }
 
@@ -187,20 +181,15 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
         mapName = in.readObject();
         partitionCount = in.readInt();
         partitions = in.readObject();
-        rightPaths = new QueryPath[in.readInt()];
-        for (int i = 0; i < rightPaths.length; i++) {
-            rightPaths[i] = in.readObject();
-        }
         rightRowProjectorSupplier = in.readObject();
     }
 
     static ProcessorMetaSupplier supplier(
             JetJoinInfo joinInfo,
             String mapName,
-            QueryPath[] rightPaths,
             KvRowProjector.Supplier rightRowProjectorSupplier
     ) {
-        return new Supplier(joinInfo, mapName, rightPaths, rightRowProjectorSupplier);
+        return new Supplier(joinInfo, mapName, rightRowProjectorSupplier);
     }
 
     @SuppressFBWarnings(
@@ -211,7 +200,6 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
 
         private JetJoinInfo joinInfo;
         private String mapName;
-        private QueryPath[] rightPaths;
         private KvRowProjector.Supplier rightRowProjectorSupplier;
 
         private transient PartitionService partitionService;
@@ -223,14 +211,12 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
         private Supplier(
                 JetJoinInfo joinInfo,
                 String mapName,
-                QueryPath[] rightPaths,
                 KvRowProjector.Supplier rightRowProjectorSupplier
         ) {
             assert joinInfo.isEquiJoin() && joinInfo.isInner();
 
             this.joinInfo = joinInfo;
             this.mapName = mapName;
-            this.rightPaths = rightPaths;
             this.rightRowProjectorSupplier = rightRowProjectorSupplier;
         }
 
@@ -258,7 +244,6 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
                     mapName,
                     partitionCount,
                     partitionsByMember.get(address),
-                    rightPaths,
                     rightRowProjectorSupplier
             );
         }
@@ -267,10 +252,6 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
         public void writeData(ObjectDataOutput out) throws IOException {
             out.writeObject(joinInfo);
             out.writeObject(mapName);
-            out.writeInt(rightPaths.length);
-            for (QueryPath rightPath : rightPaths) {
-                out.writeObject(rightPath);
-            }
             out.writeObject(rightRowProjectorSupplier);
         }
 
@@ -278,10 +259,6 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
         public void readData(ObjectDataInput in) throws IOException {
             joinInfo = in.readObject();
             mapName = in.readObject();
-            rightPaths = new QueryPath[in.readInt()];
-            for (int i = 0; i < rightPaths.length; i++) {
-                rightPaths[i] = in.readObject();
-            }
             rightRowProjectorSupplier = in.readObject();
         }
     }

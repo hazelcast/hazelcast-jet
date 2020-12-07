@@ -39,10 +39,9 @@ final class Joiner {
             String mapName,
             String tableName,
             JetJoinInfo joinInfo,
-            QueryPath[] paths,
             KvRowProjector.Supplier rightRowProjectorSupplier
     ) {
-        int leftEquiJoinPrimitiveKeyIndex = leftEquiJoinPrimitiveKeyIndex(joinInfo, paths);
+        int leftEquiJoinPrimitiveKeyIndex = leftEquiJoinPrimitiveKeyIndex(joinInfo, rightRowProjectorSupplier.paths());
         if (leftEquiJoinPrimitiveKeyIndex > -1) {
             return new NestedLoopJoin(
                     dag.newUniqueVertex(
@@ -65,7 +64,7 @@ final class Joiner {
 
             Vertex egress = dag.newUniqueVertex(
                     "Join(Predicate-" + tableName + ")",
-                    JoinByPredicateInnerProcessorSupplier.supplier(joinInfo, mapName, paths, rightRowProjectorSupplier)
+                    JoinByPredicateInnerProcessorSupplier.supplier(joinInfo, mapName, rightRowProjectorSupplier)
             );
 
             dag.edge(between(ingress, egress).partitioned(wholeItem()));
@@ -75,7 +74,7 @@ final class Joiner {
             return new NestedLoopJoin(
                     dag.newUniqueVertex(
                             "Join(Predicate-" + tableName + ")",
-                            new JoinByPredicateOuterProcessorSupplier(joinInfo, mapName, paths, rightRowProjectorSupplier)
+                            new JoinByPredicateOuterProcessorSupplier(joinInfo, mapName, rightRowProjectorSupplier)
                     )
             );
         } else {

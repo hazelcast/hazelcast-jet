@@ -22,6 +22,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector.NestedLoopJoin;
+import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
 import com.hazelcast.sql.impl.extract.QueryPath;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -32,6 +33,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static com.hazelcast.sql.impl.extract.QueryPath.KEY_PATH;
+import static com.hazelcast.sql.impl.extract.QueryPath.VALUE_PATH;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.isA;
@@ -49,6 +51,9 @@ public class JoinerTest {
     @Mock
     private Vertex egress;
 
+    @Mock
+    private KvRowProjector.Supplier rightRowProjectorSupplier;
+
     @Before
     public void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -63,6 +68,7 @@ public class JoinerTest {
     @Parameters(method = "joinTypes")
     public void test_joinByPrimitiveKey(boolean inner) {
         // given
+        given(rightRowProjectorSupplier.paths()).willReturn(new QueryPath[]{KEY_PATH});
         given(dag.newUniqueVertex(contains("Lookup"), isA(JoinByPrimitiveKeyProcessorSupplier.class))).willReturn(ingress);
 
         // when
@@ -71,8 +77,7 @@ public class JoinerTest {
                 "imap-name",
                 "table-name",
                 joinInfo(inner, new int[]{0}, new int[]{0}),
-                new QueryPath[]{KEY_PATH},
-                null
+                rightRowProjectorSupplier
         );
 
         // then
@@ -84,6 +89,7 @@ public class JoinerTest {
     @SuppressWarnings("unchecked")
     public void test_joinByPredicateInner() {
         // given
+        given(rightRowProjectorSupplier.paths()).willReturn(new QueryPath[]{QueryPath.create("path")});
         given(dag.newUniqueVertex(contains("Broadcast"), isA(SupplierEx.class))).willReturn(ingress);
         given(ingress.localParallelism(1)).willReturn(ingress);
         given(dag.newUniqueVertex(contains("Predicate"), isA(ProcessorMetaSupplier.class))).willReturn(egress);
@@ -94,8 +100,7 @@ public class JoinerTest {
                 "imap-name",
                 "table-name",
                 joinInfo(true, new int[]{0}, new int[]{0}),
-                new QueryPath[]{QueryPath.create("path")},
-                null
+                rightRowProjectorSupplier
         );
 
         // then
@@ -107,6 +112,7 @@ public class JoinerTest {
     @Test
     public void test_joinByPredicateOuter() {
         // given
+        given(rightRowProjectorSupplier.paths()).willReturn(new QueryPath[]{QueryPath.create("path")});
         given(dag.newUniqueVertex(contains("Predicate"), isA(JoinByPredicateOuterProcessorSupplier.class)))
                 .willReturn(ingress);
 
@@ -116,8 +122,7 @@ public class JoinerTest {
                 "imap-name",
                 "table-name",
                 joinInfo(false, new int[]{0}, new int[]{0}),
-                new QueryPath[]{QueryPath.create("path")},
-                null
+                rightRowProjectorSupplier
         );
 
         // then
@@ -129,6 +134,7 @@ public class JoinerTest {
     @Parameters(method = "joinTypes")
     public void test_joinByScan(boolean inner) {
         // given
+        given(rightRowProjectorSupplier.paths()).willReturn(new QueryPath[]{VALUE_PATH});
         given(dag.newUniqueVertex(contains("Scan"), isA(JoinScanProcessorSupplier.class))).willReturn(ingress);
 
         // when
@@ -137,8 +143,7 @@ public class JoinerTest {
                 "imap-name",
                 "table-name",
                 joinInfo(inner, new int[0], new int[0]),
-                new QueryPath[]{KEY_PATH},
-                null
+                rightRowProjectorSupplier
         );
 
         // then

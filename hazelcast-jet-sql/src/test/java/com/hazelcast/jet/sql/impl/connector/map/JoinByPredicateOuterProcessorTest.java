@@ -82,6 +82,7 @@ public class JoinByPredicateOuterProcessorTest {
 
     @Before
     public void setUp() {
+        given(rightRowProjectorSupplier.paths()).willReturn(new QueryPath[]{QueryPath.KEY_PATH});
         given(rightRowProjectorSupplier.get(any(), any())).willReturn(rightProjector);
         given(rightProjector.getColumnCount()).willReturn(2);
         given(supplierContext.serializationService()).willReturn(serializationService);
@@ -91,7 +92,7 @@ public class JoinByPredicateOuterProcessorTest {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
+    @SuppressWarnings("unchecked")
     public void when_filteredOutByProjector_then_nulls() throws Exception {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
@@ -110,7 +111,7 @@ public class JoinByPredicateOuterProcessorTest {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
+    @SuppressWarnings("unchecked")
     public void when_projectedByProjector_then_modified() throws Exception {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
@@ -128,7 +129,7 @@ public class JoinByPredicateOuterProcessorTest {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
+    @SuppressWarnings("unchecked")
     public void when_filteredOutByCondition_then_nulls() throws Exception {
         // given
         Processor processor = processor(ComparisonPredicate.create(
@@ -154,7 +155,6 @@ public class JoinByPredicateOuterProcessorTest {
         ProcessorSupplier supplier = new JoinByPredicateOuterProcessorSupplier(
                 new JetJoinInfo(false, new int[]{0}, new int[]{0}, nonEquiCondition, null),
                 "map",
-                new QueryPath[]{QueryPath.KEY_PATH},
                 rightRowProjectorSupplier
         );
         supplier.init(supplierContext);
