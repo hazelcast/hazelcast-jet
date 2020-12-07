@@ -23,7 +23,6 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.EventTimeMapper;
 import com.hazelcast.jet.core.EventTimePolicy;
-import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
@@ -35,11 +34,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
+import static com.hazelcast.jet.impl.util.Util.toLocalTime;
 import static com.hazelcast.jet.kinesis.impl.KinesisHelper.shardBelongsToRange;
 
 public class KinesisSourceP extends AbstractProcessor {
@@ -76,7 +77,7 @@ public class KinesisSourceP extends AbstractProcessor {
             @Nonnull HashRange hashRange,
             @Nonnull Queue<Shard> shardQueue,
             @Nullable RangeMonitor rangeMonitor
-            ) {
+    ) {
         this.kinesis = Objects.requireNonNull(kinesis, "kinesis");
         this.stream = Objects.requireNonNull(stream, "stream");
         this.eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
@@ -140,22 +141,13 @@ public class KinesisSourceP extends AbstractProcessor {
                     Long watermark = eventTimeMapper.getWatermark(currentReader);
                     watermark = watermark < 0 ? null : watermark;
                     shardStates.update(reader.getShard(), reader.getLastSeenSeqNo(), watermark);
-                    emitFromTraverser(traverser.peek(x -> {
-                        if (x instanceof Watermark) {System.out.println(x);}
-                        else {
-                            /*JetEvent event = (JetEvent) x;
-                            Map.Entry entry = (Entry) event.payload();
-                            System.out.println("msg = " + new String((byte[]) entry.getValue()));*/
-                        }
-                    }));
+                    emitFromTraverser(traverser);
                     return;
                 } else if (ShardReader.Result.CLOSED.equals(result)) {
                     Shard shard = reader.getShard();
                     logger.info("Shard " + shard.getShardId() + " of stream " + stream + " closed");
                     shardStates.close(shard);
                     removeShardReader(currentReader);
-                    //todo: save that shard is closed to snapshot and use this info somehow
-                    //todo: clean up known shards from monitor, can I?
                     nextReader = 0;
                     return;
                 }
@@ -174,7 +166,12 @@ public class KinesisSourceP extends AbstractProcessor {
 
         if (snapshotTraverser == null) {
             snapshotTraverser = traverseStream(shardStates.snapshotEntries())
-                    .onFirstNull(() -> snapshotTraverser = null);
+                    .onFirstNull(() -> {
+                        snapshotTraverser = null;
+                        if (getLogger().isFinestEnabled()) {
+                            getLogger().finest("Finished saving snapshot. Saved shard states: " + shardStates);
+                        }
+                    });
         }
         return emitFromTraverserToSnapshot(snapshotTraverser);
     }
@@ -183,7 +180,7 @@ public class KinesisSourceP extends AbstractProcessor {
     protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
         String shardId = ((BroadcastKey<String>) key).key();
 
-        Object[] shardState = (Object[]) value; //todo: would be nice to deal with something more usable than an Object array...
+        Object[] shardState = (Object[]) value;
         String startingHashKey = ShardStates.startingHashKey(shardState);
         shardBelongsToRange(startingHashKey, hashRange);
         if (shardBelongsToRange(startingHashKey, hashRange)) {
@@ -233,24 +230,14 @@ public class KinesisSourceP extends AbstractProcessor {
 
     private static class ShardStates {
 
-        private static final Object[] NO_STATE = new Object[4];
+        private static final int STATE_LENGTH = 4;
 
-        static String startingHashKey(Object[] stateValues) {
-            return (String) stateValues[0];
-        }
+        private static final int STARTING_HASH_KEY_INDEX = 0;
+        private static final int IS_CLOSED_INDEX = 1;
+        private static final int LAST_SEEN_SEQ_NO_INDEX = 2;
+        private static final int WATERMARK_INDEX = 3;
 
-        static boolean closed(Object[] stateValues) {
-            Boolean closed = (Boolean) stateValues[1];
-            return closed != null && closed;
-        }
-
-        static String lastSeenSeqNo(Object[] stateValues) {
-            return (String) stateValues[2];
-        }
-
-        static Long watermark(Object[] stateValues) {
-            return (Long) stateValues[3];
-        }
+        private static final Object[] NO_STATE = new Object[STATE_LENGTH];
 
         private final Map<String, Object[]> states = new HashMap<>();
 
@@ -263,11 +250,11 @@ public class KinesisSourceP extends AbstractProcessor {
         }
 
         void update(String shardId, String startingHashKey, boolean closed, String lastSeenSeqNo, Long watermark) {
-            Object[] stateValues = states.computeIfAbsent(shardId, IGNORED -> new Object[4]);
-            stateValues[0] = startingHashKey;
-            stateValues[1] = closed;
-            stateValues[2] = lastSeenSeqNo;
-            stateValues[3] = watermark;
+            Object[] stateValues = states.computeIfAbsent(shardId, IGNORED -> new Object[STATE_LENGTH]);
+            stateValues[STARTING_HASH_KEY_INDEX] = startingHashKey;
+            stateValues[IS_CLOSED_INDEX] = closed;
+            stateValues[LAST_SEEN_SEQ_NO_INDEX] = lastSeenSeqNo;
+            stateValues[WATERMARK_INDEX] = watermark;
         }
 
         Object[] get(String shardId) {
@@ -277,6 +264,55 @@ public class KinesisSourceP extends AbstractProcessor {
         Stream<Entry<BroadcastKey<String>, Object[]>> snapshotEntries() {
             return states.entrySet().stream()
                     .map(e -> entry(broadcastKey(e.getKey()), e.getValue()));
+        }
+
+        @Override
+        public String toString() {
+            return states.entrySet().stream().map(this::toString).collect(Collectors.joining(", "));
+        }
+
+        private String toString(Map.Entry<String, Object[]> entry) {
+            StringBuilder sb = new StringBuilder();
+
+            String shardId = entry.getKey();
+            sb.append(shardId).append(": ");
+
+            Object[] state = entry.getValue();
+
+            String startingHashKey = startingHashKey(state);
+            sb.append("startingHashKey=").append(startingHashKey);
+
+            boolean closed = closed(state);
+            sb.append(", closed=").append(closed);
+
+            if (!closed) {
+                String lastSeenSeqNo = lastSeenSeqNo(state);
+                sb.append(", lastSeenSeqNo=").append(lastSeenSeqNo);
+
+                Long watermark = watermark(state);
+                if (watermark != null) {
+                    sb.append(", watermark=").append(toLocalTime(watermark));
+                }
+            }
+
+            return sb.toString();
+        }
+
+        static String startingHashKey(Object[] state) {
+            return (String) state[STARTING_HASH_KEY_INDEX];
+        }
+
+        static boolean closed(Object[] state) {
+            Boolean closed = (Boolean) state[IS_CLOSED_INDEX];
+            return closed != null && closed;
+        }
+
+        static String lastSeenSeqNo(Object[] state) {
+            return (String) state[LAST_SEEN_SEQ_NO_INDEX];
+        }
+
+        static Long watermark(Object[] state) {
+            return (Long) state[WATERMARK_INDEX];
         }
     }
 }

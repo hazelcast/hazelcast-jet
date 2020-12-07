@@ -50,7 +50,6 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -336,7 +335,6 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
     @Test
     @Category(SerialTest.class)
-    @Ignore //todo
     public void restart_dynamicStream() {
         createStream(3);
         HELPER.waitForStreamToActivate();
@@ -364,7 +362,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
         job.restart();
 
-        assertMessages(expectedMessages, true);
+        assertMessages(expectedMessages, false);
     }
 
     //todo: com.hazelcast.jet.impl.connector.JmsSourceIntegrationTestBase#stressTest_exactlyOnce_graceful
@@ -407,7 +405,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
     private Pipeline getPipeline() {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(kinesisSource())
-                .withoutTimestamps()
+                .withoutTimestamps() //todo: switch it to using timestamps, once possible
                 .rebalance(Entry::getKey)
                 .map(e -> entry(e.getKey(), Collections.singletonList(new String(e.getValue()))))
                 .writeTo(Sinks.mapWithMerging(results, Entry::getKey, Entry::getValue, (l1, l2) -> {
