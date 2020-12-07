@@ -74,6 +74,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
     /**
      * Key: topicName<br>
      * Value: partition offsets, at index I is offset for partition I.<br>
+     * Offsets are -1 initially and remain -1 for partitions not assigned to this processor.
      */
     private final Map<String, long[]> offsets = new HashMap<>();
     private Traverser<Entry<BroadcastKey<TopicPartition>, long[]>> snapshotTraverser;
@@ -89,7 +90,6 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
         this.properties = properties;
         this.topics = topics;
         this.projectionFn = projectionFn;
-
         eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
         for (String topic : topics) {
             offsets.put(topic, new long[0]);
