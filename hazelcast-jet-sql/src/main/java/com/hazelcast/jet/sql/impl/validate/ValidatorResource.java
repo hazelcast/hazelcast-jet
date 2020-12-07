@@ -35,7 +35,7 @@ interface ValidatorResource {
     ExInst<SqlValidatorException> streamingAggregationsNotSupported();
 
     @BaseMessage("SELECT/VALUES on the right side of a join not supported")
-    ExInst<SqlValidatorException> subqueryValuesOnRightSideOfJoinNotSupported();
+    ExInst<SqlValidatorException> selectValuesOnRightSideOfJoinNotSupported();
 
     @BaseMessage("You must use CREATE JOB statement for a streaming DML query")
     ExInst<SqlValidatorException> mustUseCreateJob();
