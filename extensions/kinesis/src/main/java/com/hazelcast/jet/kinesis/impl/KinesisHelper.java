@@ -38,6 +38,9 @@ import com.amazonaws.services.kinesis.model.ShardFilterType;
 import com.amazonaws.services.kinesis.model.StreamDescriptionSummary;
 import com.amazonaws.services.kinesis.model.StreamStatus;
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.retry.IntervalFunction;
+import com.hazelcast.jet.retry.RetryStrategies;
+import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
@@ -57,7 +60,9 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
 public class KinesisHelper {
 
-    private static final int SLEEP_DURATION = 250;
+    public static final RetryStrategy RETRY_STRATEGY = RetryStrategies.custom()
+            .intervalFunction(IntervalFunction.exponentialBackoff(250L, 2.0))
+            .build();
 
     private final AmazonKinesisAsync kinesis;
     private final String stream;
@@ -86,6 +91,7 @@ public class KinesisHelper {
     }
 
     public void waitForStreamToActivate() {
+        int attempt = 0;
         while (true) {
             StreamStatus status = callSafely(this::getStreamStatus);
             switch (status) {
@@ -94,7 +100,7 @@ public class KinesisHelper {
                 case CREATING:
                 case UPDATING:
                     logger.info("Waiting for stream " + stream + " to become active...");
-                    waitABit();
+                    wait(++attempt);
                     break;
                 case DELETING:
                     throw new JetException("Stream is being deleted");
@@ -105,13 +111,14 @@ public class KinesisHelper {
     }
 
     public void waitForStreamToDisappear() {
+        int attempt = 0;
         while (true) {
             List<String> streams = callSafely(this::listStreams);
             if (streams.isEmpty()) {
                 return;
             } else {
                 logger.info("Waiting for stream " + stream + " to disappear...");
-                waitABit();
+                wait(++attempt);
             }
         }
     }
@@ -188,6 +195,7 @@ public class KinesisHelper {
     }
 
     private <T> T callSafely(Callable<T> callable) {
+        int attempt = 0;
         while (true) {
             try {
                 return callable.call();
@@ -215,7 +223,7 @@ public class KinesisHelper {
                 throw rethrow(e);
             }
 
-            waitABit();
+            wait(++attempt);
         }
     }
 
@@ -230,10 +238,10 @@ public class KinesisHelper {
         }
     }
 
-    private static void waitABit() {
-        //todo: use exponential backup
+    private static void wait(int attempt) {
+        long duration = RETRY_STRATEGY.getIntervalFunction().waitAfterAttempt(attempt);
         try {
-            TimeUnit.MILLISECONDS.sleep(SLEEP_DURATION);
+            TimeUnit.MILLISECONDS.sleep(duration);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new JetException("Waiting for stream to activate interrupted");

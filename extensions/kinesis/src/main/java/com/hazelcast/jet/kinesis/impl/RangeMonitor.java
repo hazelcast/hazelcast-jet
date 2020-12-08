@@ -30,6 +30,7 @@ import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.kinesis.impl.KinesisHelper.shardBelongsToRange;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toCollection;
@@ -47,17 +48,6 @@ public class RangeMonitor extends AbstractShardWorker {
      */
     private static final double RATIO_OF_SHARD_LISTING_RATE_UTILIZED = 0.1;
 
-    /**
-     * Failure usually happens due to the over-utilization of resources and/or
-     * crossing of various limits. Even if we retry the operation, it is a good
-     * idea to add some waits (decrease the rate) in order to alleviate the
-     * problem.
-     */
-    private static final long PAUSE_AFTER_FAILURE = SECONDS.toNanos(1); //todo: exponential backoff
-
-    //todo: never removing from the set of known shards, because I have to read from all shards, not
-    // just the active ones and I have to not read from shards that are closed and I have read from them already...
-
     private final Set<String> knownShards = new HashSet<>();
     private final HashRange coveredRange;
     private final HashRange[] rangePartitions;
@@ -68,6 +58,7 @@ public class RangeMonitor extends AbstractShardWorker {
     private String nextToken;
     private Future<ListShardsResult> listShardResult;
     private long nextListShardsTime;
+    private final RetryTracker listShardRetryTracker = new RetryTracker();
 
     public RangeMonitor(
             int totalInstances,
@@ -106,40 +97,46 @@ public class RangeMonitor extends AbstractShardWorker {
 
     private void checkForNewShards(long currentTime) {
         if (listShardResult.isDone()) {
+            ListShardsResult result;
             try {
-                ListShardsResult result = helper.readResult(listShardResult);
-                nextToken = result.getNextToken();
-
-                List<Shard> shards = result.getShards();
-
-                Set<Shard> newShards = shards.stream()
-                        .filter(shard -> shardBelongsToRange(shard, coveredRange))
-                        .filter(shard -> !knownShards.contains(shard.getShardId())).collect(toCollection(HashSet::new));
-
-                if (!newShards.isEmpty()) {
-                    logger.info("New shards detected: " +
-                            newShards.stream().map(Shard::getShardId).collect(joining(", ")));
-                    knownShards.addAll(newShards.stream().map(Shard::getShardId).collect(toList()));
-
-                    for (Shard shard : newShards) { //todo: ok to do for all new shards at once?
-                        int index = findOwner(shard);
-                        if (index < 0) {
-                            throw new RuntimeException("Programming error, shard not covered by any hash range");
-                        }
-                        boolean successful = shardQueues[index].offer(shard);
-                        if (!successful) {
-                            throw new RuntimeException("Programming error, shard queues should not have a capacity limit");
-                        }
-                    }
-                }
+                result = helper.readResult(listShardResult);
             } catch (SdkClientException e) {
                 logger.warning("Failed listing shards, retrying. Cause: " + e.getMessage());
                 nextToken = null;
-                nextListShardsTime = currentTime + PAUSE_AFTER_FAILURE;
+                listShardRetryTracker.attemptFailed();
+                nextListShardsTime = currentTime + MILLISECONDS.toNanos(listShardRetryTracker.getNextWaitTimeMillis());
+                return;
             } catch (Throwable t) {
                 throw rethrow(t);
             } finally {
                 listShardResult = null;
+            }
+
+            listShardRetryTracker.reset();
+
+            nextToken = result.getNextToken();
+
+            List<Shard> shards = result.getShards();
+
+            Set<Shard> newShards = shards.stream()
+                    .filter(shard -> shardBelongsToRange(shard, coveredRange))
+                    .filter(shard -> !knownShards.contains(shard.getShardId())).collect(toCollection(HashSet::new));
+
+            if (!newShards.isEmpty()) {
+                logger.info("New shards detected: " +
+                        newShards.stream().map(Shard::getShardId).collect(joining(", ")));
+                knownShards.addAll(newShards.stream().map(Shard::getShardId).collect(toList()));
+
+                for (Shard shard : newShards) { //todo: ok to do for all new shards at once?
+                    int index = findOwner(shard);
+                    if (index < 0) {
+                        throw new RuntimeException("Programming error, shard not covered by any hash range");
+                    }
+                    boolean successful = shardQueues[index].offer(shard);
+                    if (!successful) {
+                        throw new RuntimeException("Programming error, shard queues should not have a capacity limit");
+                    }
+                }
             }
         }
     }

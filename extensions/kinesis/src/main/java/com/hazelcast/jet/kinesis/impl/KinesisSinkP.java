@@ -40,22 +40,14 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static java.lang.System.nanoTime;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class KinesisSinkP<T> implements Processor {
-
-    //todo; Each shard can support writes up to 1,000 records per second, up to a
-    // maximum data write total of 1 MiB per second. Right now we don't pre-check
-    // this, because we don't check which item goes to what shard, we just rely
-    // failure handling with exponential backoff. Would be complicated to improve
-    // on, but can we affort not to?
 
     /**
      * PutRecords requests are limited to 500 records.
      */
     private static final int MAX_RECORDS_IN_REQUEST = 500;
-
-    private static final long PAUSE_AFTER_FAILURE = SECONDS.toNanos(1); //todo: exponential backoff
 
     /**
      * Each record, when encoded as a byte array, is limited to 1M,
@@ -83,8 +75,9 @@ public class KinesisSinkP<T> implements Processor {
     private ILogger logger;
     private KinesisHelper helper;
 
-    private long nextSendTime = nanoTime();
     private Future<PutRecordsResult> sendResult;
+    private long nextSendTime = nanoTime();
+    private final RetryTracker sendRetryTracker = new RetryTracker();
 
     public KinesisSinkP(
             AmazonKinesisAsync kinesis,
@@ -186,33 +179,40 @@ public class KinesisSinkP<T> implements Processor {
 
         List<PutRecordsRequestEntry> entries = buffer.content();
         sendResult = helper.putRecordsAsync(entries);
-        nextSendTime = currentTime; //todo: add some wait here?
+        nextSendTime = currentTime;
     }
 
     private void checkIfSendingFinished() {
         if (sendResult.isDone()) {
+            PutRecordsResult result;
             try {
-                PutRecordsResult result = helper.readResult(this.sendResult);
-                pruneSentFromBuffer(result);
-                if (result.getFailedRecordCount() > 0) {
-                    dealWithSendFailure("Failed to send " + result.getFailedRecordCount() + " record(s) to stream '"
-                            + stream + "'. Sending will be retried, message reordering is likely.");
-                }
+                result = helper.readResult(this.sendResult);
             } catch (ProvisionedThroughputExceededException pte) {
                 dealWithSendFailure("Data throughput rate exceeded. Backing off and will retry.");
+                return;
             } catch (SdkClientException sce) {
                 dealWithSendFailure("Failed to send records, will retry. Cause: " + sce.getMessage());
+                return;
             } catch (Throwable t) {
                 throw rethrow(t);
             } finally {
                 sendResult = null;
+            }
+
+            sendRetryTracker.reset();
+
+            pruneSentFromBuffer(result);
+            if (result.getFailedRecordCount() > 0) {
+                dealWithSendFailure("Failed to send " + result.getFailedRecordCount() + " record(s) to stream '"
+                        + stream + "'. Sending will be retried, message reordering is likely.");
             }
         }
     }
 
     private void dealWithSendFailure(@Nonnull String message) {
         logger.warning(message);
-        nextSendTime = System.nanoTime() + PAUSE_AFTER_FAILURE;
+        sendRetryTracker.attemptFailed();
+        nextSendTime = System.nanoTime() + MILLISECONDS.toNanos(sendRetryTracker.getNextWaitTimeMillis());
     }
 
     private void pruneSentFromBuffer(@Nullable PutRecordsResult result) {

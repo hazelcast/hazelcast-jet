@@ -27,43 +27,17 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.logging.ILogger;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 class ShardReader extends AbstractShardWorker {
 
     /* Kinesis allows for a maximum of 5 GetRecords operations per second. */
     private static final int GET_RECORD_OPS_PER_SECOND = 5;
-
-    /* Even though GetRecords operations are limited to 5 per second, if one
-     * such operation happens to return too much data, following operations will
-     * throw ProvisionedThroughputExceededException. In such cases we need to
-     * wait a bit longer than for regular rate limiting.
-     *
-     * Relevant section from AWS documentation:
-     *
-     * "The size of the data returned by GetRecords varies depending on the
-     * utilization of the shard. The maximum size of data that GetRecords can
-     * return is 10 MiB. If a call returns this amount of data, subsequent calls
-     * made within the next 5 seconds throw
-     * ProvisionedThroughputExceededException. If there is insufficient
-     * provisioned throughput on the stream, subsequent calls made within the
-     * next 1 second throw ProvisionedThroughputExceededException. GetRecords
-     * doesn't return any data when it throws an exception. For this reason, we
-     * recommend that you wait 1 second between calls to GetRecords. However,
-     * it's possible that the application will get exceptions for longer than
-     * 1 second."
-     *
-     * We also need to add this extra wait whenever we encounter other unexpected
-     * failures.
-     * */
-    private static final long PAUSE_AFTER_FAILURE = SECONDS.toNanos(1); //todo: exponential backoff
 
     private final Shard shard;
     private final RandomizedRateTracker getRecordsRateTracker =
@@ -71,13 +45,14 @@ class ShardReader extends AbstractShardWorker {
 
     private State state = State.NO_SHARD_ITERATOR;
     private String shardIterator;
+
     private Future<GetShardIteratorResult> shardIteratorResult;
+
     private Future<GetRecordsResult> recordsResult;
+    private final RetryTracker readRecordRetryTracker = new RetryTracker();
     private long nextGetRecordsTime = System.nanoTime();
 
-    @Nonnull
     private List<Record> data = Collections.emptyList();
-    @Nullable
     private String lastSeenSeqNo;
 
     ShardReader(AmazonKinesisAsync kinesis, String stream, Shard shard, String lastSeenSeqNo, ILogger logger) {
@@ -139,23 +114,9 @@ class ShardReader extends AbstractShardWorker {
 
     private Result handleWaitingForRecords(long currentTime) {
         if (recordsResult.isDone()) {
+            GetRecordsResult result;
             try {
-                GetRecordsResult result = helper.readResult(recordsResult);
-                shardIterator = result.getNextShardIterator();
-                data = result.getRecords();
-                if (!data.isEmpty()) {
-                    lastSeenSeqNo = data.get(data.size() - 1).getSequenceNumber();
-                }
-                if (shardIterator == null) {
-                    state = State.SHARD_CLOSED;
-                    return data.isEmpty() ? Result.CLOSED : Result.HAS_DATA;
-                } else if (!data.isEmpty()) {
-                    state = State.HAS_DATA_NEED_TO_REQUEST_RECORDS;
-                    return Result.HAS_DATA;
-                } else {
-                    state = State.NEED_TO_REQUEST_RECORDS;
-                    return Result.NOTHING;
-                }
+                result = helper.readResult(recordsResult);
             } catch (ProvisionedThroughputExceededException pte) {
                 return dealWithReadRecordFailure(currentTime, "Data throughput rate exceeded. Backing off and retrying.");
             } catch (ExpiredIteratorException eie) {
@@ -166,6 +127,24 @@ class ShardReader extends AbstractShardWorker {
             } catch (Throwable t) {
                 throw rethrow(t);
             }
+
+            readRecordRetryTracker.reset();
+
+            shardIterator = result.getNextShardIterator();
+            data = result.getRecords();
+            if (!data.isEmpty()) {
+                lastSeenSeqNo = data.get(data.size() - 1).getSequenceNumber();
+            }
+            if (shardIterator == null) {
+                state = State.SHARD_CLOSED;
+                return data.isEmpty() ? Result.CLOSED : Result.HAS_DATA;
+            } else if (!data.isEmpty()) {
+                state = State.HAS_DATA_NEED_TO_REQUEST_RECORDS;
+                return Result.HAS_DATA;
+            } else {
+                state = State.NEED_TO_REQUEST_RECORDS;
+                return Result.NOTHING;
+            }
         } else {
             return Result.NOTHING;
         }
@@ -173,7 +152,8 @@ class ShardReader extends AbstractShardWorker {
 
     private Result dealWithReadRecordFailure(long currentTime, String message) {
         logger.warning(message);
-        nextGetRecordsTime = currentTime + PAUSE_AFTER_FAILURE;
+        readRecordRetryTracker.attemptFailed();
+        nextGetRecordsTime = currentTime + MILLISECONDS.toNanos(readRecordRetryTracker.getNextWaitTimeMillis());
         state = State.NEED_TO_REQUEST_RECORDS;
         return Result.NOTHING;
     }

@@ -207,6 +207,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
         List<Shard> shards = listActiveShards();
         mergeShards(shards.get(0), shards.get(1));
+        HELPER.waitForStreamToActivate();
 
         jet().newJob(getPipeline());
 
@@ -265,6 +266,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
         List<Shard> shards = listActiveShards();
         splitShard(shards.get(0));
+        HELPER.waitForStreamToActivate();
 
         jet().newJob(getPipeline());
 
