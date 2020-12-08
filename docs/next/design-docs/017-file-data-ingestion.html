@@ -1,0 +1,297 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>017 - File Data Ingestion · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Unified API for reading files and improved packaging for cloud sources"/><meta name="docsearch:version" content="next"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="017 - File Data Ingestion · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="Unified API for reading files and improved packaging for cloud sources"/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>next</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/next/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Design Documents</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/next/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/next/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/next/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/next/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/kafka">Process Events from Apache Kafka</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/next/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/next/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/error-handling">Error Handling Strategies</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">SQL<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/sql/intro">Hazelcast Jet SQL</a></li><li class="navListItem"><a class="navItem" href="/docs/next/sql/basic-commands">Basic commands</a></li><li class="navListItem"><a class="navItem" href="/docs/next/sql/ddl">DDL statements</a></li><li class="navListItem"><a class="navItem" href="/docs/next/sql/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/next/sql/imap-connector">IMap Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/next/sql/kafka-connector">Apache Kafka Connector</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/next/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/next/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/next/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/next/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/next/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/next/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/">Introduction</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/next/design-docs/017-file-data-ingestion">017 - File Data Ingestion</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/016-event-reordering">016 - Avoiding Event Reordering Effects</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/015-mqtt-connector">015 - Mqtt Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/014-batchstage-sort">014 -- BatchStage.sort()</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/013-system-time-watermarks">013 - Resolving Sparse Events Issue with System-Time Watermarks</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/012-improved-job-resilience">012 - Improved Resilience of Fault-Tolerant Streaming Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/design-docs/017-file-data-ingestion.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">017 - File Data Ingestion</h1></header><article><div><span><p><em>Since 4.4.</em></p>
+<blockquote>
+<p>NOTE: The order of the following sections is in logical order, but
+numbering follows the requirement document (PRD).</p>
+</blockquote>
+<h2><a class="anchor" aria-hidden="true" id="2-support-for-common-formats-and-data-sources"></a><a href="#2-support-for-common-formats-and-data-sources" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>2. Support for common formats and data sources</h2>
+<p>Format and source of the data are seemingly orthogonal. You can read
+plain text files/csv/avro/.. etc from a local filesystem, S3 etc.</p>
+<p>However, to take an advantage of some properties of certain formats
+(e.g. parallel reading/deserialization of Avro files, selecting columns
+in parquet …) requires combining these two steps (read Avro file header
+to find out the beginning positions of data blocks).</p>
+<p>This is already implemented in the Hadoop connector.</p>
+<p>Required Formats</p>
+<ul>
+<li><p>CSV
+We don’t have a connector
+There is not official Hadoop connector (= InputFormat), open-source
+implementations exist, with limitations (same as with Spark)</p></li>
+<li><p>JSON
+We have a connector
+There is not official Hadoop connector (= InputFormat), open-source
+implementations exist</p></li>
+<li><p>Avro
+We have a connector
+There is official Hadoop connector</p></li>
+<li><p>Parquet
+We don’t have a connector
+There is official Hadoop connector</p></li>
+<li><p>ORC low priority</p></li>
+</ul>
+<p>** <a href="https://orc.apache.org/docs/core-java.html#reading-orc-files">Reading ORC files</a></p>
+<h3><a class="anchor" aria-hidden="true" id="parquet"></a><a href="#parquet" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Parquet</h3>
+<p>Parquet is a special case between the formats listed above - it defines
+representation in the file (as others do), but doesn't have own schema
+(class?) definition for deserialization into objects. Uses one of the
+other serialization formats, most commonly thrift, avro.</p>
+<p>The PRD doesn't specify the following commonly used formats:</p>
+<ul>
+<li><p>plain text,</p></li>
+<li><p>binary (e.g. images for ML)</p></li>
+<li><p>Protobuf</p></li>
+<li><p>Thrift</p></li>
+</ul>
+<p>Sources</p>
+<ul>
+<li><p>local filesystem</p></li>
+<li><p>Amazon S3</p></li>
+<li><p>Azure Blob Storage</p></li>
+<li><p>Azure Data Lake Storage</p></li>
+<li><p>Google Cloud Storage.</p></li>
+<li><p>HDFS ? not listed in the PRD</p></li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="unified-approach-for-file-data-ingestion"></a><a href="#unified-approach-for-file-data-ingestion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Unified approach for file data ingestion</h2>
+<p>We have the following possibilities</p>
+<ol>
+<li><p>enforce naming convention, e.g.
+<code>com.hazelcast.jet.x.XSources.x(...., formatY)</code>
+<code>com.hazelcast.jet.s3.S3Sources.s3(..., Avro)</code></p></li>
+<li><p>new File API as a single entry point e.g.
+<code>FileSources.s3(&amp;quot;...&amp;quot;).withFormat(AVRO)</code></p></li>
+<li><p>URL/ resource description style with auto detection, e.g.
+<code>FileSource.read(&amp;quot;s3://...../file.avro&amp;quot;);</code></p></li>
+</ol>
+<p>We think we should go with 2., potentially write a parser for 3. to
+delegate to 2. - would be used from SQL (there already is similar logic)</p>
+<p>We decided to use Hadoop libraries to access all systems apart from
+local filesystem, and Hadoop can detect the source we implemented 3.</p>
+<h3><a class="anchor" aria-hidden="true" id="using-hadoop-libraries"></a><a href="#using-hadoop-libraries" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using Hadoop libraries</h3>
+<p>Using Hadoop libraries is a must for reading data from HDFS.</p>
+<p>To read data from other sources, like S3 it is possible to use custom
+connectors (e.g. we have a connector for S3). Both approaches have some
+advantages and disadvantages.</p>
+<p>Using Hadoop libs</p>
+<ul>
+<li><p><code>-</code> Complicated to setup, lot’s of dependencies, possible dependency
+conflicts.</p></li>
+<li><p><code>+</code> Supports advanced features - can take advantage of the structure
+of the formats - e.g. read avro file in parallel, or read specific
+columns in parquet.  +-? The hadoop api leaks (see
+<code>com.hazelcast.jet.hadoop.HadoopSources#inputFormat(org.apache.hadoop.conf.Configuration, com.hazelcast.function.BiFunctionEx&lt;K,V,E&gt;</code>) It is questionable if this
+is an issue, exposing the hadoop API gives users more power.  For
+performance difference see the benchmark below</p></li>
+</ul>
+<p>Using specific s3/... connector</p>
+<ul>
+<li><p><code>-</code> we would need to implement a connector for each source (currently we
+have local filesystem and S3), the S3 source connector is ~300 lines</p></li>
+<li><p><code>-</code> we would miss the advanced features, reimplementing those would be
+a huge effort</p></li>
+<li><p><code>+</code> Simpler packaging</p></li>
+<li><p><code>+</code> Nicer API</p></li>
+<li><p><code>+-</code>? Unknown performance compared to Hadoop libs</p></li>
+</ul>
+<p>Benchmark S3 client based vs Hadoop based connectors</p>
+<p>Benchmark summary: S3 is generally faster, apart from 1 large file case,
+where Hadoop can split the file. The difference is not massive though
+(18211 fastest for s3, vs 21306 for Hadoop, slowest 75752 for S3, 90071
+for Hadoop)</p>
+<p>We decided to use Hadoop to access all sources, with option without
+hadoop for local filesystems</p>
+<h2><a class="anchor" aria-hidden="true" id="1-loading-data-from-a-file-cookbook"></a><a href="#1-loading-data-from-a-file-cookbook" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>1. Loading data from a file Cookbook</h2>
+<p>There is a section in the manual describing the new API and each module.</p>
+<p>There are examples how to read:</p>
+<ul>
+<li>binary files</li>
+<li>text files by lines</li>
+<li>avro files</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="3-any-other-concerns"></a><a href="#3-any-other-concerns" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>3. Any other concerns</h2>
+<h3><a class="anchor" aria-hidden="true" id="compression"></a><a href="#compression" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Compression</h3>
+<p>Hadoop supports various compression formats, which work with built-in
+<code>TextInputFormat</code>, used in our <code>FileFormat#lines()</code>. Other input formats
+implemented by us do not support compression, but it is possible to
+implement. It should be straightforward for e.g. the binary files, a bit
+more complicated for splittable files without clear boundaries (e.g.
+json).</p>
+<p>Avro format has its own compression, we are able to read such compressed
+files. See <a href="https://avro.apache.org/docs/1.10.1/spec.html#Required+Codecs">Avro documentation</a>.</p>
+<p>Parquet format has its own compression, we are able to read such
+compressed files.</p>
+<h3><a class="anchor" aria-hidden="true" id="selecting-subset-of-columns"></a><a href="#selecting-subset-of-columns" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Selecting subset of columns</h3>
+<p>Possible for parquet only. Available with hadoop connector via option.</p>
+<h2><a class="anchor" aria-hidden="true" id="4-overlap-with-jet-sql"></a><a href="#4-overlap-with-jet-sql" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>4. Overlap with Jet SQL</h2>
+<p>The main difference in how SQL would use the connector is that it
+expects <code>Object[]</code> as return type.</p>
+<p>We need to provide a way to configure each format as such.</p>
+<h2><a class="anchor" aria-hidden="true" id="design"></a><a href="#design" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Design</h2>
+<p>Entry point - <code>com.hazelcast.jet.pipeline.file.FileSources</code>. Returns
+<code>com.hazelcast.jet.pipeline.file.FileSourceBuilder</code></p>
+<p>There are 2 required parameters - path and format.</p>
+<p>Path specifies the file location (accepts globs).
+The format describes the format of the data in the file (text, csv,
+json ..).</p>
+<p>The files are either on a local filesystem, hdfs, or on one of
+supported cloud storage systems, implemented using Hadoop
+infrastructure.</p>
+<p>User must provide correct module on CP.</p>
+<p>Additionally, local files can be read using Hadoop infrastructure by
+setting <code>useHadoopForLocalFiles</code> flag on the builder.</p>
+<p>It is also possible to pass key/value String pairs as options. These
+are passed to the Hadoop MR job configuration - needed for
+authentication and available to use for any options for the format or
+other needs.</p>
+<h3><a class="anchor" aria-hidden="true" id="local-files"></a><a href="#local-files" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Local files</h3>
+<p>Reading from local file system is implemented in
+<code>com.hazelcast.jet.pipeline.file.impl.LocalFileSourceFactory</code>.
+The current infrastructure is reused -
+<code>com.hazelcast.jet.core.processor.SourceProcessors.readFilesP (java.lang.String, java.lang.String, boolean, com.hazelcast.function.FunctionEx&lt;? super java.nio.file.Path,? extends java.util.stream.Stream&lt;I&gt;&gt;)</code></p>
+<p>Supporting a file format in LocalFileSourceFactory means implementing a
+<code>ReadFileFnProvider</code> interface:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">ReadFileFnProvider</span> <span class="token punctuation">{</span>
+
+    <span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token class-name">FunctionEx</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Path</span><span class="token punctuation">,</span> <span class="token class-name">Stream</span><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span><span class="token punctuation">></span></span> <span class="token function">createReadFileFn</span><span class="token punctuation">(</span><span class="token class-name">FileFormat</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> format<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">String</span> <span class="token function">format</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>The <code>createReadFileFn</code> creates, for a given file format, a function
+that reads from a Path (a file on a local filesystem) and returns
+a stream of items, which are emitted from the source.</p>
+<h3><a class="anchor" aria-hidden="true" id="cloud"></a><a href="#cloud" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Cloud</h3>
+<p>Cloud storage systems are supported via Hadoop. Each storage system is
+supported by a given module, which includes all dependencies.
+The concrete storage is detected from the path prefix by the Hadoop
+infrastructure.</p>
+<p>Supporting a file format in HadoopFileSourceFactory means implementing
+<code>JobConfigurer</code> interface:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">JobConfigurer</span> <span class="token punctuation">{</span>
+
+    <span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token keyword">void</span> <span class="token function">configure</span><span class="token punctuation">(</span><span class="token class-name">Job</span> job<span class="token punctuation">,</span> <span class="token class-name">FileFormat</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> format<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">BiFunctionEx</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span><span class="token punctuation">,</span> <span class="token operator">?</span><span class="token punctuation">,</span> <span class="token operator">?</span><span class="token punctuation">></span></span> <span class="token function">projectionFn</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>The <code>configure</code> configured the MR job with given <code>FileFormat</code>. This
+typically means setting the InputFormat class for the MR job and its
+parameters.</p>
+<p>The <code>projectionFn</code> function converts <code>InputFormat</code>'s key-value result
+to the item emitted from the source.</p>
+<h2><a class="anchor" aria-hidden="true" id="testing"></a><a href="#testing" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Testing</h2>
+<p>Tests for each format are part of the Hadoop module, which runs them in
+two modes:</p>
+<ul>
+<li><p>local mode</p></li>
+<li><p>using Hadoop local filesystem</p></li>
+</ul>
+<p>This means that the tests for the local filesystem are not part of the
+hazelcast-jet-core module where the implementation is.
+On the other hand we reuse the same set of tests, so we have the same
+coverage for both implementations.</p>
+<p>Integrations tests are part of the hazelcast-qe pipeline, where the jobs
+run in a cluster inside a docker container, with the connector fat jars.
+This ensures that the fat jars contain correct dependencies.</p>
+<h2><a class="anchor" aria-hidden="true" id="licensing"></a><a href="#licensing" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Licensing</h2>
+<p>We had to add couple of aliases for apache 2, BSD, new/revised BSD,
+nothing new</p>
+<p>What's new is:</p>
+<ul>
+<li><p>&quot;The Go license&quot; - this is permissive BSD style license,
+<a href="https://golang.org/LICENSE">link</a></p></li>
+<li><p>CDDL (1.0) - Common Development and Distribution License - this is
+a weak copyleft license, based on mozilla public license and its
+variants</p></li>
+</ul>
+<p>** CDDL 1.1 (minor update, something with patents and EU law)
+** CDDL + GPLv2 with classpath exception - this is just dual CDDL
+1.0 + GPLv2 license</p>
+<p>All the CDDL libs are transitive dependencies of hadoop-common, which
+we plan to package in the all deps included file connectors jars for
+s3/gcp/azure.</p>
+<p>Many commercial applications use CDDL dependencies (e.g. Spring
+framework has many modules with transitive dependencies under CDDL)</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/next/design-docs/index"><span class="arrow-prev">← </span><span>Introduction</span></a><a class="docs-next button" href="/docs/next/design-docs/016-event-reordering"><span>016 - Avoiding Event Reordering Effects</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#2-support-for-common-formats-and-data-sources">2. Support for common formats and data sources</a><ul class="toc-headings"><li><a href="#parquet">Parquet</a></li></ul></li><li><a href="#unified-approach-for-file-data-ingestion">Unified approach for file data ingestion</a><ul class="toc-headings"><li><a href="#using-hadoop-libraries">Using Hadoop libraries</a></li></ul></li><li><a href="#1-loading-data-from-a-file-cookbook">1. Loading data from a file Cookbook</a></li><li><a href="#3-any-other-concerns">3. Any other concerns</a><ul class="toc-headings"><li><a href="#compression">Compression</a></li><li><a href="#selecting-subset-of-columns">Selecting subset of columns</a></li></ul></li><li><a href="#4-overlap-with-jet-sql">4. Overlap with Jet SQL</a></li><li><a href="#design">Design</a><ul class="toc-headings"><li><a href="#local-files">Local files</a></li><li><a href="#cloud">Cloud</a></li></ul></li><li><a href="#testing">Testing</a></li><li><a href="#licensing">Licensing</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:next"]}
+              });
+            </script></body></html>
