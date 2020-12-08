@@ -106,7 +106,7 @@ class ShardReader extends AbstractShardWorker {
         if (currentTime < nextGetShardIteratorTime) {
             return false;
         }
-        shardIteratorResult = helper.getShardIteratorAsync(shard, lastSeenSeqNo);recordsResult = helper.getRecordsAsync(shardIterator);
+        shardIteratorResult = helper.getShardIteratorAsync(shard, lastSeenSeqNo);
         nextGetShardIteratorTime = currentTime;
         return true;
     }
@@ -216,9 +216,7 @@ class ShardReader extends AbstractShardWorker {
         if (currentTime < nextGetRecordsTime) {
             return false;
         }
-
         recordsResult = helper.getRecordsAsync(shardIterator);
-
         nextGetRecordsTime = currentTime + getRecordsRateTracker.next();
         return true;
     }
