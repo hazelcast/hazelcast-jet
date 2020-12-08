@@ -19,6 +19,9 @@ import com.hazelcast.jet.kinesis.impl.AwsConfig;
 import com.hazelcast.jet.kinesis.impl.KinesisSourcePMetaSupplier;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.jet.retry.IntervalFunction;
+import com.hazelcast.jet.retry.RetryStrategies;
+import com.hazelcast.jet.retry.RetryStrategy;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -49,11 +52,16 @@ public final class KinesisSources {
      */
     public static final class Builder {
 
-        @Nonnull
-        private final String stream;
+        private static final RetryStrategy DEFAULT_RETRY_STRATEGY = RetryStrategies.custom()
+                .intervalFunction(IntervalFunction.exponentialBackoffWithCap(100L, 2.0, 5_000L))
+                .build();
 
         @Nonnull
+        private final String stream;
+        @Nonnull
         private final AwsConfig config = new AwsConfig();
+        @Nonnull
+        private RetryStrategy retryStrategy = DEFAULT_RETRY_STRATEGY;
 
         /**
          * TODO: javadoc
@@ -93,13 +101,23 @@ public final class KinesisSources {
          * TODO: javadoc
          */
         @Nonnull
+        public Builder withRetryStrategy(@Nonnull RetryStrategy retryStrategy) {
+            this.retryStrategy = retryStrategy;
+            return this;
+        }
+
+        /**
+         * TODO: javadoc
+         */
+        @Nonnull
         public StreamSource<Map.Entry<String, byte[]>> build() {
             String stream = this.stream;
             AwsConfig config = this.config;
+            RetryStrategy retryStrategy = this.retryStrategy;
             return Sources.streamFromProcessorWithWatermarks(
                     "Kinesis Source (" + stream + ")",
                     true,
-                    eventTimePolicy -> new KinesisSourcePMetaSupplier(config, stream, eventTimePolicy));
+                    eventTimePolicy -> new KinesisSourcePMetaSupplier(config, stream, retryStrategy, eventTimePolicy));
         }
     }
 

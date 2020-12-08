@@ -20,6 +20,7 @@ import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.retry.RetryStrategy;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -50,6 +51,8 @@ public class KinesisSinkPSupplier<T> implements ProcessorSupplier {
     private final FunctionEx<T, String> keyFn;
     @Nonnull
     private final FunctionEx<T, byte[]> valueFn;
+    @Nonnull
+    private final RetryStrategy retryStrategy;
 
     private transient AmazonKinesisAsync[] clients;
 
@@ -57,12 +60,14 @@ public class KinesisSinkPSupplier<T> implements ProcessorSupplier {
             @Nonnull AwsConfig awsConfig,
             @Nonnull String stream,
             @Nonnull FunctionEx<T, String> keyFn,
-            @Nonnull FunctionEx<T, byte[]> valueFn
+            @Nonnull FunctionEx<T, byte[]> valueFn,
+            @Nonnull RetryStrategy retryStrategy
     ) {
         this.awsConfig = awsConfig;
         this.stream = stream;
         this.keyFn = keyFn;
         this.valueFn = valueFn;
+        this.retryStrategy = retryStrategy;
     }
 
     @Override
@@ -77,7 +82,7 @@ public class KinesisSinkPSupplier<T> implements ProcessorSupplier {
     @Override
     public Collection<? extends Processor> get(int count) {
         return IntStream.range(0, count)
-                .mapToObj(i -> new KinesisSinkP<>(clients[i % clients.length], stream, keyFn, valueFn))
+                .mapToObj(i -> new KinesisSinkP<>(clients[i % clients.length], stream, keyFn, valueFn, retryStrategy))
                 .collect(toList());
     }
 

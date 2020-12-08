@@ -19,6 +19,7 @@ import com.amazonaws.SdkClientException;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.amazonaws.services.kinesis.model.ListShardsResult;
 import com.amazonaws.services.kinesis.model.Shard;
+import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
@@ -58,7 +59,7 @@ public class RangeMonitor extends AbstractShardWorker {
     private String nextToken;
     private Future<ListShardsResult> listShardResult;
     private long nextListShardsTime;
-    private final RetryTracker listShardRetryTracker = new RetryTracker();
+    private final RetryTracker listShardRetryTracker;
 
     public RangeMonitor(
             int totalInstances,
@@ -67,12 +68,14 @@ public class RangeMonitor extends AbstractShardWorker {
             HashRange coveredRange,
             HashRange[] rangePartitions,
             Queue<Shard>[] shardQueues,
+            RetryStrategy retryStrategy,
             ILogger logger
     ) {
         super(kinesis, stream, logger);
         this.coveredRange = coveredRange;
         this.rangePartitions = rangePartitions;
         this.shardQueues = shardQueues;
+        this.listShardRetryTracker = new RetryTracker(retryStrategy);
         this.logger = logger;
         this.listShardsRateTracker = initRandomizedTracker(totalInstances);
         this.nextListShardsTime = System.nanoTime() + listShardsRateTracker.next();
@@ -101,10 +104,11 @@ public class RangeMonitor extends AbstractShardWorker {
             try {
                 result = helper.readResult(listShardResult);
             } catch (SdkClientException e) {
-                logger.warning("Failed listing shards, retrying. Cause: " + e.getMessage());
                 nextToken = null;
                 listShardRetryTracker.attemptFailed();
-                nextListShardsTime = currentTime + MILLISECONDS.toNanos(listShardRetryTracker.getNextWaitTimeMillis());
+                long timeoutMillis = listShardRetryTracker.getNextWaitTimeMillis();
+                logger.warning("Failed listing shards, retrying in " + timeoutMillis + " ms. Cause: " + e.getMessage());
+                nextListShardsTime = currentTime + MILLISECONDS.toNanos(timeoutMillis);
                 return;
             } catch (Throwable t) {
                 throw rethrow(t);

@@ -24,7 +24,7 @@ abstract class AbstractShardWorker {
     protected final ILogger logger;
 
     AbstractShardWorker(AmazonKinesisAsync kinesis, String stream, ILogger logger) {
-        this.helper = new KinesisHelper(kinesis, stream, logger);
+        this.helper = new KinesisHelper(kinesis, stream);
         this.logger = logger;
     }
 }

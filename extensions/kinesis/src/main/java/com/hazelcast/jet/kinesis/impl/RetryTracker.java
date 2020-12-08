@@ -4,9 +4,13 @@ import com.hazelcast.jet.retry.RetryStrategy;
 
 public class RetryTracker {
 
-    private final RetryStrategy strategy = KinesisHelper.RETRY_STRATEGY;
+    private final RetryStrategy strategy;
 
     private int attempt;
+
+    public RetryTracker(RetryStrategy strategy) {
+        this.strategy = strategy;
+    }
 
     public void reset() {
         this.attempt = 0;

@@ -21,6 +21,9 @@ import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
 import com.hazelcast.jet.kinesis.impl.KinesisSinkPSupplier;
 import com.hazelcast.jet.pipeline.Sink;
+import com.hazelcast.jet.retry.IntervalFunction;
+import com.hazelcast.jet.retry.RetryStrategies;
+import com.hazelcast.jet.retry.RetryStrategy;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -64,6 +67,10 @@ public final class KinesisSinks {
      */
     public static final class Builder<T> {
 
+        private static final RetryStrategy DEFAULT_RETRY_STRATEGY = RetryStrategies.custom()
+                .intervalFunction(IntervalFunction.exponentialBackoffWithCap(100L, 2.0, 5_000L))
+                .build();
+
         @Nonnull
         private final String stream;
         @Nonnull
@@ -72,6 +79,8 @@ public final class KinesisSinks {
         private final FunctionEx<T, byte[]> valueFn;
         @Nonnull
         private final AwsConfig config = new AwsConfig();
+        @Nonnull
+        private RetryStrategy retryStrategy = DEFAULT_RETRY_STRATEGY;
 
         /**
          * TODO: javadoc
@@ -117,9 +126,18 @@ public final class KinesisSinks {
          * TODO: javadoc
          */
         @Nonnull
+        public Builder<T> withRetryStrategy(@Nonnull RetryStrategy retryStrategy) {
+            this.retryStrategy = retryStrategy;
+            return this;
+        }
+
+        /**
+         * TODO: javadoc
+         */
+        @Nonnull
         public Sink<T> build() {
             String name = "Kinesis Sink (" + stream + ")";
-            KinesisSinkPSupplier<T> supplier = new KinesisSinkPSupplier<>(config, stream, keyFn, valueFn);
+            KinesisSinkPSupplier<T> supplier = new KinesisSinkPSupplier<>(config, stream, keyFn, valueFn, retryStrategy);
             return new SinkImpl<>(name, ProcessorMetaSupplier.of(supplier), DISTRIBUTED_PARTITIONED, keyFn);
         }
     }

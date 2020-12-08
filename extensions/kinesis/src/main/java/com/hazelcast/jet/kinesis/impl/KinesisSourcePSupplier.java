@@ -21,6 +21,7 @@ import com.amazonaws.services.kinesis.model.Shard;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
@@ -55,6 +56,8 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
     private final EventTimePolicy<? super Map.Entry<String, byte[]>> eventTimePolicy;
     @Nonnull
     private final HashRange hashRange;
+    @Nonnull
+    private final RetryStrategy retryStrategy;
 
     private transient int memberCount;
     private transient ILogger logger;
@@ -64,12 +67,14 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
             @Nonnull AwsConfig awsConfig,
             @Nonnull String stream,
             @Nonnull EventTimePolicy<? super Map.Entry<String, byte[]>> eventTimePolicy,
-            @Nonnull HashRange hashRange
+            @Nonnull HashRange hashRange,
+            @Nonnull RetryStrategy retryStrategy
     ) {
         this.awsConfig = awsConfig;
         this.stream = stream;
         this.eventTimePolicy = eventTimePolicy;
         this.hashRange = hashRange;
+        this.retryStrategy = retryStrategy;
     }
 
     @Override
@@ -94,6 +99,7 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
                 hashRange,
                 rangePartitions,
                 shardQueues,
+                retryStrategy,
                 logger
         );
 
@@ -105,7 +111,8 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
                                 eventTimePolicy,
                                 rangePartitions[i],
                                 shardQueues[i],
-                                i == 0 ? rangeMonitor : null
+                                i == 0 ? rangeMonitor : null,
+                                retryStrategy
                         ))
                 .collect(toList());
     }

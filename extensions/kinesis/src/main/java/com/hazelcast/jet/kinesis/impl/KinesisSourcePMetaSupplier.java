@@ -20,6 +20,7 @@ import com.hazelcast.cluster.Member;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.retry.RetryStrategy;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -42,6 +43,8 @@ public class KinesisSourcePMetaSupplier implements ProcessorMetaSupplier {
     @Nonnull
     private final String stream;
     @Nonnull
+    private final RetryStrategy retryStrategy;
+    @Nonnull
     private final EventTimePolicy<? super Map.Entry<String, byte[]>> eventTimePolicy;
 
     private transient Map<Address, HashRange> assignedHashRanges;
@@ -49,10 +52,12 @@ public class KinesisSourcePMetaSupplier implements ProcessorMetaSupplier {
     public KinesisSourcePMetaSupplier(
             @Nonnull AwsConfig awsConfig,
             @Nonnull String stream,
+            @Nonnull RetryStrategy retryStrategy,
             @Nonnull EventTimePolicy<? super Map.Entry<String, byte[]>> eventTimePolicy
     ) {
         this.awsConfig = awsConfig;
         this.stream = stream;
+        this.retryStrategy = retryStrategy;
         this.eventTimePolicy = eventTimePolicy;
     }
 
@@ -69,7 +74,7 @@ public class KinesisSourcePMetaSupplier implements ProcessorMetaSupplier {
     public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
         return address -> {
             HashRange assignedRange = assignedHashRanges.get(address);
-            return new KinesisSourcePSupplier(awsConfig, stream, eventTimePolicy, assignedRange);
+            return new KinesisSourcePSupplier(awsConfig, stream, eventTimePolicy, assignedRange, retryStrategy);
         };
     }
 

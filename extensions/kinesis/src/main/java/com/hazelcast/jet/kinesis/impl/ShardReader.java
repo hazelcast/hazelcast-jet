@@ -25,8 +25,10 @@ import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
+import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.logging.ILogger;
 
+import javax.annotation.Nonnull;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -47,26 +49,37 @@ class ShardReader extends AbstractShardWorker {
     private String shardIterator;
 
     private Future<GetShardIteratorResult> shardIteratorResult;
+    private final RetryTracker getShardIteratorRetryTracker;
+    private long nextGetShardIteratorTime = System.nanoTime();
 
     private Future<GetRecordsResult> recordsResult;
-    private final RetryTracker readRecordRetryTracker = new RetryTracker();
+    private final RetryTracker readRecordRetryTracker;
     private long nextGetRecordsTime = System.nanoTime();
 
     private List<Record> data = Collections.emptyList();
     private String lastSeenSeqNo;
 
-    ShardReader(AmazonKinesisAsync kinesis, String stream, Shard shard, String lastSeenSeqNo, ILogger logger) {
+    ShardReader(
+            AmazonKinesisAsync kinesis,
+            String stream,
+            Shard shard,
+            String lastSeenSeqNo,
+            RetryStrategy retryStrategy,
+            ILogger logger
+    ) {
         super(kinesis, stream, logger);
         this.shard = shard;
         this.lastSeenSeqNo = lastSeenSeqNo;
+        this.readRecordRetryTracker = new RetryTracker(retryStrategy);
+        this.getShardIteratorRetryTracker = new RetryTracker(retryStrategy);
     }
 
     public Result probe(long currentTime) {
         switch (state) {
             case NO_SHARD_ITERATOR:
-                return handleNoShardIterator();
+                return handleNoShardIterator(currentTime);
             case WAITING_FOR_SHARD_ITERATOR:
-                return handleWaitingForShardIterator();
+                return handleWaitingForShardIterator(currentTime);
             case NEED_TO_REQUEST_RECORDS:
                 return handleNeedToRequestRecords(currentTime);
             case WAITING_FOR_RECORDS:
@@ -82,25 +95,47 @@ class ShardReader extends AbstractShardWorker {
         }
     }
 
-    private Result handleNoShardIterator() {
-        shardIteratorResult = helper.getShardIteratorAsync(shard, lastSeenSeqNo);
-        state = State.WAITING_FOR_SHARD_ITERATOR;
+    private Result handleNoShardIterator(long currentTime) {
+        if (attemptToSendGetShardIteratorRequest(currentTime)) {
+            state = State.WAITING_FOR_SHARD_ITERATOR;
+        }
         return Result.NOTHING;
     }
 
-    private Result handleWaitingForShardIterator() {
+    private boolean attemptToSendGetShardIteratorRequest(long currentTime) {
+        if (currentTime < nextGetShardIteratorTime) {
+            return false;
+        }
+        shardIteratorResult = helper.getShardIteratorAsync(shard, lastSeenSeqNo);recordsResult = helper.getRecordsAsync(shardIterator);
+        nextGetShardIteratorTime = currentTime;
+        return true;
+    }
+
+    private Result handleWaitingForShardIterator(long currentTime) {
         if (shardIteratorResult.isDone()) {
             try {
                 shardIterator = helper.readResult(shardIteratorResult).getShardIterator();
-                state = State.NEED_TO_REQUEST_RECORDS;
             } catch (SdkClientException sce) {
-                logger.warning("Failed retrieving shard iterator, retrying. Cause: " + sce.getMessage());
-                state = State.NO_SHARD_ITERATOR;
-                return Result.NOTHING;
+                return dealWithGetShardIteratorFailure(currentTime,
+                        "Failed retrieving shard iterator, retrying in %d ms.Cause: " + sce.getMessage());
             } catch (Throwable t) {
                 throw rethrow(t);
             }
+
+            getShardIteratorRetryTracker.reset();
+
+            state = State.NEED_TO_REQUEST_RECORDS;
         }
+        return Result.NOTHING;
+    }
+
+    @Nonnull
+    private Result dealWithGetShardIteratorFailure(long currentTime, String message) {
+        getShardIteratorRetryTracker.attemptFailed();
+        long timeoutMillis = getShardIteratorRetryTracker.getNextWaitTimeMillis();
+        logger.warning(String.format(message, timeoutMillis));
+        nextGetShardIteratorTime = currentTime + MILLISECONDS.toNanos(timeoutMillis);
+        state = State.NO_SHARD_ITERATOR;
         return Result.NOTHING;
     }
 
@@ -118,12 +153,13 @@ class ShardReader extends AbstractShardWorker {
             try {
                 result = helper.readResult(recordsResult);
             } catch (ProvisionedThroughputExceededException pte) {
-                return dealWithReadRecordFailure(currentTime, "Data throughput rate exceeded. Backing off and retrying.");
+                return dealWithReadRecordFailure(currentTime, "Data throughput rate exceeded. Backing off and retrying " +
+                        "in %d ms.");
             } catch (ExpiredIteratorException eie) {
-                return dealWithReadRecordFailure(currentTime, "Record iterator expired. Retrying.");
+                return dealWithReadRecordFailure(currentTime, "Record iterator expired. Retrying in %d ms.");
             } catch (SdkClientException sce) {
                 return dealWithReadRecordFailure(currentTime,
-                        "Failed reading records, retrying. Cause: " + sce.getMessage());
+                        "Failed reading records, retrying in %d. Cause: " + sce.getMessage());
             } catch (Throwable t) {
                 throw rethrow(t);
             }
@@ -151,9 +187,10 @@ class ShardReader extends AbstractShardWorker {
     }
 
     private Result dealWithReadRecordFailure(long currentTime, String message) {
-        logger.warning(message);
         readRecordRetryTracker.attemptFailed();
-        nextGetRecordsTime = currentTime + MILLISECONDS.toNanos(readRecordRetryTracker.getNextWaitTimeMillis());
+        long timeoutMillis = readRecordRetryTracker.getNextWaitTimeMillis();
+        logger.warning(String.format(message, timeoutMillis));
+        nextGetRecordsTime = currentTime + MILLISECONDS.toNanos(timeoutMillis);
         state = State.NEED_TO_REQUEST_RECORDS;
         return Result.NOTHING;
     }

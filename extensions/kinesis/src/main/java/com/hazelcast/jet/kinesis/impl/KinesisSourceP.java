@@ -23,6 +23,7 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.EventTimeMapper;
 import com.hazelcast.jet.core.EventTimePolicy;
+import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
@@ -61,6 +62,8 @@ public class KinesisSourceP extends AbstractProcessor {
     private final RangeMonitor rangeMonitor;
     @Nonnull
     private final List<ShardReader> shardReaders = new ArrayList<>();
+    @Nonnull
+    private final RetryStrategy retryStrategy;
 
     private int id;
     private ILogger logger;
@@ -76,14 +79,16 @@ public class KinesisSourceP extends AbstractProcessor {
             @Nonnull EventTimePolicy<? super Entry<String, byte[]>> eventTimePolicy,
             @Nonnull HashRange hashRange,
             @Nonnull Queue<Shard> shardQueue,
-            @Nullable RangeMonitor rangeMonitor
-    ) {
+            @Nullable RangeMonitor rangeMonitor,
+            @Nonnull RetryStrategy retryStrategy
+            ) {
         this.kinesis = Objects.requireNonNull(kinesis, "kinesis");
         this.stream = Objects.requireNonNull(stream, "stream");
         this.eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
         this.hashRange = Objects.requireNonNull(hashRange, "hashRange");
         this.shardQueue = shardQueue;
         this.rangeMonitor = rangeMonitor;
+        this.retryStrategy = retryStrategy;
     }
 
     @Override
@@ -217,7 +222,7 @@ public class KinesisSourceP extends AbstractProcessor {
     @Nonnull
     private ShardReader initShardReader(Shard shard, String lastSeenSeqNo) {
         logger.info("Shard " + shard.getShardId() + " of stream " + stream + " assigned to processor instance " + id);
-        return new ShardReader(kinesis, stream, shard, lastSeenSeqNo, logger);
+        return new ShardReader(kinesis, stream, shard, lastSeenSeqNo, retryStrategy, logger);
     }
 
     private static int incrCircular(int v, int limit) {

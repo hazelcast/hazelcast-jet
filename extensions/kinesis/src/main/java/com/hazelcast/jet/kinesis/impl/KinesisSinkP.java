@@ -26,6 +26,7 @@ import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
@@ -77,17 +78,19 @@ public class KinesisSinkP<T> implements Processor {
 
     private Future<PutRecordsResult> sendResult;
     private long nextSendTime = nanoTime();
-    private final RetryTracker sendRetryTracker = new RetryTracker();
+    private final RetryTracker sendRetryTracker;
 
     public KinesisSinkP(
             AmazonKinesisAsync kinesis,
             @Nonnull String stream,
             @Nonnull FunctionEx<T, String> keyFn,
-            @Nonnull FunctionEx<T, byte[]> valueFn
-    ) {
+            @Nonnull FunctionEx<T, byte[]> valueFn,
+            @Nonnull RetryStrategy retryStrategy
+            ) {
         this.kinesis = kinesis;
         this.stream = stream;
         this.buffer = new Buffer<>(keyFn, valueFn);
+        this.sendRetryTracker = new RetryTracker(retryStrategy);
     }
 
     @Override
@@ -98,7 +101,7 @@ public class KinesisSinkP<T> implements Processor {
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         logger = context.logger();
-        helper = new KinesisHelper(kinesis, stream, logger);
+        helper = new KinesisHelper(kinesis, stream);
     }
 
     @Override
@@ -188,10 +191,10 @@ public class KinesisSinkP<T> implements Processor {
             try {
                 result = helper.readResult(this.sendResult);
             } catch (ProvisionedThroughputExceededException pte) {
-                dealWithSendFailure("Data throughput rate exceeded. Backing off and will retry.");
+                dealWithSendFailure("Data throughput rate exceeded. Backing off and retrying in %d ms");
                 return;
             } catch (SdkClientException sce) {
-                dealWithSendFailure("Failed to send records, will retry. Cause: " + sce.getMessage());
+                dealWithSendFailure("Failed to send records, will retry in %d ms. Cause: " + sce.getMessage());
                 return;
             } catch (Throwable t) {
                 throw rethrow(t);
@@ -204,15 +207,16 @@ public class KinesisSinkP<T> implements Processor {
             pruneSentFromBuffer(result);
             if (result.getFailedRecordCount() > 0) {
                 dealWithSendFailure("Failed to send " + result.getFailedRecordCount() + " record(s) to stream '"
-                        + stream + "'. Sending will be retried, message reordering is likely.");
+                        + stream + "'. Sending will be retried in %d ms, message reordering is likely.");
             }
         }
     }
 
     private void dealWithSendFailure(@Nonnull String message) {
-        logger.warning(message);
         sendRetryTracker.attemptFailed();
-        nextSendTime = System.nanoTime() + MILLISECONDS.toNanos(sendRetryTracker.getNextWaitTimeMillis());
+        long timeoutMillis = sendRetryTracker.getNextWaitTimeMillis();
+        logger.warning(String.format(message, timeoutMillis));
+        nextSendTime = System.nanoTime() + MILLISECONDS.toNanos(timeoutMillis);
     }
 
     private void pruneSentFromBuffer(@Nullable PutRecordsResult result) {

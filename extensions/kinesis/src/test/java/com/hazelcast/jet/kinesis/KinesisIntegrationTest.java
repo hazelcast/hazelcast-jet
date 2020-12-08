@@ -85,8 +85,6 @@ import static org.junit.Assert.fail;
 @RunWith(HazelcastSerialClassRunner.class)
 public class KinesisIntegrationTest extends JetTestSupport {
 
-    //todo: tests are slow... why?
-
     @ClassRule
     public static final LocalStackContainer LOCALSTACK = new LocalStackContainer("0.12.1")
             .withServices(Service.KINESIS);
@@ -99,7 +97,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
     private static AwsConfig AWS_CONFIG;
     private static AmazonKinesisAsync KINESIS;
-    private static KinesisHelper HELPER;
+    private static KinesisTestHelper HELPER;
 
     private JetInstance[] cluster;
     private IMap<String, List<String>> results;
@@ -117,7 +115,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
                 LOCALSTACK.getSecretKey()
         );
         KINESIS = AWS_CONFIG.buildClient();
-        HELPER = new KinesisHelper(KINESIS, STREAM, Logger.getLogger(KinesisIntegrationTest.class));
+        HELPER = new KinesisTestHelper(KINESIS, STREAM, Logger.getLogger(KinesisIntegrationTest.class));
     }
 
     @AfterClass
