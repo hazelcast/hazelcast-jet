@@ -123,13 +123,13 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
                 return;
             }
 
-            handleNewPartitions(topicIndex, newPartitionCount);
+            handleNewPartitions(topicIndex, newPartitionCount, false);
         }
 
         nextMetadataCheck = System.nanoTime() + METADATA_CHECK_INTERVAL_NANOS;
     }
 
-    private void handleNewPartitions(int topicIndex, int newPartitionCount) {
+    private void handleNewPartitions(int topicIndex, int newPartitionCount, boolean isRestoring) {
         String topicName = topics.get(topicIndex);
         long[] oldTopicOffsets = offsets.get(topicName);
         if (oldTopicOffsets.length >= newPartitionCount) {
@@ -153,7 +153,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
         getLogger().info("New partition(s) handled: " + newAssignments);
         eventTimeMapper.addPartitions(newAssignments.size());
         consumer.assign(currentAssignment.keySet());
-        if (oldTopicOffsets.length > 0) {
+        if (oldTopicOffsets.length > 0 && !isRestoring) {
             // For partitions detected later during the runtime we seek to their
             // beginning. It can happen that a partition is added, and some messages
             // are added to it before we start consuming from it. If we started at the
@@ -247,7 +247,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
         }
         int topicIndex = topics.indexOf(topicPartition.topic());
         assert topicIndex >= 0;
-        handleNewPartitions(topicIndex, topicPartition.partition() + 1);
+        handleNewPartitions(topicIndex, topicPartition.partition() + 1, true);
         if (!handledByThisProcessor(topicIndex, topicPartition.partition())) {
             return;
         }
