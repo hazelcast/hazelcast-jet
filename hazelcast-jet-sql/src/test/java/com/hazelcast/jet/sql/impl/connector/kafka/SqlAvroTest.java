@@ -81,7 +81,7 @@ public class SqlAvroTest extends SqlTestSupport {
         kafkaTestSupport = new KafkaTestSupport();
         kafkaTestSupport.createKafkaCluster();
 
-        schemaRegistry = new SchemaRegistryContainer().withKafka(kafkaTestSupport.getBrokerConnectionString());
+        schemaRegistry = new SchemaRegistryContainer().withKafka(kafkaTestSupport.getBrokerPort());
         schemaRegistry.start();
     }
 
@@ -449,12 +449,12 @@ public class SqlAvroTest extends SqlTestSupport {
             port = randomPort();
         }
 
-        public SchemaRegistryContainer withKafka(String brokerConnectionString) {
+        public SchemaRegistryContainer withKafka(int brokerPort) {
             withNetworkMode("host");
             withExposedPorts(port);
             withEnv("SCHEMA_REGISTRY_HOST_NAME", getHost());
             withEnv("SCHEMA_REGISTRY_LISTENERS", "http://0.0.0.0:" + port);
-            withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", "PLAINTEXT://" + brokerConnectionString);
+            withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", "PLAINTEXT://" + getHost() + ":" + brokerPort);
             waitingFor(Wait.forHttp("/subjects").forStatusCode(200));
             return self();
         }
