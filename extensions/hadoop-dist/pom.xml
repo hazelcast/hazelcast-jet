@@ -37,6 +37,7 @@
         <module>files-azure</module>
         <module>files-gcs</module>
         <module>files-s3</module>
+        <module>hadoop</module>
         <module>hadoop-all</module>
     </modules>
 
@@ -119,7 +120,7 @@
     <dependencies>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-hadoop</artifactId>
+            <artifactId>hazelcast-jet-hadoop-core</artifactId>
             <version>4.4-SNAPSHOT</version>
         </dependency>
         <dependency>
