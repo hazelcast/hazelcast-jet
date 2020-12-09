@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.hadoop.file;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.io.JsonEOFException;
 import com.fasterxml.jackson.jr.stree.JrsNumber;
 import com.fasterxml.jackson.jr.stree.JrsObject;
 import com.fasterxml.jackson.jr.stree.JrsString;
 import com.google.common.collect.ImmutableMap;
-import com.hazelcast.com.fasterxml.jackson.core.JsonParseException;
-import com.hazelcast.com.fasterxml.jackson.core.io.JsonEOFException;
 import com.hazelcast.jet.hadoop.file.model.User;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
