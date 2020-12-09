@@ -246,7 +246,7 @@ public class StreamKafkaPTest extends SimpleTestInClusterSupport {
                 .setTotalParallelism(INITIAL_PARTITION_COUNT + 1)
                 .setGlobalProcessorIndex(INITIAL_PARTITION_COUNT));
 
-        assertTrue(processor.   currentAssignment.isEmpty());
+        assertTrue(processor.currentAssignment.isEmpty());
         assertEquals(IDLE_MESSAGE, consumeEventually(processor, outbox));
 
         kafkaTestSupport.setPartitionCount(topic1Name, INITIAL_PARTITION_COUNT + 1);

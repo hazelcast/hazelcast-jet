@@ -150,7 +150,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
         if (newAssignments.isEmpty()) {
             return;
         }
-        getLogger().info("New partition(s) handled: " + newAssignments);
+        getLogger().info("New partition(s) assigned: " + newAssignments);
         eventTimeMapper.addPartitions(newAssignments.size());
         consumer.assign(currentAssignment.keySet());
         if (oldTopicOffsets.length > 0 && !isRestoring) {
