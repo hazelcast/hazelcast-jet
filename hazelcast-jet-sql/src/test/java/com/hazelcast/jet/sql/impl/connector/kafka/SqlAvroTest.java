@@ -452,7 +452,7 @@ public class SqlAvroTest extends SqlTestSupport {
         public SchemaRegistryContainer withKafka(String brokerConnectionString) {
             withNetworkMode("host");
             withExposedPorts(port);
-            withEnv("SCHEMA_REGISTRY_HOST_NAME", "localhost");
+            withEnv("SCHEMA_REGISTRY_HOST_NAME", getHost());
             withEnv("SCHEMA_REGISTRY_LISTENERS", "http://0.0.0.0:" + port);
             withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", "PLAINTEXT://" + brokerConnectionString);
             waitingFor(Wait.forHttp("/subjects").forStatusCode(200));
@@ -471,7 +471,7 @@ public class SqlAvroTest extends SqlTestSupport {
         }
 
         private String getUrl() {
-            return "http://" + "localhost" + ":" + port;
+            return "http://" + getContainerIpAddress() + ":" + port;
         }
     }
 }

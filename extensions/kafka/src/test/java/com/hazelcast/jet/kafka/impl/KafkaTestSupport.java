@@ -44,6 +44,8 @@ import scala.Option;
 import scala.collection.Seq;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.util.Arrays;
@@ -56,6 +58,7 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.test.HazelcastTestSupport.randomString;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singleton;
@@ -71,7 +74,7 @@ import static scala.collection.JavaConversions.mapAsScalaMap;
 public class KafkaTestSupport {
 
     private static final String ZK_HOST = "127.0.0.1";
-    private static final String BROKER_HOST = "127.0.0.1";
+    private static final String BROKER_HOST;
     private static final int SESSION_TIMEOUT = 30_000;
     private static final int CONNECTION_TIMEOUT = 30_000;
 
@@ -82,6 +85,14 @@ public class KafkaTestSupport {
     private KafkaProducer<Integer, String> producer;
     private int brokerPort = -1;
     private String brokerConnectionString;
+
+    static {
+        try {
+            BROKER_HOST = InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            throw sneakyThrow(e);
+        }
+    }
 
     public void createKafkaCluster() throws IOException {
         System.setProperty("zookeeper.preAllocSize", Integer.toString(128));
