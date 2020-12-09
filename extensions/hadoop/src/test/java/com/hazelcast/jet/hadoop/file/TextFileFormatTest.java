@@ -35,10 +35,7 @@ public class TextFileFormatTest extends BaseFileFormatTest {
                                                       .glob("file.txt")
                                                       .format(FileFormat.text());
 
-        assertItemsInSource(source,
-                "Text contents of" + System.lineSeparator() +
-                        "the file." + System.lineSeparator()
-        );
+        assertItemsInSource(source, "Text contents of\nthe file.\n");
     }
 
     @Test

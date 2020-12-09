@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.hadoop.file;
 
-import com.hazelcast.com.fasterxml.jackson.core.JsonParseException;
-import com.hazelcast.com.fasterxml.jackson.core.io.JsonEOFException;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.io.JsonEOFException;
 import com.hazelcast.jet.hadoop.file.model.User;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
@@ -103,6 +103,6 @@ public class JsonFileFormatTest extends BaseFileFormatTest {
                                                     .glob("file-invalid.jsonl")
                                                     .format(FileFormat.json(User.class));
 
-        assertJobFailed(source, JsonEOFException.class, "Unexpected end-of-input");
+        assertJobFailed(source, JsonEOFException.class, "Unexpected end of input");
     }
 }
