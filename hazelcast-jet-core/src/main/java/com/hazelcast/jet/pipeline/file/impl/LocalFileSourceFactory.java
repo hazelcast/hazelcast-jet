@@ -43,7 +43,6 @@ import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
