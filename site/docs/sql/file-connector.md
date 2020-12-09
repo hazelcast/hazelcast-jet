@@ -34,8 +34,8 @@ The default value is '*', matching all files.
 ## Serialization options
 
 `format` defines the serialization used to read the files. We assume all
-records in files to be of the same format. These are the supported
-`format` values:
+records in files have the same format. These are the supported `format`
+values:
 
 * `csv`
 * `jsonl`
@@ -48,12 +48,12 @@ some cases you can use a different type if you specify the columns
 explicitly. For example, the CSV format uses `VARCHAR` for all fields -
 if you specify `DATE` manually, the behavior would be as if `CAST(column
 AS DATE)` was used, using the same rules for conversion from `VARCHAR`
-to `DATE`.
+to `DATE` as `CAST` uses.
 
 Also if you don't specify the columns, the directory needs to be
 available at the time you execute the `CREATE MAPPING` and it must not
 be empty. In case of local files, every cluster member must have some
-file, otherwise an empty directory is OK.
+file. If you specify the columns, an empty directory is OK.
 
 See the examples for individual serialization options below.
 
@@ -99,9 +99,7 @@ OPTIONS (
 
 ### Avro & Parquet Serialization
 
-The `avro` & `parquet` files are expected to contain Avro records. If
-you skip mapping columns from the declaration we infer names and types
-based on a sample.
+The `avro` & `parquet` files are expected to contain Avro records.
 
 ```sql
 CREATE MAPPING my_files
