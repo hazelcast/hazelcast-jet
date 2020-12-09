@@ -20,10 +20,13 @@ import com.fasterxml.jackson.jr.stree.JrsNumber;
 import com.fasterxml.jackson.jr.stree.JrsObject;
 import com.fasterxml.jackson.jr.stree.JrsString;
 import com.google.common.collect.ImmutableMap;
+import com.hazelcast.com.fasterxml.jackson.core.JsonParseException;
+import com.hazelcast.com.fasterxml.jackson.core.io.JsonEOFException;
 import com.hazelcast.jet.hadoop.file.model.User;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.file.FileSources;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,5 +64,70 @@ public class JsonFileFormatTest extends BaseFileFormatTest {
                 new User("Frantisek", 7),
                 new User("Ali", 42)
         );
+    }
+
+    @Test
+    @Ignore("It's an issue, remove this @Ignore once it will be fixed")
+    public void shouldReadPrettyPrintedJsonFile() throws Exception {
+        FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
+                                                    .glob("pretty-printed-file-*.json")
+                                                    .format(FileFormat.json(User.class));
+
+        assertItemsInSource(source,
+                new User("Frantisek", 7),
+                new User("Ali", 42)
+        );
+    }
+
+    @Test
+    public void shouldReadJsonLinesFileWithMoreAttributesThanTargetClass() {
+        FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
+                                                    .glob("file-more-attributes.jsonl")
+                                                    .format(FileFormat.json(User.class));
+
+        assertItemsInSource(source,
+                new User("Frantisek", 7),
+                new User("Ali", 42)
+        );
+    }
+
+    @Test
+    public void shouldReadJsonLinesFileWithLessColumnsThanTargetClass() {
+        FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
+                                                    .glob("file-less-attributes.jsonl")
+                                                    .format(FileFormat.json(User.class));
+
+        assertItemsInSource(source,
+                new User("Frantisek", 0),
+                new User("Ali", 0)
+        );
+    }
+
+    @Test
+    public void shouldReadEmptyJsonFile() {
+
+        FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
+                                                    .glob("file-empty.json")
+                                                    .format(FileFormat.json(User.class));
+
+        assertItemsInSource(source, items -> assertThat(items).isEmpty());
+    }
+
+    @Test
+    public void shouldThrowWhenInvalidFileType() {
+        FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
+                                                    .glob("invalid-data.png")
+                                                    .format(FileFormat.json(User.class));
+
+        assertJobFailed(source, JsonParseException.class, "Unexpected character");
+    }
+
+    @Test
+    public void shouldThrowWhenWrongFormatting() {
+        FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
+                                                    .glob("file-invalid.jsonl")
+                                                    .format(FileFormat.json(User.class));
+
+        assertJobFailed(source, JsonEOFException.class, "Unexpected end-of-input");
     }
 }
