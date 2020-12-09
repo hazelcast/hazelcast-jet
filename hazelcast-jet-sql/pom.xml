@@ -342,6 +342,73 @@
                 </executions>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <createSourcesJar>true</createSourcesJar>
+                    <shadeSourcesContent>true</shadeSourcesContent>
+                    <createDependencyReducedPom>true</createDependencyReducedPom>
+                    <shadedArtifactAttached>true</shadedArtifactAttached>
+                    <shadedClassifierName>jar-with-dependencies</shadedClassifierName>
+                    <!--
+                    We actually don't shade these in here in Hadoop module, they are already part of core
+                    But we need to relocate the usage in the Hadoop module
+                    -->
+                    <relocations>
+                        <relocation>
+                            <pattern>com.fasterxml.jackson.jr</pattern>
+                            <shadedPattern>com.hazelcast.com.fasterxml.jackson.jr</shadedPattern>
+                        </relocation>
+                    </relocations>
+                    <transformers>
+                        <transformer
+                            implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+                        <transformer
+                            implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer"/>
+                        <transformer
+                            implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                    </transformers>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <!-- Exclude signatures -->
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                                <exclude>META-INF/MANIFEST.MF</exclude>
+                            </excludes>
+                        </filter>
+                        <filter>
+                            <artifact>org.apache.calcite:*</artifact>
+                            <excludes>
+                                <!-- Avoid automatic discovery of Calcite JDBC. -->
+                                <exclude>META-INF/services/java.sql.Driver</exclude>
+                                <exclude>codegen/**</exclude>
+                                <exclude>**/package-info.java</exclude>
+                            </excludes>
+                        </filter>
+                        <filter>
+                            <artifact>org.apache.calcite.avatica:*</artifact>
+                            <excludes>
+                                <!-- Avoid automatic discovery of Avatica JDBC. -->
+                                <exclude>META-INF/services/java.sql.Driver</exclude>
+                                <!-- Exclude Avatica ProtoBuf definitions, since Avatica is not used. -->
+                                <exclude>*.proto</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
+            </plugin>
+            <!--<plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>${maven.assembly.plugin.version}</version>
                 <executions>
@@ -377,7 +444,7 @@
                         </manifestEntries>
                     </archive>
                 </configuration>
-            </plugin>
+            </plugin>-->
         </plugins>
     </build>
 

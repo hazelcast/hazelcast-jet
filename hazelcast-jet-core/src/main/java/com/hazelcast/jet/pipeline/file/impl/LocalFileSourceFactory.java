@@ -118,10 +118,9 @@ public class LocalFileSourceFactory implements FileSourceFactory {
             };
         }
 
-        @SuppressWarnings("unchecked")
         private static <T> FunctionEx<? super String, T> mapper(Class<T> clazz) {
             return clazz == null
-                    ? line -> JsonUtil.treeFrom(line)
+                    ? JsonUtil::treeFrom
                     : line -> JsonUtil.beanFrom(line, clazz);
         }
 

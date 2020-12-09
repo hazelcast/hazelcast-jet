@@ -85,7 +85,7 @@ public class JsonInputFormat extends FileInputFormat<LongWritable, Object> {
 
     private static FunctionEx<? super String, Object> mapper(Class<?> clazz) {
         return clazz == null
-                ? line -> JsonUtil.treeFrom(line)
+                ? JsonUtil::treeFrom
                 : line -> JsonUtil.beanFrom(line, clazz);
     }
 
