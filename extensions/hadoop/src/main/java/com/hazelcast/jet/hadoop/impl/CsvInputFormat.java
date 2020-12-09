@@ -102,7 +102,6 @@ public class CsvInputFormat extends FileInputFormat<NullWritable, Object> {
         if (clazz == null) {
             return new CsvMapper().enable(Feature.WRAP_AS_ARRAY)
                                   .readerFor(String[].class)
-                                  .withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                                   .with(CsvSchema.emptySchema().withSkipFirstDataRow(includesHeader));
         } else {
             assert includesHeader;

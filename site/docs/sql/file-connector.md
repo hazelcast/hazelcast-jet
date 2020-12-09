@@ -31,7 +31,16 @@ above is considered local (i.e. files residing on Jet members), e.g.
 `glob` is a pattern to filter the files in the specified directory.
 The default value is '*', matching all files.
 
-## Using a Sample to List Columns
+## Serialization options
+
+`format` defines the serialization used to read the files. We assume all
+records in files to be of the same format. These are the supported
+`format` values:
+
+* `csv`
+* `jsonl`
+* `avro`
+* `parquet`: remote files only
 
 If you omit a file list from the `CREATE MAPPING` command, Jet will read
 a sample file and try to determine column names and types from it. In
@@ -45,22 +54,6 @@ Also if you don't specify the columns, the directory needs to be
 available at the time you execute the `CREATE MAPPING` and it must not
 be empty. In case of local files, every cluster member must have some
 file, otherwise an empty directory is OK.
-
-## Serialization options
-
-`format` defines the serialization used to read the files. We assume all
-records in files to be of the same format. These are the supported
-`format` values:
-
-* `csv`
-* `jsonl`
-* `avro`
-* `parquet`: remote files only
-
-For each serialization format you can skip the mapping columns. When
-you do so, we sample one of the files and infer columns from there.
-In case of local files, it's important to have some data on each
-member, otherwise the query might fail.
 
 See the examples for individual serialization options below.
 

@@ -18,7 +18,7 @@ package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.sql.impl.connector.Processors;
+import com.hazelcast.jet.sql.impl.connector.SqlProcessors;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -128,7 +128,7 @@ public class FileSqlConnector implements SqlConnector {
 
         Vertex vEnd = dag.newVertex(
                 "Project(" + table.toString() + ")",
-                Processors.rowProjector(
+                SqlProcessors.rowProjector(
                         table.paths(),
                         table.types(),
                         table.queryTargetSupplier(),
