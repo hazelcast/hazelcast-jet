@@ -229,52 +229,6 @@ public class SqlAvroTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_castTypes() {
-        String name = randomName();
-        sqlService.execute("CREATE MAPPING " + name + " ("
-                + "string VARCHAR"
-                + ", \"boolean\" BOOLEAN"
-                + ", byte TINYINT"
-                + ", short SMALLINT"
-                + ", \"int\" INT"
-                + ", long BIGINT"
-                + ", \"float\" REAL"
-                + ", \"double\" DOUBLE"
-                + ", \"decimal\" DECIMAL"
-                + ", \"time\" TIME"
-                + ", \"date\" DATE"
-                + ", \"timestamp\" TIMESTAMP"
-                + ", \"timestampTz\" TIMESTAMP WITH TIME ZONE"
-                + ") "
-                + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
-                + "OPTIONS ( "
-                + '\'' + OPTION_FORMAT + "'='" + AVRO_FORMAT + '\''
-                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
-                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.avro" + '\''
-                + ")"
-        );
-
-        assertRowsAnyOrder(
-                "SELECT * FROM " + name,
-                singletonList(new Row(
-                        "string",
-                        true,
-                        (byte) 127,
-                        (short) 32767,
-                        2147483647,
-                        9223372036854775807L,
-                        1234567890.1f,
-                        123451234567890.1,
-                        new BigDecimal("9223372036854775.123"),
-                        LocalTime.parse("12:23:34"),
-                        LocalDate.parse("2020-04-15"),
-                        LocalDateTime.parse("2020-04-15T12:23:34.001"),
-                        OffsetDateTime.parse("2020-04-15T12:23:34.200Z")
-                ))
-        );
-    }
-
-    @Test
     public void when_conversionFails_then_queryFails() {
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " (string INT) "
