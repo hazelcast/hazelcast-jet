@@ -69,7 +69,9 @@ public class SqlHadoopTest extends SqlTestSupport {
 
     @AfterClass
     public static void afterClass() {
-        cluster.shutdown();
+        if (cluster != null) {
+            cluster.shutdown();
+        }
     }
 
     @Test

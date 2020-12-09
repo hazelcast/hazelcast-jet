@@ -41,7 +41,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ServiceLoader;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
@@ -121,10 +120,10 @@ public class LocalFileSourceFactory implements FileSourceFactory {
         }
 
         @SuppressWarnings("unchecked")
-        private static <T> Function<? super String, T> mapper(Class<T> clazz) {
+        private static <T> FunctionEx<? super String, T> mapper(Class<T> clazz) {
             return clazz == null
-                    ? line -> uncheckCall(() -> JsonUtil.treeFrom(line))
-                    : line -> uncheckCall(() -> JsonUtil.beanFrom(line, clazz));
+                    ? line -> JsonUtil.treeFrom(line)
+                    : line -> JsonUtil.beanFrom(line, clazz);
         }
 
         @Nonnull @Override

@@ -73,7 +73,7 @@ public class CsvFileFormat<T> implements FileFormat<T> {
     }
 
     /**
-     * Returns whether source includes header.
+     * Returns whether the source includes header.
      */
     public boolean includesHeader() {
         return includesHeader;

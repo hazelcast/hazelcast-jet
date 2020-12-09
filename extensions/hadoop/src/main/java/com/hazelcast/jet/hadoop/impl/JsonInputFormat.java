@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.hadoop.impl;
 
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.jet.json.JsonUtil;
 import org.apache.hadoop.conf.Configuration;
@@ -33,8 +34,6 @@ import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
 
 import java.io.IOException;
 import java.util.function.Function;
-
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
 public class JsonInputFormat extends FileInputFormat<LongWritable, Object> {
 
@@ -84,10 +83,10 @@ public class JsonInputFormat extends FileInputFormat<LongWritable, Object> {
         };
     }
 
-    private static Function<? super String, Object> mapper(Class<?> clazz) {
+    private static FunctionEx<? super String, Object> mapper(Class<?> clazz) {
         return clazz == null
-                ? line -> uncheckCall(() -> JsonUtil.treeFrom(line))
-                : line -> uncheckCall(() -> JsonUtil.beanFrom(line, clazz));
+                ? line -> JsonUtil.treeFrom(line)
+                : line -> JsonUtil.beanFrom(line, clazz);
     }
 
     @Override
