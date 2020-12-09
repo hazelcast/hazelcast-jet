@@ -30,6 +30,7 @@ import org.junit.Test;
 
 import java.util.BitSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.core.JobStatus.FAILED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
@@ -104,9 +105,11 @@ public class SqlClientTest extends SqlTestSupport {
         logger.info("before select");
         SqlResult res = sqlService.execute("SELECT * FROM t");
         logger.info("after execute returned");
-        List<Job> allJobs = client.getJobs();
-        assertEquals(1, allJobs.size());
-        Job job = allJobs.get(0);
+        List<Job> allRunningJobs = client.getJobs().stream()
+                                         .filter(job -> job.getStatus() == RUNNING)
+                                         .collect(Collectors.toList());
+        assertEquals(1, allRunningJobs.size());
+        Job job = allRunningJobs.get(0);
         assertEquals(RUNNING, job.getStatus());
         logger.info("Job is running.");
         res.close();
