@@ -68,7 +68,7 @@ public class JsonFileFormatTest extends BaseFileFormatTest {
 
     @Test
     @Ignore("It's an issue, remove this @Ignore once it will be fixed")
-    public void shouldReadPrettyPrintedJsonFile() throws Exception {
+    public void shouldReadPrettyPrintedJsonFile() {
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
                                                     .glob("pretty-printed-file-*.json")
                                                     .format(FileFormat.json(User.class));
