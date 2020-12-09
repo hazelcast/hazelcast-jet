@@ -47,7 +47,11 @@ import static org.junit.Assert.assertEquals;
 public class OrderedBatchParallelismTest {
 
     private static final int DEFAULT_PARALLELISM = 8;
-    private static final int LOCAL_PARALLELISM = 11;
+
+    // Used to set the LP of the stage with the higher value than upstream parallelism
+    private static final int HIGH_LOCAL_PARALLELISM = 11;
+    // Used to set the LP of the stage with the smaller value than upstream parallelism
+    private static final int LOW_LOCAL_PARALLELISM = 5;
     private static final int UPSTREAM_PARALLELISM = 6;
     private static final Context PIPELINE_CTX = new Context() {
         @Override public int defaultLocalParallelism() {
@@ -73,7 +77,7 @@ public class OrderedBatchParallelismTest {
                 createParamSet(
                         stage -> stage
                                 .map(x -> x)
-                                .setLocalParallelism(LOCAL_PARALLELISM),
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM),
                         Collections.singletonList("map"),
                         Collections.singletonList(UPSTREAM_PARALLELISM),
                         "map"
@@ -81,7 +85,7 @@ public class OrderedBatchParallelismTest {
                 createParamSet(
                         stage -> stage
                                 .flatMap(x -> Traversers.singleton(1L))
-                                .setLocalParallelism(LOCAL_PARALLELISM),
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM),
                         Collections.singletonList("flat-map"),
                         Collections.singletonList(UPSTREAM_PARALLELISM),
                         "flat-map"
@@ -89,7 +93,7 @@ public class OrderedBatchParallelismTest {
                 createParamSet(
                         stage -> stage
                                 .mapUsingIMap("test-map", wholeItem(), (x, ignored) -> x)
-                                .setLocalParallelism(LOCAL_PARALLELISM),
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM),
                         Collections.singletonList("mapUsingIMap"),
                         Collections.singletonList(UPSTREAM_PARALLELISM),
                         "map-using-imap"
@@ -97,7 +101,7 @@ public class OrderedBatchParallelismTest {
                 createParamSet(
                         stage -> stage
                                 .mapUsingReplicatedMap("test-map", wholeItem(), (x, ignored) -> x)
-                                .setLocalParallelism(LOCAL_PARALLELISM),
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM),
                         Collections.singletonList("mapUsingReplicatedMap"),
                         Collections.singletonList(UPSTREAM_PARALLELISM),
                         "map-using-replicated-map"
@@ -105,7 +109,7 @@ public class OrderedBatchParallelismTest {
                 createParamSet(
                         stage -> stage
                                 .filter(x -> x % 2 == 0)
-                                .setLocalParallelism(LOCAL_PARALLELISM),
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM),
                         Collections.singletonList("filter"),
                         Collections.singletonList(UPSTREAM_PARALLELISM),
                         "filter"
@@ -113,7 +117,7 @@ public class OrderedBatchParallelismTest {
                 createParamSet(
                         stage -> stage
                                 .sort()
-                                .setLocalParallelism(LOCAL_PARALLELISM),
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM),
                         Arrays.asList("sort", "sort-collect"),
                         Arrays.asList(UPSTREAM_PARALLELISM, 1),
                         "sort"
@@ -121,7 +125,7 @@ public class OrderedBatchParallelismTest {
                 createParamSet(
                         stage -> stage
                                 .mapStateful(LongAccumulator::new, (s, x) -> x)
-                                .setLocalParallelism(LOCAL_PARALLELISM),
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM),
                         Collections.singletonList("map-stateful-global"),
                         Collections.singletonList(1),
                         "map-stateful-global"
@@ -129,15 +133,15 @@ public class OrderedBatchParallelismTest {
                 createParamSet(
                         stage -> stage
                                 .distinct()
-                                .setLocalParallelism(LOCAL_PARALLELISM),
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM),
                         Arrays.asList("distinct-prepare", "distinct"),
-                        Arrays.asList(LOCAL_PARALLELISM, LOCAL_PARALLELISM),
+                        Arrays.asList(HIGH_LOCAL_PARALLELISM, HIGH_LOCAL_PARALLELISM),
                         "distinct"
                 ),
                 createParamSet(
                         stage -> stage
                                 .aggregate(counting())
-                                .setLocalParallelism(LOCAL_PARALLELISM),
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM),
                         Arrays.asList("aggregate-prepare", "aggregate"),
                         Arrays.asList(UPSTREAM_PARALLELISM, 1),
                         "two-stage-aggregation"
@@ -146,7 +150,7 @@ public class OrderedBatchParallelismTest {
                         stage -> stage
                                 .<Long>customTransform("custom-transform",
                                         Processors.mapP(FunctionEx.identity()))
-                                .setLocalParallelism(LOCAL_PARALLELISM),
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM),
                         Collections.singletonList("custom-transform"),
                         Collections.singletonList(UPSTREAM_PARALLELISM),
                         "custom-transform"
@@ -154,14 +158,38 @@ public class OrderedBatchParallelismTest {
                 createParamSet(
                         stage -> stage
                                 .map(x -> x)
-                                .setLocalParallelism(LOCAL_PARALLELISM)
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM)
                                 .aggregate(counting())
-                                .setLocalParallelism(LOCAL_PARALLELISM)
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM)
                                 .flatMap(x -> Traversers.<Long>traverseItems())
-                                .setLocalParallelism(LOCAL_PARALLELISM),
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM),
                         Arrays.asList("map", "aggregate-prepare", "aggregate", "flat-map"),
                         Arrays.asList(UPSTREAM_PARALLELISM, UPSTREAM_PARALLELISM, 1, 1),
                         "map+aggregate+flat-map"
+                ),
+                createParamSet(
+                        stage -> stage
+                                .map(x -> x)
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM)
+                                .filter(x -> x % 2 == 0)
+                                .setLocalParallelism(LOW_LOCAL_PARALLELISM)
+                                .flatMap(x -> Traversers.<Long>traverseItems())
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM),
+                        Arrays.asList("map", "filter", "flat-map"),
+                        Arrays.asList(UPSTREAM_PARALLELISM, LOW_LOCAL_PARALLELISM, LOW_LOCAL_PARALLELISM),
+                        "map+filter+flat-map"
+                ),
+                createParamSet(
+                        stage -> stage
+                                .map(x -> x)
+                                .setLocalParallelism(LOW_LOCAL_PARALLELISM)
+                                .filter(x -> x % 2 == 0)
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM)
+                                .flatMap(x -> Traversers.<Long>traverseItems())
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM),
+                        Arrays.asList("map", "fused(filter, flat-map)"),
+                        Arrays.asList(LOW_LOCAL_PARALLELISM, LOW_LOCAL_PARALLELISM),
+                        "map+filter+flat-map-2"
                 )
         );
     }
