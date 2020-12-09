@@ -28,6 +28,7 @@ import javax.annotation.Nonnull;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
@@ -217,11 +218,16 @@ public class FileSourceBuilder<T> {
         if (shouldUseHadoop()) {
             ServiceLoader<FileSourceFactory> loader = ServiceLoader.load(FileSourceFactory.class);
             // Only one implementation is expected to be present on classpath
-            for (FileSourceFactory fileSourceFactory : loader) {
-                return fileSourceFactory.create(fsc);
+            Iterator<FileSourceFactory> iterator = loader.iterator();
+            if (!iterator.hasNext()) {
+                throw new JetException("No suitable FileSourceFactory found. " +
+                                       "Do you have Jet's Hadoop module on classpath?");
             }
-            throw new JetException("No suitable FileSourceFactory found. " +
-                    "Do you have Jet's Hadoop module on classpath?");
+            FileSourceFactory fileSourceFactory = iterator.next();
+            if (iterator.hasNext()) {
+                throw new JetException("Multiple FileSourceFactory implementations found");
+            }
+            return fileSourceFactory.create(fsc);
         }
         return new LocalFileSourceFactory().create(fsc);
     }
