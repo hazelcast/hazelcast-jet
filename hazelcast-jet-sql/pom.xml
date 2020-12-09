@@ -149,7 +149,7 @@
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-hadoop</artifactId>
+            <artifactId>hazelcast-jet-hadoop-core</artifactId>
             <version>${project.parent.version}</version>
             <scope>test</scope>
         </dependency>
