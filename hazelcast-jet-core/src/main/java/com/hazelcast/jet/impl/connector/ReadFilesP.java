@@ -23,10 +23,10 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.jet.impl.util.DisabledLogger;
 import com.hazelcast.jet.pipeline.file.impl.FileProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.file.impl.FileTraverser;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -134,6 +134,8 @@ public final class ReadFilesP<T> extends AbstractProcessor {
 
     private static final class MetaSupplier<T> implements FileProcessorMetaSupplier<T> {
 
+        private static final ILogger LOGGER = Logger.getLogger(MetaSupplier.class);
+
         private final int localParallelism;
         private final String directory;
         private final String glob;
@@ -167,7 +169,7 @@ public final class ReadFilesP<T> extends AbstractProcessor {
 
         @Override
         public FileTraverser<T> traverser() {
-            return new LocalFileTraverser<>(DisabledLogger.INSTANCE, directory, glob, path -> true, readFileFn);
+            return new LocalFileTraverser<>(LOGGER, directory, glob, path -> true, readFileFn);
         }
     }
 
