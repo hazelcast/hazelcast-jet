@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.connector.kafka;
 
-import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.google.common.collect.ImmutableMap;
 import com.hazelcast.internal.nio.Bits;
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
@@ -24,6 +23,8 @@ import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
 import com.hazelcast.sql.HazelcastSqlException;
 import com.hazelcast.sql.SqlService;
+import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
+import io.confluent.kafka.schemaregistry.rest.SchemaRegistryRestApplication;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import org.apache.avro.Schema;
@@ -34,18 +35,15 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
+import org.eclipse.jetty.server.Server;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.Network;
-import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.images.builder.Transferable;
-import org.testcontainers.utility.DockerImageName;
 
+import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
+import java.net.ServerSocket;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -54,8 +52,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.Properties;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
@@ -71,10 +68,10 @@ import static org.junit.Assert.assertEquals;
 
 public class SqlAvroTest extends SqlTestSupport {
 
-    private static Network network;
-    private static ZookeeperContainer zookeeper;
-    private static KafkaContainer kafka;
-    private static SchemaRegistryContainer schemaRegistry;
+    private static final int INITIAL_PARTITION_COUNT = 4;
+
+    private static KafkaTestSupport kafkaTestSupport;
+    private static Server schemaRegistry;
 
     private static SqlService sqlService;
 
@@ -83,24 +80,22 @@ public class SqlAvroTest extends SqlTestSupport {
         initialize(1, null);
         sqlService = instance().getSql();
 
-        network = Network.newNetwork();
+        kafkaTestSupport = new KafkaTestSupport();
+        kafkaTestSupport.createKafkaCluster();
 
-        zookeeper = new ZookeeperContainer(network);
-        zookeeper.start();
-
-        kafka = new KafkaContainer(network, zookeeper.internalUrl());
-        kafka.start();
-
-        schemaRegistry = new SchemaRegistryContainer(network, zookeeper.internalUrl());
+        Properties properties = new Properties();
+        properties.put("listeners", "http://0.0.0.0:" + randomPort());
+        properties.put("kafkastore.connection.url", kafkaTestSupport.getZookeeperConnectionString());
+        SchemaRegistryConfig config = new SchemaRegistryConfig(properties);
+        SchemaRegistryRestApplication schemaRegistryApplication = new SchemaRegistryRestApplication(config);
+        schemaRegistry = schemaRegistryApplication.createServer();
         schemaRegistry.start();
     }
 
     @AfterClass
-    public static void tearDownClass() {
+    public static void tearDownClass() throws Exception {
         schemaRegistry.stop();
-        kafka.stop();
-        zookeeper.stop();
-        network.close();
+        kafkaTestSupport.shutdownKafkaCluster();
     }
 
     @Test
@@ -113,8 +108,8 @@ public class SqlAvroTest extends SqlTestSupport {
                 + "OPTIONS ( "
                 + '\'' + OPTION_KEY_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", '" + OPTION_VALUE_FORMAT + "'='" + AVRO_FORMAT + '\''
-                + ", 'bootstrap.servers'='" + kafka.getBootstrapServers() + '\''
-                + ", 'schema.registry.url'='" + schemaRegistry.url() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'schema.registry.url'='" + schemaRegistry.getURI() + '\''
                 + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
@@ -143,8 +138,8 @@ public class SqlAvroTest extends SqlTestSupport {
                 + "OPTIONS ( "
                 + '\'' + OPTION_KEY_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", '" + OPTION_VALUE_FORMAT + "'='" + AVRO_FORMAT + '\''
-                + ", 'bootstrap.servers'='" + kafka.getBootstrapServers() + '\''
-                + ", 'schema.registry.url'='" + schemaRegistry.url() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'schema.registry.url'='" + schemaRegistry.getURI() + '\''
                 + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
@@ -173,8 +168,8 @@ public class SqlAvroTest extends SqlTestSupport {
                 + "OPTIONS ( "
                 + '\'' + OPTION_KEY_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", '" + OPTION_VALUE_FORMAT + "'='" + AVRO_FORMAT + '\''
-                + ", 'bootstrap.servers'='" + kafka.getBootstrapServers() + '\''
-                + ", 'schema.registry.url'='" + schemaRegistry.url() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'schema.registry.url'='" + schemaRegistry.getURI() + '\''
                 + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
@@ -191,8 +186,8 @@ public class SqlAvroTest extends SqlTestSupport {
                 + "OPTIONS ( "
                 + '\'' + OPTION_KEY_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", '" + OPTION_VALUE_FORMAT + "'='" + AVRO_FORMAT + '\''
-                + ", 'bootstrap.servers'='" + kafka.getBootstrapServers() + '\''
-                + ", 'schema.registry.url'='" + schemaRegistry.url() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'schema.registry.url'='" + schemaRegistry.getURI() + '\''
                 + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
@@ -236,8 +231,8 @@ public class SqlAvroTest extends SqlTestSupport {
                 + "OPTIONS ( "
                 + '\'' + OPTION_KEY_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", '" + OPTION_VALUE_FORMAT + "'='" + AVRO_FORMAT + '\''
-                + ", 'bootstrap.servers'='" + kafka.getBootstrapServers() + '\''
-                + ", 'schema.registry.url'='" + schemaRegistry.url() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'schema.registry.url'='" + schemaRegistry.getURI() + '\''
                 + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
@@ -297,21 +292,17 @@ public class SqlAvroTest extends SqlTestSupport {
                 + "'keyFormat'='java'"
                 + ", 'keyJavaClass'='java.lang.Integer'"
                 + ", 'valueFormat'='avro'"
-                + ", 'bootstrap.servers'='" + kafka.getBootstrapServers() + '\''
-                + ", 'schema.registry.url'='" + schemaRegistry.url() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'schema.registry.url'='" + schemaRegistry.getURI() + '\''
                 + ", 'auto.offset.reset'='earliest')"
         );
 
         sqlService.execute("INSERT INTO " + topicName + " VALUES(42, 'foo')");
         sqlService.execute("INSERT INTO " + topicName + " VALUES(43, 'bar')");
 
-        try (KafkaConsumer<Integer, byte[]> consumer = KafkaTestSupport.createConsumer(
-                kafka.getBootstrapServers(),
-                IntegerDeserializer.class,
-                ByteArrayDeserializer.class,
-                emptyMap(),
-                topicName
-        )) {
+        try (KafkaConsumer<Integer, byte[]> consumer = kafkaTestSupport.createConsumer(
+                IntegerDeserializer.class, ByteArrayDeserializer.class, emptyMap(), topicName)
+        ) {
             long timeLimit = System.nanoTime() + SECONDS.toNanos(10);
             List<Integer> schemaIds = new ArrayList<>();
             while (schemaIds.size() < 2) {
@@ -372,8 +363,8 @@ public class SqlAvroTest extends SqlTestSupport {
                 + "OPTIONS ( "
                 + '\'' + OPTION_KEY_FORMAT + "'='" + AVRO_FORMAT + '\''
                 + ", '" + OPTION_VALUE_FORMAT + "'='" + AVRO_FORMAT + '\''
-                + ", 'bootstrap.servers'='" + kafka.getBootstrapServers() + '\''
-                + ", 'schema.registry.url'='" + schemaRegistry.url() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'schema.registry.url'='" + schemaRegistry.getURI() + '\''
                 + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
@@ -402,8 +393,8 @@ public class SqlAvroTest extends SqlTestSupport {
                 + ", 'key.deserializer'='" + KafkaAvroDeserializer.class.getCanonicalName() + '\''
                 + ", 'value.serializer'='" + KafkaAvroSerializer.class.getCanonicalName() + '\''
                 + ", 'value.deserializer'='" + KafkaAvroDeserializer.class.getCanonicalName() + '\''
-                + ", 'bootstrap.servers'='" + kafka.getBootstrapServers() + '\''
-                + ", 'schema.registry.url'='" + schemaRegistry.url() + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'schema.registry.url'='" + schemaRegistry.getURI() + '\''
                 + ", 'auto.offset.reset'='earliest'"
                 + ")"
         );
@@ -423,19 +414,20 @@ public class SqlAvroTest extends SqlTestSupport {
     }
 
     private static String createRandomTopic() {
-        return "t_" + randomString().replace('-', '_');
+        String topicName = "t_" + randomString().replace('-', '_');
+        kafkaTestSupport.createTopic(topicName, INITIAL_PARTITION_COUNT);
+        return topicName;
     }
 
-    private void assertTopicEventually(String name, String sql, Map<Object, Object> expected) {
+    private static void assertTopicEventually(String name, String sql, Map<Object, Object> expected) {
         sqlService.execute(sql);
 
-        KafkaTestSupport.assertTopicContentsEventually(
-                kafka.getBootstrapServers(),
+        kafkaTestSupport.assertTopicContentsEventually(
                 name,
                 expected,
                 KafkaAvroDeserializer.class,
                 KafkaAvroDeserializer.class,
-                ImmutableMap.of("schema.registry.url", schemaRegistry.url())
+                ImmutableMap.of("schema.registry.url", schemaRegistry.getURI().toString())
         );
     }
 
@@ -453,124 +445,9 @@ public class SqlAvroTest extends SqlTestSupport {
                             .endRecord();
     }
 
-    private static final class ZookeeperContainer extends GenericContainer<ZookeeperContainer> {
-
-        private static final int ZOOKEEPER_INTERNAL_PORT = 2181;
-        private static final int ZOOKEEPER_TICK_TIME = 2000;
-        private static final String NETWORK_ALIAS = "zookeeper";
-
-        private ZookeeperContainer(Network network) {
-            super(DockerImageName.parse(("confluentinc/cp-zookeeper:4.1.4")));
-
-            withEnv("ZOOKEEPER_CLIENT_PORT", Integer.toString(ZOOKEEPER_INTERNAL_PORT));
-            withEnv("ZOOKEEPER_TICK_TIME", Integer.toString(ZOOKEEPER_TICK_TIME));
-
-            withNetwork(network);
-            withNetworkAliases(NETWORK_ALIAS);
-            addExposedPort(ZOOKEEPER_INTERNAL_PORT);
-        }
-
-        private String internalUrl() {
-            return String.format("%s:%d", NETWORK_ALIAS, ZOOKEEPER_INTERNAL_PORT);
-        }
-    }
-
-    private static final class KafkaContainer extends GenericContainer<KafkaContainer> {
-
-        private static final String STARTER_SCRIPT = "/testcontainers_start.sh";
-
-        private static final int KAFKA_PORT = 9093;
-        private static final int KAFKA_INTERNAL_PORT = 9092;
-        private static final int PORT_NOT_ASSIGNED = -1;
-        private static final String NETWORK_ALIAS = "kafka";
-
-        private final String zookeeperConnect;
-
-        private KafkaContainer(Network network, String zookeeperConnect) {
-            super(DockerImageName.parse("confluentinc/cp-kafka:4.1.4"));
-
-            this.zookeeperConnect = zookeeperConnect;
-
-            // Use two listeners with different names, it will force Kafka to communicate with itself via internal
-            // listener when KAFKA_INTER_BROKER_LISTENER_NAME is set, otherwise Kafka will try to use the advertised
-            // listener
-            withEnv("KAFKA_LISTENERS", "PLAINTEXT://0.0.0.0:" + KAFKA_PORT + ",BROKER://0.0.0.0:" + KAFKA_INTERNAL_PORT);
-
-            withEnv("KAFKA_LISTENER_SECURITY_PROTOCOL_MAP", "BROKER:PLAINTEXT,PLAINTEXT:PLAINTEXT");
-            withEnv("KAFKA_INTER_BROKER_LISTENER_NAME", "BROKER");
-
-            withEnv("KAFKA_BROKER_ID", "1");
-            withEnv("KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR", "1");
-            withEnv("KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS", "1");
-            withEnv("KAFKA_LOG_FLUSH_INTERVAL_MESSAGES", Long.MAX_VALUE + "");
-            withEnv("KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS", "0");
-
-            withNetwork(network);
-            withNetworkAliases(NETWORK_ALIAS);
-            withExposedPorts(KAFKA_INTERNAL_PORT);
-        }
-
-        private String getBootstrapServers() {
-            return String.format("PLAINTEXT://%s:%d", getContainerIpAddress(), getMappedPort(KAFKA_INTERNAL_PORT));
-        }
-
-        @Override
-        protected void doStart() {
-            withCommand("sh", "-c", "while [ ! -f " + STARTER_SCRIPT + " ]; do sleep 0.1; done; " + STARTER_SCRIPT);
-
-            super.doStart();
-        }
-
-        @Override
-        protected void containerIsStarting(InspectContainerResponse containerInfo, boolean reused) {
-            super.containerIsStarting(containerInfo, reused);
-
-            if (reused) {
-                return;
-            }
-
-
-            String command = "#!/bin/bash \n";
-            command += "export KAFKA_ZOOKEEPER_CONNECT='" + zookeeperConnect + "'\n";
-            command += "export KAFKA_ADVERTISED_LISTENERS='" + Stream
-                    .concat(
-                            Stream.of("PLAINTEXT://" + NETWORK_ALIAS + ":" + KAFKA_PORT),
-                            containerInfo.getNetworkSettings().getNetworks().values().stream()
-                                         .map(it -> "BROKER://" + it.getIpAddress() + ":" + KAFKA_INTERNAL_PORT)
-                    )
-                    .collect(Collectors.joining(",")) + "'\n";
-
-            command += ". /etc/confluent/docker/bash-config \n";
-            command += "/etc/confluent/docker/configure \n";
-            command += "/etc/confluent/docker/launch \n";
-
-            copyFileToContainer(
-                    Transferable.of(command.getBytes(StandardCharsets.UTF_8), 700),
-                    STARTER_SCRIPT
-            );
-        }
-    }
-
-    private static final class SchemaRegistryContainer extends GenericContainer<SchemaRegistryContainer> {
-
-        private static final int SCHEMA_REGISTRY_INTERNAL_PORT = 8081;
-        private static final String NETWORK_ALIAS = "schema-registry";
-
-        private SchemaRegistryContainer(Network network, String zookeeperConnect) {
-            super(DockerImageName.parse("confluentinc/cp-schema-registry:4.1.4"));
-
-            withEnv("SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL", zookeeperConnect);
-            withEnv("SCHEMA_REGISTRY_HOST_NAME", "localhost");
-
-            withNetwork(network);
-            withNetworkAliases(NETWORK_ALIAS);
-            withExposedPorts(SCHEMA_REGISTRY_INTERNAL_PORT);
-
-            waitingFor(Wait.forHttp("/subjects"));
-        }
-
-        private String url() {
-            return String.format("http://%s:%d", getContainerIpAddress(), getMappedPort(SCHEMA_REGISTRY_INTERNAL_PORT));
+    private static int randomPort() throws IOException {
+        try (ServerSocket server = new ServerSocket(0)) {
+            return server.getLocalPort();
         }
     }
 }

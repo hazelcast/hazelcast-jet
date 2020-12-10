@@ -76,6 +76,7 @@ public class KafkaTestSupport {
     private static final int CONNECTION_TIMEOUT = 30_000;
 
     private EmbeddedZookeeper zkServer;
+    private String zkConnect;
     private ZkUtils zkUtils;
 
     private KafkaServer kafkaServer;
@@ -86,7 +87,7 @@ public class KafkaTestSupport {
     public void createKafkaCluster() throws IOException {
         System.setProperty("zookeeper.preAllocSize", Integer.toString(128));
         zkServer = new EmbeddedZookeeper();
-        String zkConnect = ZK_HOST + ':' + zkServer.port();
+        zkConnect = ZK_HOST + ':' + zkServer.port();
         ZkClient zkClient = new ZkClient(zkConnect, SESSION_TIMEOUT, CONNECTION_TIMEOUT, ZKStringSerializer$.MODULE$);
         zkUtils = ZkUtils.apply(zkClient, false);
 
@@ -133,6 +134,10 @@ public class KafkaTestSupport {
             zkUtils = null;
             zkServer = null;
         }
+    }
+
+    public String getZookeeperConnectionString() {
+        return zkConnect;
     }
 
     public String getBrokerConnectionString() {
@@ -199,22 +204,6 @@ public class KafkaTestSupport {
             Map<String, String> properties,
             String... topicIds
     ) {
-        return createConsumer(
-                getBrokerConnectionString(),
-                keyDeserializerClass,
-                valueDeserializerClass,
-                properties,
-                topicIds
-        );
-    }
-
-    public static <K, V> KafkaConsumer<K, V> createConsumer(
-            String brokerConnectionString,
-            Class<? extends Deserializer<K>> keyDeserializerClass,
-            Class<? extends Deserializer<V>> valueDeserializerClass,
-            Map<String, String> properties,
-            String... topicIds
-    ) {
         Properties consumerProps = new Properties();
         consumerProps.setProperty("bootstrap.servers", brokerConnectionString);
         consumerProps.setProperty("group.id", randomString());
@@ -256,18 +245,10 @@ public class KafkaTestSupport {
             Class<? extends Deserializer<K>> keyDeserializerClass,
             Class<? extends Deserializer<V>> valueDeserializerClass
     ) {
-        assertTopicContentsEventually(
-                getBrokerConnectionString(),
-                topic,
-                expected,
-                keyDeserializerClass,
-                valueDeserializerClass,
-                emptyMap()
-        );
+        assertTopicContentsEventually(topic, expected, keyDeserializerClass, valueDeserializerClass, emptyMap());
     }
 
-    public static <K, V> void assertTopicContentsEventually(
-            String brokerConnectionString,
+    public <K, V> void assertTopicContentsEventually(
             String topic,
             Map<K, V> expected,
             Class<? extends Deserializer<K>> keyDeserializerClass,
@@ -275,7 +256,6 @@ public class KafkaTestSupport {
             Map<String, String> consumerProperties
     ) {
         try (KafkaConsumer<K, V> consumer = createConsumer(
-                brokerConnectionString,
                 keyDeserializerClass,
                 valueDeserializerClass,
                 consumerProperties,
