@@ -67,7 +67,7 @@ public class FileSqlConnector implements SqlConnector {
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> userFields
     ) {
-        return METADATA_RESOLVERS.resolveAndValidateFields(userFields, options);
+        return resolveAndValidateFields(options, userFields);
     }
 
     @Nonnull

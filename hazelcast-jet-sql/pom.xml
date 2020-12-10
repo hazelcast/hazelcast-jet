@@ -238,9 +238,9 @@
         </dependency>
 
         <!--
-        HDFS (via hadoop-minicluster) and kafka-schema-registry depend on different versions of jetty
+        HDFS (via hadoop-minicluster) and kafka-schema-registry depend on different versions of jetty.
         Listing hadoop-common here brings it further up the dependency tree (it is a transitive dependency of
-        hadoop-client and hadoop-minicluster), therefore preferring it's version of jetty.
+        hadoop-client and hadoop-minicluster), therefore preferring its version of jetty.
         Easier than specifying jetty artifacts directly.
         -->
         <dependency>

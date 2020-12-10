@@ -147,7 +147,7 @@ public class JetSqlOperatorTableTest {
 
         assertThatThrownBy(() -> sqlFunction.getRowType(TYPE_FACTORY, singletonList(node)))
                 .isInstanceOf(QueryException.class)
-                .hasMessageContaining("All literals in MAP constructor");
+                .hasMessageContaining("All values in the MAP constructor");
     }
 
     @Test
@@ -159,7 +159,7 @@ public class JetSqlOperatorTableTest {
                 new SqlNode[]{literal("key"), literal("value1"), literal("key"), literal("value2")},
                 ZERO
         )))).isInstanceOf(QueryException.class)
-            .hasMessageContaining("Duplicate entry in MAP constructor");
+            .hasMessageContaining("Duplicate entry in the MAP constructor");
     }
 
     private SqlUserDefinedTableFunction function(String parameterName, SqlTypeName type) {

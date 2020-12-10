@@ -74,7 +74,7 @@ public interface FileFormat<T> extends Serializable {
      * Returns a file format for CSV files which specifies to deserialize each
      * line into an instance of the given class. It assumes the CSV has a
      * header line and specifies to use it as the column names that map to the
-     * object's fields. If parameter is {@code null} data is deserialized into
+     * object's fields. If parameter is {@code null}, data is deserialized into
      * {@code Map<String, String>} but for that case you should prefer the
      * no-argument {@link #csv()} call.
      */
@@ -98,7 +98,7 @@ public interface FileFormat<T> extends Serializable {
      * href="https://github.com/FasterXML/jackson-jr">Jackson jr</a>, which
      * supports the basic data types such as strings, numbers, lists and maps,
      * objects with JavaBeans-style getters/setters, as well as public fields.
-     * If parameter is {@code null} data is deserialized into
+     * If parameter is {@code null}, data is deserialized into
      * {@link com.fasterxml.jackson.jr.stree.JrsObject} but for that case you
      * should prefer the no-argument {@link #json()} call.
      */

@@ -173,7 +173,7 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
                 return extractMapValue(functionName, parameter, (SqlCall) node);
             }
             throw QueryException.error(
-                    "All arguments of call to function " + functionName + " should be either VARCHAR literals or " +
+                    "All arguments of a call to function " + functionName + " must be either VARCHAR literals or " +
                     "MAP constructors. Actual argument #" + parameter.getOrdinal() + " (" + parameter.getName() + ") is: "
                     + node.getKind());
         }
@@ -188,7 +188,7 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
                 return ((NlsString) value).getValue();
             }
             throw QueryException.error(
-                    "All literals of call to function " + functionName + " should be VARCHAR literals. " +
+                    "All literals in a call to function " + functionName + " must be VARCHAR literals. " +
                     "Actual argument #" + parameter.getOrdinal() + " (" + parameter.getName() + ") is: " +
                     literal.getTypeName());
         }
@@ -205,7 +205,7 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
                 String value = extractMapLiteralValue(functionName, parameter, operands.get(i + 1));
                 if (entries.putIfAbsent(key, value) != null) {
                     throw QueryException.error(
-                            "Duplicate entry in MAP constructor of call to function " + functionName + " - " +
+                            "Duplicate entry in the MAP constructor in the call to function " + functionName + " - " +
                             "argument #" + parameter.getOrdinal() + " (" + parameter.getName() + ")");
                 }
             }
@@ -225,8 +225,8 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
                 }
             }
             throw QueryException.error(
-                    "All literals in MAP constructor of call to function " + functionName + " - argument #"
-                    + parameter.getOrdinal() + " (" + parameter.getName() + ") - should be VARCHAR " + "literals. "
+                    "All values in the MAP constructor of the call to function " + functionName + ", argument #"
+                    + parameter.getOrdinal() + " (" + parameter.getName() + ") must be VARCHAR literals. "
                     + "Actual argument is: "
                     + (SqlUtil.isLiteral(node) ? ((SqlLiteral) node).getTypeName() : node.getKind()));
         }
