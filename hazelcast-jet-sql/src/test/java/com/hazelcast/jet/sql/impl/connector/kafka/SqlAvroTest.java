@@ -460,7 +460,7 @@ public class SqlAvroTest extends SqlTestSupport {
         private static final int ZOOKEEPER_TICK_TIME = 2000;
         private static final String NETWORK_ALIAS = "zookeeper";
 
-        public ZookeeperContainer(Network network) {
+        private ZookeeperContainer(Network network) {
             super(DockerImageName.parse(("confluentinc/cp-zookeeper:4.1.4")));
 
             withEnv("ZOOKEEPER_CLIENT_PORT", Integer.toString(ZOOKEEPER_INTERNAL_PORT));
@@ -489,13 +489,14 @@ public class SqlAvroTest extends SqlTestSupport {
 
         private int port = PORT_NOT_ASSIGNED;
 
-        public KafkaContainer(Network network, String zookeeperConnect) {
+        private KafkaContainer(Network network, String zookeeperConnect) {
             super(DockerImageName.parse("confluentinc/cp-kafka:4.1.4"));
 
             this.zookeeperConnect = zookeeperConnect;
 
             // Use two listeners with different names, it will force Kafka to communicate with itself via internal
-            // listener when KAFKA_INTER_BROKER_LISTENER_NAME is set, otherwise Kafka will try to use the advertised listener
+            // listener when KAFKA_INTER_BROKER_LISTENER_NAME is set, otherwise Kafka will try to use the advertised
+            // listener
             withEnv("KAFKA_LISTENERS", "PLAINTEXT://0.0.0.0:" + KAFKA_PORT + ",BROKER://0.0.0.0:" + KAFKA_INTERNAL_PORT);
 
             withEnv("KAFKA_LISTENER_SECURITY_PROTOCOL_MAP", "BROKER:PLAINTEXT,PLAINTEXT:PLAINTEXT");
