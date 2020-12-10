@@ -386,7 +386,7 @@ public class StreamKafkaPTest extends SimpleTestInClusterSupport {
 
         Job job = instance().newJob(p, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE));
         assertTrueEventually(() -> {
-            kafkaTestSupport.produce(topic1Name, 0, "0");
+            kafkaTestSupport.produce(topic1Name, 0, "0").get();
             assertFalse(sinkList.isEmpty());
             assertEquals(entry(0, "0"), sinkList.get(0));
         });
