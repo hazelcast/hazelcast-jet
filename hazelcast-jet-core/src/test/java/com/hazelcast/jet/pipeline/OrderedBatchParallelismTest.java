@@ -47,7 +47,6 @@ import static org.junit.Assert.assertEquals;
 public class OrderedBatchParallelismTest {
 
     private static final int DEFAULT_PARALLELISM = 8;
-
     // Used to set the LP of the stage with the higher value than upstream parallelism
     private static final int HIGH_LOCAL_PARALLELISM = 11;
     // Used to set the LP of the stage with the smaller value than upstream parallelism
@@ -166,6 +165,15 @@ public class OrderedBatchParallelismTest {
                         Arrays.asList("map", "aggregate-prepare", "aggregate", "flat-map"),
                         Arrays.asList(UPSTREAM_PARALLELISM, UPSTREAM_PARALLELISM, 1, 1),
                         "map+aggregate+flat-map"
+                ),
+                createParamSet(
+                        stage -> stage
+                                .peek()
+                                .map(x -> x)
+                                .setLocalParallelism(HIGH_LOCAL_PARALLELISM),
+                        Collections.singletonList("map"),
+                        Collections.singletonList(UPSTREAM_PARALLELISM),
+                        "map-after-peek"
                 ),
                 createParamSet(
                         stage -> stage
