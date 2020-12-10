@@ -68,9 +68,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.IntFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static com.hazelcast.internal.util.concurrent.ConcurrentConveyor.concurrentConveyor;
 import static com.hazelcast.jet.config.EdgeConfig.DEFAULT_QUEUE_SIZE;
@@ -472,13 +474,35 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 throw new IllegalArgumentException("Isolated edges must be local: " + edge);
             }
 
-            // there is only one producer per consumer for a one to many edge, so queueCount is always 1
             ConcurrentConveyor<Object>[] localConveyors = localConveyorMap.computeIfAbsent(edge.edgeId(),
-                    e -> createConveyorArray(downstreamParallelism, 1, queueSize));
-            return IntStream.range(0, downstreamParallelism)
-                            .filter(i -> i % upstreamParallelism == processorIndex)
-                            .mapToObj(i -> new ConveyorCollector(localConveyors[i], 0, null))
-                            .toArray(OutboundCollector[]::new);
+                    e -> {
+                        int queueCount = upstreamParallelism / downstreamParallelism;
+                        int remainder = upstreamParallelism % downstreamParallelism;
+                        if (remainder == 0) {
+                            return createConveyorArray(downstreamParallelism, queueCount, queueSize);
+                        } else if (upstreamParallelism - remainder == 0) { // downstreamParallelism > upstreamParallelism
+                            return createConveyorArray(downstreamParallelism, queueCount + 1, queueSize);
+                        } else {
+                            return Stream.concat(
+                                    Arrays.stream(createConveyorArray(remainder, queueCount + 1, queueSize)),
+                                    Arrays.stream(createConveyorArray(
+                                            downstreamParallelism - remainder, queueCount, queueSize
+                                    ))).toArray((IntFunction<ConcurrentConveyor<Object>[]>) ConcurrentConveyor[]::new);
+                        }
+                    });
+
+            if (downstreamParallelism >= upstreamParallelism) {
+                return IntStream.range(0, downstreamParallelism)
+                        .filter(i -> i % upstreamParallelism == processorIndex)
+                        .mapToObj(i -> new ConveyorCollector(localConveyors[i], 0, null))
+                        .toArray(OutboundCollector[]::new);
+            } else {
+                return IntStream.range(0, downstreamParallelism)
+                        .filter(i -> processorIndex % downstreamParallelism == i)
+                        .mapToObj(i -> new ConveyorCollector(localConveyors[i],
+                                processorIndex / downstreamParallelism, null))
+                        .toArray(OutboundCollector[]::new);
+            }
         }
 
         /*
