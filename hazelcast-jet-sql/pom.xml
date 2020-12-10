@@ -370,9 +370,9 @@
                     </relocations>
                     <transformers>
                         <transformer
-                            implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+                            implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer" />
                         <transformer
-                            implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer"/>
+                            implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer" />
                         <transformer
                             implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
                     </transformers>
@@ -408,25 +408,6 @@
                     </filters>
                 </configuration>
             </plugin>
-            <!--<plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>${maven.assembly.plugin.version}</version>
-                <executions>
-                    <execution>
-                        <id>distro-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <configuration>
-                            <descriptors>
-                                <descriptor>src/main/resources/assemblies/jar-with-dependencies.xml</descriptor>
-                            </descriptors>
-                            <tarLongFileMode>posix</tarLongFileMode>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -444,7 +425,7 @@
                         </manifestEntries>
                     </archive>
                 </configuration>
-            </plugin>-->
+            </plugin>
         </plugins>
     </build>
 
