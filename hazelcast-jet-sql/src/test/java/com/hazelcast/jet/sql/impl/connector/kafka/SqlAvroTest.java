@@ -61,7 +61,6 @@ import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
-import static java.lang.String.format;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
@@ -472,7 +471,7 @@ public class SqlAvroTest extends SqlTestSupport {
         }
 
         private String internalUrl() {
-            return format("%s:%d", NETWORK_ALIAS, ZOOKEEPER_INTERNAL_PORT);
+            return String.format("%s:%d", NETWORK_ALIAS, ZOOKEEPER_INTERNAL_PORT);
         }
     }
 
@@ -486,8 +485,6 @@ public class SqlAvroTest extends SqlTestSupport {
         private static final String NETWORK_ALIAS = "kafka";
 
         private final String zookeeperConnect;
-
-        private int port = PORT_NOT_ASSIGNED;
 
         private KafkaContainer(Network network, String zookeeperConnect) {
             super(DockerImageName.parse("confluentinc/cp-kafka:4.1.4"));
@@ -514,10 +511,7 @@ public class SqlAvroTest extends SqlTestSupport {
         }
 
         private String getBootstrapServers() {
-            if (port == PORT_NOT_ASSIGNED) {
-                throw new IllegalStateException("You should start Kafka container first");
-            }
-            return String.format("PLAINTEXT://%s:%s", getHost(), port);
+            return String.format("PLAINTEXT://%s:%d", getContainerIpAddress(), getMappedPort(KAFKA_INTERNAL_PORT));
         }
 
         @Override
@@ -530,8 +524,6 @@ public class SqlAvroTest extends SqlTestSupport {
         @Override
         protected void containerIsStarting(InspectContainerResponse containerInfo, boolean reused) {
             super.containerIsStarting(containerInfo, reused);
-
-            port = getMappedPort(KAFKA_INTERNAL_PORT);
 
             if (reused) {
                 return;
@@ -578,7 +570,7 @@ public class SqlAvroTest extends SqlTestSupport {
         }
 
         private String url() {
-            return format("http://%s:%d", getContainerIpAddress(), getMappedPort(SCHEMA_REGISTRY_INTERNAL_PORT));
+            return String.format("http://%s:%d", getContainerIpAddress(), getMappedPort(SCHEMA_REGISTRY_INTERNAL_PORT));
         }
     }
 }
