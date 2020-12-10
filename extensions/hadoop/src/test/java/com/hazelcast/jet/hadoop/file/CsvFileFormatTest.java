@@ -83,7 +83,7 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
     }
 
     @Test
-    public void shouldReadCsvFileWithLessColumnsThanTargetClass() throws Exception {
+    public void shouldReadCsvFileWithLessColumnsThanTargetClass() {
 
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
                                                     .glob("file-less-columns.csv")
@@ -96,7 +96,7 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
     }
 
     @Test
-    public void shouldReadEmptyCsvFile() throws Exception {
+    public void shouldReadEmptyCsvFile() {
 
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
                                                     .glob("file-empty.csv")
@@ -106,7 +106,7 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
     }
 
     @Test
-    public void shouldThrowWhenInvalidFileType() throws Exception {
+    public void shouldThrowWhenInvalidFileType() {
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
                                                     .glob("invalid-data.png")
                                                     .format(FileFormat.csv(User.class));
@@ -115,7 +115,7 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
     }
 
     @Test
-    public void shouldThrowWhenWrongFormatting() throws Exception {
+    public void shouldThrowWhenWrongFormatting() {
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
                                                     .glob("file-invalid.csv")
                                                     .format(FileFormat.csv(User.class));
