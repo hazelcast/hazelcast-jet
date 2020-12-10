@@ -193,8 +193,6 @@ public class RoutingPolicyTest extends SimpleTestInClusterSupport {
         assertEquals(setOf(NUMBERS_HIGH), setOf(list2));
     }
 
-
-
     private void execute(DAG dag) throws Throwable {
         executeAndPeel(instance().newJob(dag));
     }
