@@ -61,7 +61,6 @@ import java.util.ServiceLoader;
 import static com.hazelcast.jet.hadoop.HadoopProcessors.readHadoopP;
 import static com.hazelcast.jet.hadoop.HadoopSources.COPY_ON_READ;
 import static com.hazelcast.jet.hadoop.impl.CsvInputFormat.CSV_INPUT_FORMAT_BEAN_CLASS;
-import static com.hazelcast.jet.hadoop.impl.CsvInputFormat.CSV_INPUT_FORMAT_HEADER;
 import static com.hazelcast.jet.hadoop.impl.JsonInputFormat.JSON_INPUT_FORMAT_BEAN_CLASS;
 import static java.util.Objects.requireNonNull;
 
@@ -195,7 +194,6 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
             CsvFileFormat<T> csvFileFormat = (CsvFileFormat<T>) format;
             job.setInputFormatClass(CsvInputFormat.class);
             job.getConfiguration().setBoolean(COPY_ON_READ, Boolean.FALSE);
-            job.getConfiguration().setBoolean(CSV_INPUT_FORMAT_HEADER, csvFileFormat.includesHeader());
 
             Class<?> clazz = csvFileFormat.clazz();
             if (clazz != null) {

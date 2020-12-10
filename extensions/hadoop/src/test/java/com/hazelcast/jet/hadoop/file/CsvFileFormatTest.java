@@ -17,6 +17,7 @@
 package com.hazelcast.jet.hadoop.file;
 
 import com.fasterxml.jackson.dataformat.csv.CsvMappingException;
+import com.google.common.collect.ImmutableMap;
 import com.hazelcast.jet.hadoop.file.model.User;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
@@ -24,6 +25,7 @@ import com.hazelcast.jet.pipeline.file.FileSources;
 import org.junit.Test;
 
 import java.io.CharConversionException;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -32,27 +34,13 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
     @Test
     public void shouldReadCsvFile() {
 
-        FileSourceBuilder<String[]> source = FileSources.files(currentDir + "/src/test/resources")
-                                                    .glob("file.csv")
-                                                    .format(FileFormat.csv(true));
+        FileSourceBuilder<Map<String, String>> source = FileSources.files(currentDir + "/src/test/resources")
+                                                                   .glob("file.csv")
+                                                                   .format(FileFormat.csv());
 
         assertItemsInSource(source,
-                new String[]{"Frantisek", "7"},
-                new String[]{"Ali", "42"}
-        );
-    }
-
-    @Test
-    public void shouldReadCsvFileWithHeader() {
-
-        FileSourceBuilder<String[]> source = FileSources.files(currentDir + "/src/test/resources")
-                                                        .glob("file.csv")
-                                                        .format(FileFormat.csv(false));
-
-        assertItemsInSource(source,
-                new String[]{"name", "favoriteNumber"},
-                new String[]{"Frantisek", "7"},
-                new String[]{"Ali", "42"}
+                ImmutableMap.of("name", "Frantisek", "favoriteNumber", "7"),
+                ImmutableMap.of("name", "Ali", "favoriteNumber", "42")
         );
     }
 

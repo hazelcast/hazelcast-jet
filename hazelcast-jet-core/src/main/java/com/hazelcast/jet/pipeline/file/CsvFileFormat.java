@@ -19,8 +19,6 @@ package com.hazelcast.jet.pipeline.file;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import static java.util.Objects.requireNonNull;
-
 /**
  * {@link FileFormat} for CSV files. See {@link FileFormat#csv} for more
  * details.
@@ -35,51 +33,39 @@ public class CsvFileFormat<T> implements FileFormat<T> {
      */
     public static final String FORMAT_CSV = "csv";
 
-    private final Class<T> clazz;
-    private final boolean includesHeader;
+    private Class<T> clazz;
 
     /**
-     * Creates a {@code CsvFileFormat}. See {@link FileFormat#csv} for more
+     * Creates {@link CsvFileFormat}. See {@link FileFormat#csv} for more
      * details.
-     *
-     * @param clazz type of the object to deserialize CSV lines into
      */
-    CsvFileFormat(@Nonnull Class<T> clazz) {
-        this(requireNonNull(clazz, "clazz must not be null"), true);
+    CsvFileFormat() {
     }
 
     /**
-     * Creates a {@code CsvFileFormat}. See {@link FileFormat#csv} for more
-     * details.
+     * Specifies class that data will be deserialized into.
+     * If parameter is {@code null} data is deserialized into
+     * {@code Map<String, String>}.
      *
-     * @param includesHeader whether source includes header
+     * @param clazz type of the object to deserialize CSV into
      */
-    CsvFileFormat(boolean includesHeader) {
-        this(null, includesHeader);
-    }
-
-    private CsvFileFormat(Class<T> clazz, boolean includesHeader) {
+    @Nonnull
+    public CsvFileFormat<T> withClass(@Nullable Class<T> clazz) {
         this.clazz = clazz;
-        this.includesHeader = includesHeader;
+        return this;
     }
 
     /**
-     * Returns the type of the object the data source using this format will
-     * emit.
+     * Returns the class Jet will deserialize data into.
+     * Null if not set.
      */
     @Nullable
     public Class<T> clazz() {
         return clazz;
     }
 
-    /**
-     * Returns whether the source includes header.
-     */
-    public boolean includesHeader() {
-        return includesHeader;
-    }
-
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public String format() {
         return FORMAT_CSV;
     }

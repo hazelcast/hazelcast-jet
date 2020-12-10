@@ -47,6 +47,45 @@ public class SqlCsvTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_nulls() {
+        String name = randomName();
+        sqlService.execute("CREATE MAPPING " + name + " ("
+                + "nonExistingField VARCHAR"
+                + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ("
+                + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.csv" + '\''
+                + ")"
+        );
+
+        assertRowsAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row((Object) null))
+        );
+    }
+
+    @Test
+    public void test_fieldsMapping() {
+        String name = randomName();
+        sqlService.execute("CREATE MAPPING " + name + " ("
+                + "id TINYINT EXTERNAL NAME byte"
+                + ", name VARCHAR EXTERNAL NAME string"
+                + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ("
+                + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.csv" + '\''
+                + ")"
+        );
+
+        assertRowsAnyOrder(
+                "SELECT id, name FROM " + name,
+                singletonList(new Row((byte) 127, "string"))
+        );
+    }
+
+    @Test
     public void test_allTypes() {
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " ("

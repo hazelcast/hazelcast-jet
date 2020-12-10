@@ -17,52 +17,17 @@
 package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.jet.pipeline.file.FileFormat;
-import com.hazelcast.jet.pipeline.file.ParquetFileFormat;
 import com.hazelcast.jet.sql.impl.extract.AvroQueryTarget;
-import com.hazelcast.jet.sql.impl.schema.MappingField;
-import com.hazelcast.sql.impl.QueryException;
 import org.apache.avro.generic.GenericRecord;
 
-import java.util.List;
-import java.util.Map;
-
-final class ParquetMetadataResolver extends MetadataResolver {
+final class ParquetMetadataResolver extends MetadataResolver<GenericRecord> {
 
     static final ParquetMetadataResolver INSTANCE = new ParquetMetadataResolver();
 
     private ParquetMetadataResolver() {
-    }
-
-    @Override
-    public String supportedFormat() {
-        return ParquetFileFormat.FORMAT_PARQUET;
-    }
-
-    @Override
-    public List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, ?> options) {
-        return !userFields.isEmpty() ? validateFields(userFields) : resolveFieldsFromSample(options);
-    }
-
-    private List<MappingField> validateFields(List<MappingField> userFields) {
-        for (MappingField userField : userFields) {
-            String path = userField.externalName() == null ? userField.name() : userField.externalName();
-            if (path.indexOf('.') >= 0) {
-                throw QueryException.error("Invalid field name - '" + path + "'. Nested fields are not supported.");
-            }
-        }
-        return userFields;
-    }
-
-    private List<MappingField> resolveFieldsFromSample(Map<String, ?> options) {
-        GenericRecord record = fetchRecord(FileFormat.parquet(), options);
-        return AvroResolver.resolveFields(record.getSchema());
-    }
-
-    @Override
-    Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
-        return new Metadata(
-                toFields(resolvedFields),
-                toProcessorMetaSupplier(FileFormat.parquet(), options),
+        super(
+                FileFormat.parquet(),
+                record -> AvroResolver.resolveFields(record.getSchema()),
                 AvroQueryTarget::new
         );
     }

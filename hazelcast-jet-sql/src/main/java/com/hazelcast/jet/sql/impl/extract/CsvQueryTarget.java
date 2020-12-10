@@ -26,17 +26,12 @@ import java.util.Map;
 @NotThreadSafe
 public class CsvQueryTarget implements QueryTarget {
 
-    private final Map<String, Integer> indicesByNames;
-
-    private String[] line;
-
-    public CsvQueryTarget(Map<String, Integer> indicesByNames) {
-        this.indicesByNames = indicesByNames;
-    }
+    private Map<String, String> entry;
 
     @Override
+    @SuppressWarnings("unchecked")
     public void setTarget(Object target) {
-        line = (String[]) target;
+        entry = (Map<String, String>) target;
     }
 
     @Override
@@ -45,15 +40,10 @@ public class CsvQueryTarget implements QueryTarget {
     }
 
     private QueryExtractor createExtractor() {
-        return () -> line;
+        return () -> entry;
     }
 
     private QueryExtractor createFieldExtractor(String path, QueryDataType type) {
-        Integer index = indicesByNames.get(path);
-        if (index == null) {
-            return () -> null;
-        } else {
-            return () -> index < line.length ? type.convert(line[index]) : null;
-        }
+        return () -> type.convert(entry.get(path));
     }
 }

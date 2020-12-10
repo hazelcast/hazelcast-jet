@@ -19,7 +19,6 @@ package com.hazelcast.jet.csv.impl;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
-import com.fasterxml.jackson.dataformat.csv.CsvParser.Feature;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.pipeline.file.CsvFileFormat;
@@ -30,6 +29,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import javax.annotation.Nonnull;
 import java.io.FileInputStream;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -52,28 +52,15 @@ public class CsvReadFileFnProvider implements ReadFileFnProvider {
     public <T> FunctionEx<Path, Stream<T>> createReadFileFn(@Nonnull FileFormat<T> format) {
         CsvFileFormat<T> csvFileFormat = (CsvFileFormat<T>) format;
         Class<?> formatClazz = csvFileFormat.clazz(); // Format is not Serializable
-        boolean includesHeader = csvFileFormat.includesHeader();
 
         return path -> {
-            ObjectReader reader = reader(formatClazz, includesHeader);
+            ObjectReader reader = new CsvMapper().readerFor(formatClazz != null ? formatClazz : Map.class)
+                                                 .withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                                                 .with(CsvSchema.emptySchema().withHeader());
             FileInputStream fis = new FileInputStream(path.toFile());
             return StreamSupport.<T>stream(Spliterators.spliteratorUnknownSize(reader.readValues(fis), ORDERED), false)
                     .onClose(() -> uncheckRun(fis::close));
         };
-    }
-
-    private static <T> ObjectReader reader(Class<T> clazz, boolean includesHeader) {
-        if (clazz == null) {
-            return new CsvMapper().enable(Feature.WRAP_AS_ARRAY)
-                                  .readerFor(String[].class)
-                                  .with(CsvSchema.emptySchema().withSkipFirstDataRow(includesHeader));
-        } else {
-            assert includesHeader;
-
-            return new CsvMapper().readerFor(clazz)
-                                  .withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                                  .with(CsvSchema.emptySchema().withHeader());
-        }
     }
 
     @Nonnull

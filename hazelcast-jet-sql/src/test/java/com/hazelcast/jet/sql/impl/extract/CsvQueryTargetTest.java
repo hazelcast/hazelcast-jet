@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.extract;
 
-import com.google.common.collect.ImmutableMap;
 import com.hazelcast.sql.impl.extract.QueryExtractor;
 import com.hazelcast.sql.impl.extract.QueryTarget;
 import org.junit.Test;
@@ -26,6 +25,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 import static com.hazelcast.sql.impl.type.QueryDataType.BIGINT;
@@ -49,24 +49,7 @@ public class CsvQueryTargetTest {
 
     @Test
     public void test_get() {
-        Map<String, Integer> indicesByNames = ImmutableMap.<String, Integer>builder()
-                .put("string", 0)
-                .put("boolean", 1)
-                .put("byte", 2)
-                .put("short", 3)
-                .put("int", 4)
-                .put("long", 5)
-                .put("float", 6)
-                .put("double", 7)
-                .put("decimal", 8)
-                .put("time", 9)
-                .put("date", 10)
-                .put("timestamp", 11)
-                .put("timestampTz", 12)
-                .put("object", 13)
-                .build();
-
-        QueryTarget target = new CsvQueryTarget(indicesByNames);
+        QueryTarget target = new CsvQueryTarget();
         QueryExtractor topExtractor = target.createExtractor(null, OBJECT);
         QueryExtractor nonExistingExtractor = target.createExtractor("nonExisting", OBJECT);
         QueryExtractor stringExtractor = target.createExtractor("string", VARCHAR);
@@ -84,24 +67,24 @@ public class CsvQueryTargetTest {
         QueryExtractor timestampTzExtractor = target.createExtractor("timestampTz", TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME);
         QueryExtractor objectExtractor = target.createExtractor("object", OBJECT);
 
-        target.setTarget(new String[]{
-                "string"
-                , "true"
-                , "127"
-                , "32767"
-                , "2147483647"
-                , "9223372036854775807"
-                , "1234567890.1"
-                , "123451234567890.1"
-                , "9223372036854775.123"
-                , "12:23:34"
-                , "2020-09-09"
-                , "2020-09-09T12:23:34.100"
-                , "2020-09-09T12:23:34.200Z"
-                , "object"
-        });
+        target.setTarget(new HashMap<String, String>() {{
+            put("string", "string");
+            put("boolean", "true");
+            put("byte", "127");
+            put("short", "32767");
+            put("int", "2147483647");
+            put("long", "9223372036854775807");
+            put("float", "1234567890.1");
+            put("double", "123451234567890.1");
+            put("decimal", "9223372036854775.123");
+            put("time", "12:23:34");
+            put("date", "2020-09-09");
+            put("timestamp", "2020-09-09T12:23:34.100");
+            put("timestampTz", "2020-09-09T12:23:34.200Z");
+            put("object", "object");
+        }});
 
-        assertThat(topExtractor.get()).isInstanceOf(String[].class);
+        assertThat(topExtractor.get()).isInstanceOf(Map.class);
         assertThat(nonExistingExtractor.get()).isNull();
         assertThat(stringExtractor.get()).isEqualTo("string");
         assertThat(booleanExtractor.get()).isEqualTo(true);

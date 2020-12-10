@@ -18,51 +18,16 @@ package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.fasterxml.jackson.jr.stree.JrsObject;
 import com.hazelcast.jet.pipeline.file.FileFormat;
-import com.hazelcast.jet.pipeline.file.JsonFileFormat;
 import com.hazelcast.jet.sql.impl.extract.JsonQueryTarget;
-import com.hazelcast.jet.sql.impl.schema.MappingField;
-import com.hazelcast.sql.impl.QueryException;
 
-import java.util.List;
-import java.util.Map;
-
-final class JsonMetadataResolver extends MetadataResolver {
+final class JsonMetadataResolver extends MetadataResolver<JrsObject> {
 
     static final JsonMetadataResolver INSTANCE = new JsonMetadataResolver();
 
     private JsonMetadataResolver() {
-    }
-
-    @Override
-    public String supportedFormat() {
-        return JsonFileFormat.FORMAT_JSONL;
-    }
-
-    @Override
-    public List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, ?> options) {
-        return !userFields.isEmpty() ? validateFields(userFields) : resolveFieldsFromSample(options);
-    }
-
-    private List<MappingField> validateFields(List<MappingField> userFields) {
-        for (MappingField userField : userFields) {
-            String path = userField.externalName() == null ? userField.name() : userField.externalName();
-            if (path.indexOf('.') >= 0) {
-                throw QueryException.error("Invalid field name - '" + path + "'. Nested fields are not supported.");
-            }
-        }
-        return userFields;
-    }
-
-    private List<MappingField> resolveFieldsFromSample(Map<String, ?> options) {
-        JrsObject object = fetchRecord(FileFormat.json(), options);
-        return JsonResolver.resolveFields(object);
-    }
-
-    @Override
-    public Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
-        return new Metadata(
-                toFields(resolvedFields),
-                toProcessorMetaSupplier(FileFormat.json(), options),
+        super(
+                FileFormat.json(),
+                JsonResolver::resolveFields,
                 JsonQueryTarget::new
         );
     }

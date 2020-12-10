@@ -63,24 +63,24 @@ public interface FileFormat<T> extends Serializable {
     }
 
     /**
-     * Returns a file format for CSV files which specifies to deserialize each
-     * line into {@code String[]}. {@code includesHeader} specifies whether the
-     * source includes a header.
+     * Returns a file format for CSV files.
      */
     @Nonnull
-    static <T> CsvFileFormat<T> csv(boolean includesHeader) {
-        return new CsvFileFormat<>(includesHeader);
+    static <T> CsvFileFormat<T> csv() {
+        return csv(null);
     }
 
     /**
      * Returns a file format for CSV files which specifies to deserialize each
      * line into an instance of the given class. It assumes the CSV has a
      * header line and specifies to use it as the column names that map to the
-     * object's fields.
+     * object's fields. If parameter is {@code null} data is deserialized into
+     * {@code Map<String, String>} but for that case you should prefer the
+     * no-argument {@link #csv()} call.
      */
     @Nonnull
-    static <T> CsvFileFormat<T> csv(@Nonnull Class<T> clazz) {
-        return new CsvFileFormat<>(clazz);
+    static <T> CsvFileFormat<T> csv(@Nullable Class<T> clazz) {
+        return new CsvFileFormat<T>().withClass(clazz);
     }
 
     /**

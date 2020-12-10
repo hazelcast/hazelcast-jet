@@ -23,13 +23,14 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 final class CsvResolver {
 
     private CsvResolver() {
     }
 
-    static List<MappingField> resolveFields(String[] header) {
+    static List<MappingField> resolveFields(Set<String> header) {
         Map<String, MappingField> fields = new LinkedHashMap<>();
         for (String name : header) {
             MappingField field = new MappingField(name, QueryDataType.VARCHAR);

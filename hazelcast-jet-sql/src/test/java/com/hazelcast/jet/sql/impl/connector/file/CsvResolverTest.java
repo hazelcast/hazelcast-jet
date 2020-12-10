@@ -16,11 +16,13 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
+import com.google.common.collect.ImmutableSet;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,7 +31,7 @@ public class CsvResolverTest {
     @Test
     public void test_resolveFields() {
         // given
-        String[] headers = new String[]{"field1", "field2"};
+        Set<String> headers = ImmutableSet.of("field1", "field2");
 
         // when
         List<MappingField> fields = CsvResolver.resolveFields(headers);

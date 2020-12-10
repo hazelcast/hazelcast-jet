@@ -30,9 +30,9 @@ public class CsvMetadataResolverTest {
     @Test
     public void test_fieldValidation() {
         assertThatThrownBy(() -> CsvMetadataResolver.INSTANCE.resolveAndValidateFields(
-                singletonList(new MappingField("name", QueryDataType.VARCHAR, "externalName")),
+                singletonList(new MappingField("name", QueryDataType.VARCHAR, "externalName.nested")),
                 emptyMap())
         ).isInstanceOf(QueryException.class)
-         .hasMessageContaining("EXTERNAL NAME not supported");
+         .hasMessageContaining("Nested fields are not supported");
     }
 }
