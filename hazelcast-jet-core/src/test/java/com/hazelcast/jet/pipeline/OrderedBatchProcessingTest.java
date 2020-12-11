@@ -191,7 +191,7 @@ public class OrderedBatchProcessingTest extends JetTestSupport {
 
     @Test
     public void ordered_batch_processing_test() {
-        int itemCount = 5_000;
+        int itemCount = 200;
         List<Integer> sequence1 = IntStream.range(0, itemCount).boxed().collect(toList());
         List<Integer> sequence2 = IntStream.range(itemCount, 2 * itemCount).boxed().collect(toList());
         List<Integer> sequence3 = IntStream.range(2 * itemCount, 3 * itemCount).boxed().collect(toList());
