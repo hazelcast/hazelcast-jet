@@ -50,7 +50,7 @@ public class OrderedBatchParallelismTest {
     // Used to set the LP of the stage with the higher value than upstream parallelism
     private static final int HIGH_LOCAL_PARALLELISM = 11;
     // Used to set the LP of the stage with the smaller value than upstream parallelism
-    private static final int LOW_LOCAL_PARALLELISM = 5;
+    private static final int LOW_LOCAL_PARALLELISM = 2;
     private static final int UPSTREAM_PARALLELISM = 6;
     private static final Context PIPELINE_CTX = new Context() {
         @Override public int defaultLocalParallelism() {
