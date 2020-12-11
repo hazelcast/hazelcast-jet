@@ -819,8 +819,6 @@ public class JetCommandLine implements Runnable {
             int lastNonQuoteCommentIndex = 0;
 
             for (int i = 0; i < line.length(); i++) {
-                // once we reach the cursor, set the
-                // position of the selected index
                 if (oneLineCommentStart == -1
                         && multiLineCommentStart == -1
                         && quoteStart < 0
@@ -1019,12 +1017,7 @@ public class JetCommandLine implements Runnable {
             resultFuture.get();
         } catch (CancellationException e) {
             res.get().close();
-            String cancellationPrompt = new AttributedStringBuilder()
-                    .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
-                    .append("\nQuery is cancelled. Until now, total " )
-                    .append(" rows received.")
-                    .toAnsi();
-            out.println(cancellationPrompt);
+            out.println(CliPrompts.QUERY_CANCELLATION_PROMPT);
             out.flush();
         } catch (InterruptedException | java.util.concurrent.ExecutionException e) {
             res.get().close();
@@ -1106,9 +1099,15 @@ public class JetCommandLine implements Runnable {
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("\n\t\t\t\t\t Welcome to the Hazelcast Jet SQL Console")
                 .append("\n\t\t\t\t\t Commands end with semicolon")
-                .append("\n\t\t\t\t\t Type 'help;' to display the available commands\n\n")
-
+                .append("\n\t\t\t\t\t Type 'help;' to display the available commands")
+                .append("\n\t\t\t\t\t Press Ctrl+C to cancel streaming queries.\n\n")
     .toAnsi();
+
+        static final String QUERY_CANCELLATION_PROMPT = new AttributedStringBuilder()
+                .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
+                .append("\nQuery is cancelled. Until now, total ")
+                .append(" rows received.")
+                .toAnsi();
         static final String HELP_PROMPT = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("AVAILABLE COMMANDS:\n\n")
