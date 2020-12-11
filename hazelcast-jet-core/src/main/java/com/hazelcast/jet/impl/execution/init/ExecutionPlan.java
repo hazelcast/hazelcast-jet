@@ -478,31 +478,17 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                     e -> {
                         int queueCount = upstreamParallelism / downstreamParallelism;
                         int remainder = upstreamParallelism % downstreamParallelism;
-                        if (remainder == 0) {
-                            return createConveyorArray(downstreamParallelism, queueCount, queueSize);
-                        } else if (upstreamParallelism - remainder == 0) { // downstreamParallelism > upstreamParallelism
-                            return createConveyorArray(downstreamParallelism, queueCount + 1, queueSize);
-                        } else {
-                            return Stream.concat(
-                                    Arrays.stream(createConveyorArray(remainder, queueCount + 1, queueSize)),
-                                    Arrays.stream(createConveyorArray(
-                                            downstreamParallelism - remainder, queueCount, queueSize
-                                    ))).toArray((IntFunction<ConcurrentConveyor<Object>[]>) ConcurrentConveyor[]::new);
-                        }
+                        return Stream.concat(
+                                Arrays.stream(createConveyorArray(remainder, queueCount + 1, queueSize)),
+                                Arrays.stream(createConveyorArray(
+                                        downstreamParallelism - remainder, Math.max(1, queueCount), queueSize
+                                ))).toArray((IntFunction<ConcurrentConveyor<Object>[]>) ConcurrentConveyor[]::new);
                     });
 
-            if (downstreamParallelism >= upstreamParallelism) {
                 return IntStream.range(0, downstreamParallelism)
-                        .filter(i -> i % upstreamParallelism == processorIndex)
-                        .mapToObj(i -> new ConveyorCollector(localConveyors[i], 0, null))
+                        .filter(i -> i % upstreamParallelism == processorIndex % downstreamParallelism)
+                        .mapToObj(i -> new ConveyorCollector(localConveyors[i], processorIndex / downstreamParallelism, null))
                         .toArray(OutboundCollector[]::new);
-            } else {
-                return IntStream.range(0, downstreamParallelism)
-                        .filter(i -> processorIndex % downstreamParallelism == i)
-                        .mapToObj(i -> new ConveyorCollector(localConveyors[i],
-                                processorIndex / downstreamParallelism, null))
-                        .toArray(OutboundCollector[]::new);
-            }
         }
 
         /*
