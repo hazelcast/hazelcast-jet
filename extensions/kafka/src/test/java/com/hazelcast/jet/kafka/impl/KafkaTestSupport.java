@@ -104,7 +104,7 @@ public class KafkaTestSupport {
         brokerProps.setProperty("transaction.state.log.num.partitions", "1");
         brokerProps.setProperty("transaction.state.log.min.isr", "1");
         brokerProps.setProperty("transaction.abort.timed.out.transaction.cleanup.interval.ms", "200");
-        brokerProps.setProperty("group.initial.rebalance.delay.ms", "10");
+        brokerProps.setProperty("group.initial.rebalance.delay.ms", "0");
         KafkaConfig config = new KafkaConfig(brokerProps);
         Time mock = new MockTime();
         kafkaServer = TestUtils.createServer(config, mock);
@@ -175,8 +175,8 @@ public class KafkaTestSupport {
         return getProducer().send(new ProducerRecord<>(topic, key, value));
     }
 
-    void produce(String topic, int partition, Long timestamp, Integer key, String value) {
-        getProducer().send(new ProducerRecord<>(topic, partition, timestamp, key, value));
+    Future<RecordMetadata> produce(String topic, int partition, Long timestamp, Integer key, String value) {
+        return getProducer().send(new ProducerRecord<>(topic, partition, timestamp, key, value));
     }
 
     private KafkaProducer<Integer, String> getProducer() {

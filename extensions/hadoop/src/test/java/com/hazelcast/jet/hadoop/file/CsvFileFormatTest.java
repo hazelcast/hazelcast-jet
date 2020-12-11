@@ -16,16 +16,36 @@
 
 package com.hazelcast.jet.hadoop.file;
 
+import com.fasterxml.jackson.dataformat.csv.CsvMappingException;
+import com.google.common.collect.ImmutableMap;
 import com.hazelcast.jet.hadoop.file.model.User;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.file.FileSources;
 import org.junit.Test;
 
+import java.io.CharConversionException;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class CsvFileFormatTest extends BaseFileFormatTest {
 
     @Test
-    public void shouldReadCsvFile() throws Exception {
+    public void shouldReadCsvFile() {
+
+        FileSourceBuilder<Map<String, String>> source = FileSources.files(currentDir + "/src/test/resources")
+                                                                   .glob("file.csv")
+                                                                   .format(FileFormat.csv());
+
+        assertItemsInSource(source,
+                ImmutableMap.of("name", "Frantisek", "favoriteNumber", "7"),
+                ImmutableMap.of("name", "Ali", "favoriteNumber", "42")
+        );
+    }
+
+    @Test
+    public void shouldReadCsvFileToObject() {
 
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
                                                     .glob("file.csv")
@@ -38,7 +58,7 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
     }
 
     @Test
-    public void shouldReadCsvFileWithMoreColumnsThanTargetClass() throws Exception {
+    public void shouldReadCsvFileWithMoreColumnsThanTargetClass() {
 
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
                                                     .glob("file-more-columns.csv")
@@ -48,5 +68,46 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
                 new User("Frantisek", 7),
                 new User("Ali", 42)
         );
+    }
+
+    @Test
+    public void shouldReadCsvFileWithLessColumnsThanTargetClass() {
+
+        FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
+                                                    .glob("file-less-columns.csv")
+                                                    .format(FileFormat.csv(User.class));
+
+        assertItemsInSource(source,
+                new User("Frantisek", 0),
+                new User("Ali", 0)
+        );
+    }
+
+    @Test
+    public void shouldReadEmptyCsvFile() {
+
+        FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
+                                                    .glob("file-empty.csv")
+                                                    .format(FileFormat.csv(User.class));
+
+        assertItemsInSource(source, items -> assertThat(items).isEmpty());
+    }
+
+    @Test
+    public void shouldThrowWhenInvalidFileType() {
+        FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
+                                                    .glob("invalid-data.png")
+                                                    .format(FileFormat.csv(User.class));
+
+        assertJobFailed(source, CharConversionException.class, "Invalid UTF-8");
+    }
+
+    @Test
+    public void shouldThrowWhenWrongFormatting() {
+        FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
+                                                    .glob("file-invalid.csv")
+                                                    .format(FileFormat.csv(User.class));
+
+        assertJobFailed(source, CsvMappingException.class, "Too many entries");
     }
 }
