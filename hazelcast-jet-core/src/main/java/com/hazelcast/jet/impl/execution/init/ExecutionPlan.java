@@ -485,18 +485,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                                 ))).toArray((IntFunction<ConcurrentConveyor<Object>[]>) ConcurrentConveyor[]::new);
                     });
 
-            if (downstreamParallelism >= upstreamParallelism) {
                 return IntStream.range(0, downstreamParallelism)
-                        .filter(i -> i % upstreamParallelism == processorIndex)
-                        .mapToObj(i -> new ConveyorCollector(localConveyors[i], 0, null))
+                        .filter(i -> i % upstreamParallelism == processorIndex % downstreamParallelism)
+                        .mapToObj(i -> new ConveyorCollector(localConveyors[i], processorIndex / downstreamParallelism, null))
                         .toArray(OutboundCollector[]::new);
-            } else {
-                return IntStream.range(0, downstreamParallelism)
-                        .filter(i -> processorIndex % downstreamParallelism == i)
-                        .mapToObj(i -> new ConveyorCollector(localConveyors[i],
-                                processorIndex / downstreamParallelism, null))
-                        .toArray(OutboundCollector[]::new);
-            }
         }
 
         /*
