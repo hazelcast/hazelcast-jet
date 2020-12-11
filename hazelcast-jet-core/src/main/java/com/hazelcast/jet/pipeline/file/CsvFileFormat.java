@@ -97,6 +97,10 @@ public class CsvFileFormat<T> implements FileFormat<T> {
         return FORMAT_CSV;
     }
 
+    /**
+     * Return the desired list of fields that is used with {@code String[]}
+     * class.
+     */
     @Nullable
     public List<String> stringArrayFieldList() {
         return stringArrayFieldList;
