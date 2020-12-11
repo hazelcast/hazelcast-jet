@@ -157,6 +157,11 @@
                         </dependency>
                         <dependency>
                             <groupId>com.fasterxml.jackson.jr</groupId>
+                            <artifactId>jackson-jr-stree</artifactId>
+                            <version>${jackson.jr.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.fasterxml.jackson.jr</groupId>
                             <artifactId>jackson-jr-objects</artifactId>
                             <version>${jackson.jr.version}</version>
                         </dependency>
@@ -346,6 +351,12 @@
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
             <version>${classgraph.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.jr</groupId>
+            <artifactId>jackson-jr-stree</artifactId>
+            <version>${jackson.jr.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>
