@@ -16,14 +16,14 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.impl.execution.PrefixedLogger;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.logging.LoggingService;
 
 import javax.annotation.Nonnull;
 
@@ -65,14 +65,13 @@ public abstract class ProcessorWrapper implements Processor {
         // and also other objects could be mocked or null, such as jetInstance())
         if (context instanceof ProcCtx) {
             ProcCtx c = (ProcCtx) context;
-            NodeEngine nodeEngine = ((HazelcastInstanceImpl) c.jetInstance().getHazelcastInstance()).node.nodeEngine;
-            ILogger newLogger = nodeEngine.getLogger(
-                    createLoggerName(
-                            getWrapped().getClass().getName(),
-                            c.jobConfig().getName(),
-                            c.vertexName(),
-                            c.globalProcessorIndex())
-            );
+            LoggingService loggingService = c.jetInstance().getHazelcastInstance().getLoggingService();
+            String prefix = createLoggerName(
+                    getWrapped().getClass().getName(),
+                    c.jobConfig().getName(),
+                    c.vertexName(),
+                    c.globalProcessorIndex());
+            ILogger newLogger = new PrefixedLogger(loggingService.getLogger(getWrapped().getClass()), prefix);
             context = new ProcCtx(c.jetInstance(), c.jobId(), c.executionId(), c.jobConfig(),
                     newLogger, c.vertexName(), c.localProcessorIndex(), c.globalProcessorIndex(), c.processingGuarantee(),
                     c.localParallelism(), c.memberIndex(), c.memberCount(), c.tempDirectories(), c.serializationService());

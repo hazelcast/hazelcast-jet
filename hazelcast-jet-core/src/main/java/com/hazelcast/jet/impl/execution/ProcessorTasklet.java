@@ -40,8 +40,6 @@ import com.hazelcast.jet.impl.util.CircularListCursor;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.logging.Logger;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
@@ -172,7 +170,7 @@ public class ProcessorTasklet implements Tasklet {
                                     .sorted(comparing(OutboundEdgeStream::ordinal))
                                     .toArray(OutboundEdgeStream[]::new);
         this.ssContext = ssContext;
-        this.logger = getLogger(context);
+        this.logger = new PrefixedLogger(context.logger(), toString());
         this.isSource = isSource;
 
         instreamCursor = popInstreamGroup();
@@ -186,14 +184,6 @@ public class ProcessorTasklet implements Tasklet {
         waitForAllBarriers = ssContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE;
 
         watermarkCoalescer = WatermarkCoalescer.create(instreams.size());
-    }
-
-    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE",
-            justification = "jetInstance() can be null in TestProcessorContext")
-    private ILogger getLogger(@Nonnull Context context) {
-        return context.jetInstance() != null
-                ? context.jetInstance().getHazelcastInstance().getLoggingService().getLogger(getClass() + "." + toString())
-                : Logger.getLogger(getClass());
     }
 
     private OutboxImpl createOutbox(@Nonnull OutboundCollector ssCollector) {

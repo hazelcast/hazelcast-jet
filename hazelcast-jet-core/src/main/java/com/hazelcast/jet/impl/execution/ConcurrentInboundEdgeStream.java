@@ -88,8 +88,7 @@ public final class ConcurrentInboundEdgeStream {
             this.conveyor = conveyor;
             this.ordinal = ordinal;
             this.priority = priority;
-
-            logger = Logger.getLogger(ConcurrentInboundEdgeStream.class.getName() + "." + debugName);
+            logger = new PrefixedLogger(Logger.getLogger(getClass()), debugName);
             logger.finest("Coalescing " + conveyor.queueCount() + " input queues");
         }
 

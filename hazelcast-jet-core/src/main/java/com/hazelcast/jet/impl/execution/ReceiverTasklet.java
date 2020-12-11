@@ -134,8 +134,8 @@ public class ReceiverTasklet implements Tasklet {
         this.ordinalString = "" + ordinal;
         this.destinationVertexName = destinationVertexName;
         this.memberConnection = memberConnection;
-        String loggerName = String.format("%s.receiverFor:%s#%d", getClass().getName(), destinationVertexName, ordinal);
-        this.logger = loggingService.getLogger(loggerName);
+        String prefix = String.format("receiverFor:%s#%d", destinationVertexName, ordinal);
+        this.logger = new PrefixedLogger(loggingService.getLogger(getClass()), prefix);
         this.receiveWindowCompressed = INITIAL_RECEIVE_WINDOW_COMPRESSED;
     }
 

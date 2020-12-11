@@ -46,6 +46,7 @@ import com.hazelcast.jet.impl.execution.SenderTasklet;
 import com.hazelcast.jet.impl.execution.SnapshotContext;
 import com.hazelcast.jet.impl.execution.StoreSnapshotTasklet;
 import com.hazelcast.jet.impl.execution.Tasklet;
+import com.hazelcast.jet.impl.execution.PrefixedLogger;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl;
@@ -177,30 +178,31 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             QueuedPipe<Object>[] snapshotQueues = new QueuedPipe[vertex.localParallelism()];
             Arrays.setAll(snapshotQueues, i -> new OneToOneConcurrentArrayQueue<>(SNAPSHOT_QUEUE_SIZE));
             ConcurrentConveyor<Object> ssConveyor = ConcurrentConveyor.concurrentConveyor(null, snapshotQueues);
+            ILogger storeSnapShotLogger = new PrefixedLogger(
+                    nodeEngine.getLogger(StoreSnapshotTasklet.class), sanitizeLoggerNamePart(vertex.name()));
             StoreSnapshotTasklet ssTasklet = new StoreSnapshotTasklet(snapshotContext,
                     ConcurrentInboundEdgeStream.create(ssConveyor, 0, 0, true, "ssFrom:" + vertex.name(), null),
                     new AsyncSnapshotWriterImpl(nodeEngine, snapshotContext, vertex.name(), memberIndex, memberCount,
                             jobSerializationService),
-                    nodeEngine.getLogger(StoreSnapshotTasklet.class.getName() + "."
-                            + sanitizeLoggerNamePart(vertex.name())),
-                    vertex.name(), higherPriorityVertices.contains(vertex.vertexId()));
+                    storeSnapShotLogger, vertex.name(), higherPriorityVertices.contains(vertex.vertexId()));
             tasklets.add(ssTasklet);
 
             int localProcessorIdx = 0;
             for (Processor processor : processors) {
                 int globalProcessorIndex = memberIndex * vertex.localParallelism() + localProcessorIdx;
-                String loggerName = createLoggerName(
+                String prefix = createLoggerName(
                         processor.getClass().getName(),
                         jobConfig.getName(),
                         vertex.name(),
                         globalProcessorIndex
                 );
+                ILogger processorLogger = new PrefixedLogger(nodeEngine.getLogger(processor.getClass()), prefix);
                 ProcCtx context = new ProcCtx(
                         instance,
                         jobId,
                         executionId,
                         getJobConfig(),
-                        nodeEngine.getLogger(loggerName),
+                        processorLogger,
                         vertex.name(),
                         localProcessorIdx,
                         globalProcessorIndex,
@@ -326,8 +328,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
         for (VertexDef vertex : vertices) {
             ProcessorSupplier supplier = vertex.processorSupplier();
-            ILogger logger = nodeEngine.getLogger(supplier.getClass().getName() + '.'
-                    + vertex.name() + "#ProcessorSupplier");
+            String prefix = vertex.name() + "#ProcessorSupplier";
+            ILogger logger = new PrefixedLogger(nodeEngine.getLogger(supplier.getClass()), prefix);
             try {
                 supplier.init(new ProcSupplierCtx(
                         service.getJetInstance(),
