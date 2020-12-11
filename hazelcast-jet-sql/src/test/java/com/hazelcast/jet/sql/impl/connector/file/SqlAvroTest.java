@@ -23,7 +23,6 @@ import org.apache.avro.generic.GenericRecordBuilder;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
