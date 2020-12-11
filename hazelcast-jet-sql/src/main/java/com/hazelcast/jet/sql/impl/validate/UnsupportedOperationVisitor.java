@@ -31,14 +31,12 @@ import org.apache.calcite.sql.JoinType;
 import org.apache.calcite.sql.SqlBasicTypeNameSpec;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDataTypeSpec;
-import org.apache.calcite.sql.SqlDynamicParam;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlJoin;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSelectKeyword;
@@ -47,7 +45,7 @@ import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.util.SqlVisitor;
+import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.sql.validate.SqlValidatorException;
 
 import java.util.HashSet;
@@ -62,7 +60,7 @@ import static com.hazelcast.jet.sql.impl.validate.ValidatorResource.RESOURCE;
  * with Jet specific tweaks/extensions.
  */
 @SuppressWarnings("checkstyle:ExecutableStatementCount")
-public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
+public final class UnsupportedOperationVisitor extends SqlBasicVisitor<Void> {
 
     public static final UnsupportedOperationVisitor INSTANCE = new UnsupportedOperationVisitor();
 
@@ -75,6 +73,11 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
      * A set of supported operators for functions.
      */
     private static final Set<SqlOperator> SUPPORTED_OPERATORS;
+
+    /**
+     * A set of supported functions.
+     */
+    private static final Set<SqlOperator> SUPPORTED_FUNCTIONS;
 
     static {
         // We define all supported features explicitly instead of getting them from predefined sets of SqlKind class.
@@ -126,7 +129,7 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         SUPPORTED_KINDS.add(SqlKind.SUM);
         SUPPORTED_KINDS.add(SqlKind.AVG);
 
-        // Extensions
+        // DDL & DML
         SUPPORTED_KINDS.add(SqlKind.CREATE_TABLE);
         SUPPORTED_KINDS.add(SqlKind.DROP_TABLE);
         SUPPORTED_KINDS.add(SqlKind.COLUMN_DECL);
@@ -135,8 +138,8 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         SUPPORTED_KINDS.add(SqlKind.VALUES);
         SUPPORTED_KINDS.add(SqlKind.INSERT);
 
+        // Table functions
         SUPPORTED_KINDS.add(SqlKind.COLLECTION_TABLE);
-        SUPPORTED_KINDS.add(SqlKind.ARGUMENT_ASSIGNMENT);
 
         // Supported operators
         SUPPORTED_OPERATORS = new HashSet<>();
@@ -177,6 +180,13 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
 
         // Extensions
         SUPPORTED_OPERATORS.add(SqlOption.OPERATOR);
+
+        // Supported functions
+        SUPPORTED_FUNCTIONS = new HashSet<>();
+        SUPPORTED_FUNCTIONS.add(JetSqlOperatorTable.CSV_FILE);
+        SUPPORTED_FUNCTIONS.add(JetSqlOperatorTable.JSON_FILE);
+        SUPPORTED_FUNCTIONS.add(JetSqlOperatorTable.AVRO_FILE);
+        SUPPORTED_FUNCTIONS.add(JetSqlOperatorTable.PARQUET_FILE);
     }
 
     private UnsupportedOperationVisitor() {
@@ -184,26 +194,13 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
 
     @Override
     public Void visit(SqlCall call) {
-        processCall(call);
+        // validation of custom functions is already performed as part of argument resolution in JetSqlOperatorTable
+        if (!SUPPORTED_FUNCTIONS.contains(call.getOperator())) {
+            processCall(call);
 
-        call.getOperator().acceptCall(this, call);
-
-        return null;
-    }
-
-    @Override
-    public Void visit(SqlNodeList nodeList) {
-        for (int i = 0; i < nodeList.size(); i++) {
-            SqlNode node = nodeList.get(i);
-
-            node.accept(this);
+            call.getOperator().acceptCall(this, call);
         }
 
-        return null;
-    }
-
-    @Override
-    public Void visit(SqlIdentifier id) {
         return null;
     }
 
@@ -245,11 +242,6 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
             default:
                 throw error(type, ValidatorResource.RESOURCE.notSupported(typeName.getName()));
         }
-    }
-
-    @Override
-    public Void visit(SqlDynamicParam param) {
-        return null;
     }
 
     @Override
@@ -304,11 +296,6 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
             default:
                 throw error(literal, RESOURCE.error(typeName + " literals are not supported"));
         }
-    }
-
-    @Override
-    public Void visit(SqlIntervalQualifier intervalQualifier) {
-        return null;
     }
 
     private void processCall(SqlCall call) {
@@ -379,10 +366,10 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
 
     private void processOtherDdl(SqlCall call) {
         if (!(call instanceof SqlCreateJob)
-                && !(call instanceof SqlDropJob)
-                && !(call instanceof SqlAlterJob)
-                && !(call instanceof SqlCreateSnapshot)
-                && !(call instanceof SqlDropSnapshot)
+            && !(call instanceof SqlDropJob)
+            && !(call instanceof SqlAlterJob)
+            && !(call instanceof SqlCreateSnapshot)
+            && !(call instanceof SqlDropSnapshot)
         ) {
             throw unsupported(call, "OTHER DDL class (" + call.getClass().getSimpleName() + ")");
         }
