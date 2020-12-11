@@ -33,7 +33,7 @@ final class AvroMetadataResolver extends MetadataResolver<GenericRecord> {
     private static final FileFormat<Map<String, String>> FORMAT = FileFormat.avro();
 
     @Override
-    protected FileFormat<?> format() {
+    protected FileFormat<?> formatForSample() {
         return FORMAT;
     }
 
@@ -43,7 +43,7 @@ final class AvroMetadataResolver extends MetadataResolver<GenericRecord> {
     }
 
     @Override
-    protected SupplierEx<QueryTarget> queryTargetSupplier() {
+    protected SupplierEx<QueryTarget> queryTargetSupplier(List<MappingField> resolvedFields) {
         return AvroQueryTarget::new;
     }
 }

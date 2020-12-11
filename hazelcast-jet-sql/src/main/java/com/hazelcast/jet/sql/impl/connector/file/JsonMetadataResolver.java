@@ -33,7 +33,7 @@ final class JsonMetadataResolver extends MetadataResolver<JrsObject> {
     private static final FileFormat<Map<String, String>> FORMAT = FileFormat.json();
 
     @Override
-    protected FileFormat<?> format() {
+    protected FileFormat<?> formatForSample() {
         return FORMAT;
     }
 
@@ -43,7 +43,7 @@ final class JsonMetadataResolver extends MetadataResolver<JrsObject> {
     }
 
     @Override
-    protected SupplierEx<QueryTarget> queryTargetSupplier() {
+    protected SupplierEx<QueryTarget> queryTargetSupplier(List<MappingField> resolvedFields) {
         return JsonQueryTarget::new;
     }
 }

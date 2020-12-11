@@ -40,7 +40,7 @@ import static java.util.Map.Entry;
 abstract class MetadataResolver<T> {
 
     String supportedFormat() {
-        return format().format();
+        return formatForSample().format();
     }
 
     List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, ?> options) {
@@ -61,7 +61,7 @@ abstract class MetadataResolver<T> {
     @SuppressWarnings("unchecked")
     private List<MappingField> resolveFieldsFromSample(Map<String, ?> options) {
         FileProcessorMetaSupplier<T> fileProcessorMetaSupplier =
-                (FileProcessorMetaSupplier<T>) toProcessorMetaSupplier(options);
+                (FileProcessorMetaSupplier<T>) toProcessorMetaSupplier(options, formatForSample());
 
         try (FileTraverser<T> traverser = fileProcessorMetaSupplier.traverser()) {
             T sample = traverser.next();
@@ -72,7 +72,10 @@ abstract class MetadataResolver<T> {
     }
 
     Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
-        return new Metadata(toFields(resolvedFields), toProcessorMetaSupplier(options), queryTargetSupplier());
+        return new Metadata(
+                toFields(resolvedFields),
+                toProcessorMetaSupplier(options, formatForData(resolvedFields)),
+                queryTargetSupplier(resolvedFields));
     }
 
     private List<TableField> toFields(List<MappingField> resolvedFields) {
@@ -87,8 +90,8 @@ abstract class MetadataResolver<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private ProcessorMetaSupplier toProcessorMetaSupplier(Map<String, ?> options) {
-        FileSourceBuilder<?> builder = new FileSourceBuilder<>((String) options.get(OPTION_PATH)).format(format());
+    private ProcessorMetaSupplier toProcessorMetaSupplier(Map<String, ?> options, FileFormat<?> format) {
+        FileSourceBuilder<?> builder = new FileSourceBuilder<>((String) options.get(OPTION_PATH)).format(format);
 
         String glob = (String) options.get(OPTION_GLOB);
         if (glob != null) {
@@ -120,9 +123,14 @@ abstract class MetadataResolver<T> {
         return builder.buildMetaSupplier();
     }
 
-    protected abstract FileFormat<?> format();
+    protected abstract FileFormat<?> formatForSample();
+
+    protected FileFormat<?> formatForData(List<MappingField> resolvedFields) {
+        // Normally, the sample format is equal to the data format. Subclasses can override.
+        return formatForSample();
+    };
 
     protected abstract List<MappingField> resolveFieldsFromSample(T sample);
 
-    protected abstract SupplierEx<QueryTarget> queryTargetSupplier();
+    protected abstract SupplierEx<QueryTarget> queryTargetSupplier(List<MappingField> resolvedFields);
 }

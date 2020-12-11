@@ -33,7 +33,6 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
 
     @Test
     public void shouldReadCsvFile() {
-
         FileSourceBuilder<Map<String, String>> source = FileSources.files(currentDir + "/src/test/resources")
                                                                    .glob("file.csv")
                                                                    .format(FileFormat.csv());
@@ -46,7 +45,6 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
 
     @Test
     public void shouldReadCsvFileToObject() {
-
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
                                                     .glob("file.csv")
                                                     .format(FileFormat.csv(User.class));
@@ -59,7 +57,6 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
 
     @Test
     public void shouldReadCsvFileWithMoreColumnsThanTargetClass() {
-
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
                                                     .glob("file-more-columns.csv")
                                                     .format(FileFormat.csv(User.class));
@@ -72,7 +69,6 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
 
     @Test
     public void shouldReadCsvFileWithLessColumnsThanTargetClass() {
-
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
                                                     .glob("file-less-columns.csv")
                                                     .format(FileFormat.csv(User.class));
@@ -85,7 +81,6 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
 
     @Test
     public void shouldReadEmptyCsvFile() {
-
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
                                                     .glob("file-empty.csv")
                                                     .format(FileFormat.csv(User.class));

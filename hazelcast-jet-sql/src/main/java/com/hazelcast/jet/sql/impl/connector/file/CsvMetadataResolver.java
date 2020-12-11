@@ -22,18 +22,26 @@ import com.hazelcast.jet.sql.impl.extract.CsvQueryTarget;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.extract.QueryTarget;
 
+import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 final class CsvMetadataResolver extends MetadataResolver<Map<String, String>> {
 
     static final CsvMetadataResolver INSTANCE = new CsvMetadataResolver();
 
-    private static final FileFormat<Map<String, String>> FORMAT = FileFormat.csv();
+    private static final FileFormat<Map<String, String>> FORMAT_SAMPLE = FileFormat.csv();
 
     @Override
-    protected FileFormat<?> format() {
-        return FORMAT;
+    protected FileFormat<?> formatForSample() {
+        return FORMAT_SAMPLE;
+    }
+
+    @Override
+    protected FileFormat<?> formatForData(List<MappingField> resolvedFields) {
+        return FileFormat.csv(String[].class)
+                         .withStringArrayFieldList(createFieldList(resolvedFields));
     }
 
     @Override
@@ -42,7 +50,16 @@ final class CsvMetadataResolver extends MetadataResolver<Map<String, String>> {
     }
 
     @Override
-    protected SupplierEx<QueryTarget> queryTargetSupplier() {
-        return CsvQueryTarget::new;
+    protected SupplierEx<QueryTarget> queryTargetSupplier(List<MappingField> resolvedFields) {
+        List<String> fieldMap = createFieldList(resolvedFields);
+        return () -> new CsvQueryTarget(fieldMap);
+    }
+
+    @Nonnull
+    private static List<String> createFieldList(List<MappingField> resolvedFields) {
+        return resolvedFields.stream()
+                      .map(f -> f.externalName() != null ? f.externalName() : f.name())
+                      .distinct()
+                      .collect(Collectors.toList());
     }
 }

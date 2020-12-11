@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline.file;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * {@link FileFormat} for CSV files. See {@link FileFormat#csv} for more
@@ -34,6 +35,7 @@ public class CsvFileFormat<T> implements FileFormat<T> {
     public static final String FORMAT_CSV = "csv";
 
     private Class<T> clazz;
+    private List<String> stringArrayFieldList;
 
     /**
      * Creates {@link CsvFileFormat}. See {@link FileFormat#csv} for more
@@ -56,6 +58,31 @@ public class CsvFileFormat<T> implements FileFormat<T> {
     }
 
     /**
+     * This setting is only applied when the class (as set with {@link
+     * #withClass} is {@code String[]}. It specifies which column should be at
+     * which index in the resulting string array. It is useful if the files
+     * have different field order or don't have the same set of columns.
+     * <p>
+     * For example, if the argument is {@code [surname, name]}, then the format
+     * will always return items of type String[2] where at index 0 is the
+     * {@code surname} column and at index 1 is the {@code name} column,
+     * regardless of the actual columns found in a particular file. If some
+     * file doesn't have some field, the value at its index will always be 0.
+     * <p>
+     * If the given list is {@code null}, the length and order of the string
+     * array will match the order found in each file. It can be different for
+     * each file. If it's an empty array, a zero-length array will be returned.
+     *
+     * @param fieldList list of fields in the desired order for {@code
+     *      String[]} class
+     */
+    @Nonnull
+    public CsvFileFormat<T> withStringArrayFieldList(@Nullable List<String> fieldList) {
+        this.stringArrayFieldList = fieldList;
+        return this;
+    }
+
+    /**
      * Returns the class Jet will deserialize data into.
      * Null if not set.
      */
@@ -68,5 +95,10 @@ public class CsvFileFormat<T> implements FileFormat<T> {
     @Override
     public String format() {
         return FORMAT_CSV;
+    }
+
+    @Nullable
+    public List<String> stringArrayFieldList() {
+        return stringArrayFieldList;
     }
 }
