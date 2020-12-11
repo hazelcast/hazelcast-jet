@@ -478,17 +478,11 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                     e -> {
                         int queueCount = upstreamParallelism / downstreamParallelism;
                         int remainder = upstreamParallelism % downstreamParallelism;
-                        if (remainder == 0) {
-                            return createConveyorArray(downstreamParallelism, queueCount, queueSize);
-                        } else if (upstreamParallelism - remainder == 0) { // downstreamParallelism > upstreamParallelism
-                            return createConveyorArray(downstreamParallelism, queueCount + 1, queueSize);
-                        } else {
-                            return Stream.concat(
-                                    Arrays.stream(createConveyorArray(remainder, queueCount + 1, queueSize)),
-                                    Arrays.stream(createConveyorArray(
-                                            downstreamParallelism - remainder, queueCount, queueSize
-                                    ))).toArray((IntFunction<ConcurrentConveyor<Object>[]>) ConcurrentConveyor[]::new);
-                        }
+                        return Stream.concat(
+                                Arrays.stream(createConveyorArray(remainder, queueCount + 1, queueSize)),
+                                Arrays.stream(createConveyorArray(
+                                        downstreamParallelism - remainder, Math.max(1, queueCount), queueSize
+                                ))).toArray((IntFunction<ConcurrentConveyor<Object>[]>) ConcurrentConveyor[]::new);
                     });
 
             if (downstreamParallelism >= upstreamParallelism) {
