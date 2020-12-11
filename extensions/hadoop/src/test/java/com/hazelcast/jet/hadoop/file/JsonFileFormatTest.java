@@ -107,7 +107,7 @@ public class JsonFileFormatTest extends BaseFileFormatTest {
     public void shouldReadEmptyJsonFile() {
 
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
-                                                    .glob("file-empty.jsonl")
+                                                    .glob("file-empty.json")
                                                     .format(FileFormat.json(User.class));
 
         assertItemsInSource(source, items -> assertThat(items).isEmpty());
