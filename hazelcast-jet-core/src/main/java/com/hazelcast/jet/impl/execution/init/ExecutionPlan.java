@@ -487,7 +487,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
                 return IntStream.range(0, downstreamParallelism)
                         .filter(i -> i % upstreamParallelism == processorIndex % downstreamParallelism)
-                        .mapToObj(i -> new ConveyorCollector(localConveyors[i], processorIndex / downstreamParallelism, null))
+                        .mapToObj(i -> new ConveyorCollector(localConveyors[i],
+                                processorIndex / downstreamParallelism, null))
                         .toArray(OutboundCollector[]::new);
         }
 
