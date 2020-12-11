@@ -41,6 +41,7 @@ import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.NO_NEW_WM;
 import static com.hazelcast.jet.impl.util.ProgressState.DONE;
 import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
+import static com.hazelcast.jet.impl.util.Util.prefixedLogger;
 import static com.hazelcast.jet.impl.util.Util.toLocalTime;
 
 /**
@@ -88,7 +89,7 @@ public final class ConcurrentInboundEdgeStream {
             this.conveyor = conveyor;
             this.ordinal = ordinal;
             this.priority = priority;
-            logger = new PrefixedLogger(Logger.getLogger(getClass()), debugName);
+            logger = prefixedLogger(Logger.getLogger(getClass()), debugName);
             logger.finest("Coalescing " + conveyor.queueCount() + " input queues");
         }
 

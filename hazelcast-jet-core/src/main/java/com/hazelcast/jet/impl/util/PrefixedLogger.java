@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.execution;
+package com.hazelcast.jet.impl.util;
 
 import com.hazelcast.logging.AbstractLogger;
 import com.hazelcast.logging.ILogger;
@@ -23,32 +23,35 @@ import com.hazelcast.logging.LogEvent;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
+/**
+ * A Logger implementation that wraps another Logger and prefixes all
+ * the logged messages with a given prefix. The logger logs the
+ * messages like: [prefix] message
+ */
 public class PrefixedLogger extends AbstractLogger {
-
-    private static final String PATTERN = "%s -> %s";
 
     private final ILogger wrapped;
     private final String prefix;
 
-    public PrefixedLogger(ILogger wrapped, String prefix) {
+    PrefixedLogger(ILogger wrapped, String prefix) {
         this.wrapped = wrapped;
-        this.prefix = prefix;
+        this.prefix = "[" + prefix + "] ";
     }
 
     @Override
     public void log(Level level, String message) {
-        wrapped.log(level, String.format(PATTERN, prefix, message));
+        wrapped.log(level, prefix + message);
     }
 
     @Override
     public void log(Level level, String message, Throwable thrown) {
-        wrapped.log(level, String.format(PATTERN, prefix, message), thrown);
+        wrapped.log(level, prefix + message, thrown);
     }
 
     @Override
     public void log(LogEvent logEvent) {
         LogRecord logRecord = logEvent.getLogRecord();
-        logRecord.setMessage(String.format(PATTERN, prefix, logRecord.getMessage()));
+        logRecord.setMessage(prefix + logRecord.getMessage());
         wrapped.log(logEvent);
     }
 

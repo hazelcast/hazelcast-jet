@@ -20,14 +20,15 @@ import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.impl.execution.PrefixedLogger;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.impl.execution.init.ExecutionPlan.createLoggerName;
+import static com.hazelcast.jet.impl.util.Util.prefix;
+import static com.hazelcast.jet.impl.util.Util.prefixedLogger;
+
 
 /**
  * Base class for processor wrappers. Delegates all calls to the wrapped
@@ -66,12 +67,8 @@ public abstract class ProcessorWrapper implements Processor {
         if (context instanceof ProcCtx) {
             ProcCtx c = (ProcCtx) context;
             LoggingService loggingService = c.jetInstance().getHazelcastInstance().getLoggingService();
-            String prefix = createLoggerName(
-                    getWrapped().getClass().getName(),
-                    c.jobConfig().getName(),
-                    c.vertexName(),
-                    c.globalProcessorIndex());
-            ILogger newLogger = new PrefixedLogger(loggingService.getLogger(getWrapped().getClass()), prefix);
+            String prefix = prefix(c.jobConfig().getName(), c.jobId(), c.vertexName(), c.globalProcessorIndex());
+            ILogger newLogger = prefixedLogger(loggingService.getLogger(wrapped.getClass()), prefix);
             context = new ProcCtx(c.jetInstance(), c.jobId(), c.executionId(), c.jobConfig(),
                     newLogger, c.vertexName(), c.localProcessorIndex(), c.globalProcessorIndex(), c.processingGuarantee(),
                     c.localParallelism(), c.memberIndex(), c.memberCount(), c.tempDirectories(), c.serializationService());

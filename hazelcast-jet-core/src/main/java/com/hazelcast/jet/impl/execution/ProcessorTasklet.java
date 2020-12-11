@@ -40,6 +40,8 @@ import com.hazelcast.jet.impl.util.CircularListCursor;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
@@ -84,6 +86,8 @@ import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
 import static com.hazelcast.jet.impl.util.Util.lazyAdd;
 import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
+import static com.hazelcast.jet.impl.util.Util.prefix;
+import static com.hazelcast.jet.impl.util.Util.prefixedLogger;
 import static com.hazelcast.jet.impl.util.Util.sum;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.groupingBy;
@@ -170,7 +174,9 @@ public class ProcessorTasklet implements Tasklet {
                                     .sorted(comparing(OutboundEdgeStream::ordinal))
                                     .toArray(OutboundEdgeStream[]::new);
         this.ssContext = ssContext;
-        this.logger = new PrefixedLogger(context.logger(), toString());
+        String prefix = prefix(context.jobConfig().getName(),
+                context.jobId(), context.vertexName(), context.globalProcessorIndex());
+        this.logger = prefixedLogger(getLogger(context), prefix);
         this.isSource = isSource;
 
         instreamCursor = popInstreamGroup();
@@ -184,6 +190,14 @@ public class ProcessorTasklet implements Tasklet {
         waitForAllBarriers = ssContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE;
 
         watermarkCoalescer = WatermarkCoalescer.create(instreams.size());
+    }
+
+    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE",
+            justification = "jetInstance() can be null in TestProcessorContext")
+    private ILogger getLogger(@Nonnull Context context) {
+        return context.jetInstance() != null
+                ? context.jetInstance().getHazelcastInstance().getLoggingService().getLogger(getClass())
+                : Logger.getLogger(getClass());
     }
 
     private OutboxImpl createOutbox(@Nonnull OutboundCollector ssCollector) {
@@ -536,8 +550,9 @@ public class ProcessorTasklet implements Tasklet {
 
     @Override
     public String toString() {
-        String jobPrefix = context.jobConfig().getName() == null ? "" : context.jobConfig().getName() + "/";
-        return "ProcessorTasklet{" + jobPrefix + context.vertexName() + '#' + context.globalProcessorIndex() + '}';
+        String prefix = prefix(context.jobConfig().getName(),
+                context.jobId(), context.vertexName(), context.globalProcessorIndex());
+        return "ProcessorTasklet{" + prefix + '}';
     }
 
     private void observeBarrier(int ordinal, SnapshotBarrier barrier) {
