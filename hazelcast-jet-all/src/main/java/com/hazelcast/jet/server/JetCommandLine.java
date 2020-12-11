@@ -51,6 +51,7 @@ import com.hazelcast.sql.SqlRowMetadata;
 import org.jline.reader.EOFError;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.History;
 import org.jline.reader.ParsedLine;
 import org.jline.reader.Parser;
 import org.jline.reader.SyntaxError;
@@ -90,6 +91,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -215,7 +217,8 @@ public class JetCommandLine implements Runnable {
     ) {
         runWithJet(targets, verbosity, jet -> {
             LineReader reader = LineReaderBuilder.builder().parser(new MultilineParser())
-                    .variable(LineReader.SECONDARY_PROMPT_PATTERN, "%M%P > ")
+                    .variable(LineReader.SECONDARY_PROMPT_PATTERN, new AttributedStringBuilder()
+                            .style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR)).append("%M%P > ").toAnsi())
                     .variable(LineReader.INDENTATION, 2)
                     .variable(LineReader.LIST_MAX, SQL_LIST_MAX)
                     .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
@@ -254,11 +257,32 @@ public class JetCommandLine implements Runnable {
                     writer.flush();
                     continue;
                 }
+                if ("history".equalsIgnoreCase(command)) {
+                    ListIterator<History.Entry> iterator = reader.getHistory().iterator();
+                    while (iterator.hasNext()) {
+                        History.Entry entry = iterator.next();
+                        if (iterator.hasNext()) {
+                            String entryLine = new AttributedStringBuilder()
+                                    .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
+                                    .append(String.valueOf(entry.index() + 1))
+                                    .append(" - ")
+                                    .append(entry.line())
+                                    .append("\n")
+                                    .toAnsi();
+                            writer.println(entryLine);
+                            writer.flush();
+                        } else {
+                            iterator.remove();
+                        }
+                    }
+                    continue;
+                }
                 if ("exit".equalsIgnoreCase(command)) {
                     writer.println(CliPrompts.EXIT_PROMPT);
                     writer.flush();
                     break;
                 }
+
                 executeSqlCmd(jet, command, reader.getTerminal());
             }
         });
@@ -970,7 +994,6 @@ public class JetCommandLine implements Runnable {
     }
 
     private void executeSqlCmd(JetInstance jet, String command, Terminal terminal) {
-
         PrintWriter out = terminal.writer();
         final int colWidth = 20;
         AtomicReference<SqlResult> res = new AtomicReference<>();
@@ -1105,15 +1128,16 @@ public class JetCommandLine implements Runnable {
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("\n\t\t\t\t\t Welcome to the Hazelcast Jet SQL Console")
                 .append("\n\t\t\t\t\t Commands end with semicolon")
-                .append("\n\t\t\t\t\t Type 'help;' to display the available commands")
-                .append("\n\t\t\t\t\t Press Ctrl+C to cancel streaming queries.\n\n")
+                .append("\n\t\t\t\t\t Type 'HELP;' to display the available commands")
+                .append("\n\t\t\t\t\t Press Ctrl+C to cancel streaming queries\n\n")
     .toAnsi();
         static final String HELP_PROMPT = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("AVAILABLE COMMANDS:\n\n")
                 .append("CLEAR\t-\tClear the terminal screen\n")
+                .append("HELP\t-\tProvide information about available commands.\n")
+                .append("HISTORY\t-\tShow the command history of the current session.\n")
                 .append("EXIT\t-\tExit from the SQL console.\n")
-                .append("HELP\t-\tProvides information about available commands.\n")
                 .append("\nHints:\n")
                 .append("\tPress Ctrl+C to cancel streaming queries.\n")
                 .toAnsi();
