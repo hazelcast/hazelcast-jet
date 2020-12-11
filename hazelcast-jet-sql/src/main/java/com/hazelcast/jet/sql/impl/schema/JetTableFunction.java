@@ -49,6 +49,10 @@ public abstract class JetTableFunction implements TableFunction {
         return ((JetFunctionRelDataType) rowType).table();
     }
 
+    /**
+     * The only purpose of this class is to be able to pass the {@code
+     * HazelcastTable} object to place where the function is used.
+     */
     private static final class JetFunctionRelDataType implements RelDataType {
 
         private final HazelcastTable table;

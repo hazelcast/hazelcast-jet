@@ -29,7 +29,6 @@ import com.hazelcast.sql.impl.schema.TableField;
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.toList;
@@ -40,23 +39,8 @@ import static java.util.Map.Entry;
 
 abstract class MetadataResolver<T> {
 
-    private final FileFormat<?> format;
-    private final Function<T, List<MappingField>> fieldResolver;
-    private final SupplierEx<QueryTarget> queryTargetSupplier;
-
-    protected MetadataResolver(
-            FileFormat<?> format,
-            Function<T, List<MappingField>> fieldResolver,
-            SupplierEx<QueryTarget> queryTargetSupplier
-    ) {
-        this.format = format;
-        this.fieldResolver = fieldResolver;
-        this.queryTargetSupplier = queryTargetSupplier;
-    }
-
-
     String supportedFormat() {
-        return format.format();
+        return format().format();
     }
 
     List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, ?> options) {
@@ -81,14 +65,14 @@ abstract class MetadataResolver<T> {
 
         try (FileTraverser<T> traverser = fileProcessorMetaSupplier.traverser()) {
             T sample = traverser.next();
-            return fieldResolver.apply(sample);
+            return resolveFieldsFromSample(sample);
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
     }
 
     Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
-        return new Metadata(toFields(resolvedFields), toProcessorMetaSupplier(options), queryTargetSupplier);
+        return new Metadata(toFields(resolvedFields), toProcessorMetaSupplier(options), queryTargetSupplier());
     }
 
     private List<TableField> toFields(List<MappingField> resolvedFields) {
@@ -104,7 +88,7 @@ abstract class MetadataResolver<T> {
 
     @SuppressWarnings("unchecked")
     private ProcessorMetaSupplier toProcessorMetaSupplier(Map<String, ?> options) {
-        FileSourceBuilder<?> builder = new FileSourceBuilder<>((String) options.get(OPTION_PATH)).format(format);
+        FileSourceBuilder<?> builder = new FileSourceBuilder<>((String) options.get(OPTION_PATH)).format(format());
 
         String glob = (String) options.get(OPTION_GLOB);
         if (glob != null) {
@@ -135,4 +119,10 @@ abstract class MetadataResolver<T> {
         }
         return builder.buildMetaSupplier();
     }
+
+    protected abstract FileFormat<?> format();
+
+    protected abstract List<MappingField> resolveFieldsFromSample(T sample);
+
+    protected abstract SupplierEx<QueryTarget> queryTargetSupplier();
 }

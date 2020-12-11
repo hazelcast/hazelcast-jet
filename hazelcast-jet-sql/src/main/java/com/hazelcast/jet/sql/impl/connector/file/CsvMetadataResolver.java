@@ -16,20 +16,33 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.sql.impl.extract.CsvQueryTarget;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
+import com.hazelcast.sql.impl.extract.QueryTarget;
 
+import java.util.List;
 import java.util.Map;
 
 final class CsvMetadataResolver extends MetadataResolver<Map<String, String>> {
 
     static final CsvMetadataResolver INSTANCE = new CsvMetadataResolver();
 
-    private CsvMetadataResolver() {
-        super(
-                FileFormat.csv(),
-                entry -> CsvResolver.resolveFields(entry.keySet()),
-                CsvQueryTarget::new
-        );
+    private static final FileFormat<Map<String, String>> FORMAT = FileFormat.csv();
+
+    @Override
+    protected FileFormat<?> format() {
+        return FORMAT;
+    }
+
+    @Override
+    protected List<MappingField> resolveFieldsFromSample(Map<String, String> entry) {
+        return CsvResolver.resolveFields(entry.keySet());
+    }
+
+    @Override
+    protected SupplierEx<QueryTarget> queryTargetSupplier() {
+        return CsvQueryTarget::new;
     }
 }

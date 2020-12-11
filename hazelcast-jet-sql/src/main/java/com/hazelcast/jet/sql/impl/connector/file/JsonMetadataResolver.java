@@ -17,18 +17,33 @@
 package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.fasterxml.jackson.jr.stree.JrsObject;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.sql.impl.extract.JsonQueryTarget;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
+import com.hazelcast.sql.impl.extract.QueryTarget;
+
+import java.util.List;
+import java.util.Map;
 
 final class JsonMetadataResolver extends MetadataResolver<JrsObject> {
 
     static final JsonMetadataResolver INSTANCE = new JsonMetadataResolver();
 
-    private JsonMetadataResolver() {
-        super(
-                FileFormat.json(),
-                JsonResolver::resolveFields,
-                JsonQueryTarget::new
-        );
+    private static final FileFormat<Map<String, String>> FORMAT = FileFormat.json();
+
+    @Override
+    protected FileFormat<?> format() {
+        return FORMAT;
+    }
+
+    @Override
+    protected List<MappingField> resolveFieldsFromSample(JrsObject object) {
+        return JsonResolver.resolveFields(object);
+    }
+
+    @Override
+    protected SupplierEx<QueryTarget> queryTargetSupplier() {
+        return JsonQueryTarget::new;
     }
 }
