@@ -29,9 +29,9 @@ import javax.annotation.Nullable;
 public class JsonFileFormat<T> implements FileFormat<T> {
 
     /**
-     * Format ID for JSON Lines.
+     * Format ID for JSON.
      */
-    public static final String FORMAT_JSONL = "jsonl";
+    public static final String FORMAT_JSON = "json";
 
     private Class<T> clazz;
 
@@ -47,7 +47,7 @@ public class JsonFileFormat<T> implements FileFormat<T> {
      * If parameter is {@code null} data is deserialized into
      * {@link com.fasterxml.jackson.jr.stree.JrsObject}.
      *
-     * @param clazz type of the object to deserialize JSON lines into
+     * @param clazz type of the object to deserialize JSON into
      */
     @Nonnull
     public JsonFileFormat<T> withClass(@Nullable Class<T> clazz) {
@@ -66,6 +66,6 @@ public class JsonFileFormat<T> implements FileFormat<T> {
 
     @Nonnull @Override
     public String format() {
-        return FORMAT_JSONL;
+        return FORMAT_JSON;
     }
 }

@@ -115,15 +115,10 @@ public interface SqlConnector {
     String PORTABLE_FORMAT = "portable";
 
     /**
-     * Value for {@value #OPTION_KEY_FORMAT} and {@value #OPTION_VALUE_FORMAT}
-     * for JSON serialization.
+     * Value for {@value #OPTION_KEY_FORMAT}, {@value #OPTION_VALUE_FORMAT}
+     * and {@value #OPTION_FORMAT} for JSON serialization.
      */
     String JSON_FORMAT = "json";
-
-    /**
-     * Value for {@value #OPTION_FORMAT} for JSON Lines serialization.
-     */
-    String JSONL_FORMAT = "jsonl";
 
     /**
      * Value for {@value #OPTION_FORMAT} for CSV (comma-separated values)

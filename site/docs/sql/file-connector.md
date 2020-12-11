@@ -38,7 +38,7 @@ records in files have the same format. These are the supported `format`
 values:
 
 * `csv`
-* `jsonl`
+* `json`
 * `avro`
 * `parquet`: remote files only
 
@@ -73,9 +73,9 @@ OPTIONS (
 )
 ```
 
-### JSONL serialization
+### JSON serialization
 
-The `jsonl` files are expected to contain one valid json document per
+The `json` files are expected to contain one valid json document per
 line and be `UTF-8` encoded. If you skip mapping columns from the
 declaration, we infer names and types based on a sample.
 
@@ -84,7 +84,7 @@ CREATE MAPPING my_files
 TYPE File
 OPTIONS (
     'path' = '/path/to/directory',
-    'format' = 'jsonl'
+    'format' = 'json'
 )
 ```
 
@@ -145,7 +145,7 @@ To execute an ad hoc query against data in files you can use one of the
 predefined table functions:
 
 * `csv_file`
-* `jsonl_file`
+* `json_file`
 * `avro_file`
 * `parquet_file`
 

@@ -180,7 +180,7 @@ public final class UnsupportedOperationVisitor extends SqlBasicVisitor<Void> {
         // Supported functions
         SUPPORTED_FUNCTIONS = new HashSet<>();
         SUPPORTED_FUNCTIONS.add(JetSqlOperatorTable.CSV_FILE);
-        SUPPORTED_FUNCTIONS.add(JetSqlOperatorTable.JSONL_FILE);
+        SUPPORTED_FUNCTIONS.add(JetSqlOperatorTable.JSON_FILE);
         SUPPORTED_FUNCTIONS.add(JetSqlOperatorTable.AVRO_FILE);
         SUPPORTED_FUNCTIONS.add(JetSqlOperatorTable.PARQUET_FILE);
     }

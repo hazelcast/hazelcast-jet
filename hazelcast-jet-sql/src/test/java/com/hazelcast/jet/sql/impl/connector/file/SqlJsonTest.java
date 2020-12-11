@@ -29,7 +29,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSONL_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_FORMAT;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.emptyMap;
@@ -55,7 +55,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + "nonExistingField VARCHAR"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '\'' + OPTION_FORMAT + "'='" + JSONL_FORMAT + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
                 + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.json" + '\''
                 + ")"
@@ -75,7 +75,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", name VARCHAR EXTERNAL NAME string"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '\'' + OPTION_FORMAT + "'='" + JSONL_FORMAT + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
                 + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.json" + '\''
                 + ")"
@@ -107,7 +107,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", object OBJECT"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '\'' + OPTION_FORMAT + "'='" + JSONL_FORMAT + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
                 + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.json" + '\''
                 + ")"
@@ -140,7 +140,7 @@ public class SqlJsonTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '\'' + OPTION_FORMAT + "'='" + JSONL_FORMAT + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
                 + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.json" + '\''
                 + ")"
@@ -204,7 +204,7 @@ public class SqlJsonTest extends SqlTestSupport {
                         + ", \"null\""
                         + ", object IS NOT NULL"
                         + " FROM TABLE ("
-                        + "JSONL_FILE ('" + RESOURCES_PATH + "', 'file.json')"
+                        + "JSON_FILE ('" + RESOURCES_PATH + "', 'file.json')"
                         + ")",
                 singletonList(new Row(
                         "string",
@@ -232,7 +232,7 @@ public class SqlJsonTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " (string INT) "
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '\'' + OPTION_FORMAT + "'='" + JSONL_FORMAT + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
                 + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.json" + '\''
                 + ")"
@@ -248,7 +248,7 @@ public class SqlJsonTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " (field INT) "
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '\'' + OPTION_FORMAT + "'='" + JSONL_FORMAT + '\''
+                + '\'' + OPTION_FORMAT + "'='" + JSON_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='/non-existent-directory'"
                 + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "foo.json" + '\''
                 + ")"

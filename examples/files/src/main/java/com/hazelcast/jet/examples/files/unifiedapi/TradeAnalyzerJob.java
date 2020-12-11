@@ -33,7 +33,7 @@ import java.nio.file.Paths;
  * Demonstrates usage of {@link FileSources#files(String)} and various file formats from {@link FileFormat}
  * <p>
  * Usage:
- * com.hazelcast.jet.examples.files.unifiedapi.TradeAnalyzerJob <csv|jsonl|avro|parquet> <sourceDir>
+ * com.hazelcast.jet.examples.files.unifiedapi.TradeAnalyzerJob <csv|json|avro|parquet> <sourceDir>
  * <p>
  * Reads files of given type, expecting corresponding format, and sums the quantity sold for each trade instrument and
  * prints to result to the log.
@@ -41,7 +41,7 @@ import java.nio.file.Paths;
  * CSV - the .csv file is expected to contain header with columns matching the fields of the class specified by
  * {@link FileFormat#csv(Class)}
  * <p>
- * JSON - the .jsonl files is expected to contain one valid json document per line, each document must have fields
+ * JSON - the .json files is expected to contain one valid json document per line, each document must have fields
  * matching the fields of the class specified by {@link FileFormat#json(Class)}
  * <p>
  * AVRO - the Avro file is expected to have a schema compatible with the class specified by
@@ -65,7 +65,7 @@ public class TradeAnalyzerJob {
                 trades = p.readFrom(source);
                 break;
 
-            case "jsonl":
+            case "json":
                 source = FileSources.files(sourceDir)
                                     .glob("*." + type)
                                     .format(FileFormat.json(Trade.class))
@@ -108,7 +108,7 @@ public class TradeAnalyzerJob {
     public static void main(String[] args) {
         if (args.length != 2) {
             System.err.println("Usage:");
-            System.err.println("  " + TradeAnalyzerJob.class.getSimpleName() + " <csv|jsonl|avro|parquet> <sourceDir>");
+            System.err.println("  " + TradeAnalyzerJob.class.getSimpleName() + " <csv|json|avro|parquet> <sourceDir>");
             System.exit(1);
         }
         final String type = args[0];

@@ -61,7 +61,7 @@ import static org.apache.calcite.sql.type.SqlTypeFamily.MAP;
 public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
 
     public static final SqlFunction CSV_FILE = from(FileTableFunction.CSV, "CSV_FILE");
-    public static final SqlFunction JSONL_FILE = from(FileTableFunction.JSONL, "JSONL_FILE");
+    public static final SqlFunction JSON_FILE = from(FileTableFunction.JSON, "JSON_FILE");
     public static final SqlFunction AVRO_FILE = from(FileTableFunction.AVRO, "AVRO_FILE");
     public static final SqlFunction PARQUET_FILE = from(FileTableFunction.PARQUET, "PARQUET_FILE");
 

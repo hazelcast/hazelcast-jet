@@ -235,7 +235,7 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
         @Nonnull
         @Override
         public String format() {
-            return JsonFileFormat.FORMAT_JSONL;
+            return JsonFileFormat.FORMAT_JSON;
         }
     }
 

@@ -34,9 +34,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class JsonFileFormatTest extends BaseFileFormatTest {
 
     @Test
-    public void shouldReadJsonLinesFile() {
+    public void shouldReadJsonFile() {
         FileSourceBuilder<JrsObject> source = FileSources.files(currentDir + "/src/test/resources")
-                                                         .glob("file.jsonl")
+                                                         .glob("file.json")
                                                          .format(FileFormat.json());
 
         assertItemsInSource(source,
@@ -55,9 +55,9 @@ public class JsonFileFormatTest extends BaseFileFormatTest {
     }
 
     @Test
-    public void shouldReadJsonLinesFileToObject() {
+    public void shouldReadJsonFileToObject() {
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
-                                                    .glob("file.jsonl")
+                                                    .glob("file.json")
                                                     .format(FileFormat.json(User.class));
 
         assertItemsInSource(source,
@@ -80,9 +80,9 @@ public class JsonFileFormatTest extends BaseFileFormatTest {
     }
 
     @Test
-    public void shouldReadJsonLinesFileWithMoreAttributesThanTargetClass() {
+    public void shouldReadJsonFileWithMoreAttributesThanTargetClass() {
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
-                                                    .glob("file-more-attributes.jsonl")
+                                                    .glob("file-more-attributes.json")
                                                     .format(FileFormat.json(User.class));
 
         assertItemsInSource(source,
@@ -92,9 +92,9 @@ public class JsonFileFormatTest extends BaseFileFormatTest {
     }
 
     @Test
-    public void shouldReadJsonLinesFileWithLessColumnsThanTargetClass() {
+    public void shouldReadJsonFileWithLessColumnsThanTargetClass() {
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
-                                                    .glob("file-less-attributes.jsonl")
+                                                    .glob("file-less-attributes.json")
                                                     .format(FileFormat.json(User.class));
 
         assertItemsInSource(source,
@@ -125,7 +125,7 @@ public class JsonFileFormatTest extends BaseFileFormatTest {
     @Test
     public void shouldThrowWhenWrongFormatting() {
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
-                                                    .glob("file-invalid.jsonl")
+                                                    .glob("file-invalid.json")
                                                     .format(FileFormat.json(User.class));
 
         assertJobFailed(source, JsonEOFException.class, "Unexpected end-of-input");

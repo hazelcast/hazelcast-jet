@@ -33,7 +33,7 @@ import java.util.Map;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.CSV_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSONL_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PARQUET_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_GLOB;
@@ -52,7 +52,7 @@ public final class FileTableFunction extends JetTableFunction {
             new JetTableFunctionParameter(3, OPTION_OPTIONS, SqlTypeName.MAP, false)
     ));
 
-    public static final FileTableFunction JSONL = new FileTableFunction(JSONL_FORMAT, asList(
+    public static final FileTableFunction JSON = new FileTableFunction(JSON_FORMAT, asList(
             new JetTableFunctionParameter(0, OPTION_PATH, SqlTypeName.VARCHAR, true),
             new JetTableFunctionParameter(1, OPTION_GLOB, SqlTypeName.VARCHAR, false),
             new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, SqlTypeName.VARCHAR, false),
