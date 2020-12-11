@@ -135,11 +135,9 @@ OPTIONS (
 ## External Name
 
 You rarely need to specify the columns in DDL. If you do, you might want
-to specify the external name. External names are supported for all
-formats except for `csv`.
-
-We don't support nested fields, hence the external name should refer to
-the top-level field - not containing any `.`.
+to specify the external name. We don't support nested fields, hence the
+external name should refer to the top-level field - not containing any
+`.`.
 
 ## File Table Functions
 
@@ -174,74 +172,5 @@ SELECT * FROM TABLE(
 ## Installation
 
 Depending on what formats you want to work with you need different
-modules on the classpath.
-
-`csv` format requires the `hazelcast-jet-csv` module:
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--Gradle-->
-
-```groovy
-compile 'com.hazelcast.jet:hazelcast-jet-csv:{jet-version}'
-```
-
-<!--Maven-->
-
-```xml
-<dependency>
-    <groupId>com.hazelcast.jet</groupId>
-    <artifactId>hazelcast-jet-csv</artifactId>
-    <version>{jet-version}</version>
-</dependency>
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-`avro` format requires the `hazelcast-jet-avro` module:
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--Gradle-->
-
-```groovy
-compile 'com.hazelcast.jet:hazelcast-jet-avro:{jet-version}'
-```
-
-<!--Maven-->
-
-```xml
-<dependency>
-    <groupId>com.hazelcast.jet</groupId>
-    <artifactId>hazelcast-jet-avro</artifactId>
-    <version>{jet-version}</version>
-</dependency>
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-`parquet` format and all remote files require the `hazelcast-jet-hadoop`
-module:
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--Gradle-->
-
-```groovy
-compile 'com.hazelcast.jet:hazelcast-jet-hadoop:{jet-version}'
-```
-
-<!--Maven-->
-
-```xml
-<dependency>
-    <groupId>com.hazelcast.jet</groupId>
-    <artifactId>hazelcast-jet-hadoop</artifactId>
-    <version>{jet-version}</version>
-</dependency>
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-If you're using the distribution package, make sure to move the
-respective jar files from the `opt/` to the `lib/` directory.
+modules on the classpath. Consult [file source documentation](
+../api/sources-sinks#the-format) for details.
