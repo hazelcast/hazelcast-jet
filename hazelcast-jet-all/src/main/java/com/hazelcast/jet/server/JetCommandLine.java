@@ -1017,7 +1017,13 @@ public class JetCommandLine implements Runnable {
             resultFuture.get();
         } catch (CancellationException e) {
             res.get().close();
-            out.println(CliPrompts.QUERY_CANCELLATION_PROMPT);
+            String queryCancellationPrompt = new AttributedStringBuilder()
+                    .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
+                    .append("\nQuery is cancelled. Until now, total ")
+                    .append(String.valueOf(rowCount.get()))
+                    .append(" rows received.")
+                    .toAnsi();
+            out.println(queryCancellationPrompt);
             out.flush();
         } catch (InterruptedException | java.util.concurrent.ExecutionException e) {
             res.get().close();
@@ -1102,12 +1108,6 @@ public class JetCommandLine implements Runnable {
                 .append("\n\t\t\t\t\t Type 'help;' to display the available commands")
                 .append("\n\t\t\t\t\t Press Ctrl+C to cancel streaming queries.\n\n")
     .toAnsi();
-
-        static final String QUERY_CANCELLATION_PROMPT = new AttributedStringBuilder()
-                .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
-                .append("\nQuery is cancelled. Until now, total ")
-                .append(" rows received.")
-                .toAnsi();
         static final String HELP_PROMPT = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("AVAILABLE COMMANDS:\n\n")
