@@ -22,6 +22,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.parquet.hadoop.util.HadoopOutputFile;
+import org.apache.parquet.io.OutputFile;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -165,7 +167,7 @@ public class SqlHadoopTest extends SqlTestSupport {
 
     @Test
     public void test_avro() throws IOException {
-        store("/avro/file.avro", Files.readAllBytes(Paths.get("src/test/resources/file.avro")));
+        store("/avro/file.avro", FileUtil.createAvroPayload());
 
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
@@ -186,7 +188,7 @@ public class SqlHadoopTest extends SqlTestSupport {
 
     @Test
     public void test_avroSchemaDiscovery() throws IOException {
-        store("/discovered-avro/file.avro", Files.readAllBytes(Paths.get("src/test/resources/file.avro")));
+        store("/discovered-avro/file.avro", FileUtil.createAvroPayload());
 
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + ' '
@@ -205,7 +207,7 @@ public class SqlHadoopTest extends SqlTestSupport {
 
     @Test
     public void test_parquet_nulls() throws IOException {
-        store("/parquet-nulls/file.parquet", Files.readAllBytes(Paths.get("src/test/resources/file.parquet")));
+        storeParquet("/parquet-nulls/file.parquet");
 
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
@@ -225,7 +227,7 @@ public class SqlHadoopTest extends SqlTestSupport {
 
     @Test
     public void test_parquet_fieldsMapping() throws IOException {
-        store("/parquet-fields-mapping/file.parquet", Files.readAllBytes(Paths.get("src/test/resources/file.parquet")));
+        storeParquet("/parquet-fields-mapping/file.parquet");
 
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
@@ -246,7 +248,7 @@ public class SqlHadoopTest extends SqlTestSupport {
 
     @Test
     public void test_parquet_allTypes() throws IOException {
-        store("/parquet-all-types/file.parquet", Files.readAllBytes(Paths.get("src/test/resources/file.parquet")));
+        storeParquet("/parquet-all-types/file.parquet");
 
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
@@ -292,7 +294,7 @@ public class SqlHadoopTest extends SqlTestSupport {
 
     @Test
     public void test_parquet_schemaDiscovery() throws IOException {
-        store("/parquet-schema-discovery/file.parquet", Files.readAllBytes(Paths.get("src/test/resources/file.parquet")));
+        storeParquet("/parquet-schema-discovery/file.parquet");
 
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + ' '
@@ -338,7 +340,7 @@ public class SqlHadoopTest extends SqlTestSupport {
 
     @Test
     public void test_parquet_tableFunction() throws IOException {
-        store("/parquet-table-function/file.parquet", Files.readAllBytes(Paths.get("src/test/resources/file.parquet")));
+        storeParquet("/parquet-table-function/file.parquet");
 
         assertRowsAnyOrder("SELECT "
                         + "string"
@@ -389,5 +391,10 @@ public class SqlHadoopTest extends SqlTestSupport {
         try (FSDataOutputStream output = cluster.getFileSystem().create(new Path(path))) {
             output.write(content);
         }
+    }
+
+    private static void storeParquet(String path) throws IOException {
+        OutputFile file = HadoopOutputFile.fromPath(new Path(path), cluster.getFileSystem().getConf());
+        FileUtil.writeParquetPayloadTo(file);
     }
 }

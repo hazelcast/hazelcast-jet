@@ -23,8 +23,8 @@ import org.apache.avro.generic.GenericRecordBuilder;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SqlAvroTest extends SqlTestSupport {
 
-    private static final String RESOURCES_PATH = Paths.get("src/test/resources").toFile().getAbsolutePath();
+    private static final String RESOURCES_PATH = FileUtil.createAvroFile().getAbsolutePath();
 
     private static SqlService sqlService;
 
@@ -129,9 +129,7 @@ public class SqlAvroTest extends SqlTestSupport {
                         LocalDate.of(2020, 4, 15),
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
                         OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC),
-                        new GenericRecordBuilder(
-                                SchemaBuilder.record("object").namespace("jet.sql").fields().endRecord()
-                        ).build()
+                        new GenericRecordBuilder(SchemaBuilder.record("object").fields().endRecord()).build()
                 ))
         );
     }

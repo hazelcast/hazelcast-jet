@@ -41,7 +41,7 @@ import java.nio.file.Paths;
  * CSV - the .csv file is expected to contain header with columns matching the fields of the class specified by
  * {@link FileFormat#csv(Class)}
  * <p>
- * JSON - the .json files is expected to contain one valid json document per line, each document must have fields
+ * JSON - the .jsonl files is expected to contain one valid json document per line, each document must have fields
  * matching the fields of the class specified by {@link FileFormat#json(Class)}
  * <p>
  * AVRO - the Avro file is expected to have a schema compatible with the class specified by
@@ -67,7 +67,7 @@ public class TradeAnalyzerJob {
 
             case "json":
                 source = FileSources.files(sourceDir)
-                                    .glob("*." + type)
+                                    .glob("*." + type + "*")
                                     .format(FileFormat.json(Trade.class))
                                     .build();
                 trades = p.readFrom(source);

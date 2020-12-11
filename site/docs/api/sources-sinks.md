@@ -180,11 +180,11 @@ BatchSource<User> source = FileSources.files("/data")
 fields must match the class fields you want to deserialize into.
 
 Create the file source in the following way to read from file
-`users.json` and deserialize into a `User` class.
+`users.jsonl` and deserialize into a `User` class.
 
 ```java
 BatchSource<User> source = FileSources.files("/data")
-                                      .glob("users.json")
+                                      .glob("users.jsonl")
                                       .format(FileFormat.json(User.class))
                                       .build();
 ```

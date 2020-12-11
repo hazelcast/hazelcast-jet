@@ -36,7 +36,7 @@ public class JsonFileFormatTest extends BaseFileFormatTest {
     @Test
     public void shouldReadJsonFile() {
         FileSourceBuilder<JrsObject> source = FileSources.files(currentDir + "/src/test/resources")
-                                                         .glob("file.json")
+                                                         .glob("file.jsonl")
                                                          .format(FileFormat.json());
 
         assertItemsInSource(source,
@@ -57,7 +57,7 @@ public class JsonFileFormatTest extends BaseFileFormatTest {
     @Test
     public void shouldReadJsonFileToObject() {
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
-                                                    .glob("file.json")
+                                                    .glob("file.jsonl")
                                                     .format(FileFormat.json(User.class));
 
         assertItemsInSource(source,
@@ -82,7 +82,7 @@ public class JsonFileFormatTest extends BaseFileFormatTest {
     @Test
     public void shouldReadJsonFileWithMoreAttributesThanTargetClass() {
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
-                                                    .glob("file-more-attributes.json")
+                                                    .glob("file-more-attributes.jsonl")
                                                     .format(FileFormat.json(User.class));
 
         assertItemsInSource(source,
@@ -94,7 +94,7 @@ public class JsonFileFormatTest extends BaseFileFormatTest {
     @Test
     public void shouldReadJsonFileWithLessColumnsThanTargetClass() {
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
-                                                    .glob("file-less-attributes.json")
+                                                    .glob("file-less-attributes.jsonl")
                                                     .format(FileFormat.json(User.class));
 
         assertItemsInSource(source,
@@ -107,7 +107,7 @@ public class JsonFileFormatTest extends BaseFileFormatTest {
     public void shouldReadEmptyJsonFile() {
 
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
-                                                    .glob("file-empty.json")
+                                                    .glob("file-empty.jsonl")
                                                     .format(FileFormat.json(User.class));
 
         assertItemsInSource(source, items -> assertThat(items).isEmpty());
@@ -125,7 +125,7 @@ public class JsonFileFormatTest extends BaseFileFormatTest {
     @Test
     public void shouldThrowWhenWrongFormatting() {
         FileSourceBuilder<User> source = FileSources.files(currentDir + "/src/test/resources")
-                                                    .glob("file-invalid.json")
+                                                    .glob("file-invalid.jsonl")
                                                     .format(FileFormat.json(User.class));
 
         assertJobFailed(source, JsonEOFException.class, "Unexpected end-of-input");

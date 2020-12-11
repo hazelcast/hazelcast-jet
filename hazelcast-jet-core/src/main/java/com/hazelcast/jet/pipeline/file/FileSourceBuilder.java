@@ -58,7 +58,7 @@ import static java.util.Objects.requireNonNull;
  * <p>
  * Usage:
  * <pre>{@code
- * BatchSource<User> source = new FileSourceBuilder("data/users.json")
+ * BatchSource<User> source = new FileSourceBuilder("data/users.jsonl")
  *   .withFormat(new JsonFileFormat<>(User.class))
  *   .build();
  * }</pre>

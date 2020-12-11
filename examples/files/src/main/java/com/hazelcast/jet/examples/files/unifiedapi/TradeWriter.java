@@ -51,7 +51,7 @@ public class TradeWriter {
         AvroParquetOutputFormat.setSchema(job, tradeAvroSchema);
 
         BatchSource<Trade> source = FileSources.files(Paths.get("data/trades").toAbsolutePath().toString())
-                                               .glob("*json")
+                                               .glob("*jsonl")
                                                .format(FileFormat.json(Trade.class))
                                                .build();
 
