@@ -58,6 +58,7 @@ public class JetQueryResultProducer implements QueryResultProducer {
 
     @Override
     public void onError(QueryException error) {
+        assert error != null;
         done.compareAndSet(null, error);
     }
 
@@ -66,11 +67,15 @@ public class JetQueryResultProducer implements QueryResultProducer {
     }
 
     public void consume(Inbox inbox) {
-        if (done.get() != null) {
-            throw new RuntimeException(done.get());
-        }
+        check();
         for (Object[] row; (row = (Object[]) inbox.peek()) != null && rows.offer(new HeapRow(row)); ) {
             inbox.remove();
+        }
+    }
+
+    public void check() {
+        if (done.get() != null) {
+            throw new RuntimeException(done.get());
         }
     }
 

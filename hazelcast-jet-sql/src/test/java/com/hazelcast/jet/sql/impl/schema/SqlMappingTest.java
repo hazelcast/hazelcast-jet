@@ -102,6 +102,13 @@ public class SqlMappingTest extends SqlTestSupport {
     }
 
     @Test
+    public void when_emptyColumnList_then_fails() {
+        assertThatThrownBy(() -> sqlService.execute("create mapping t () type TestBatch"))
+                .isInstanceOf(HazelcastSqlException.class)
+                .hasMessageStartingWith("Encountered \")\" at line 1, column 19.");
+    }
+
+    @Test
     public void when_badType_then_fail() {
         assertThatThrownBy(() -> sqlService.execute("CREATE MAPPING m TYPE TooBad"))
                 .hasMessageContaining("Unknown connector type: TooBad");
@@ -130,7 +137,7 @@ public class SqlMappingTest extends SqlTestSupport {
     private void test_alias(String javaClassName, String ... aliases) {
         for (String alias : aliases) {
             sqlService.execute("CREATE MAPPING \"m_" + alias + "\"(__key " + alias + ") TYPE IMap " +
-                    "OPTIONS(keyFormat 'java', keyJavaClass '" + javaClassName + "', valueFormat 'json')");
+                    "OPTIONS('keyFormat'='java', 'keyJavaClass'='" + javaClassName + "', 'valueFormat'='json')");
         }
 
         MappingStorage mappingStorage = new MappingStorage(getNodeEngineImpl(instance()));

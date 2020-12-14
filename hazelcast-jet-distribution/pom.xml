@@ -156,6 +156,11 @@
                         </dependency>
                         <dependency>
                             <groupId>com.fasterxml.jackson.jr</groupId>
+                            <artifactId>jackson-jr-stree</artifactId>
+                            <version>${jackson.jr.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.fasterxml.jackson.jr</groupId>
                             <artifactId>jackson-jr-objects</artifactId>
                             <version>${jackson.jr.version}</version>
                         </dependency>
@@ -257,6 +262,12 @@
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-csv</artifactId>
+            <version>${project.version}</version>
+            <classifier>jar-with-dependencies</classifier>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-elasticsearch-7</artifactId>
             <version>${project.version}</version>
             <classifier>jar-with-dependencies</classifier>
@@ -329,6 +340,12 @@
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
             <version>${classgraph.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.jr</groupId>
+            <artifactId>jackson-jr-stree</artifactId>
+            <version>${jackson.jr.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>
