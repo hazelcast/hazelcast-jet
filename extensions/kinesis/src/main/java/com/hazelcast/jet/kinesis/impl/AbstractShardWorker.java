@@ -21,10 +21,12 @@ import com.hazelcast.logging.ILogger;
 abstract class AbstractShardWorker {
 
     protected final KinesisHelper helper;
+    protected final String stream;
     protected final ILogger logger;
 
     AbstractShardWorker(AmazonKinesisAsync kinesis, String stream, ILogger logger) {
         this.helper = new KinesisHelper(kinesis, stream);
+        this.stream = stream;
         this.logger = logger;
     }
 }

@@ -59,7 +59,7 @@ public class KinesisSourceP extends AbstractProcessor {
     @Nonnull
     private final Queue<Shard> shardQueue;
     @Nullable
-    private final RangeMonitor rangeMonitor;
+    private final RangeMonitor monitor;
     @Nonnull
     private final List<ShardReader> shardReaders = new ArrayList<>();
     @Nonnull
@@ -79,7 +79,7 @@ public class KinesisSourceP extends AbstractProcessor {
             @Nonnull EventTimePolicy<? super Entry<String, byte[]>> eventTimePolicy,
             @Nonnull HashRange hashRange,
             @Nonnull Queue<Shard> shardQueue,
-            @Nullable RangeMonitor rangeMonitor,
+            @Nullable RangeMonitor monitor,
             @Nonnull RetryStrategy retryStrategy
             ) {
         this.kinesis = Objects.requireNonNull(kinesis, "kinesis");
@@ -87,7 +87,7 @@ public class KinesisSourceP extends AbstractProcessor {
         this.eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
         this.hashRange = Objects.requireNonNull(hashRange, "hashRange");
         this.shardQueue = shardQueue;
-        this.rangeMonitor = rangeMonitor;
+        this.monitor = monitor;
         this.retryStrategy = retryStrategy;
     }
 
@@ -115,8 +115,8 @@ public class KinesisSourceP extends AbstractProcessor {
     }
 
     private void runMonitor() {
-        if (rangeMonitor != null) {
-            rangeMonitor.run();
+        if (monitor != null) {
+            monitor.run();
         }
     }
 

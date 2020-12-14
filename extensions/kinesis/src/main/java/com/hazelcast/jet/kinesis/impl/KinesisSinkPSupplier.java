@@ -21,11 +21,13 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.retry.RetryStrategy;
+import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
@@ -41,7 +43,7 @@ public class KinesisSinkPSupplier<T> implements ProcessorSupplier {
      * of contention, causing problems. So we use shared clients but use them
      * for a limited number of processor instances, specified by this constant.
      */
-    private static final int PROCESSORS_PER_CLIENT = 12; //todo: find optimal value on real backend
+    private static final int PROCESSORS_PER_CLIENT = 12;
 
     @Nonnull
     private final AwsConfig awsConfig;
@@ -55,6 +57,8 @@ public class KinesisSinkPSupplier<T> implements ProcessorSupplier {
     private final RetryStrategy retryStrategy;
 
     private transient AmazonKinesisAsync[] clients;
+    private transient int memberCount;
+    private transient ILogger logger;
 
     public KinesisSinkPSupplier(
             @Nonnull AwsConfig awsConfig,
@@ -72,8 +76,9 @@ public class KinesisSinkPSupplier<T> implements ProcessorSupplier {
 
     @Override
     public void init(@Nonnull Context context) {
-        int localParallelism = context.localParallelism();
-        this.clients = IntStream.range(0, (int) Math.ceil((double) localParallelism / PROCESSORS_PER_CLIENT))
+        this.memberCount = context.memberCount();
+        this.logger = context.logger();
+        this.clients = IntStream.range(0, (int) Math.ceil((double) context.localParallelism() / PROCESSORS_PER_CLIENT))
                 .mapToObj(IGNORED -> awsConfig.buildClient())
                 .toArray(AmazonKinesisAsync[]::new);
     }
@@ -81,8 +86,27 @@ public class KinesisSinkPSupplier<T> implements ProcessorSupplier {
     @Nonnull
     @Override
     public Collection<? extends Processor> get(int count) {
+        AtomicInteger shardCount = new AtomicInteger();
+
+        ShardCountMonitor shardCountMonitor = new ShardCountMonitor(
+                shardCount,
+                memberCount,
+                clients[0],
+                stream,
+                retryStrategy,
+                logger
+        );
+
         return IntStream.range(0, count)
-                .mapToObj(i -> new KinesisSinkP<>(clients[i % clients.length], stream, keyFn, valueFn, retryStrategy))
+                .mapToObj(i -> new KinesisSinkP<>(
+                        clients[i % clients.length],
+                        stream,
+                        keyFn,
+                        valueFn,
+                        i == 0 ? shardCountMonitor : null,
+                        shardCount,
+                        retryStrategy
+                ))
                 .collect(toList());
     }
 

@@ -20,12 +20,13 @@ package com.hazelcast.jet.kinesis;
  */
 public class ToDo {
 
-    //todo: make sure all integration tests run on real backend too
+    //todo: what happens when READING/WRITING stream with 0 shards?
+
+    //todo: tripping any shard's ingestion rate, getting messages refused randomly from the send batch will mess
+    // up the order of messages; document this
 
     //todo: merges and splits can reorder in-flight messages, document this
     //todo: offer option for single instance sources to fix reordering; test this
-
-    //todo: test stream when shard count is more than 100 (manually, mock won't allow for it)
 
     //todo: clarify what license to use
 

@@ -17,7 +17,7 @@ package com.hazelcast.jet.kinesis;
 
 import com.amazonaws.SdkClientException;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
-import com.amazonaws.services.kinesis.model.AmazonKinesisException;
+import com.amazonaws.services.kinesis.model.CreateStreamRequest;
 import com.amazonaws.services.kinesis.model.DescribeStreamSummaryRequest;
 import com.amazonaws.services.kinesis.model.ExpiredNextTokenException;
 import com.amazonaws.services.kinesis.model.InvalidArgumentException;
@@ -37,7 +37,9 @@ import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.logging.ILogger;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
@@ -48,8 +50,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 class KinesisTestHelper {
 
     private static final RetryStrategy RETRY_STRATEGY = RetryStrategies.custom()
-            .maxAttempts(7)
-            .intervalFunction(IntervalFunction.exponentialBackoff(500L, 2.0))
+            .intervalFunction(IntervalFunction.exponentialBackoffWithCap(250L, 2.0, 3000L))
             .build();
 
     private final AmazonKinesisAsync kinesis;
@@ -61,6 +62,11 @@ class KinesisTestHelper {
         this.kinesis = kinesis;
         this.stream = stream;
         this.logger = logger;
+    }
+
+    public boolean streamExists() {
+        Set<String> streams = new HashSet<>(callSafely(this::listStreams));
+        return streams.contains(stream);
     }
 
     public void waitForStreamToActivate() {
@@ -87,13 +93,26 @@ class KinesisTestHelper {
         int attempt = 0;
         while (true) {
             List<String> streams = callSafely(this::listStreams);
-            if (streams.isEmpty()) {
-                return;
-            } else {
+            if (streams.contains(stream)) {
                 logger.info("Waiting for stream " + stream + " to disappear...");
                 wait(++attempt);
+            } else {
+                return;
             }
         }
+    }
+
+    public void createStream(int shardCount) {
+        callSafely(() -> {
+            CreateStreamRequest request = new CreateStreamRequest();
+            request.setShardCount(shardCount);
+            request.setStreamName(stream);
+            return kinesis.createStream(request);
+        });
+    }
+
+    public void deleteStream() {
+        callSafely(() -> kinesis.deleteStream(stream));
     }
 
     public List<Shard> listShards(Predicate<? super Shard> filter) {
@@ -116,7 +135,7 @@ class KinesisTestHelper {
         return StreamStatus.valueOf(statusString);
     }
 
-    private List<Shard> listShards() throws AmazonKinesisException {
+    private List<Shard> listShards() {
         List<Shard> shards = new ArrayList<>();
         String nextToken = null;
         do {

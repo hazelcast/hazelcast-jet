@@ -16,6 +16,8 @@
 package com.hazelcast.jet.kinesis.impl;
 
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
+import com.amazonaws.services.kinesis.model.DescribeStreamSummaryRequest;
+import com.amazonaws.services.kinesis.model.DescribeStreamSummaryResult;
 import com.amazonaws.services.kinesis.model.GetRecordsRequest;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
 import com.amazonaws.services.kinesis.model.GetShardIteratorResult;
@@ -70,6 +72,12 @@ public class KinesisHelper {
         }
         request.setShardFilter(new ShardFilter().withType(ShardFilterType.AT_LATEST));
         return request;
+    }
+
+    public Future<DescribeStreamSummaryResult> describeStreamSummaryAsync() {
+        DescribeStreamSummaryRequest request = new DescribeStreamSummaryRequest();
+        request.setStreamName(stream);
+        return kinesis.describeStreamSummaryAsync(request);
     }
 
     public Future<ListShardsResult> listShardsAsync(String nextToken) {

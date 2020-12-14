@@ -34,7 +34,7 @@
 
     <properties>
         <aws.kinesis.sdk.version>1.11.887</aws.kinesis.sdk.version>
-        <testcontainers.version>1.14.3</testcontainers.version>
+        <testcontainers.version>1.15.0-rc2</testcontainers.version>
         <log4j2.slf4j.binding.version>2.13.2</log4j2.slf4j.binding.version>
     </properties>
 

@@ -27,6 +27,8 @@ public class RetryTracker {
         this.strategy = strategy;
     }
 
+    //todo: max retry no. property is not taken into consideration
+
     public void reset() {
         this.attempt = 0;
     }

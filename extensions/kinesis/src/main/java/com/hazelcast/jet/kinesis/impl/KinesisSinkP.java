@@ -33,22 +33,37 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static java.lang.System.nanoTime;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class KinesisSinkP<T> implements Processor {
+
+    /**
+     * Each shard can ingest a maximum of a 1000 records per second.
+     */
+    private static final int MAX_RECORD_PER_SHARD_PER_SECOND = 1000;
 
     /**
      * PutRecords requests are limited to 500 records.
      */
     private static final int MAX_RECORDS_IN_REQUEST = 500;
+
+    /**
+     * Since we are using PutRecords for its batching effect, we don't want
+     * the batch size to be so small as to negate all benefits.
+     */
+    private static final int MIN_RECORDS_IN_REQUEST = 10;
 
     /**
      * Each record, when encoded as a byte array, is limited to 1M,
@@ -68,27 +83,41 @@ public class KinesisSinkP<T> implements Processor {
      */
     private static final int MAX_UNICODE_CHARS_IN_KEY = 256;
 
+    @Nonnull
     private final AmazonKinesisAsync kinesis;
+    @Nonnull
     private final String stream;
-
+    @Nullable
+    private final ShardCountMonitor monitor;
+    @Nonnull
+    private final AtomicInteger shardCountProvider;
+    @Nonnull
     private final Buffer<T> buffer;
 
     private ILogger logger;
     private KinesisHelper helper;
+    private int shardCount;
+    private int sinkCount;
 
     private Future<PutRecordsResult> sendResult;
     private long nextSendTime = nanoTime();
     private final RetryTracker sendRetryTracker;
 
+    private final ThroughputController throughputController = new ThroughputController();
+
     public KinesisSinkP(
-            AmazonKinesisAsync kinesis,
+            @Nonnull AmazonKinesisAsync kinesis,
             @Nonnull String stream,
             @Nonnull FunctionEx<T, String> keyFn,
             @Nonnull FunctionEx<T, byte[]> valueFn,
+            @Nullable ShardCountMonitor monitor,
+            @Nonnull AtomicInteger shardCountProvider,
             @Nonnull RetryStrategy retryStrategy
             ) {
         this.kinesis = kinesis;
         this.stream = stream;
+        this.monitor = monitor;
+        this.shardCountProvider = shardCountProvider;
         this.buffer = new Buffer<>(keyFn, valueFn);
         this.sendRetryTracker = new RetryTracker(retryStrategy);
     }
@@ -101,6 +130,7 @@ public class KinesisSinkP<T> implements Processor {
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         logger = context.logger();
+        sinkCount = context.memberCount() * context.localParallelism();
         helper = new KinesisHelper(kinesis, stream);
     }
 
@@ -111,6 +141,12 @@ public class KinesisSinkP<T> implements Processor {
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
+        if (monitor != null) {
+            monitor.run();
+        }
+
+        updateThroughputLimitations();
+
         if (sendResult != null) {
             checkIfSendingFinished();
         }
@@ -139,6 +175,18 @@ public class KinesisSinkP<T> implements Processor {
             checkIfSendingFinished();
         }
         return sendResult == null;
+    }
+
+    private void updateThroughputLimitations() {
+        int newShardCount = shardCountProvider.get();
+        if (newShardCount > 0 && shardCount != newShardCount) {
+            int bufferSize = throughputController.computeBufferCapacity(newShardCount, sinkCount);
+            if (buffer.setCapacity(bufferSize)) {
+                logger.info("Changing buffer capacity to " + bufferSize);
+            }
+
+            shardCount = newShardCount;
+        }
     }
 
     private void initSending(@Nullable Inbox inbox) {
@@ -191,7 +239,7 @@ public class KinesisSinkP<T> implements Processor {
             try {
                 result = helper.readResult(this.sendResult);
             } catch (ProvisionedThroughputExceededException pte) {
-                dealWithSendFailure("Data throughput rate exceeded. Backing off and retrying in %d ms");
+                dealWithThroughputExceeded("Data throughput rate exceeded. Backing off and retrying in %d ms");
                 return;
             } catch (SdkClientException sce) {
                 dealWithSendFailure("Failed to send records, will retry in %d ms. Cause: " + sce.getMessage());
@@ -202,12 +250,14 @@ public class KinesisSinkP<T> implements Processor {
                 sendResult = null;
             }
 
-            sendRetryTracker.reset();
-
             pruneSentFromBuffer(result);
             if (result.getFailedRecordCount() > 0) {
-                dealWithSendFailure("Failed to send " + result.getFailedRecordCount() + " record(s) to stream '"
-                        + stream + "'. Sending will be retried in %d ms, message reordering is likely.");
+                dealWithThroughputExceeded("Failed to send " + result.getFailedRecordCount() + " (out of " +
+                        result.getRecords().size() + ") record(s) to stream '" + stream +
+                        "'. Sending will be retried in %d ms, message reordering is likely.");
+            } else {
+                this.nextSendTime += throughputController.markSuccessfulSend();
+                sendRetryTracker.reset();
             }
         }
     }
@@ -219,13 +269,19 @@ public class KinesisSinkP<T> implements Processor {
         nextSendTime = System.nanoTime() + MILLISECONDS.toNanos(timeoutMillis);
     }
 
+    private void dealWithThroughputExceeded(@Nonnull String message) {
+        long sleepTimeNanos = throughputController.markFailedSend();
+        this.nextSendTime += sleepTimeNanos;
+        logger.warning(String.format(message, NANOSECONDS.toMillis(sleepTimeNanos)));
+    }
+
     private void pruneSentFromBuffer(@Nullable PutRecordsResult result) {
         if (result == null) {
             return;
         }
 
+        List<PutRecordsResultEntry> resultEntries = result.getRecords();
         if (result.getFailedRecordCount() > 0) {
-            List<PutRecordsResultEntry> resultEntries = result.getRecords();
             for (int i = resultEntries.size() - 1; i >= 0; i--) {
                 PutRecordsResultEntry resultEntry = resultEntries.get(i);
                 if (resultEntry.getErrorCode() == null) {
@@ -233,7 +289,7 @@ public class KinesisSinkP<T> implements Processor {
                 }
             }
         } else {
-            buffer.clear();
+            buffer.remove(0, resultEntries.size());
         }
     }
 
@@ -245,15 +301,26 @@ public class KinesisSinkP<T> implements Processor {
         private final BufferEntry[] entries;
         private int entryCount;
         private int totalEntrySize;
+        private int capacity;
 
         Buffer(FunctionEx<T, String> keyFn, FunctionEx<T, byte[]> valueFn) {
             this.keyFn = keyFn;
             this.valueFn = valueFn;
             this.entries = initEntries();
+            this.capacity = entries.length;
+        }
+
+        boolean setCapacity(int capacity) {
+            if (capacity < 0 || capacity > entries.length) {
+                throw new IllegalArgumentException("Capacity limited to [0, " + entries.length + ")");
+            }
+            boolean change = this.capacity != capacity;
+            this.capacity = capacity;
+            return change;
         }
 
         boolean add(T item) {
-            if (entryCount == entries.length) {
+            if (isFull()) {
                 return false;
             }
 
@@ -282,7 +349,7 @@ public class KinesisSinkP<T> implements Processor {
             }
         }
 
-        public void remove(int index) { //todo: test it, at least manually
+        public void remove(int index) {
             if (index < 0 || index >= entryCount) {
                 throw new IllegalArgumentException("Index needs to be between 0 and " + entryCount);
             }
@@ -296,12 +363,25 @@ public class KinesisSinkP<T> implements Processor {
             }
         }
 
-        boolean isEmpty() {
-            return entryCount == 0;
-        }
+        public void remove(int index, int count) {
+            if (count == 0) {
+                return;
+            }
+            if (count < 0) {
+                throw new IllegalArgumentException("Count has to be non-negative");
+            }
 
-        public boolean isFull() {
-            return entryCount == entries.length;
+            if (index < 0 || index >= entryCount) {
+                throw new IllegalArgumentException("Index needs to be in [0, " + entryCount + ")");
+            }
+
+            if (index == 0 && count == entryCount) {
+                clear();
+            } else {
+                for (int i = 0; i < count; i++) {
+                    remove(index);
+                }
+            }
         }
 
         void clear() {
@@ -309,9 +389,17 @@ public class KinesisSinkP<T> implements Processor {
             totalEntrySize = 0;
         }
 
+        boolean isEmpty() {
+            return entryCount == 0;
+        }
+
+        public boolean isFull() {
+            return entryCount == entries.length || entryCount >= capacity;
+        }
+
         public List<PutRecordsRequestEntry> content() {
             return Arrays.stream(entries)
-                    .limit(entryCount)
+                    .limit(Math.min(entryCount, capacity))
                     .map(e -> e.putRecordsRequestEntry)
                     .collect(Collectors.toList());
         }
@@ -352,4 +440,111 @@ public class KinesisSinkP<T> implements Processor {
         }
     }
 
+    /**
+     * Under normal circumstances, when our sinks don't saturate the stream
+     * (ie. they don't send out more data than the sink can ingest), sinks
+     * will not sleep or introduce any kind of delay between two consecutive
+     * send operations (as long as there is data to send).
+     * <p>
+     * When the stream's ingestion rate is reached however, we want the sinks to
+     * slow down the sending process. They do it by adjusting the send batch
+     * size on one hand, and by introducing a sleep after each send operation.
+     * <p>
+     * The sleep duration is continuously adjusted to find the best value. The
+     * ideal situation we try to achieve is that we never trip the stream's
+     * ingestion rate limiter, while also sending out data with the maximum
+     * rate possible.
+     */
+    private static final class ThroughputController {
+
+        /**
+         * The ideal sleep duratio after sends, while rate limiting is necessary.
+         */
+        private static final int IDEAL_SLEEP_MS = 250;
+
+        /**
+         * Minimum sleep duration after sends, while rate limiting is necessary.
+         */
+        private static final long MINIMUM_SLEEP_MS = 100L;
+
+        /**
+         * Maximum sleep duration after sends, while rate limiting is necessary.
+         */
+        private static final long MAXIMUM_SLEEP_MS = 10_000L;
+
+        /**
+         * The increment of increasing/decreasing the sleep duration while
+         * adaptively searching for the best value.
+         */
+        private static final int SLEEP_INCREMENT = 25;
+
+        /**
+         * When adjusting the sleep duration we want to handle the effects in a
+         * non-equal manner. If we set a sleep duration and then still get
+         * messages rejected by the stream, we immediately increase the
+         * duration.
+         * <p>
+         * On successful sends however we don't necessarily want to react
+         * immediately. A success means that the sleep duration we have used is
+         * good, so we should keep it and use it for following sends.
+         * <p>
+         * Keeping the last used sleep duration for ever is also not a good idea,
+         * because the data flow might have decreased in the meantime and we
+         * might be sleeping too much. So we want to slowly decrease, just
+         * not as fast as we have increased it.
+         * <p>
+         * The relative ratio of these two speeds is what this constant
+         * expresses.
+         */
+        private static final int DEGRADATION_VS_RECOVERY_SPEED_RATIO = 10;
+
+        private final Damper<Long> damper;
+
+        ThroughputController() {
+            this.damper = initDamper();
+        }
+
+        int computeBufferCapacity(int shardCount, int sinkCount) {
+            if (shardCount < 1) {
+                throw new IllegalArgumentException("Invalid shard count: " + shardCount);
+            }
+            if (sinkCount < 1) {
+                throw new IllegalArgumentException("Invalid sink count: " + sinkCount);
+            }
+
+            int totalRecordsPerSecond = MAX_RECORD_PER_SHARD_PER_SECOND * shardCount;
+            int recordPerSinkPerSecond = totalRecordsPerSecond / sinkCount;
+            int computedCapacity = recordPerSinkPerSecond / (int) (SECONDS.toMillis(1) / IDEAL_SLEEP_MS);
+
+            if (computedCapacity > MAX_RECORDS_IN_REQUEST) {
+                return MAX_RECORDS_IN_REQUEST;
+            } else {
+                return Math.max(computedCapacity, MIN_RECORDS_IN_REQUEST);
+            }
+        }
+
+        long markSuccessfulSend() {
+            damper.ok();
+            return damper.output();
+        }
+
+        long markFailedSend() {
+            damper.error();
+            return damper.output();
+        }
+
+        private static Damper<Long> initDamper() {
+            List<Long> list = new ArrayList<>();
+
+            //default sleep when there haven't been errors for a while
+            list.add(0L);
+
+            //increasing sleeps when errors keep repeating
+            for (long millis = MINIMUM_SLEEP_MS; millis <= MAXIMUM_SLEEP_MS; millis += SLEEP_INCREMENT) {
+                list.add(MILLISECONDS.toNanos(millis));
+            }
+
+            return new Damper<>(DEGRADATION_VS_RECOVERY_SPEED_RATIO, list.toArray(new Long[0]));
+        }
+    }
 }

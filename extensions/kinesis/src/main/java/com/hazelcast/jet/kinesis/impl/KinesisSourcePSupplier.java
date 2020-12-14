@@ -46,7 +46,7 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
      * of contention, causing problems. So we use shared clients but use them
      * for a limited number of processor instances, specified by this constant.
      */
-    private static final int PROCESSORS_PER_CLIENT = 12; //todo: find optimal value on real backend
+    private static final int PROCESSORS_PER_CLIENT = 12;
 
     @Nonnull
     private final AwsConfig awsConfig;

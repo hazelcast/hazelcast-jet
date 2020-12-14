@@ -17,7 +17,6 @@ package com.hazelcast.jet.kinesis;
 
 import com.amazonaws.SDKGlobalConfiguration;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
-import com.amazonaws.services.kinesis.model.CreateStreamRequest;
 import com.amazonaws.services.kinesis.model.MergeShardsRequest;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.SplitShardRequest;
@@ -86,10 +85,10 @@ import static org.junit.Assert.fail;
 public class KinesisIntegrationTest extends JetTestSupport {
 
     @ClassRule
-    public static final LocalStackContainer LOCALSTACK = new LocalStackContainer("0.12.1")
+    public static final LocalStackContainer LOCALSTACK = new LocalStackContainer("0.12.3")
             .withServices(Service.KINESIS);
 
-    private static final int KEYS = 10;
+    private static final int KEYS = 250;
     private static final int MEMBER_COUNT = 2;
     private static final int MESSAGES = 25_000;
     private static final String STREAM = "TestStream";
@@ -125,6 +124,8 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
     @Before
     public void before() {
+        deleteStream();
+
         JetConfig jetConfig = new JetConfig();
         jetConfig.getInstanceConfig().setCooperativeThreadCount(12); //todo: don't force this, let Jenkins be Jenkins
         cluster = createJetMembers(jetConfig, MEMBER_COUNT);
@@ -136,7 +137,6 @@ public class KinesisIntegrationTest extends JetTestSupport {
         cleanUpCluster(cluster);
 
         deleteStream();
-        HELPER.waitForStreamToDisappear();
 
         results.clear();
         results.destroy();
@@ -146,7 +146,6 @@ public class KinesisIntegrationTest extends JetTestSupport {
     @Category(SerialTest.class)
     public void timestampsAndWatermarks() {
         createStream(1);
-        HELPER.waitForStreamToActivate();
 
         sendMessages(false);
 
@@ -189,7 +188,6 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
     private void staticStream(int shards) {
         createStream(shards);
-        HELPER.waitForStreamToActivate();
 
         jet().newJob(getPipeline());
 
@@ -201,7 +199,6 @@ public class KinesisIntegrationTest extends JetTestSupport {
     @Category({SerialTest.class, NightlyTest.class})
     public void dynamicStream_2Shards_mergeBeforeData() {
         createStream(2);
-        HELPER.waitForStreamToActivate();
 
         List<Shard> shards = listActiveShards();
         mergeShards(shards.get(0), shards.get(1));
@@ -228,7 +225,6 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
     private void dynamicStream_mergesDuringData(int shards, int merges) {
         createStream(shards);
-        HELPER.waitForStreamToActivate();
 
         jet().newJob(getPipeline());
 
@@ -260,7 +256,6 @@ public class KinesisIntegrationTest extends JetTestSupport {
     @Category({SerialTest.class, NightlyTest.class})
     public void dynamicStream_1Shard_splitBeforeData() {
         createStream(1);
-        HELPER.waitForStreamToActivate();
 
         List<Shard> shards = listActiveShards();
         splitShard(shards.get(0));
@@ -286,7 +281,6 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
     private void dynamicStream_splitsDuringData(int shards, int splits) {
         createStream(shards);
-        HELPER.waitForStreamToActivate();
 
         jet().newJob(getPipeline());
 
@@ -327,7 +321,6 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
     private void restart_staticStream(boolean graceful) {
         createStream(3);
-        HELPER.waitForStreamToActivate();
 
         JobConfig jobConfig = new JobConfig()
                 .setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE)
@@ -356,9 +349,8 @@ public class KinesisIntegrationTest extends JetTestSupport {
         restart_dynamicStream(false);
     }
 
-    private void restart_dynamicStream(boolean graceful) {
+    private void restart_dynamicStream(boolean graceful) { //todo: have seen this fail on the real backend, investigate
         createStream(3);
-        HELPER.waitForStreamToActivate();
 
         JobConfig jobConfig = new JobConfig()
                 .setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE)
@@ -467,15 +459,19 @@ public class KinesisIntegrationTest extends JetTestSupport {
     }
 
     private static void createStream(int shardCount) {
-        CreateStreamRequest request = new CreateStreamRequest();
-        request.setShardCount(shardCount);
-        request.setStreamName(STREAM);
-        KINESIS.createStream(request);
+        if (HELPER.streamExists()) {
+            throw new IllegalStateException("Stream already exists");
+        }
+
+        HELPER.createStream(shardCount);
+        HELPER.waitForStreamToActivate();
     }
 
     private static void deleteStream() {
-        KINESIS.deleteStream(STREAM);
-        assertTrueEventually(() -> assertFalse(KINESIS.listStreams().isHasMoreStreams()));
+        if (HELPER.streamExists()) {
+            HELPER.deleteStream();
+            HELPER.waitForStreamToDisappear();
+        }
     }
 
     private static void mergeShards(Shard shard1, Shard shard2) {

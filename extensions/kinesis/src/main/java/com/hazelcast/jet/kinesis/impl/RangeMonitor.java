@@ -54,12 +54,11 @@ public class RangeMonitor extends AbstractShardWorker {
     private final HashRange[] rangePartitions;
     private final Queue<Shard>[] shardQueues;
     private final RandomizedRateTracker listShardsRateTracker;
-    private final ILogger logger;
+    private final RetryTracker listShardRetryTracker;
 
     private String nextToken;
     private Future<ListShardsResult> listShardResult;
     private long nextListShardsTime;
-    private final RetryTracker listShardRetryTracker;
 
     public RangeMonitor(
             int totalInstances,
@@ -76,7 +75,6 @@ public class RangeMonitor extends AbstractShardWorker {
         this.rangePartitions = rangePartitions;
         this.shardQueues = shardQueues;
         this.listShardRetryTracker = new RetryTracker(retryStrategy);
-        this.logger = logger;
         this.listShardsRateTracker = initRandomizedTracker(totalInstances);
         this.nextListShardsTime = System.nanoTime() + listShardsRateTracker.next();
     }
