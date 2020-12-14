@@ -695,7 +695,8 @@ public class Edge implements IdentifiedDataSerializable {
         BROADCAST,
         /**
          * This policy sends each item to a single processor on each of the
-         * cluster members. It is only available on a distributed edge.
+         * cluster members in a round robin fashion. It is only available
+         * on a distributed edge.
          */
         FANOUT
     }
