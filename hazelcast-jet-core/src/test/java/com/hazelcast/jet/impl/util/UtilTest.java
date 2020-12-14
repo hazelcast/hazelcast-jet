@@ -24,6 +24,7 @@ import org.junit.runner.RunWith;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -33,11 +34,13 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.impl.util.Util.addClamped;
 import static com.hazelcast.jet.impl.util.Util.addOrIncrementIndexInName;
+import static com.hazelcast.jet.impl.util.Util.createFieldProjection;
 import static com.hazelcast.jet.impl.util.Util.formatJobDuration;
 import static com.hazelcast.jet.impl.util.Util.gcd;
 import static com.hazelcast.jet.impl.util.Util.memoizeConcurrent;
 import static com.hazelcast.jet.impl.util.Util.roundRobinPart;
 import static com.hazelcast.jet.impl.util.Util.subtractClamped;
+import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertArrayEquals;
@@ -224,5 +227,11 @@ public class UtilTest {
         assertEquals("00:12:22.855", formatJobDuration(742_855));
         assertEquals("106751991167d 07:12:55.807", formatJobDuration(Long.MAX_VALUE));
         assertEquals("-9223372036854775808", formatJobDuration(Long.MIN_VALUE));
+    }
+
+    @Test
+    public void test_createFieldProjection() {
+        Function<String[], String[]> fieldProjection = createFieldProjection(new String[]{"c", "a", "d"}, asList("a", "b", "c"));
+        assertArrayEquals(new String[]{"a", null, "c"}, fieldProjection.apply(new String[]{"c", "a", "d"}));
     }
 }

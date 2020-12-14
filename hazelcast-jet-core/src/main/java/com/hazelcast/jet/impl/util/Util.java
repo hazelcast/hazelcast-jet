@@ -552,35 +552,34 @@ public final class Util {
     }
 
     /**
-     * Given a list of input headers and a list of output headers crates a
-     * projection to map between these.
+     * Given a list of input field names and a list of output field names
+     * creates a projection to map between these.
      * <p>
-     * For example, if input headers are [a, b, c] and output headers are [c,
-     * a, d], the return value will be [2, 0, -1] meaning that the output
-     * headers are found at index 2, 0 and -1 of the input, respectively. The
-     * value of -1 means that the output column `d` isn't found in the input.
-     * <p>
-     * Used to map multiple CSV files with possibly distinct columns to a fixed
-     * column list.
+     * For example, if input names are {@code [surname, name, address]} and
+     * output names are {@code [name, surname, age]}, then the function,
+     * applied to {@code [Smith, John, New York]} will return {@code [John,
+     * Smith, (null)]}. That is, it will map the fields from the input order to
+     * output order. The output field named {@code age} is missing in input, so
+     * the value for it is {@code null} for any input.
      *
-     * @param inputHeaders the input headers
-     * @param outputHeaders the output headers
+     * @param inputFields the input headers
+     * @param outputFields the output headers
      * @return the indices to map input to output
      */
     @Nonnull
     public static Function<String[], String[]> createFieldProjection(
-            @Nonnull String[] inputHeaders,
-            @Nonnull List<String> outputHeaders
+            @Nonnull String[] inputFields,
+            @Nonnull List<String> outputFields
     ) {
-        if (outputHeaders.equals(asList(inputHeaders))) {
+        if (outputFields.equals(asList(inputFields))) {
             // shortcut - the mapping is an identity
             return i -> i;
         }
-        int[] simpleFieldMap = new int[outputHeaders.size()];
+        int[] simpleFieldMap = new int[outputFields.size()];
         Arrays.fill(simpleFieldMap, -1);
-        for (int i = 0; i < inputHeaders.length; i++) {
-            int index = outputHeaders.indexOf(inputHeaders[i]);
-            // if the inputHeaders is present in the file and we didn't encounter it yet, store its index
+        for (int i = 0; i < inputFields.length; i++) {
+            int index = outputFields.indexOf(inputFields[i]);
+            // if the inputFields is present in the file and we didn't encounter it yet, store its index
             if (index >= 0 && simpleFieldMap[index] == -1) {
                 simpleFieldMap[index] = i;
             }
