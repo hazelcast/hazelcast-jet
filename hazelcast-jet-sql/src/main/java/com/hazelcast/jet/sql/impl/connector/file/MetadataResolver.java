@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
@@ -24,7 +23,6 @@ import com.hazelcast.jet.pipeline.file.impl.FileProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.file.impl.FileTraverser;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
-import com.hazelcast.sql.impl.extract.QueryTarget;
 import com.hazelcast.sql.impl.schema.TableField;
 
 import java.util.List;
@@ -40,7 +38,7 @@ import static java.util.Map.Entry;
 abstract class MetadataResolver<T> {
 
     String supportedFormat() {
-        return formatForSample().format();
+        return sampleFormat().format();
     }
 
     List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, ?> options) {
@@ -61,7 +59,7 @@ abstract class MetadataResolver<T> {
     @SuppressWarnings("unchecked")
     private List<MappingField> resolveFieldsFromSample(Map<String, ?> options) {
         FileProcessorMetaSupplier<T> fileProcessorMetaSupplier =
-                (FileProcessorMetaSupplier<T>) toProcessorMetaSupplier(options, formatForSample());
+                (FileProcessorMetaSupplier<T>) toProcessorMetaSupplier(options, sampleFormat());
 
         try (FileTraverser<T> traverser = fileProcessorMetaSupplier.traverser()) {
             T sample = traverser.next();
@@ -71,14 +69,9 @@ abstract class MetadataResolver<T> {
         }
     }
 
-    Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
-        return new Metadata(
-                toFields(resolvedFields),
-                toProcessorMetaSupplier(options, formatForData(resolvedFields)),
-                queryTargetSupplier(resolvedFields));
-    }
+    abstract Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options);
 
-    private List<TableField> toFields(List<MappingField> resolvedFields) {
+    protected List<TableField> toFields(List<MappingField> resolvedFields) {
         return toList(
                 resolvedFields,
                 field -> new FileTableField(
@@ -90,7 +83,7 @@ abstract class MetadataResolver<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private ProcessorMetaSupplier toProcessorMetaSupplier(Map<String, ?> options, FileFormat<?> format) {
+    ProcessorMetaSupplier toProcessorMetaSupplier(Map<String, ?> options, FileFormat<?> format) {
         FileSourceBuilder<?> builder = new FileSourceBuilder<>((String) options.get(OPTION_PATH)).format(format);
 
         String glob = (String) options.get(OPTION_GLOB);
@@ -123,14 +116,7 @@ abstract class MetadataResolver<T> {
         return builder.buildMetaSupplier();
     }
 
-    protected abstract FileFormat<?> formatForSample();
-
-    protected FileFormat<?> formatForData(List<MappingField> resolvedFields) {
-        // Normally, the sample format is equal to the data format. Subclasses can override.
-        return formatForSample();
-    };
+    protected abstract FileFormat<?> sampleFormat();
 
     protected abstract List<MappingField> resolveFieldsFromSample(T sample);
-
-    protected abstract SupplierEx<QueryTarget> queryTargetSupplier(List<MappingField> resolvedFields);
 }

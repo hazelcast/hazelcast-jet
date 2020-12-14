@@ -16,11 +16,9 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.sql.impl.extract.CsvQueryTarget;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
-import com.hazelcast.sql.impl.extract.QueryTarget;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -31,28 +29,27 @@ final class CsvMetadataResolver extends MetadataResolver<Map<String, String>> {
 
     static final CsvMetadataResolver INSTANCE = new CsvMetadataResolver();
 
-    private static final FileFormat<Map<String, String>> FORMAT_SAMPLE = FileFormat.csv();
+    private static final FileFormat<Map<String, String>> SAMPLE_FORMAT = FileFormat.csv();
 
     @Override
-    protected FileFormat<?> formatForSample() {
-        return FORMAT_SAMPLE;
+    Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
+        List<String> fieldMap = createFieldList(resolvedFields);
+        FileFormat<String[]> format = FileFormat.csv(String[].class)
+                                                .withStringArrayFieldList(createFieldList(resolvedFields));
+        return new Metadata(
+                toFields(resolvedFields),
+                toProcessorMetaSupplier(options, format),
+                () -> new CsvQueryTarget(fieldMap));
     }
 
     @Override
-    protected FileFormat<?> formatForData(List<MappingField> resolvedFields) {
-        return FileFormat.csv(String[].class)
-                         .withStringArrayFieldList(createFieldList(resolvedFields));
+    protected FileFormat<?> sampleFormat() {
+        return SAMPLE_FORMAT;
     }
 
     @Override
     protected List<MappingField> resolveFieldsFromSample(Map<String, String> entry) {
         return CsvResolver.resolveFields(entry.keySet());
-    }
-
-    @Override
-    protected SupplierEx<QueryTarget> queryTargetSupplier(List<MappingField> resolvedFields) {
-        List<String> fieldMap = createFieldList(resolvedFields);
-        return () -> new CsvQueryTarget(fieldMap);
     }
 
     @Nonnull
