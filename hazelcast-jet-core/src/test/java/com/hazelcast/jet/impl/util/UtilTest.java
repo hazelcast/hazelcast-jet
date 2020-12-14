@@ -231,7 +231,8 @@ public class UtilTest {
 
     @Test
     public void test_createFieldProjection() {
-        Function<String[], String[]> fieldProjection = createFieldProjection(new String[]{"c", "a", "d"}, asList("a", "b", "c"));
+        Function<String[], String[]> fieldProjection =
+                createFieldProjection(new String[]{"c", "a", "d"}, asList("a", "b", "c"));
         assertArrayEquals(new String[]{"a", null, "c"}, fieldProjection.apply(new String[]{"c", "a", "d"}));
     }
 }
