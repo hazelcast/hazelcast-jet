@@ -20,6 +20,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.nio.charset.Charset;
+import java.util.Map;
 
 /**
  * Identifies the data format of a file to be used as a Jet data source.
@@ -63,7 +64,8 @@ public interface FileFormat<T> extends Serializable {
     }
 
     /**
-     * Returns a file format for CSV files.
+     * Returns a file format for CSV files that uses {@link Map} as the format.
+     * Equivalent to calling {@code csv(Map.class)}.
      */
     @Nonnull
     static <T> CsvFileFormat<T> csv() {

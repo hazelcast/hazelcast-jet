@@ -32,7 +32,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import javax.annotation.Nonnull;
 import java.io.FileInputStream;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Spliterators;
@@ -40,6 +39,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static com.hazelcast.jet.impl.util.Util.createFieldProjection;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.Spliterator.ORDERED;
 
@@ -75,18 +75,7 @@ public class CsvReadFileFnProvider implements ReadFileFnProvider {
                 String[] header = (String[]) iterator.next();
                 List<String> fieldList = csvFileFormat.stringArrayFieldList();
                 if (fieldList != null) {
-                    int[] simpleFieldMap = createSimpleFieldMap(fieldList, header);
-
-                    projection = row0 -> {
-                        String[] inputRow = (String[]) row0;
-                        String[] projectedRow = new String[simpleFieldMap.length];
-                        for (int i = 0; i < simpleFieldMap.length; i++) {
-                            if (simpleFieldMap[i] >= 0) {
-                                projectedRow[i] = inputRow[simpleFieldMap[i]];
-                            }
-                        }
-                        return (T) projectedRow;
-                    };
+                    projection = (Function<T, T>) createFieldProjection(header, fieldList);
                 }
             } else {
                 iterator = new CsvMapper().readerFor(formatClazz != null ? formatClazz : Map.class)
@@ -104,18 +93,5 @@ public class CsvReadFileFnProvider implements ReadFileFnProvider {
     @Override
     public String format() {
         return CsvFileFormat.FORMAT_CSV;
-    }
-
-    private static int[] createSimpleFieldMap(List<String> fieldList, String[] actualHeader) {
-        int[] res = new int[fieldList.size()];
-        Arrays.fill(res, -1);
-        for (int i = 0; i < actualHeader.length; i++) {
-            int index = fieldList.indexOf(actualHeader[i]);
-            // if the header is present in the file and we didn't encounter it yet, store its index
-            if (index >= 0 && res[index] == -1) {
-                res[index] = i;
-            }
-        }
-        return res;
     }
 }

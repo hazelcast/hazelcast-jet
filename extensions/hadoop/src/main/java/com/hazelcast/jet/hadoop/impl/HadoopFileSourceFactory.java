@@ -54,6 +54,7 @@ import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.ServiceLoader;
@@ -61,6 +62,7 @@ import java.util.ServiceLoader;
 import static com.hazelcast.jet.hadoop.HadoopProcessors.readHadoopP;
 import static com.hazelcast.jet.hadoop.HadoopSources.COPY_ON_READ;
 import static com.hazelcast.jet.hadoop.impl.CsvInputFormat.CSV_INPUT_FORMAT_BEAN_CLASS;
+import static com.hazelcast.jet.hadoop.impl.CsvInputFormat.CSV_INPUT_FORMAT_FIELD_LIST_PREFIX;
 import static com.hazelcast.jet.hadoop.impl.JsonInputFormat.JSON_INPUT_FORMAT_BEAN_CLASS;
 import static java.util.Objects.requireNonNull;
 
@@ -197,7 +199,13 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
 
             Class<?> clazz = csvFileFormat.clazz();
             if (clazz != null) {
-                job.getConfiguration().set(CSV_INPUT_FORMAT_BEAN_CLASS, clazz.getCanonicalName());
+                job.getConfiguration().set(CSV_INPUT_FORMAT_BEAN_CLASS, clazz.getName());
+            }
+            List<String> fieldList = csvFileFormat.stringArrayFieldList();
+            if (fieldList != null) {
+                for (int i = 0; i < fieldList.size(); i++) {
+                    job.getConfiguration().set(CSV_INPUT_FORMAT_FIELD_LIST_PREFIX + i, fieldList.get(i));
+                }
             }
         }
 
@@ -223,7 +231,7 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
 
             Class<?> clazz = jsonFileFormat.clazz();
             if (clazz != null) {
-                job.getConfiguration().set(JSON_INPUT_FORMAT_BEAN_CLASS, clazz.getCanonicalName());
+                job.getConfiguration().set(JSON_INPUT_FORMAT_BEAN_CLASS, clazz.getName());
             }
         }
 

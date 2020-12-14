@@ -49,6 +49,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +75,7 @@ import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.lang.Math.abs;
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
+import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
@@ -547,5 +549,53 @@ public final class Util {
         durationMs /= 24;
         String textUpToHours = String.format("%02d:%02d:%02d.%03d", hours, minutes, seconds, millis);
         return sign + (durationMs > 0 ? durationMs + "d " : "") + textUpToHours;
+    }
+
+    /**
+     * Given a list of input headers and a list of output headers crates a
+     * projection to map between these.
+     * <p>
+     * For example, if input headers are [a, b, c] and output headers are [c,
+     * a, d], the return value will be [2, 0, -1] meaning that the output
+     * headers are found at index 2, 0 and -1 of the input, respectively. The
+     * value of -1 means that the output column `d` isn't found in the input.
+     * <p>
+     * Used to map multiple CSV files with possibly distinct columns to a fixed
+     * column list.
+     *
+     * @param inputHeaders the input headers
+     * @param outputHeaders the output headers
+     * @return the indices to map input to output
+     */
+    @Nonnull
+    public static Function<String[], String[]> createFieldProjection(
+            @Nonnull String[] inputHeaders,
+            @Nonnull List<String> outputHeaders
+    ) {
+        if (outputHeaders.equals(asList(inputHeaders))) {
+            // shortcut - the mapping is an identity
+            return i -> i;
+        }
+        int[] simpleFieldMap = new int[outputHeaders.size()];
+        Arrays.fill(simpleFieldMap, -1);
+        for (int i = 0; i < inputHeaders.length; i++) {
+            int index = outputHeaders.indexOf(inputHeaders[i]);
+            // if the inputHeaders is present in the file and we didn't encounter it yet, store its index
+            if (index >= 0 && simpleFieldMap[index] == -1) {
+                simpleFieldMap[index] = i;
+            }
+        }
+
+        return row0 -> {
+            String[] inputRow = row0;
+            String[] projectedRow = new String[simpleFieldMap.length];
+            for (int i = 0; i < simpleFieldMap.length; i++) {
+                if (simpleFieldMap[i] >= 0) {
+                    projectedRow[i] = inputRow[simpleFieldMap[i]];
+                }
+            }
+            return projectedRow;
+        };
+        //
     }
 }

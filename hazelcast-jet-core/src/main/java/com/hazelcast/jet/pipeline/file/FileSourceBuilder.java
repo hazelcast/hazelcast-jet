@@ -98,7 +98,7 @@ public class FileSourceBuilder<T> {
      */
     public FileSourceBuilder(@Nonnull String path) {
         this.path = requireNonNull(path, "path must not be null");
-        if (!(Paths.get(path).isAbsolute() || hasHadoopPrefix(path))) {
+        if (!hasHadoopPrefix(path) && !Paths.get(path).isAbsolute()) {
             throw new IllegalArgumentException("Provided path must be absolute. path: " + path);
         }
     }
