@@ -378,6 +378,19 @@ public class Edge implements IdentifiedDataSerializable {
     }
 
     /**
+     * Activates the {@link RoutingPolicy#FANOUT FANOUT} routing policy.
+     * <p>
+     * This policy is allowed only on a distributed edge.
+     *
+     * @since 4.4
+     */
+    @Nonnull
+    public Edge fanout() {
+        routingPolicy = RoutingPolicy.FANOUT;
+        return this;
+    }
+
+    /**
      * Returns the instance encapsulating the partitioning strategy in effect
      * on this edge.
      */
@@ -549,6 +562,9 @@ public class Edge implements IdentifiedDataSerializable {
             case BROADCAST:
                 b.append(".broadcast()");
                 break;
+            case FANOUT:
+                b.append(".fanout()");
+                break;
             default:
         }
         if (DISTRIBUTE_TO_ALL.equals(distributedTo)) {
@@ -676,7 +692,12 @@ public class Edge implements IdentifiedDataSerializable {
         /**
          * This policy sends each item to all candidate processors.
          */
-        BROADCAST
+        BROADCAST,
+        /**
+         * This policy sends each item to a single processor on each of the
+         * cluster members. It is only available on a distributed edge.
+         */
+        FANOUT
     }
 
     private static class Single implements Partitioner<Object> {
