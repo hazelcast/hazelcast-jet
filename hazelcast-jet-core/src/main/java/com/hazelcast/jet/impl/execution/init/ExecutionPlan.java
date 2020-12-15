@@ -77,8 +77,7 @@ import java.util.stream.Stream;
 import static com.hazelcast.internal.util.concurrent.ConcurrentConveyor.concurrentConveyor;
 import static com.hazelcast.jet.config.EdgeConfig.DEFAULT_QUEUE_SIZE;
 import static com.hazelcast.jet.core.Edge.DISTRIBUTE_TO_ALL;
-import static com.hazelcast.jet.impl.execution.OutboundCollector.localCompositeCollector;
-import static com.hazelcast.jet.impl.execution.OutboundCollector.distributedCompositeCollector;
+import static com.hazelcast.jet.impl.execution.OutboundCollector.compositeCollector;
 import static com.hazelcast.jet.impl.execution.TaskletExecutionService.TASKLET_INIT_CLOSE_EXECUTOR_NAME;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ImdgUtil.getMemberConnection;
@@ -406,12 +405,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             int processorIndex,
             InternalSerializationService jobSerializationService
     ) {
-        if (edge.isDistributed() && edge.routingPolicy() == RoutingPolicy.ISOLATED) {
+        if (edge.routingPolicy() == RoutingPolicy.ISOLATED && edge.getDistributedTo() != null) {
             throw new IllegalArgumentException("Isolated edges must be local: " + edge);
-        }
-        if ((!edge.isDistributed() || !edge.getDistributedTo().equals(DISTRIBUTE_TO_ALL))
-            && edge.routingPolicy() == RoutingPolicy.FANOUT) {
-            throw new IllegalArgumentException("Fanout edges must be distributed: " + edge);
         }
 
         int totalPartitionCount = nodeEngine.getPartitionService().getPartitionCount();
@@ -423,7 +418,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 totalPartitionCount,
                 partitionsPerProcessor
         );
-        if (!edge.isDistributed()) {
+        if (edge.getDistributedTo() == null) {
             return localCollector;
         }
 
@@ -440,7 +435,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         OutboundCollector[] collectors = new OutboundCollector[remoteCollectors.length + 1];
         collectors[0] = localCollector;
         System.arraycopy(remoteCollectors, 0, collectors, 1, collectors.length - 1);
-        return distributedCompositeCollector(collectors, edge, totalPartitionCount);
+        return compositeCollector(collectors, edge, totalPartitionCount, false);
     }
 
     private OutboundCollector createLocalOutboundCollector(
@@ -472,12 +467,12 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                             .mapToObj(i -> new ConveyorCollector(localConveyors[i],
                                     processorIndex / downstreamParallelism, null))
                             .toArray(OutboundCollector[]::new);
-            return localCompositeCollector(localCollectors, edge, totalPartitionCount);
+            return compositeCollector(localCollectors, edge, totalPartitionCount, true);
         } else {
             ConcurrentConveyor<Object>[] localConveyors = localConveyorMap.computeIfAbsent(
                     edge.edgeId(),
                     edgeId -> {
-                        int queueCount = upstreamParallelism + (edge.isDistributed() ? numRemoteMembers : 0);
+                        int queueCount = upstreamParallelism + (edge.getDistributedTo() != null ? numRemoteMembers : 0);
                         return createConveyorArray(downstreamParallelism, queueCount, queueSize);
                     }
             );
@@ -487,7 +482,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                     localCollectors,
                     n -> new ConveyorCollector(localConveyors[n], processorIndex, partitionsPerProcessor[n])
             );
-            return localCompositeCollector(localCollectors, edge, totalPartitionCount);
+            return compositeCollector(localCollectors, edge, totalPartitionCount, true);
         }
     }
 
@@ -545,7 +540,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             EdgeDef edge,
             InternalSerializationService jobSerializationService
     ) {
-        assert edge.isDistributed() : "Edge is not distributed";
+        assert edge.getDistributedTo() != null : "Edge is not distributed";
+
         return edgeSenderConveyorMap.computeIfAbsent(edge.edgeId(), x -> {
             final Map<Address, ConcurrentConveyor<Object>> addrToConveyor = new HashMap<>();
             for (Address destAddr : remoteMembers.get()) {
@@ -597,7 +593,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             return new int[downstreamParallelism][];
         }
 
-        if (!edge.isDistributed() || nodeEngine.getThisAddress().equals(edge.getDistributedTo())) {
+        if (edge.getDistributedTo() == null || nodeEngine.getThisAddress().equals(edge.getDistributedTo())) {
             // the edge is local-partitioned or it is distributed to one member and this member is the target
             return ptionArrgmt.assignPartitionsToProcessors(downstreamParallelism, false);
         }
@@ -632,7 +628,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                            Arrays.setAll(collectors, n -> new ConveyorCollector(
                                    localConveyors[n], localConveyors[n].queueCount() + queueOffset,
                                    ptionsPerProcessor[n]));
-                           final OutboundCollector collector = localCompositeCollector(collectors, edge, totalPtionCount);
+                           final OutboundCollector collector = compositeCollector(collectors, edge, totalPtionCount, true);
                            ReceiverTasklet receiverTasklet = new ReceiverTasklet(
                                    collector, jobSerializationService,
                                    edge.getConfig().getReceiveWindowMultiplier(),

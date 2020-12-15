@@ -114,10 +114,6 @@ public class EdgeDef implements IdentifiedDataSerializable {
         return distributedTo;
     }
 
-    boolean isDistributed() {
-        return distributedTo != null;
-    }
-
     EdgeConfig getConfig() {
         return config;
     }

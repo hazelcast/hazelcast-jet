@@ -57,28 +57,8 @@ public interface OutboundCollector {
     }
 
 
-    static OutboundCollector localCompositeCollector(
-            OutboundCollector[] collectors, EdgeDef outboundEdge, int partitionCount
-    ) {
-        if (collectors.length == 1) {
-            return collectors[0];
-        }
-        switch (outboundEdge.routingPolicy()) {
-            case UNICAST:
-            case ISOLATED:
-            case FANOUT:
-                return new RoundRobin(collectors);
-            case PARTITIONED:
-                return new Partitioned(collectors, outboundEdge.partitioner(), partitionCount);
-            case BROADCAST:
-                return new Broadcast(collectors);
-            default:
-                throw new AssertionError("Missing case label for " + outboundEdge.routingPolicy());
-        }
-    }
-
-    static OutboundCollector distributedCompositeCollector(
-            OutboundCollector[] collectors, EdgeDef outboundEdge, int partitionCount
+    static OutboundCollector compositeCollector(
+            OutboundCollector[] collectors, EdgeDef outboundEdge, int partitionCount, boolean local
     ) {
         if (collectors.length == 1) {
             return collectors[0];
@@ -90,8 +70,9 @@ public interface OutboundCollector {
             case PARTITIONED:
                 return new Partitioned(collectors, outboundEdge.partitioner(), partitionCount);
             case BROADCAST:
-            case FANOUT:
                 return new Broadcast(collectors);
+            case FANOUT:
+                return local ? new RoundRobin(collectors) : new Broadcast(collectors);
             default:
                 throw new AssertionError("Missing case label for " + outboundEdge.routingPolicy());
         }
