@@ -28,6 +28,7 @@ import java.io.CharConversionException;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.util.Lists.newArrayList;
 
 public class CsvFileFormatTest extends BaseFileFormatTest {
 
@@ -104,5 +105,35 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
                                                     .format(FileFormat.csv(User.class));
 
         assertJobFailed(source, CsvMappingException.class, "Too many entries");
+    }
+
+    @Test
+    public void shouldRemapFields() {
+        FileFormat<String[]> format = FileFormat.csv(String[].class)
+                                                .withStringArrayFieldList(newArrayList("favoriteNumber", "name"));
+
+        FileSourceBuilder<String[]> source = FileSources.files(currentDir + "/src/test/resources")
+                                                        .glob("file.csv")
+                                                        .format(format);
+
+            assertItemsInSource(source,
+                    new String[]{"7", "Frantisek"},
+                    new String[]{"42", "Ali"}
+            );
+    }
+
+    @Test
+    public void shouldRemapSubsetOfFields() {
+        FileFormat<String[]> format = FileFormat.csv(String[].class)
+                                                .withStringArrayFieldList(newArrayList("name"));
+
+        FileSourceBuilder<String[]> source = FileSources.files(currentDir + "/src/test/resources")
+                                                        .glob("file.csv")
+                                                        .format(format);
+
+            assertItemsInSource(source,
+                    new String[]{"Frantisek"},
+                    new String[]{"Ali"}
+            );
     }
 }
