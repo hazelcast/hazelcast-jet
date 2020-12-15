@@ -698,7 +698,8 @@ public class Edge implements IdentifiedDataSerializable {
          * on each member, it is <em>unicast</em> to one processor.
          * <p>
          * If the destination local parallelism is 1, the behavior is equal to
-         * {@link #BROADCAST}.
+         * {@link #BROADCAST}. If the member count in the cluster is 1, the
+         * behavior is equal to {@link #UNICAST}.
          *
          * @since 4.4
          */
