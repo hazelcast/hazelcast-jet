@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.connector.map;
 
-import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
@@ -46,10 +45,7 @@ public class JoinerTest {
     private DAG dag;
 
     @Mock
-    private Vertex ingress;
-
-    @Mock
-    private Vertex egress;
+    private Vertex vertex;
 
     @Mock
     private KvRowProjector.Supplier rightRowProjectorSupplier;
@@ -69,7 +65,7 @@ public class JoinerTest {
     public void test_joinByPrimitiveKey(boolean inner) {
         // given
         given(rightRowProjectorSupplier.paths()).willReturn(new QueryPath[]{KEY_PATH});
-        given(dag.newUniqueVertex(contains("Lookup"), isA(JoinByPrimitiveKeyProcessorSupplier.class))).willReturn(ingress);
+        given(dag.newUniqueVertex(contains("Lookup"), isA(JoinByPrimitiveKeyProcessorSupplier.class))).willReturn(vertex);
 
         // when
         NestedLoopJoin join = Joiner.join(
@@ -81,18 +77,15 @@ public class JoinerTest {
         );
 
         // then
-        assertThat(join.ingress()).isNotNull();
-        assertThat(join.ingress()).isEqualTo(join.egress());
+        assertThat(join.vertex()).isEqualTo(vertex);
+        assertThat(join.configureEdgeFn()).isNotNull();
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void test_joinByPredicateInner() {
         // given
         given(rightRowProjectorSupplier.paths()).willReturn(new QueryPath[]{QueryPath.create("path")});
-        given(dag.newUniqueVertex(contains("Broadcast"), isA(SupplierEx.class))).willReturn(ingress);
-        given(ingress.localParallelism(1)).willReturn(ingress);
-        given(dag.newUniqueVertex(contains("Predicate"), isA(ProcessorMetaSupplier.class))).willReturn(egress);
+        given(dag.newUniqueVertex(contains("Predicate"), isA(ProcessorMetaSupplier.class))).willReturn(vertex);
 
         // when
         NestedLoopJoin join = Joiner.join(
@@ -104,9 +97,8 @@ public class JoinerTest {
         );
 
         // then
-        assertThat(join.ingress()).isNotNull();
-        assertThat(join.egress()).isNotNull();
-        assertThat(join.ingress()).isNotEqualTo(join.egress());
+        assertThat(join.vertex()).isEqualTo(vertex);
+        assertThat(join.configureEdgeFn()).isNotNull();
     }
 
     @Test
@@ -114,7 +106,7 @@ public class JoinerTest {
         // given
         given(rightRowProjectorSupplier.paths()).willReturn(new QueryPath[]{QueryPath.create("path")});
         given(dag.newUniqueVertex(contains("Predicate"), isA(JoinByPredicateOuterProcessorSupplier.class)))
-                .willReturn(ingress);
+                .willReturn(vertex);
 
         // when
         NestedLoopJoin join = Joiner.join(
@@ -126,8 +118,8 @@ public class JoinerTest {
         );
 
         // then
-        assertThat(join.ingress()).isNotNull();
-        assertThat(join.ingress()).isEqualTo(join.egress());
+        assertThat(join.vertex()).isEqualTo(vertex);
+        assertThat(join.configureEdgeFn()).isNull();
     }
 
     @Test
@@ -135,7 +127,7 @@ public class JoinerTest {
     public void test_joinByScan(boolean inner) {
         // given
         given(rightRowProjectorSupplier.paths()).willReturn(new QueryPath[]{VALUE_PATH});
-        given(dag.newUniqueVertex(contains("Scan"), isA(JoinScanProcessorSupplier.class))).willReturn(ingress);
+        given(dag.newUniqueVertex(contains("Scan"), isA(JoinScanProcessorSupplier.class))).willReturn(vertex);
 
         // when
         NestedLoopJoin join = Joiner.join(
@@ -147,8 +139,8 @@ public class JoinerTest {
         );
 
         // then
-        assertThat(join.ingress()).isNotNull();
-        assertThat(join.ingress()).isEqualTo(join.egress());
+        assertThat(join.vertex()).isEqualTo(vertex);
+        assertThat(join.configureEdgeFn()).isNull();
     }
 
     private static JetJoinInfo joinInfo(boolean inner, int[] leftEquiJoinIndices, int[] rightEquiJoinIndices) {

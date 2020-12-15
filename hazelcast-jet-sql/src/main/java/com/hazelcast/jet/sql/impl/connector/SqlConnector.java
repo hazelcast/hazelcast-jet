@@ -318,38 +318,29 @@ public interface SqlConnector {
      * Definition of a nested loop join.
      * <p>
      * Contains:<ul>
-     * <li>{@code ingress}: the input vertex
-     * <li>{@code egress}: the output vertex
+     * <li>{@code vertex}: the joining vertex to be added to the DAG,
+     * that reads the Object[] input - on the left side of a join - and
+     * connects it with the source - on the right side of a join
      * <li>{@code configureEdgeFn}: function to configure the edge the
-     * {@code ingress} vertex is connected to
+     * joining vertex is connected to
      * </ul>
      */
     class NestedLoopJoin {
 
-        private final Vertex ingress;
-        private final Vertex egress;
+        private final Vertex vertex;
         private final Consumer<Edge> configureEdgeFn;
 
-        public NestedLoopJoin(Vertex ingress) {
-            this(ingress, ingress, null);
+        public NestedLoopJoin(Vertex vertex) {
+            this(vertex, null);
         }
 
-        public NestedLoopJoin(Vertex ingress, Consumer<Edge> configureEdgeFn) {
-            this(ingress, ingress, configureEdgeFn);
-        }
-
-        public NestedLoopJoin(Vertex ingress, Vertex egress, Consumer<Edge> configureEdgeFn) {
-            this.ingress = ingress;
-            this.egress = egress;
+        public NestedLoopJoin(Vertex vertex, Consumer<Edge> configureEdgeFn) {
+            this.vertex = vertex;
             this.configureEdgeFn = configureEdgeFn;
         }
 
-        public Vertex ingress() {
-            return ingress;
-        }
-
-        public Vertex egress() {
-            return egress;
+        public Vertex vertex() {
+            return vertex;
         }
 
         public Consumer<Edge> configureEdgeFn() {

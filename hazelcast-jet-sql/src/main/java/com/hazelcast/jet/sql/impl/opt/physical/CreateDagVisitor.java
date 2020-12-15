@@ -114,7 +114,7 @@ public class CreateDagVisitor {
                         localMemberAddress
                 )
         );
-        connectInput(rel.getInput(), vertex, edge -> edge.allToOne("").distributeTo(localMemberAddress));
+        connectInput(rel.getInput(), vertex, edge -> edge.distributeTo(localMemberAddress).allToOne(""));
         return vertex;
     }
 
@@ -139,7 +139,7 @@ public class CreateDagVisitor {
                         localMemberAddress
                 )
         );
-        connectInput(rel.getInput(), vertex, edge -> edge.allToOne("").distributeTo(localMemberAddress));
+        connectInput(rel.getInput(), vertex, edge -> edge.distributeTo(localMemberAddress).allToOne(""));
         return vertex;
     }
 
@@ -151,7 +151,7 @@ public class CreateDagVisitor {
                 "AggregateByKey",
                 Processors.aggregateByKeyP(singletonList(groupKeyFn), aggregateOperation, (key, value) -> value)
         );
-        connectInput(rel.getInput(), vertex, edge -> edge.partitioned(groupKeyFn).distributed());
+        connectInput(rel.getInput(), vertex, edge -> edge.distributed().partitioned(groupKeyFn));
         return vertex;
     }
 
@@ -174,7 +174,7 @@ public class CreateDagVisitor {
                 "CombineByKey",
                 Processors.combineByKeyP(aggregateOperation, (key, value) -> value)
         );
-        connectInput(rel.getInput(), vertex, edge -> edge.partitioned(entryKey()).distributed());
+        connectInput(rel.getInput(), vertex, edge -> edge.distributed().partitioned(entryKey()));
         return vertex;
     }
 
@@ -190,8 +190,8 @@ public class CreateDagVisitor {
                 rel.rightProjection(),
                 rel.joinInfo()
         );
-        connectInput(rel.getLeft(), join.ingress(), join.configureEdgeFn());
-        return join.egress();
+        connectInput(rel.getLeft(), join.vertex(), join.configureEdgeFn());
+        return join.vertex();
     }
 
     public Vertex onRoot(JetRootRel rootRel) {
@@ -203,7 +203,7 @@ public class CreateDagVisitor {
         // We use distribute-to-one edge to send all the items to the initiator member.
         // Such edge has to be partitioned, but the sink is LP=1 anyway, so we can use
         // allToOne with any key, it goes to a single processor on a single member anyway.
-        connectInput(rootRel.getInput(), vertex, edge -> edge.allToOne("").distributeTo(localMemberAddress));
+        connectInput(rootRel.getInput(), vertex, edge -> edge.distributeTo(localMemberAddress).allToOne(""));
         return vertex;
     }
 

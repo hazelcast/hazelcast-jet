@@ -17,17 +17,11 @@
 package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector.NestedLoopJoin;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
 import com.hazelcast.sql.impl.extract.QueryPath;
-
-import static com.hazelcast.function.Functions.wholeItem;
-import static com.hazelcast.jet.core.Edge.between;
 
 final class Joiner {
 
@@ -54,22 +48,16 @@ final class Joiner {
                                     rightRowProjectorSupplier
                             )
                     ),
-                    edge -> edge.partitioned(extractPrimitiveKeyFn(leftEquiJoinPrimitiveKeyIndex)).distributed()
+                    edge -> edge.distributed().partitioned(extractPrimitiveKeyFn(leftEquiJoinPrimitiveKeyIndex))
             );
         } else if (joinInfo.isEquiJoin() && joinInfo.isInner()) {
-            // TODO: define new edge type (mix of broadcast & local-round-robin) ?
-            Vertex ingress = dag
-                    .newUniqueVertex("Broadcast", () -> new TransformP<>(Traversers::singleton))
-                    .localParallelism(1);
-
-            Vertex egress = dag.newUniqueVertex(
-                    "Join(Predicate-" + tableName + ")",
-                    JoinByPredicateInnerProcessorSupplier.supplier(joinInfo, mapName, rightRowProjectorSupplier)
+            return new NestedLoopJoin(
+                    dag.newUniqueVertex(
+                            "Join(Predicate-" + tableName + ")",
+                            JoinByPredicateInnerProcessorSupplier.supplier(joinInfo, mapName, rightRowProjectorSupplier)
+                    ),
+                    edge -> edge.distributed().fanout()
             );
-
-            dag.edge(between(ingress, egress).partitioned(wholeItem()));
-
-            return new NestedLoopJoin(ingress, egress, edge -> edge.distributed().broadcast());
         } else if (joinInfo.isEquiJoin() && joinInfo.isOuter()) {
             return new NestedLoopJoin(
                     dag.newUniqueVertex(
