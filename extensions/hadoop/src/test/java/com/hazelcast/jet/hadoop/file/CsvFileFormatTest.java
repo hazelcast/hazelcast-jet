@@ -116,10 +116,10 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
                                                         .glob("file.csv")
                                                         .format(format);
 
-            assertItemsInSource(source,
-                    new String[]{"7", "Frantisek"},
-                    new String[]{"42", "Ali"}
-            );
+        assertItemsInSource(source,
+                new String[]{"7", "Frantisek"},
+                new String[]{"42", "Ali"}
+        );
     }
 
     @Test
@@ -131,9 +131,9 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
                                                         .glob("file.csv")
                                                         .format(format);
 
-            assertItemsInSource(source,
-                    new String[]{"Frantisek"},
-                    new String[]{"Ali"}
-            );
+        assertItemsInSource(source,
+                new String[]{"Frantisek"},
+                new String[]{"Ali"}
+        );
     }
 }
