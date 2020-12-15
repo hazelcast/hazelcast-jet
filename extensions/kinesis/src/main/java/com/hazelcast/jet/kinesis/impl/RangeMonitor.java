@@ -80,15 +80,15 @@ public class RangeMonitor extends AbstractShardWorker {
     }
 
     public void run() {
-        long currentTime = System.nanoTime();
         if (listShardResult == null) {
-            initShardListing(currentTime);
+            initShardListing();
         } else {
-            checkForNewShards(currentTime);
+            checkForNewShards();
         }
     }
 
-    private void initShardListing(long currentTime) {
+    private void initShardListing() {
+        long currentTime = System.nanoTime();
         if (currentTime < nextListShardsTime) {
             return;
         }
@@ -96,17 +96,13 @@ public class RangeMonitor extends AbstractShardWorker {
         nextListShardsTime = currentTime + listShardsRateTracker.next();
     }
 
-    private void checkForNewShards(long currentTime) {
+    private void checkForNewShards() {
         if (listShardResult.isDone()) {
             ListShardsResult result;
             try {
                 result = helper.readResult(listShardResult);
             } catch (SdkClientException e) {
-                nextToken = null;
-                listShardRetryTracker.attemptFailed();
-                long timeoutMillis = listShardRetryTracker.getNextWaitTimeMillis();
-                logger.warning("Failed listing shards, retrying in " + timeoutMillis + " ms. Cause: " + e.getMessage());
-                nextListShardsTime = currentTime + MILLISECONDS.toNanos(timeoutMillis);
+                dealWithListShardsFailure(e);
                 return;
             } catch (Throwable t) {
                 throw rethrow(t);
@@ -141,6 +137,20 @@ public class RangeMonitor extends AbstractShardWorker {
                 }
             }
         }
+    }
+
+    private void dealWithListShardsFailure(@Nonnull Exception failure) {
+        nextToken = null;
+        listShardRetryTracker.attemptFailed();
+        if (listShardRetryTracker.shouldTryAgain()) {
+            long timeoutMillis = listShardRetryTracker.getNextWaitTimeMillis();
+            logger.warning(String.format("Failed listing shards, retrying in %d ms. Cause: %s",
+                    timeoutMillis, failure.getMessage()));
+            nextListShardsTime = System.nanoTime() + MILLISECONDS.toNanos(timeoutMillis);
+        } else {
+            throw rethrow(failure);
+        }
+
     }
 
     private int findOwner(Shard shard) {

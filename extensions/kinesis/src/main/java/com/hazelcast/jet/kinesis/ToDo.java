@@ -20,8 +20,6 @@ package com.hazelcast.jet.kinesis;
  */
 public class ToDo {
 
-    //todo: what happens when READING/WRITING stream with 0 shards?
-
     //todo: tripping any shard's ingestion rate, getting messages refused randomly from the send batch will mess
     // up the order of messages; document this
 
@@ -33,6 +31,8 @@ public class ToDo {
     //todo: update source/sink docs
 
     //todo: use TestSupport to test the Kinesis processors
+
+    //todo: test the sink and source in a real cluster with multiple nodes running in different JVMs
 
     //todo: delete this class
 

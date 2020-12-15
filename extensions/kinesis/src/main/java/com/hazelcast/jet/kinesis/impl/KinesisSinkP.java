@@ -232,7 +232,7 @@ public class KinesisSinkP<T> implements Processor {
                 dealWithThroughputExceeded("Data throughput rate exceeded. Backing off and retrying in %d ms");
                 return;
             } catch (SdkClientException sce) {
-                dealWithSendFailure("Failed to send records, will retry in %d ms. Cause: " + sce.getMessage());
+                dealWithSendFailure(sce);
                 return;
             } catch (Throwable t) {
                 throw rethrow(t);
@@ -252,11 +252,17 @@ public class KinesisSinkP<T> implements Processor {
         }
     }
 
-    private void dealWithSendFailure(@Nonnull String message) {
+    private void dealWithSendFailure(@Nonnull Exception failure) {
         sendRetryTracker.attemptFailed();
-        long timeoutMillis = sendRetryTracker.getNextWaitTimeMillis();
-        logger.warning(String.format(message, timeoutMillis));
-        nextSendTime = System.nanoTime() + MILLISECONDS.toNanos(timeoutMillis);
+        if (sendRetryTracker.shouldTryAgain()) {
+            long timeoutMillis = sendRetryTracker.getNextWaitTimeMillis();
+            logger.warning(String.format("Failed to send records, will retry in %d ms. Cause: %s",
+                    timeoutMillis, failure.getMessage()));
+            nextSendTime = System.nanoTime() + MILLISECONDS.toNanos(timeoutMillis);
+        } else {
+            throw rethrow(failure);
+        }
+
     }
 
     private void dealWithThroughputExceeded(@Nonnull String message) {

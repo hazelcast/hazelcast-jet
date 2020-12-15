@@ -22,6 +22,7 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.jet.test.SerialTest;
 import com.hazelcast.logging.Logger;
@@ -29,6 +30,7 @@ import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -105,11 +107,29 @@ public class KinesisFailureTest extends AbstractKinesisTest {
 
     @Test
     @Category(SerialTest.class)
-    public void temporaryNetworkOutage() throws Exception {
+    public void networkOutageWhenStarting() throws Exception {
+        HELPER.createStream(10);
+
+        System.err.println("Cutting network connection ...");
+        PROXY.setConnectionCut(true);
+
+        jet().newJob(getPipeline());
+        Map<String, List<String>> expectedMessages = sendMessages(false);
+
+        SECONDS.sleep(5);
+
+        System.err.println("Network connection re-established");
+        PROXY.setConnectionCut(false);
+
+        assertMessages(expectedMessages, true, false);
+    }
+
+    @Test
+    @Category(SerialTest.class)
+    public void networkOutageWhileRunning() throws Exception {
         HELPER.createStream(10);
 
         jet().newJob(getPipeline());
-
         Map<String, List<String>> expectedMessages = sendMessages(false);
 
         //wait for some data to start coming out of the pipeline
@@ -122,6 +142,53 @@ public class KinesisFailureTest extends AbstractKinesisTest {
         PROXY.setConnectionCut(false);
 
         assertMessages(expectedMessages, true, false);
+    }
+
+    @Test
+    @Category(SerialTest.class)
+    @Ignore //AWS mock completely ignores the credentials passed to it, accepts anything (test passes on real backend)
+    public void sinkWithIncorrectCredentials() {
+        HELPER.createStream(1);
+
+        AwsConfig awsConfig = new AwsConfig(null, null,
+                "wrong_key",
+                "wrong_key"
+        );
+        Pipeline p = Pipeline.create();
+        p.readFrom(TestSources.items(entry("k", new byte[0])))
+                .writeTo(KinesisSinks.kinesis(STREAM)
+                        .withEndpoint(awsConfig.getEndpoint())
+                        .withRegion(awsConfig.getRegion())
+                        .withCredentials(awsConfig.getAccessKey(), awsConfig.getSecretKey())
+                        .withRetryStrategy(KinesisTestHelper.RETRY_STRATEGY)
+                        .build());
+
+        Job job = jet().newJob(p);
+        assertThrowsJetException(job, "The security token included in the request is invalid");
+    }
+
+    @Test
+    @Category(SerialTest.class)
+    @Ignore //AWS mock completely ignores the credentials passed to it, accepts anything (test passes on real backend)
+    public void sourceWithIncorrectCredentials() {
+        HELPER.createStream(1);
+
+        AwsConfig awsConfig = new AwsConfig(null, null,
+                "wrong_key",
+                "wrong_key"
+        );
+        Pipeline p = Pipeline.create();
+        p.readFrom(KinesisSources.kinesis(STREAM)
+                    .withEndpoint(awsConfig.getEndpoint())
+                    .withRegion(awsConfig.getRegion())
+                    .withCredentials(awsConfig.getAccessKey(), awsConfig.getSecretKey())
+                    .withRetryStrategy(KinesisTestHelper.RETRY_STRATEGY)
+                    .build())
+                .withoutTimestamps()
+                .writeTo(Sinks.noop());
+
+        Job job = jet().newJob(p);
+        assertThrowsJetException(job, "The security token included in the request is invalid");
     }
 
     @Test
@@ -164,16 +231,7 @@ public class KinesisFailureTest extends AbstractKinesisTest {
         assertJobStatusEventually(job1, JobStatus.COMPLETED);
 
         Job job2 = writeOneEntry(invalid);
-        try {
-            job2.getFuture().get(5, SECONDS);
-        } catch (ExecutionException ee) {
-            //job completed exceptionally, as expected, we check the details of it
-            assertThat(ee)
-                    .hasRootCauseInstanceOf(JetException.class)
-                    .hasRootCauseMessage(error);
-        } catch (Throwable t) {
-            throw sneakyThrow(t);
-        }
+        assertThrowsJetException(job2, error);
     }
 
     private Job writeOneEntry(Entry<String, byte[]> entry) {
@@ -182,6 +240,19 @@ public class KinesisFailureTest extends AbstractKinesisTest {
                 .writeTo(kinesisSink());
 
         return jet().newJob(p);
+    }
+
+    private static void assertThrowsJetException(Job job, String messageFragment) {
+        try {
+            job.getFuture().get(ASSERT_TRUE_EVENTUALLY_TIMEOUT, SECONDS);
+        } catch (ExecutionException ee) {
+            //job completed exceptionally, as expected, we check the details of it
+            assertThat(ee)
+                    .hasCauseInstanceOf(JetException.class)
+                    .hasMessageContaining(messageFragment);
+        } catch (Throwable t) {
+            throw sneakyThrow(t);
+        }
     }
 
 }

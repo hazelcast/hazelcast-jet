@@ -64,15 +64,15 @@ public class ShardCountMonitor extends AbstractShardWorker {
     }
 
     public void run() {
-        long currentTime = System.nanoTime();
         if (describeStreamResult == null) {
-            initDescribeStream(currentTime);
+            initDescribeStream();
         } else {
-            checkForStreamDescription(currentTime);
+            checkForStreamDescription();
         }
     }
 
-    private void initDescribeStream(long currentTime) {
+    private void initDescribeStream() {
+        long currentTime = System.nanoTime();
         if (currentTime < nextDescribeStreamTime) {
             return;
         }
@@ -80,17 +80,13 @@ public class ShardCountMonitor extends AbstractShardWorker {
         nextDescribeStreamTime = currentTime + descriteStreamRateTracker.next();
     }
 
-    private void checkForStreamDescription(long currentTime) {
+    private void checkForStreamDescription() {
         if (describeStreamResult.isDone()) {
             DescribeStreamSummaryResult result;
             try {
                 result = helper.readResult(describeStreamResult);
             } catch (SdkClientException e) {
-                describeStreamRetryTracker.attemptFailed();
-                long timeoutMillis = describeStreamRetryTracker.getNextWaitTimeMillis();
-                logger.warning("Failed obtaining stream description, retrying in " + timeoutMillis + " ms. Cause:" +
-                        " " + e.getMessage());
-                nextDescribeStreamTime = currentTime + MILLISECONDS.toNanos(timeoutMillis);
+                dealWithDescribeStreamFailure(e);
                 return;
             } catch (Throwable t) {
                 throw rethrow(t);
@@ -106,6 +102,19 @@ public class ShardCountMonitor extends AbstractShardWorker {
                 logger.info(String.format("Updated shard count for stream %s: %d", stream, newShardCount));
             }
         }
+    }
+
+    private void dealWithDescribeStreamFailure(@Nonnull Exception failure) {
+        describeStreamRetryTracker.attemptFailed();
+        if (describeStreamRetryTracker.shouldTryAgain()) {
+            long timeoutMillis = describeStreamRetryTracker.getNextWaitTimeMillis();
+            logger.warning(String.format("Failed obtaining stream description, retrying in %d ms. Cause: %s",
+                    timeoutMillis, failure.getMessage()));
+            nextDescribeStreamTime = System.nanoTime() + MILLISECONDS.toNanos(timeoutMillis);
+        } else {
+            throw rethrow(failure);
+        }
+
     }
 
     @Nonnull

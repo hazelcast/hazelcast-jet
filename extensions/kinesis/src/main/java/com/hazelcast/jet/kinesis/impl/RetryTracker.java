@@ -27,14 +27,17 @@ public class RetryTracker {
         this.strategy = strategy;
     }
 
-    //todo: max retry no. property is not taken into consideration
-
     public void reset() {
         this.attempt = 0;
     }
 
     public void attemptFailed() {
         attempt++;
+    }
+
+    public boolean shouldTryAgain() {
+        int maxAttempts = strategy.getMaxAttempts();
+        return maxAttempts < 0 || maxAttempts > 0 && attempt <= maxAttempts;
     }
 
     public long getNextWaitTimeMillis() {

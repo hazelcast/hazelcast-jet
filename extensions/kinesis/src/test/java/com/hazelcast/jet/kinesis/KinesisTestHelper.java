@@ -49,8 +49,9 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
 class KinesisTestHelper {
 
-    private static final RetryStrategy RETRY_STRATEGY = RetryStrategies.custom()
-            .intervalFunction(IntervalFunction.exponentialBackoffWithCap(250L, 2.0, 3000L))
+    static final RetryStrategy RETRY_STRATEGY = RetryStrategies.custom()
+            .maxAttempts(10)
+            .intervalFunction(IntervalFunction.exponentialBackoffWithCap(250L, 2.0, 1000L))
             .build();
 
     private final AmazonKinesisAsync kinesis;
