@@ -51,7 +51,9 @@ import java.util.concurrent.CompletionException;
 import java.util.stream.LongStream;
 
 import static com.hazelcast.function.Functions.wholeItem;
-import static com.hazelcast.jet.core.test.JetAssert.*;
+import static com.hazelcast.jet.core.test.JetAssert.assertFalse;
+import static com.hazelcast.jet.core.test.JetAssert.assertTrue;
+import static com.hazelcast.jet.core.test.JetAssert.fail;
 
 @RunWith(Parameterized.class)
 @UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
@@ -241,8 +243,9 @@ public class OrderedProcessingMultipleMemberTest extends JetTestSupport implemen
         int keyCount = 8;
 
         String mapName = "test-map-" + idx;
-        StreamStage<Map.Entry<Long, Long>> srcStage = p.readFrom(Sources.<Long, Long>mapJournal(mapName, JournalInitialPosition.START_FROM_OLDEST))
-                .withoutTimestamps();
+        StreamStage<Map.Entry<Long, Long>> srcStage = p.readFrom(
+                Sources.<Long, Long>mapJournal(mapName, JournalInitialPosition.START_FROM_OLDEST)
+        ).withoutTimestamps();
         StreamStage<Map.Entry<Long, Long>> applied = srcStage.apply(transform);
 
         applied.groupingKey(Map.Entry::getKey)

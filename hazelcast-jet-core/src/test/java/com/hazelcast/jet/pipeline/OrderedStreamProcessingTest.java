@@ -79,7 +79,7 @@ public class OrderedStreamProcessingTest extends JetTestSupport implements Seria
     public String transformName;
 
     @BeforeClass
-    public static void setupClass(){
+    public static void setupClass() {
         jet = Jet.newJetInstance();
     }
 
@@ -228,7 +228,8 @@ public class OrderedStreamProcessingTest extends JetTestSupport implements Seria
 
         List<Long> sequence = LongStream.range(0, validatedItemCount).boxed().collect(toList());
 
-        StreamStage<Long> srcStage = p.readFrom(TestSources.itemStream(itemsPerSecond, (ts, seq) -> seq)).withIngestionTimestamps();
+        StreamStage<Long> srcStage = p.readFrom(TestSources.itemStream(itemsPerSecond, (ts, seq) -> seq))
+                .withIngestionTimestamps();
 
         StreamStage<Long> applied = srcStage.apply(transform);
 
@@ -296,10 +297,14 @@ public class OrderedStreamProcessingTest extends JetTestSupport implements Seria
         GeneratorFunction<Long> generator3 = (ts, seq) -> generatorCount * seq + 2;
         GeneratorFunction<Long> generator4 = (ts, seq) -> generatorCount * seq + 3;
 
-        List<Long> sequence1 = LongStream.range(0, validatedItemCountPerGenerator).map(i -> generatorCount * i).boxed().collect(toList());
-        List<Long> sequence2 = LongStream.range(0, validatedItemCountPerGenerator).map(i -> generatorCount * i + 1).boxed().collect(toList());
-        List<Long> sequence3 = LongStream.range(0, validatedItemCountPerGenerator).map(i -> generatorCount * i + 2).boxed().collect(toList());
-        List<Long> sequence4 = LongStream.range(0, validatedItemCountPerGenerator).map(i -> generatorCount * i + 3).boxed().collect(toList());
+        List<Long> sequence1 = LongStream.range(0, validatedItemCountPerGenerator)
+                .map(i -> generatorCount * i).boxed().collect(toList());
+        List<Long> sequence2 = LongStream.range(0, validatedItemCountPerGenerator)
+                .map(i -> generatorCount * i + 1).boxed().collect(toList());
+        List<Long> sequence3 = LongStream.range(0, validatedItemCountPerGenerator)
+                .map(i -> generatorCount * i + 2).boxed().collect(toList());
+        List<Long> sequence4 = LongStream.range(0, validatedItemCountPerGenerator)
+                .map(i -> generatorCount * i + 3).boxed().collect(toList());
 
         StreamStage<Long> srcStage = p.readFrom(itemsParallel(
                 eventsPerSecondPerGenerator,

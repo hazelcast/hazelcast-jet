@@ -67,7 +67,7 @@ public class OrderedBatchProcessingTest extends JetTestSupport {
     public String transformName;
 
     @BeforeClass
-    public static void setupClass(){
+    public static void setupClass() {
         jet = Jet.newJetInstance();
     }
 
