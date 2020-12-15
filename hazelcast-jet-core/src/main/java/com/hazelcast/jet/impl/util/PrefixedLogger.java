@@ -24,9 +24,9 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
 /**
- * A Logger implementation that wraps another Logger and prefixes all
- * the logged messages with a given prefix. The logger logs the
- * messages like: [prefix] message
+ * An {@link ILogger} implementation that wraps another {@link ILogger} and
+ * prefixes all the logged messages with a given prefix. The logger logs
+ * the messages like: [prefix] message
  */
 public class PrefixedLogger extends AbstractLogger {
 
