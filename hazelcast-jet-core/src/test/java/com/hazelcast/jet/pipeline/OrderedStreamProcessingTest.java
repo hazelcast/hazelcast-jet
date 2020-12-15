@@ -85,7 +85,7 @@ public class OrderedStreamProcessingTest extends JetTestSupport implements Seria
 
     @Before
     public void setup() {
-        p = Pipeline.create();
+        p = Pipeline.create().setPreserveOrder(true);
     }
 
     @AfterClass
@@ -235,7 +235,6 @@ public class OrderedStreamProcessingTest extends JetTestSupport implements Seria
         applied.writeTo(AssertionSinks.assertCollectedEventually(60,
                         list -> Assert.assertArrayEquals(list.toArray(), sequence.toArray())));
 
-        p.setPreserveOrder(true);
         Job job = jet.newJob(p);
         try {
             job.join();
@@ -274,7 +273,6 @@ public class OrderedStreamProcessingTest extends JetTestSupport implements Seria
                         }
                 ));
 
-        p.setPreserveOrder(true);
         Job job = jet.newJob(p);
         try {
             job.join();
@@ -323,8 +321,6 @@ public class OrderedStreamProcessingTest extends JetTestSupport implements Seria
         applied.filter(i -> i % generatorCount == 3)
                 .writeTo(AssertionSinks.assertCollectedEventually(60,
                         list -> Assert.assertArrayEquals(list.toArray(), sequence4.toArray())));
-
-        p.setPreserveOrder(true);
 
         Job job = jet.newJob(p);
         try {
