@@ -32,17 +32,6 @@ final class CsvMetadataResolver extends MetadataResolver<Map<String, String>> {
     private static final FileFormat<Map<String, String>> SAMPLE_FORMAT = FileFormat.csv();
 
     @Override
-    Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
-        List<String> fieldMap = createFieldList(resolvedFields);
-        FileFormat<String[]> format = FileFormat.csv(String[].class)
-                                                .withStringArrayFieldList(createFieldList(resolvedFields));
-        return new Metadata(
-                toFields(resolvedFields),
-                toProcessorMetaSupplier(options, format),
-                () -> new CsvQueryTarget(fieldMap));
-    }
-
-    @Override
     protected FileFormat<?> sampleFormat() {
         return SAMPLE_FORMAT;
     }
@@ -50,6 +39,17 @@ final class CsvMetadataResolver extends MetadataResolver<Map<String, String>> {
     @Override
     protected List<MappingField> resolveFieldsFromSample(Map<String, String> entry) {
         return CsvResolver.resolveFields(entry.keySet());
+    }
+
+    @Override
+    protected Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
+        List<String> fieldMap = createFieldList(resolvedFields);
+        FileFormat<String[]> format = FileFormat.csv(String[].class)
+                                                .withStringArrayFieldList(createFieldList(resolvedFields));
+        return new Metadata(
+                toFields(resolvedFields),
+                toProcessorMetaSupplier(options, format),
+                () -> new CsvQueryTarget(fieldMap));
     }
 
     @Nonnull

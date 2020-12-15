@@ -36,15 +36,15 @@ final class JsonMetadataResolver extends MetadataResolver<JrsObject> {
     }
 
     @Override
-    Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
+    protected List<MappingField> resolveFieldsFromSample(JrsObject object) {
+        return JsonResolver.resolveFields(object);
+    }
+
+    @Override
+    protected Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
         return new Metadata(
                 toFields(resolvedFields),
                 toProcessorMetaSupplier(options, FORMAT),
                 JsonQueryTarget::new);
-    }
-
-    @Override
-    protected List<MappingField> resolveFieldsFromSample(JrsObject object) {
-        return JsonResolver.resolveFields(object);
     }
 }

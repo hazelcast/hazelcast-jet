@@ -36,15 +36,15 @@ final class AvroMetadataResolver extends MetadataResolver<GenericRecord> {
     }
 
     @Override
-    Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
+    protected List<MappingField> resolveFieldsFromSample(GenericRecord record) {
+        return AvroResolver.resolveFields(record.getSchema());
+    }
+
+    @Override
+    protected Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
         return new Metadata(
                 toFields(resolvedFields),
                 toProcessorMetaSupplier(options, FORMAT),
                 AvroQueryTarget::new);
-    }
-
-    @Override
-    protected List<MappingField> resolveFieldsFromSample(GenericRecord record) {
-        return AvroResolver.resolveFields(record.getSchema());
     }
 }

@@ -69,7 +69,7 @@ abstract class MetadataResolver<T> {
         }
     }
 
-    abstract Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options);
+    protected abstract Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options);
 
     protected List<TableField> toFields(List<MappingField> resolvedFields) {
         return toList(
@@ -83,7 +83,7 @@ abstract class MetadataResolver<T> {
     }
 
     @SuppressWarnings("unchecked")
-    ProcessorMetaSupplier toProcessorMetaSupplier(Map<String, ?> options, FileFormat<?> format) {
+    protected ProcessorMetaSupplier toProcessorMetaSupplier(Map<String, ?> options, FileFormat<?> format) {
         FileSourceBuilder<?> builder = new FileSourceBuilder<>((String) options.get(OPTION_PATH)).format(format);
 
         String glob = (String) options.get(OPTION_GLOB);
