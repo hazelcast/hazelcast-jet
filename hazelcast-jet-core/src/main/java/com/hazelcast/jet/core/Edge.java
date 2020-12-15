@@ -694,9 +694,15 @@ public class Edge implements IdentifiedDataSerializable {
          */
         BROADCAST,
         /**
-         * This policy sends each item to a single processor on each of the
-         * cluster members in a round robin fashion. It is only available
-         * on a distributed edge.
+         * This policy sends an item to all members, but only to one processor on
+         * each member. It's a combination of {@link #BROADCAST} and {@link
+         * #UNICAST}: an item is first <em>broadcast</em> to all members, and then,
+         * on each member, it is <em>unicast</em> to one processor.
+         * <p>
+         * If the destination local parallelism is 1, the behavior is equal to
+         * {@link #BROADCAST}.
+         *
+         * @since 4.4
          */
         FANOUT
     }
