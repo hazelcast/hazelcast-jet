@@ -63,5 +63,4 @@ public class MockLoggingFactory implements LoggerFactory {
 
         };
     }
-
 }
