@@ -22,10 +22,12 @@ import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
 import com.amazonaws.services.kinesis.model.PutRecordsResult;
 import com.amazonaws.services.kinesis.model.PutRecordsResultEntry;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.kinesis.KinesisSinks;
 import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.logging.ILogger;
 
@@ -66,22 +68,10 @@ public class KinesisSinkP<T> implements Processor {
     private static final int MIN_RECORDS_IN_REQUEST = 10;
 
     /**
-     * Each record, when encoded as a byte array, is limited to 1M,
-     * including the partition key (Unicode String).
-     */
-    private static final int MAX_RECORD_SIZE_IN_BYTES = 1024 * 1024;
-
-    /**
      * The maximum allowed size of all the records in a PutRecords request,
      * including partition keys is 5M.
      */
     private static final int MAX_REQUEST_SIZE_IN_BYTES = 5 * 1024 * 1024;
-
-    /**
-     * The number of Unicode characters making up keys is limited to a maximum
-     * of 256.
-     */
-    private static final int MAX_UNICODE_CHARS_IN_KEY = 256;
 
     @Nonnull
     private final AmazonKinesisAsync kinesis;
@@ -325,16 +315,19 @@ public class KinesisSinkP<T> implements Processor {
             }
 
             String key = keyFn.apply(item);
+            if (key.isEmpty()) {
+                throw new JetException("Key empty");
+            }
             int unicodeCharsInKey = key.length();
-            if (unicodeCharsInKey > MAX_UNICODE_CHARS_IN_KEY) {
-                throw new IllegalArgumentException("Key of " + item + " too long");
+            if (unicodeCharsInKey > KinesisSinks.MAXIMUM_KEY_LENGTH) {
+                throw new JetException("Key too long");
             }
             int keyLength = getKeyLength(key);
 
             byte[] value = valueFn.apply(item);
             int itemLength = value.length + keyLength;
-            if (itemLength > MAX_RECORD_SIZE_IN_BYTES) {
-                throw new IllegalArgumentException("Item " + item + " encoded length (key + payload) is too big");
+            if (itemLength > KinesisSinks.MAX_RECORD_SIZE) {
+                throw new JetException("Encoded length (key + payload) is too big");
             }
 
             if (totalEntrySize + itemLength > MAX_REQUEST_SIZE_IN_BYTES) {

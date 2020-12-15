@@ -103,16 +103,25 @@ class KinesisTestHelper {
     }
 
     public void createStream(int shardCount) {
+        if (streamExists()) {
+            throw new IllegalStateException("Stream already exists");
+        }
+
         callSafely(() -> {
             CreateStreamRequest request = new CreateStreamRequest();
             request.setShardCount(shardCount);
             request.setStreamName(stream);
             return kinesis.createStream(request);
         });
+
+        waitForStreamToActivate();
     }
 
     public void deleteStream() {
-        callSafely(() -> kinesis.deleteStream(stream));
+        if (streamExists()) {
+            callSafely(() -> kinesis.deleteStream(stream));
+            waitForStreamToDisappear();
+        }
     }
 
     public List<Shard> listShards(Predicate<? super Shard> filter) {

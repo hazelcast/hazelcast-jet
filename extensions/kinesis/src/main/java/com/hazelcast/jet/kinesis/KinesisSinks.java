@@ -38,6 +38,19 @@ import static com.hazelcast.jet.impl.pipeline.SinkImpl.Type.DISTRIBUTED_PARTITIO
  */
 public final class KinesisSinks {
 
+    /**
+     * Kinesis partition keys are Unicode strings, with a maximum length limit
+     * of 256 characters for each key.
+     */
+    public static final int MAXIMUM_KEY_LENGTH = 256;
+
+    /**
+     * The length of a record's data blob (byte array length), plus the record's
+     * key size (no. of unicode characters in the key) must not be larger than
+     * 1M.
+     */
+    public static final int MAX_RECORD_SIZE = 1024 * 1024;
+
     private KinesisSinks() {
     }
 
