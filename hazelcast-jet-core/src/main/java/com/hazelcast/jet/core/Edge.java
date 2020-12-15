@@ -379,8 +379,6 @@ public class Edge implements IdentifiedDataSerializable {
 
     /**
      * Activates the {@link RoutingPolicy#FANOUT FANOUT} routing policy.
-     * <p>
-     * This policy is allowed only on a distributed edge.
      *
      * @since 4.4
      */
