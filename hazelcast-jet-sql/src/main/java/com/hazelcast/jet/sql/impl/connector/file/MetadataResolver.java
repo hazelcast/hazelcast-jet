@@ -19,6 +19,7 @@ package com.hazelcast.jet.sql.impl.connector.file;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
+import com.hazelcast.jet.pipeline.file.FileSources;
 import com.hazelcast.jet.pipeline.file.impl.FileProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.file.impl.FileTraverser;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
@@ -84,7 +85,7 @@ abstract class MetadataResolver<T> {
 
     @SuppressWarnings("unchecked")
     protected ProcessorMetaSupplier toProcessorMetaSupplier(Map<String, ?> options, FileFormat<?> format) {
-        FileSourceBuilder<?> builder = new FileSourceBuilder<>((String) options.get(OPTION_PATH)).format(format);
+        FileSourceBuilder<?> builder = FileSources.files((String) options.get(OPTION_PATH)).format(format);
 
         String glob = (String) options.get(OPTION_GLOB);
         if (glob != null) {
