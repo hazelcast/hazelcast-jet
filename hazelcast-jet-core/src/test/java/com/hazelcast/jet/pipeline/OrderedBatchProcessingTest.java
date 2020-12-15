@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
+import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.accumulator.LongAccumulator;
@@ -26,9 +27,11 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.pipeline.test.Assertions;
 import com.hazelcast.jet.pipeline.test.ParallelBatchP;
+import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
-import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -63,14 +66,18 @@ public class OrderedBatchProcessingTest extends JetTestSupport {
     @Parameter(value = 1)
     public String transformName;
 
+    @BeforeClass
+    public static void setupClass(){
+        jet = Jet.newJetInstance();
+    }
+
     @Before
     public void setup() {
-        jet = createJetMember();
         p = Pipeline.create();
     }
 
-    @After
-    public void after() {
+    @AfterClass
+    public static void cleanup() {
         jet.shutdown();
     }
 
@@ -188,10 +195,26 @@ public class OrderedBatchProcessingTest extends JetTestSupport {
         return new Object[]{transform, transformName};
     }
 
+    @Test
+    public void when_source_is_non_partitioned() {
+        int itemCount = 250;
+        List<Integer> sequence = IntStream.range(0, itemCount).boxed().collect(toList());
+
+
+        BatchStage<Integer> srcStage = p.readFrom(TestSources.items(sequence));
+
+        BatchStage<Integer> applied = srcStage.apply(transform);
+
+        applied.filter(i -> i < itemCount)
+                .apply(Assertions.assertOrdered(sequence));
+
+        p.setPreserveOrder(true);
+        jet.newJob(p).join();
+    }
 
     @Test
-    public void ordered_batch_processing_test() {
-        int itemCount = 200;
+    public void when_source_is_parallel() {
+        int itemCount = 250;
         List<Integer> sequence1 = IntStream.range(0, itemCount).boxed().collect(toList());
         List<Integer> sequence2 = IntStream.range(itemCount, 2 * itemCount).boxed().collect(toList());
         List<Integer> sequence3 = IntStream.range(2 * itemCount, 3 * itemCount).boxed().collect(toList());
