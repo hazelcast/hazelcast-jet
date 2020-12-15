@@ -119,10 +119,8 @@ final class JoinScanProcessorSupplier implements ProcessorSupplier, DataSerializ
 
             List<Object[]> rows = new ArrayList<>();
             for (Object left : lefts) {
-                List<Object[]> joined = join((Object[]) left, rights, joinFn);
-                if (!joined.isEmpty()) {
-                    rows.addAll(joined);
-                } else if (outer) {
+                boolean joined = join(rows, (Object[]) left, rights, joinFn);
+                if (!joined && outer) {
                     rows.add(padRight((Object[]) left, rightRowProjector.getColumnCount()));
                 }
             }
@@ -130,20 +128,21 @@ final class JoinScanProcessorSupplier implements ProcessorSupplier, DataSerializ
         };
     }
 
-    private static List<Object[]> join(
+    private static boolean join(
+            List<Object[]> rows,
             Object[] left,
             List<Object[]> rights,
             BiFunctionEx<Object[], Object[], Object[]> joinFn
     ) {
-        // TODO: get rid of intermediate list?
-        List<Object[]> rows = new ArrayList<>();
+        boolean matched = false;
         for (Object[] right : rights) {
             Object[] joined = joinFn.apply(left, right);
             if (joined != null) {
                 rows.add(joined);
+                matched = true;
             }
         }
-        return rows;
+        return matched;
     }
 
     @Override
