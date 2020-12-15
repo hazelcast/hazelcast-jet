@@ -405,7 +405,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             int processorIndex,
             InternalSerializationService jobSerializationService
     ) {
-        if (edge.routingPolicy() == RoutingPolicy.ISOLATED && edge.getDistributedTo() != null) {
+        if (edge.routingPolicy() == RoutingPolicy.ISOLATED && !edge.isLocal()) {
             throw new IllegalArgumentException("Isolated edges must be local: " + edge);
         }
 
@@ -418,7 +418,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 totalPartitionCount,
                 partitionsPerProcessor
         );
-        if (edge.getDistributedTo() == null) {
+        if (edge.isLocal()) {
             return localCollector;
         }
 
@@ -472,7 +472,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             ConcurrentConveyor<Object>[] localConveyors = localConveyorMap.computeIfAbsent(
                     edge.edgeId(),
                     edgeId -> {
-                        int queueCount = upstreamParallelism + (edge.getDistributedTo() != null ? numRemoteMembers : 0);
+                        int queueCount = upstreamParallelism + (!edge.isLocal() ? numRemoteMembers : 0);
                         return createConveyorArray(downstreamParallelism, queueCount, queueSize);
                     }
             );
@@ -540,7 +540,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             EdgeDef edge,
             InternalSerializationService jobSerializationService
     ) {
-        assert edge.getDistributedTo() != null : "Edge is not distributed";
+        assert !edge.isLocal() : "Edge is not distributed";
 
         return edgeSenderConveyorMap.computeIfAbsent(edge.edgeId(), x -> {
             final Map<Address, ConcurrentConveyor<Object>> addrToConveyor = new HashMap<>();
@@ -593,7 +593,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             return new int[downstreamParallelism][];
         }
 
-        if (edge.getDistributedTo() == null || nodeEngine.getThisAddress().equals(edge.getDistributedTo())) {
+        if (edge.isLocal() || nodeEngine.getThisAddress().equals(edge.getDistributedTo())) {
             // the edge is local-partitioned or it is distributed to one member and this member is the target
             return ptionArrgmt.assignPartitionsToProcessors(downstreamParallelism, false);
         }
