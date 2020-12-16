@@ -117,7 +117,7 @@ as the `bootstrap.servers` above, are all passed directly to the Kafka
 consumer or producer.
 
 To submit the above query, you can use the SQL CLI or the Java API (we
-also plan to support JDBC in the future):
+also plan to support JDBC and non-Java clients in the future):
 
 #### Submitting the query on the CLI
 
