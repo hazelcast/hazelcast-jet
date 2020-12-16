@@ -1027,8 +1027,7 @@ public class JetCommandLine implements Runnable {
                 String prompt = new AttributedStringBuilder()
                         .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                         .append("\n")
-                        .append(String.valueOf(res.get().updateCount()))
-                        .append(" row(s) affected")
+                        .append("The query is successful.")
                         .toAnsi();
                 out.println(prompt);
             }
@@ -1044,7 +1043,7 @@ public class JetCommandLine implements Runnable {
                     .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                     .append("\nQuery is cancelled. Until now, total ")
                     .append(String.valueOf(rowCount.get()))
-                    .append(" rows received.")
+                    .append(" rows selected.")
                     .toAnsi();
             out.println(queryCancellationPrompt);
             out.flush();
@@ -1126,10 +1125,10 @@ public class JetCommandLine implements Runnable {
                 "\t|   | |   |  /    |     |     |     |   |     |   |      \\   | |       |         |   |   |   |\n" +
                 "\to   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o     o---o   o---\\\\  o---")
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
-                .append("\n\t\t\t\t\t Welcome to the Hazelcast Jet SQL Console")
-                .append("\n\t\t\t\t\t Commands end with semicolon")
-                .append("\n\t\t\t\t\t Type 'HELP;' to display the available commands")
-                .append("\n\t\t\t\t\t Press Ctrl+C to cancel streaming queries\n\n")
+                .append("\n\t\t\t\t Welcome to the Hazelcast Jet SQL Console(BETA)")
+                .append("\n\t\t\t\t Commands end with semicolon")
+                .append("\n\t\t\t\t Type 'HELP;' to display the available commands")
+                .append("\n\t\t\t\t Press Ctrl+C to cancel streaming queries\n\n")
     .toAnsi();
         static final String HELP_PROMPT = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
