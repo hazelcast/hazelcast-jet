@@ -23,6 +23,8 @@ import com.hazelcast.logging.LogEvent;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
+import static com.hazelcast.jet.Util.idToString;
+
 /**
  * An {@link ILogger} implementation that wraps another {@link ILogger} and
  * prefixes all the logged messages with a given prefix. The logger logs
@@ -36,6 +38,23 @@ public class PrefixedLogger extends AbstractLogger {
     PrefixedLogger(ILogger wrapped, String prefix) {
         this.wrapped = wrapped;
         this.prefix = "[" + prefix + "] ";
+    }
+
+    public static ILogger prefixedLogger(ILogger logger, String prefix) {
+        return new PrefixedLogger(logger, prefix);
+    }
+
+    public static String prefix(String jobName, long jobId, String vertexName) {
+        return prefix(jobName, jobId, vertexName, null);
+    }
+
+    public static String prefix(String jobName, long jobId, String vertexName, int processorIndex) {
+        return prefix(jobName, jobId, vertexName, "#" + processorIndex);
+    }
+
+    public static String prefix(String jobName, long jobId, String vertexName, String subClass) {
+        String jobIdentification = jobName != null ? jobName : idToString(jobId);
+        return jobIdentification + "/" + vertexName + (subClass == null ? "" : subClass);
     }
 
     @Override

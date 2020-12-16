@@ -80,10 +80,10 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ImdgUtil.getMemberConnection;
 import static com.hazelcast.jet.impl.util.ImdgUtil.readList;
 import static com.hazelcast.jet.impl.util.ImdgUtil.writeList;
+import static com.hazelcast.jet.impl.util.PrefixedLogger.prefix;
+import static com.hazelcast.jet.impl.util.PrefixedLogger.prefixedLogger;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static com.hazelcast.jet.impl.util.Util.memoize;
-import static com.hazelcast.jet.impl.util.Util.prefix;
-import static com.hazelcast.jet.impl.util.Util.prefixedLogger;
 import static com.hazelcast.jet.impl.util.Util.toList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -311,7 +311,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
         for (VertexDef vertex : vertices) {
             ProcessorSupplier supplier = vertex.processorSupplier();
-            String prefix = prefix(jobConfig.getName(), jobId, vertex.name(), "PS");
+            String prefix = prefix(jobConfig.getName(), jobId, vertex.name(), "#PS");
             ILogger logger = prefixedLogger(nodeEngine.getLogger(supplier.getClass()), prefix);
             try {
                 supplier.init(new ProcSupplierCtx(
@@ -597,7 +597,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             // each tasklet has one input conveyor per edge
             final ConcurrentConveyor<Object> conveyor = localConveyorMap.get(inEdge.edgeId())[localProcessorIdx];
             inboundStreams.add(newEdgeStream(inEdge, conveyor,
-                    jobPrefix + "/procIndex:" + globalProcessorIdx, inEdge.getOrderComparator()));
+                    jobPrefix + "#" + globalProcessorIdx, inEdge.getOrderComparator()));
         }
         return inboundStreams;
     }

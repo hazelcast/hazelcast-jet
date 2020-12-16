@@ -39,9 +39,9 @@ import java.util.function.ToIntFunction;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.NO_NEW_WM;
+import static com.hazelcast.jet.impl.util.PrefixedLogger.prefixedLogger;
 import static com.hazelcast.jet.impl.util.ProgressState.DONE;
 import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
-import static com.hazelcast.jet.impl.util.Util.prefixedLogger;
 import static com.hazelcast.jet.impl.util.Util.toLocalTime;
 
 /**

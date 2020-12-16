@@ -82,12 +82,12 @@ import static com.hazelcast.jet.impl.execution.ProcessorState.WAITING_FOR_SNAPSH
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.NO_NEW_WM;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.jet.impl.util.PrefixedLogger.prefix;
+import static com.hazelcast.jet.impl.util.PrefixedLogger.prefixedLogger;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
 import static com.hazelcast.jet.impl.util.Util.lazyAdd;
 import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
-import static com.hazelcast.jet.impl.util.Util.prefix;
-import static com.hazelcast.jet.impl.util.Util.prefixedLogger;
 import static com.hazelcast.jet.impl.util.Util.sum;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.groupingBy;

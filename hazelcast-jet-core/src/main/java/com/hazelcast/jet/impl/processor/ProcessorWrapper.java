@@ -26,8 +26,8 @@ import com.hazelcast.logging.LoggingService;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.impl.util.Util.prefix;
-import static com.hazelcast.jet.impl.util.Util.prefixedLogger;
+import static com.hazelcast.jet.impl.util.PrefixedLogger.prefix;
+import static com.hazelcast.jet.impl.util.PrefixedLogger.prefixedLogger;
 
 
 /**

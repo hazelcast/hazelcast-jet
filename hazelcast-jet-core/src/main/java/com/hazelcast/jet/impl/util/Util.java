@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.util;
 
-import com.hazelcast.internal.util.StringUtil;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.EdgeConfig;
@@ -441,23 +440,6 @@ public final class Util {
             }
         }
         return name + '-' + index;
-    }
-
-    public static ILogger prefixedLogger(ILogger logger, String prefix) {
-        return new PrefixedLogger(logger, prefix);
-    }
-
-    public static String prefix(String jobName, long jobId, String vertexName) {
-        return prefix(jobName, jobId, vertexName, null);
-    }
-
-    public static String prefix(String jobName, long jobId, String vertexName, int processorIndex) {
-        return prefix(jobName, jobId, vertexName, "procIndex:" + processorIndex);
-    }
-
-    public static String prefix(String jobName, long jobId, String vertexName, String identity) {
-        String jobIdentification = StringUtil.isNullOrEmptyAfterTrim(jobName) ? idToString(jobId) : jobName.trim();
-        return jobIdentification + "/" + vertexName + (identity == null ? "" : '/' + identity);
     }
 
     public static void doWithClassLoader(ClassLoader cl, RunnableEx action) {
