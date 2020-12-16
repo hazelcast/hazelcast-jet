@@ -17,7 +17,9 @@
 package com.hazelcast.jet.pipeline.file;
 
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.BatchSource;
+import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.file.impl.FileSourceConfiguration;
 import com.hazelcast.jet.pipeline.file.impl.FileSourceFactory;
 import com.hazelcast.jet.pipeline.file.impl.LocalFileSourceFactory;
@@ -26,6 +28,7 @@ import javax.annotation.Nonnull;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
@@ -34,49 +37,23 @@ import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
 /**
- * A unified builder object for various kinds of file sources. It works
- * with the local filesystem and several distributed filesystems
- * supported through the Hadoop API.
+ * A unified builder object for various kinds of file sources.
  * <p>
- * The builder requires two parameters: {@code path} and {@code format},
- * and creates a {@link BatchSource}. The path specifies the filesystem
- * type (examples: {@code s3a://}, {@code hdfs://}) and the path to the
- * file.
- * <p>
- * The format determines how Jet will map the contents of the file to the
- * objects coming out of the corresponding pipeline source. This involves
- * two major concerns: parsing and deserialization. For example, {@link
- * LinesTextFileFormat} parses the file into lines of text and emits a
- * simple string for each line; {@link JsonFileFormat} parses a JSON Lines
- * file and emits instances of the class you specify.
- * <p>
- * You may also use Hadoop to read local files by specifying the
- * {@link #useHadoopForLocalFiles(boolean)} flag.
- * <p>
- * Usage:
- * <pre>{@code
- * BatchSource<User> source = new FileSourceBuilder("data/users.jsonl")
- *   .withFormat(new JsonFileFormat<>(User.class))
- *   .build();
- * }</pre>
+ * To create an instance, use {@link FileSources#files(String)}.
  *
- * @param <T> type of items a source using this file format will emit
+ * @param <T> the type of items a source using this file format will emit
  * @since 4.4
  */
 public class FileSourceBuilder<T> {
 
-    private static final List<String> HADOOP_PREFIXES;
-
-    static {
-        HADOOP_PREFIXES = Collections.unmodifiableList(asList(
-                "s3a://",   // Amazon S3
-                "hdfs://",  // HDFS
-                "wasbs://", // Azure Cloud Storage
-                "adl://",   // Azure Data Lake Gen 1
-                "abfs://",   // Azure Data Lake Gen 2
-                "gs://"     // Google Cloud Storage
-        ));
-    }
+    private static final List<String> HADOOP_PREFIXES = Collections.unmodifiableList(asList(
+            "s3a://",   // Amazon S3
+            "hdfs://",  // HDFS
+            "wasbs://", // Azure Cloud Storage
+            "adl://",   // Azure Data Lake Gen 1
+            "abfs://",   // Azure Data Lake Gen 2
+            "gs://"     // Google Cloud Storage
+    ));
 
     private final Map<String, String> options = new HashMap<>();
 
@@ -86,23 +63,16 @@ public class FileSourceBuilder<T> {
     private boolean useHadoop;
     private boolean sharedFileSystem;
 
-    /**
-     * Creates a new file source builder with the given path. The path
-     * must point to a directory. All files in the directory are
-     * processed. The directory is not processed recursively.
-     *
-     * @param path path pointing to a directory to read files from
-     */
-    public FileSourceBuilder(@Nonnull String path) {
+    FileSourceBuilder(@Nonnull String path) {
         this.path = requireNonNull(path, "path must not be null");
-        if (!(Paths.get(path).isAbsolute() || hasHadoopPrefix(path))) {
+        if (!(hasHadoopPrefix(path) || Paths.get(path).isAbsolute())) {
             throw new IllegalArgumentException("Provided path must be absolute. path: " + path);
         }
     }
 
     /**
-     * Sets a glob pattern to filter the files in the specified directory.
-     * The default value is '*', matching all files in the directory.
+     * Sets a glob pattern to filter the files in the specified directory. The
+     * default value is '*', matching all files in the directory.
      *
      * @param glob glob pattern,
      */
@@ -112,18 +82,10 @@ public class FileSourceBuilder<T> {
     }
 
     /**
-     * Set the file format for the source. Currently supported file formats are:
-     * <ul>
-     * <li> {@link AvroFileFormat}
-     * <li> {@link CsvFileFormat}
-     * <li> {@link JsonFileFormat}
-     * <li> {@link LinesTextFileFormat}
-     * <li> {@link ParquetFileFormat}
-     * <li> {@link RawBytesFileFormat}
-     * <li> {@link TextFileFormat}
-     * </ul>
-     * You may provide a custom format by implementing the {@link FileFormat}
-     * interface. See its javadoc for details.
+     * Set the file format for the source. See {@link FileFormat} for available
+     * formats and factory methods.
+     * <p>
+     * It's not possible to implement a custom format.
      */
     @Nonnull
     public <T_NEW> FileSourceBuilder<T_NEW> format(@Nonnull FileFormat<T_NEW> fileFormat) {
@@ -134,10 +96,13 @@ public class FileSourceBuilder<T> {
     }
 
     /**
-     * Specifies to use Hadoop for files from local filesystem. One advantage
-     * of Hadoop is that it can provide better parallelization when the number
-     * of files is smaller than the total parallelism of the pipeline source.
-     * Defaults to false.
+     * Specifies that Jet should use Apache Hadoop for files from the local
+     * filesystem. Otherwise, local files are read by Jet directly. One
+     * advantage of Hadoop is that it can provide better parallelization when
+     * the number of files is smaller than the total parallelism of the
+     * pipeline source.
+     * <p>
+     * Default value is {@code false}.
      *
      * @param useHadoop if Hadoop should be use for reading local filesystem
      */
@@ -148,23 +113,24 @@ public class FileSourceBuilder<T> {
     }
 
     /**
-     * Sets if files are in a shared storage visible to all members. Default
-     * value is {@code false}.
-     * <p>
      * If {@code sharedFileSystem} is {@code true}, Jet will assume all members
      * see the same files. They will split the work so that each member will
      * read a part of the files. If {@code sharedFileSystem} is {@code false},
-     * each member will read all files in the directory, assuming the are
-     * local.
+     * each member will read all files in the directory, assuming that other
+     * members see different files.
+     * <p>
+     * This option applies only for the local filesystem when {@linkplain
+     * #useHadoopForLocalFiles(boolean) Hadoop is not used} and when the
+     * directory doesn't contain a prefix for a remote file system. Distributed
+     * filesystems are always assumed to be shared.
      * <p>
      * If you start all the members on a single machine (such as for
-     * development), set this property to true. If you have multiple machines
-     * with multiple members each and the directory is not a shared storage,
-     * it's not possible to configure the file reader correctly - use only one
-     * member per machine.
+     * development), set this property to {@code true}. If you have multiple
+     * machines with multiple members each and the directory is not a shared
+     * storage, it's not possible to configure the file reader correctly - use
+     * only one member per machine.
      * <p>
-     * NOTE: Only valid for local filesystem, distributed filesystems are
-     * always shared.
+     * Default value is {@code false}.
      */
     @Nonnull
     public FileSourceBuilder<T> sharedFileSystem(boolean sharedFileSystem) {
@@ -190,6 +156,21 @@ public class FileSourceBuilder<T> {
      */
     @Nonnull
     public BatchSource<T> build() {
+        ProcessorMetaSupplier metaSupplier = buildMetaSupplier();
+
+        return Sources.batchFromProcessor("files(path=" + path + ", glob=" + glob + ", hadoop=" + shouldUseHadoop(),
+                metaSupplier);
+    }
+
+    /**
+     * Builds a {@link ProcessorMetaSupplier} based on the current state of the
+     * builder. Use for integration with the Core API.
+     * <p>
+     * This method is a part of Core API and has lower backward-compatibility
+     * guarantees (we can change it in minor version).
+     */
+    @Nonnull
+    public ProcessorMetaSupplier buildMetaSupplier() {
         if (path == null) {
             throw new IllegalStateException("Parameter 'path' is required");
         }
@@ -201,16 +182,25 @@ public class FileSourceBuilder<T> {
                 path, glob, format, sharedFileSystem, options
         );
 
-        if (useHadoop || hasHadoopPrefix(path)) {
+        if (shouldUseHadoop()) {
             ServiceLoader<FileSourceFactory> loader = ServiceLoader.load(FileSourceFactory.class);
             // Only one implementation is expected to be present on classpath
-            for (FileSourceFactory fileSourceFactory : loader) {
-                return fileSourceFactory.create(fsc);
+            Iterator<FileSourceFactory> iterator = loader.iterator();
+            if (!iterator.hasNext()) {
+                throw new JetException("No suitable FileSourceFactory found. " +
+                                       "Do you have Jet's Hadoop module on classpath?");
             }
-            throw new JetException("No suitable FileSourceFactory found. " +
-                    "Do you have Jet's Hadoop module on classpath?");
+            FileSourceFactory fileSourceFactory = iterator.next();
+            if (iterator.hasNext()) {
+                throw new JetException("Multiple FileSourceFactory implementations found");
+            }
+            return fileSourceFactory.create(fsc);
         }
         return new LocalFileSourceFactory().create(fsc);
+    }
+
+    private boolean shouldUseHadoop() {
+        return useHadoop || hasHadoopPrefix(path);
     }
 
     private static boolean hasHadoopPrefix(String path) {

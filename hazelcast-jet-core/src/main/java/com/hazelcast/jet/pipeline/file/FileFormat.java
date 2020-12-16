@@ -22,23 +22,23 @@ import java.io.Serializable;
 import java.nio.charset.Charset;
 
 /**
- * Identifies the data format of a file to be used as a Jet data source.
- * This is a data object that holds the configuration; actual implementation
- * code is looked up elsewhere, by using this object as a key.
+ * Describes the data format of a file to be used as a Jet data source.
+ * This is a data object that holds the configuration; actual
+ * implementation code is looked up elsewhere, by using this object as a
+ * key.
  *
- * @param <T> type of items a source using this file format will emit
+ * @param <T> the type of items a source using this file format will emit
  * @since 4.4
  */
 public interface FileFormat<T> extends Serializable {
 
     /**
-     * Returns the unique identifier of the file format. The convention is to
-     * use the well-known filename suffix or, if there is none, a short-form
-     * name of the format.
+     * Returns the name of the file format. The convention is to use the
+     * well-known filename suffix or, if there is none, a short-form name of
+     * the format.
      */
     @Nonnull
     String format();
-
 
     // Factory methods for supported file formats are here for easy discoverability.
 
@@ -55,7 +55,7 @@ public interface FileFormat<T> extends Serializable {
      * to deserialize the data into instances of the provided Java class.
      * Jet will use the {@code ReflectDatumReader} to read Avro data. The
      * parameter may be {@code null}, disabling the option to deserialize
-     * using reflection, but for that case you should prefer the no-argument
+     * using reflection, but for that case you may prefer the no-argument
      * {@link #avro()} call.
      */
     @Nonnull
@@ -64,14 +64,32 @@ public interface FileFormat<T> extends Serializable {
     }
 
     /**
+     * Returns a file format for CSV files.
+     */
+    @Nonnull
+    static <T> CsvFileFormat<T> csv() {
+        return csv(null);
+    }
+
+    /**
      * Returns a file format for CSV files which specifies to deserialize each
      * line into an instance of the given class. It assumes the CSV has a
      * header line and specifies to use it as the column names that map to the
-     * object's fields.
+     * object's fields. If parameter is {@code null}, data is deserialized into
+     * {@code Map<String, String>} but for that case you may prefer the
+     * no-argument {@link #csv()} call.
      */
     @Nonnull
-    static <T> CsvFileFormat<T> csv(@Nonnull Class<T> clazz) {
-        return new CsvFileFormat<T>(clazz);
+    static <T> CsvFileFormat<T> csv(@Nullable Class<T> clazz) {
+        return new CsvFileFormat<T>().withClass(clazz);
+    }
+
+    /**
+     * Returns a file format for JSON Lines files.
+     */
+    @Nonnull
+    static <T> JsonFileFormat<T> json() {
+        return json(null);
     }
 
     /**
@@ -81,10 +99,13 @@ public interface FileFormat<T> extends Serializable {
      * href="https://github.com/FasterXML/jackson-jr">Jackson jr</a>, which
      * supports the basic data types such as strings, numbers, lists and maps,
      * objects with JavaBeans-style getters/setters, as well as public fields.
+     * If parameter is {@code null}, data is deserialized into
+     * {@link com.fasterxml.jackson.jr.stree.JrsObject} but for that case you
+     * may prefer the no-argument {@link #json()} call.
      */
     @Nonnull
-    static <T> JsonFileFormat<T> json(@Nonnull Class<T> clazz) {
-        return new JsonFileFormat<>(clazz);
+    static <T> JsonFileFormat<T> json(@Nullable Class<T> clazz) {
+        return new JsonFileFormat<T>().withClass(clazz);
     }
 
     /**

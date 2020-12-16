@@ -36,7 +36,7 @@ import org.junit.Test;
 import org.junit.runners.Parameterized.Parameters;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -46,7 +46,7 @@ public class ParquetFileFormatTest extends BaseFileFormatTest {
     // Parquet has a dependency on Hadoop so it does not make sense to run it without it
     @Parameters(name = "{index}: useHadoop={0}")
     public static Iterable<?> parameters() {
-        return Arrays.asList(true);
+        return Collections.singletonList(true);
     }
 
     @Test
@@ -109,8 +109,8 @@ public class ParquetFileFormatTest extends BaseFileFormatTest {
             assertThatThrownBy(() -> jets[0].newJob(p).join())
                     .hasCauseInstanceOf(JetException.class)
                     .hasRootCauseInstanceOf(ClassCastException.class)
-                    .hasMessageContaining("com.hazelcast.jet.hadoop.file.generated.SpecificUser cannot be cast to "
-                            + "com.hazelcast.jet.hadoop.file.model.IncorrectUser");
+                    .hasMessageContaining("com.hazelcast.jet.hadoop.file.generated.SpecificUser")
+                    .hasMessageContaining("com.hazelcast.jet.hadoop.file.model.IncorrectUser");
         } finally {
             for (JetInstance jet : jets) {
                 jet.shutdown();
