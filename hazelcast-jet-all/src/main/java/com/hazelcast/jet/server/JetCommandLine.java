@@ -1140,7 +1140,7 @@ public class JetCommandLine implements Runnable {
                 .append("\nHints:\n")
                 .append("\tPress Ctrl+C to cancel streaming queries.\n")
                 .append("\tFor more information, see the Hazelcast Jet SQL documentation:\n")
-                .append("https://jet-start.sh/docs/sql/intro\n")
+                .append("\thttps://jet-start.sh/docs/sql/intro\n")
                 .toAnsi();
         static final String EXIT_PROMPT = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
