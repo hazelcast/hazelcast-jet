@@ -187,7 +187,6 @@ public class KinesisSourceP extends AbstractProcessor {
 
         Object[] shardState = (Object[]) value;
         String startingHashKey = ShardStates.startingHashKey(shardState);
-        shardBelongsToRange(startingHashKey, hashRange);
         if (shardBelongsToRange(startingHashKey, hashRange)) {
             boolean closed = ShardStates.closed(shardState);
             String seqNo = ShardStates.lastSeenSeqNo(shardState);
