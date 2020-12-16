@@ -43,7 +43,7 @@ public class KinesisSinkPSupplier<T> implements ProcessorSupplier {
      * of contention, causing problems. So we use shared clients but use them
      * for a limited number of processor instances, specified by this constant.
      */
-    private static final int PROCESSORS_PER_CLIENT = 12;
+    private static final int PROCESSORS_PER_CLIENT = 12; //todo: based on nothing really...
 
     @Nonnull
     private final AwsConfig awsConfig;

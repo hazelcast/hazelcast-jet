@@ -20,6 +20,10 @@ package com.hazelcast.jet.kinesis;
  */
 public class ToDo {
 
+    //todo: try to test expired shard eviction
+
+    //todo: revisit the PROCESSORS_PER_CLIENT = 12 hack, it's shady, not sure if it helps or hurts
+
     //todo: tripping any shard's ingestion rate, getting messages refused randomly from the send batch will mess
     // up the order of messages; document this
 
