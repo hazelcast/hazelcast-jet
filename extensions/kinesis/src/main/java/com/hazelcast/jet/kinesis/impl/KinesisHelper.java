@@ -55,12 +55,12 @@ public class KinesisHelper {
     }
 
     public static boolean shardBelongsToRange(@Nonnull Shard shard, @Nonnull HashRange range) {
-        String startingHashKey = shard.getHashKeyRange().getStartingHashKey();
+        BigInteger startingHashKey = new BigInteger(shard.getHashKeyRange().getStartingHashKey());
         return shardBelongsToRange(startingHashKey, range);
     }
 
-    public static boolean shardBelongsToRange(@Nonnull String startingHashKey, @Nonnull HashRange range) {
-        return range.contains(new BigInteger(startingHashKey));
+    public static boolean shardBelongsToRange(@Nonnull BigInteger startingHashKey, @Nonnull HashRange range) {
+        return range.contains(startingHashKey);
     }
 
     public static ListShardsRequest listShardsRequest(String stream, @Nullable String nextToken) {

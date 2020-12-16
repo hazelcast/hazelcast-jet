@@ -17,7 +17,6 @@ package com.hazelcast.jet.kinesis.impl;
 
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
-import com.amazonaws.services.kinesis.model.Shard;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
@@ -29,8 +28,6 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
@@ -91,7 +88,7 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
     @Override
     public Collection<? extends Processor> get(int count) {
         HashRange[] rangePartitions = rangePartitions(count);
-        Queue<Shard>[] shardQueues = shardQueues(count);
+        ShardQueue[] shardQueues = shardQueues(count);
         RangeMonitor rangeMonitor = new RangeMonitor(
                 memberCount,
                 clients[0],
@@ -109,6 +106,7 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
                                 clients[i % clients.length],
                                 stream,
                                 eventTimePolicy,
+                                hashRange,
                                 rangePartitions[i],
                                 shardQueues[i],
                                 i == 0 ? rangeMonitor : null,
@@ -117,9 +115,9 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
                 .collect(toList());
     }
 
-    private Queue<Shard>[] shardQueues(int count) {
-        Queue<Shard>[] queues = (Queue<Shard>[]) new Queue[count];
-        Arrays.setAll(queues, IGNORED -> new LinkedBlockingQueue<>());
+    private ShardQueue[] shardQueues(int count) {
+        ShardQueue[] queues = new ShardQueue[count];
+        Arrays.setAll(queues, IGNORED -> new ShardQueue());
         return queues;
     }
 

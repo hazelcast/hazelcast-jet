@@ -65,8 +65,10 @@ public class KinesisSourcePMetaSupplier implements ProcessorMetaSupplier {
     public void init(@Nonnull ProcessorMetaSupplier.Context context) {
         List<Address> addresses = getMemberAddresses(context);
         assignedHashRanges = assignHashRangesToMembers(addresses);
-        context.logger().info("Hash ranges assigned to members: \n\t" +
-                assignedHashRanges.entrySet().stream().map(Object::toString).collect(joining("\n\t")));
+        if (context.logger().isFineEnabled()) {
+            context.logger().fine("Hash ranges assigned to members: \n\t" +
+                    assignedHashRanges.entrySet().stream().map(Object::toString).collect(joining("\n\t")));
+        }
     }
 
     @Nonnull

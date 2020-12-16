@@ -171,8 +171,8 @@ public class KinesisSinkP<T> implements Processor {
         int newShardCount = shardCountProvider.get();
         if (newShardCount > 0 && shardCount != newShardCount) {
             int bufferSize = throughputController.computeBufferCapacity(newShardCount, sinkCount);
-            if (buffer.setCapacity(bufferSize)) {
-                logger.info("Changing buffer capacity to " + bufferSize);
+            if (logger.isFineEnabled() && buffer.setCapacity(bufferSize)) {
+                logger.fine("Changing buffer capacity to " + bufferSize);
             }
 
             shardCount = newShardCount;

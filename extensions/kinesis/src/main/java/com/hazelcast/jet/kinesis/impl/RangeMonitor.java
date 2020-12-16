@@ -23,19 +23,19 @@ import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
+import java.math.BigInteger;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Queue;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.kinesis.impl.KinesisHelper.shardBelongsToRange;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toCollection;
-import static java.util.stream.Collectors.toList;
 
 public class RangeMonitor extends AbstractShardWorker {
 
@@ -49,29 +49,31 @@ public class RangeMonitor extends AbstractShardWorker {
      */
     private static final double RATIO_OF_SHARD_LISTING_RATE_UTILIZED = 0.1;
 
-    private final Set<String> knownShards = new HashSet<>();
-    private final HashRange coveredRange;
+    private final Map<String, Integer> knownShards = new HashMap<>();
+    private final HashRange memberHashRange;
     private final HashRange[] rangePartitions;
-    private final Queue<Shard>[] shardQueues;
+    private final ShardQueue[] shardQueues;
     private final RandomizedRateTracker listShardsRateTracker;
     private final RetryTracker listShardRetryTracker;
 
     private String nextToken;
-    private Future<ListShardsResult> listShardResult;
+    private Set<String> shardsFromPreviousListing = new HashSet<>();
+    private Set<String> shardsFromCurrentListing = new HashSet<>();
+    private Future<ListShardsResult> listShardsResult;
     private long nextListShardsTime;
 
     public RangeMonitor(
             int totalInstances,
             AmazonKinesisAsync kinesis,
             String stream,
-            HashRange coveredRange,
+            HashRange memberHashRange,
             HashRange[] rangePartitions,
-            Queue<Shard>[] shardQueues,
+            ShardQueue[] shardQueues,
             RetryStrategy retryStrategy,
             ILogger logger
     ) {
         super(kinesis, stream, logger);
-        this.coveredRange = coveredRange;
+        this.memberHashRange = memberHashRange;
         this.rangePartitions = rangePartitions;
         this.shardQueues = shardQueues;
         this.listShardRetryTracker = new RetryTracker(retryStrategy);
@@ -80,11 +82,15 @@ public class RangeMonitor extends AbstractShardWorker {
     }
 
     public void run() {
-        if (listShardResult == null) {
+        if (listShardsResult == null) {
             initShardListing();
         } else {
             checkForNewShards();
         }
+    }
+
+    public void addKnownShard(String shardId, BigInteger startingHashKey) {
+        knownShards.put(shardId, findOwner(startingHashKey));
     }
 
     private void initShardListing() {
@@ -92,55 +98,75 @@ public class RangeMonitor extends AbstractShardWorker {
         if (currentTime < nextListShardsTime) {
             return;
         }
-        listShardResult = helper.listShardsAsync(nextToken);
+        listShardsResult = helper.listShardsAsync(nextToken);
         nextListShardsTime = currentTime + listShardsRateTracker.next();
     }
 
     private void checkForNewShards() {
-        if (listShardResult.isDone()) {
+        if (listShardsResult.isDone()) {
             ListShardsResult result;
             try {
-                result = helper.readResult(listShardResult);
+                result = helper.readResult(listShardsResult);
             } catch (SdkClientException e) {
                 dealWithListShardsFailure(e);
                 return;
+
+                //todo: catch LimitExceededException and handle it differently
+                //todo: check against /amazon/kinesis/leases/KinesisShardDetector.java#L188
             } catch (Throwable t) {
                 throw rethrow(t);
             } finally {
-                listShardResult = null;
+                listShardsResult = null;
             }
 
             listShardRetryTracker.reset();
 
-            nextToken = result.getNextToken();
-
-            List<Shard> shards = result.getShards();
+            Set<Shard> shards = result.getShards().stream()
+                    .filter(shard -> shardBelongsToRange(shard, memberHashRange))
+                    .collect(Collectors.toSet());
+            shardsFromCurrentListing.addAll(shards.stream().map(Shard::getShardId).collect(Collectors.toSet()));
 
             Set<Shard> newShards = shards.stream()
-                    .filter(shard -> shardBelongsToRange(shard, coveredRange))
-                    .filter(shard -> !knownShards.contains(shard.getShardId())).collect(toCollection(HashSet::new));
+                    .filter(shard -> !shardsFromPreviousListing.contains(shard.getShardId()))
+                    .collect(Collectors.toSet());
 
             if (!newShards.isEmpty()) {
                 logger.info("New shards detected: " +
                         newShards.stream().map(Shard::getShardId).collect(joining(", ")));
-                knownShards.addAll(newShards.stream().map(Shard::getShardId).collect(toList()));
 
-                for (Shard shard : newShards) { //todo: ok to do for all new shards at once?
-                    int index = findOwner(shard);
-                    if (index < 0) {
-                        throw new RuntimeException("Programming error, shard not covered by any hash range");
-                    }
-                    boolean successful = shardQueues[index].offer(shard);
-                    if (!successful) {
-                        throw new RuntimeException("Programming error, shard queues should not have a capacity limit");
-                    }
+                for (Shard shard : newShards) {
+                    int index = findOwner(new BigInteger(shard.getHashKeyRange().getStartingHashKey()));
+                    knownShards.put(shard.getShardId(), index);
+                    shardQueues[index].added(shard);
                 }
+            }
+
+            nextToken = result.getNextToken();
+            if (nextToken == null) {
+                Set<Map.Entry<String, Integer>> expiredShards = knownShards.entrySet().stream()
+                        .filter(e -> !shardsFromCurrentListing.contains(e.getKey()))
+                        .collect(Collectors.toSet());
+                for (Map.Entry<String, Integer> e : expiredShards) {
+                    String shardId = e.getKey();
+                    logger.info("Expired shard detected: " + shardId);
+                    knownShards.remove(shardId);
+                    shardQueues[e.getValue()].expired(shardId);
+                }
+
+                Set<String> tmp = shardsFromPreviousListing;
+                tmp.clear();
+
+                shardsFromPreviousListing = shardsFromCurrentListing;
+
+                shardsFromCurrentListing = tmp;
             }
         }
     }
 
     private void dealWithListShardsFailure(@Nonnull Exception failure) {
         nextToken = null;
+        shardsFromCurrentListing.clear();
+
         listShardRetryTracker.attemptFailed();
         if (listShardRetryTracker.shouldTryAgain()) {
             long timeoutMillis = listShardRetryTracker.getNextWaitTimeMillis();
@@ -153,14 +179,14 @@ public class RangeMonitor extends AbstractShardWorker {
 
     }
 
-    private int findOwner(Shard shard) {
+    private int findOwner(BigInteger startingHashKey) {
         for (int i = 0; i < rangePartitions.length; i++) { //todo: could do binary search, but is it worth it?
             HashRange range = rangePartitions[i];
-            if (KinesisHelper.shardBelongsToRange(shard, range)) {
+            if (KinesisHelper.shardBelongsToRange(startingHashKey, range)) {
                 return i;
             }
         }
-        return -1;
+        throw new RuntimeException("Programming error, shard not covered by any hash range");
     }
 
     @Nonnull

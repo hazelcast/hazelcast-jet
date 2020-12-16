@@ -28,13 +28,13 @@ import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Queue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -53,11 +53,13 @@ public class KinesisSourceP extends AbstractProcessor {
     @Nonnull
     private final EventTimeMapper<? super Entry<String, byte[]>> eventTimeMapper;
     @Nonnull
-    private final HashRange hashRange;
+    private final HashRange memberHashRange;
+    @Nonnull
+    private final HashRange processorHashRange;
     @Nonnull
     private final ShardStates shardStates = new ShardStates();
     @Nonnull
-    private final Queue<Shard> shardQueue;
+    private final ShardQueue shardQueue;
     @Nullable
     private final RangeMonitor monitor;
     @Nonnull
@@ -77,15 +79,17 @@ public class KinesisSourceP extends AbstractProcessor {
             @Nonnull AmazonKinesisAsync kinesis,
             @Nonnull String stream,
             @Nonnull EventTimePolicy<? super Entry<String, byte[]>> eventTimePolicy,
-            @Nonnull HashRange hashRange,
-            @Nonnull Queue<Shard> shardQueue,
+            @Nonnull HashRange memberHashRange,
+            @Nonnull HashRange processorHashRange,
+            @Nonnull ShardQueue shardQueue,
             @Nullable RangeMonitor monitor,
             @Nonnull RetryStrategy retryStrategy
             ) {
         this.kinesis = Objects.requireNonNull(kinesis, "kinesis");
         this.stream = Objects.requireNonNull(stream, "stream");
         this.eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
-        this.hashRange = Objects.requireNonNull(hashRange, "hashRange");
+        this.memberHashRange = Objects.requireNonNull(memberHashRange, "memberHashRange");
+        this.processorHashRange = Objects.requireNonNull(processorHashRange, "processorHashRange");
         this.shardQueue = shardQueue;
         this.monitor = monitor;
         this.retryStrategy = retryStrategy;
@@ -98,7 +102,9 @@ public class KinesisSourceP extends AbstractProcessor {
         logger = context.logger();
         id = context.globalProcessorIndex();
 
-        logger.info("Processor " + id + " handles " + hashRange);
+        if (logger.isFineEnabled()) {
+            logger.fine("Processor " + id + " handles " + processorHashRange);
+        }
     }
 
     @Override
@@ -121,9 +127,15 @@ public class KinesisSourceP extends AbstractProcessor {
     }
 
     private void checkForNewShards() {
-        Shard shard = shardQueue.poll();
-        if (shard != null) {
-            addShardReader(shard);
+        shardQueue.poll();
+        String shardId = shardQueue.getExpired();
+        if (shardId == null) {
+            Shard shard = shardQueue.getAdded();
+            if (shard != null) {
+                addShardReader(shard);
+            }
+        } else {
+            shardStates.remove(shardId);
         }
     }
 
@@ -186,12 +198,17 @@ public class KinesisSourceP extends AbstractProcessor {
         String shardId = ((BroadcastKey<String>) key).key();
 
         Object[] shardState = (Object[]) value;
-        String startingHashKey = ShardStates.startingHashKey(shardState);
-        if (shardBelongsToRange(startingHashKey, hashRange)) {
+        BigInteger startingHashKey = ShardStates.startingHashKey(shardState);
+
+        if (shardBelongsToRange(startingHashKey, processorHashRange)) {
             boolean closed = ShardStates.closed(shardState);
             String seqNo = ShardStates.lastSeenSeqNo(shardState);
             Long watermark = ShardStates.watermark(shardState);
             shardStates.update(shardId, startingHashKey, closed, seqNo, watermark);
+        }
+
+        if (monitor != null && shardBelongsToRange(startingHashKey, memberHashRange)) {
+            monitor.addKnownShard(shardId, startingHashKey);
         }
     }
 
@@ -232,7 +249,7 @@ public class KinesisSourceP extends AbstractProcessor {
         return v;
     }
 
-    private static class ShardStates {
+    private static class ShardStates { //todo: use IdentifiedDataSerializable instead (SlidingWindowP.SnapshotKey)
 
         private static final int STATE_LENGTH = 4;
 
@@ -246,19 +263,28 @@ public class KinesisSourceP extends AbstractProcessor {
         private final Map<String, Object[]> states = new HashMap<>();
 
         void update(Shard shard, String seqNo, Long watermark) {
-            update(shard.getShardId(), shard.getHashKeyRange().getStartingHashKey(), false, seqNo, watermark);
+            BigInteger startingHashKey = new BigInteger(shard.getHashKeyRange().getStartingHashKey());
+            update(shard.getShardId(), startingHashKey, false, seqNo, watermark);
         }
 
         void close(Shard shard) {
-            update(shard.getShardId(), shard.getHashKeyRange().getStartingHashKey(), true, null, null);
+            BigInteger startingHashKey = new BigInteger(shard.getHashKeyRange().getStartingHashKey());
+            update(shard.getShardId(), startingHashKey, true, null, null);
         }
 
-        void update(String shardId, String startingHashKey, boolean closed, String lastSeenSeqNo, Long watermark) {
+        void update(String shardId, BigInteger startingHashKey, boolean closed, String lastSeenSeqNo, Long watermark) {
             Object[] stateValues = states.computeIfAbsent(shardId, IGNORED -> new Object[STATE_LENGTH]);
             stateValues[STARTING_HASH_KEY_INDEX] = startingHashKey;
             stateValues[IS_CLOSED_INDEX] = closed;
             stateValues[LAST_SEEN_SEQ_NO_INDEX] = lastSeenSeqNo;
             stateValues[WATERMARK_INDEX] = watermark;
+        }
+
+        void remove(String shardId) {
+            Object[] state = states.remove(shardId);
+            if (state == null) {
+                throw new RuntimeException("Removing inexistend state, shouldn't happen");
+            }
         }
 
         Object[] get(String shardId) {
@@ -283,7 +309,7 @@ public class KinesisSourceP extends AbstractProcessor {
 
             Object[] state = entry.getValue();
 
-            String startingHashKey = startingHashKey(state);
+            BigInteger startingHashKey = startingHashKey(state);
             sb.append("startingHashKey=").append(startingHashKey);
 
             boolean closed = closed(state);
@@ -302,8 +328,8 @@ public class KinesisSourceP extends AbstractProcessor {
             return sb.toString();
         }
 
-        static String startingHashKey(Object[] state) {
-            return (String) state[STARTING_HASH_KEY_INDEX];
+        static BigInteger startingHashKey(Object[] state) {
+            return (BigInteger) state[STARTING_HASH_KEY_INDEX];
         }
 
         static boolean closed(Object[] state) {
