@@ -134,7 +134,7 @@ public class JoinByPrimitiveKeyProcessorTest {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
+    @SuppressWarnings("unchecked")
     public void when_innerJoinProjectedByProjector_then_modified() throws Exception {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), true);
@@ -172,7 +172,7 @@ public class JoinByPrimitiveKeyProcessorTest {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
+    @SuppressWarnings("unchecked")
     public void when_outerJoinLeftKeyIsNull_then_nulls() throws Exception {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
@@ -188,7 +188,7 @@ public class JoinByPrimitiveKeyProcessorTest {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
+    @SuppressWarnings("unchecked")
     public void when_outerJoinRightValueIsNull_then_nulls() throws Exception {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
@@ -205,7 +205,7 @@ public class JoinByPrimitiveKeyProcessorTest {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
+    @SuppressWarnings("unchecked")
     public void when_outerJoinFilteredOutByProjector_then_nulls() throws Exception {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
@@ -223,7 +223,7 @@ public class JoinByPrimitiveKeyProcessorTest {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
+    @SuppressWarnings("unchecked")
     public void when_outerJoinProjectedByProjector_then_modified() throws Exception {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
@@ -241,7 +241,6 @@ public class JoinByPrimitiveKeyProcessorTest {
     }
 
     @Test
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public void when_outerJoinFilteredOutByCondition_then_nulls() throws Exception {
         // given
         Processor processor = processor(ComparisonPredicate.create(

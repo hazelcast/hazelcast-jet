@@ -89,7 +89,7 @@ public class JoinScanProcessorTest {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
+    @SuppressWarnings("unchecked")
     public void when_innerJoinFilteredOutByProjector_then_absent() throws Exception {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), true);
@@ -109,7 +109,7 @@ public class JoinScanProcessorTest {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
+    @SuppressWarnings("unchecked")
     public void when_innerJoinProjectedByProjector_then_modified() throws Exception {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), true);
@@ -127,7 +127,6 @@ public class JoinScanProcessorTest {
     }
 
     @Test
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public void when_innerJoinFilteredOutByCondition_then_absent() throws Exception {
         // given
         Processor processor = processor(ComparisonPredicate.create(
@@ -150,7 +149,7 @@ public class JoinScanProcessorTest {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
+    @SuppressWarnings("unchecked")
     public void when_outerJoinFilteredOutByProjector_then_nulls() throws Exception {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
@@ -169,7 +168,7 @@ public class JoinScanProcessorTest {
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
+    @SuppressWarnings("unchecked")
     public void when_outerJoinProjectedByProjector_then_modified() throws Exception {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
@@ -187,7 +186,6 @@ public class JoinScanProcessorTest {
     }
 
     @Test
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public void when_outerJoinFilteredOutByCondition_then_nulls() throws Exception {
         // given
         Processor processor = processor(ComparisonPredicate.create(
