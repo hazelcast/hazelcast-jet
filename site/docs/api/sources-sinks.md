@@ -294,6 +294,14 @@ compile 'com.hazelcast.jet:hazelcast-jet-hadoop-all:{jet-version}'
 The basic authentication mechanisms are covered here. For additional
 ways to authenticate see the linked documentation for the services.
 
+Due to performance, the authentication is cached. This may cause issues
+when submitting multiple jobs with different credentials, or even the
+same jobs with new credentials, e.g. after credentials rotation.
+
+You can turn off authentication caching by setting
+`fs.<prefix>.impl.disable.cache` option to `true`. For the list of
+prefixes see the table above.
+
 #### Amazon S3
 
 Provide your AWS access key id and secret key with required access via
