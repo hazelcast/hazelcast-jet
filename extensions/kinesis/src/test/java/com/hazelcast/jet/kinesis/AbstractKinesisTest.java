@@ -33,6 +33,7 @@ import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.test.TestSources;
+import com.hazelcast.jet.retry.RetryStrategies;
 import com.hazelcast.map.IMap;
 import org.junit.After;
 import org.junit.Before;
@@ -175,6 +176,7 @@ class AbstractKinesisTest extends JetTestSupport {
                 .withEndpoint(awsConfig.getEndpoint())
                 .withRegion(awsConfig.getRegion())
                 .withCredentials(awsConfig.getAccessKey(), awsConfig.getSecretKey())
+                .withRetryStrategy(RetryStrategies.indefinitely(250))
                 .build();
     }
 

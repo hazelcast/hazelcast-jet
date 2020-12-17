@@ -32,6 +32,9 @@ public class ToDo {
 
     //todo: clarify what license to use
 
+    //todo: use GetRecords.IteratorAgeMilliseconds to log alerts when consumer is behind?
+    //todo: sink metrics for buffer size and current post-send sleep?
+
     //todo: update source/sink docs
 
     //todo: use TestSupport to test the Kinesis processors
