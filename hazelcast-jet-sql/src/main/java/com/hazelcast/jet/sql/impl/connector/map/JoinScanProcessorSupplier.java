@@ -147,15 +147,15 @@ final class JoinScanProcessorSupplier implements ProcessorSupplier, DataSerializ
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
+        out.writeObject(joinInfo);
         out.writeObject(mapName);
         out.writeObject(rightRowProjectorSupplier);
-        out.writeObject(joinInfo);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
+        joinInfo = in.readObject();
         mapName = in.readObject();
         rightRowProjectorSupplier = in.readObject();
-        joinInfo = in.readObject();
     }
 }
