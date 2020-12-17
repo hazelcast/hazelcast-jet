@@ -322,6 +322,9 @@ Provide a location of the keyfile via
 the file must be available on the node where you submit the job and on
 the cluster members.
 
+For additional ways to authenticate see
+[Google Cloud Hadoop connector](https://github.com/GoogleCloudDataproc/hadoop-connectors/blob/master/gcs/CONFIGURATION.md#authentication).
+
 #### Windows Azure Blob Storage
 
 Provide an account key via
