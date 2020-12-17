@@ -63,6 +63,7 @@ import static com.hazelcast.jet.hadoop.HadoopProcessors.readHadoopP;
 import static com.hazelcast.jet.hadoop.HadoopSources.COPY_ON_READ;
 import static com.hazelcast.jet.hadoop.impl.CsvInputFormat.CSV_INPUT_FORMAT_BEAN_CLASS;
 import static com.hazelcast.jet.hadoop.impl.JsonInputFormat.JSON_INPUT_FORMAT_BEAN_CLASS;
+import static com.hazelcast.jet.hadoop.impl.JsonInputFormat.JSON_MULTILINE;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -221,16 +222,18 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
         public <T> void configure(Job job, FileFormat<T> format) {
             JsonFileFormat<T> jsonFileFormat = (JsonFileFormat<T>) format;
             job.setInputFormatClass(JsonInputFormat.class);
-            job.getConfiguration().setBoolean(COPY_ON_READ, Boolean.FALSE);
 
+            Configuration configuration = job.getConfiguration();
+            configuration.setBoolean(COPY_ON_READ, Boolean.FALSE);
+            configuration.setBoolean(JSON_MULTILINE, jsonFileFormat.isMultiline());
             Class<?> clazz = jsonFileFormat.clazz();
             if (clazz != null) {
-                job.getConfiguration().set(JSON_INPUT_FORMAT_BEAN_CLASS, clazz.getCanonicalName());
+                configuration.set(JSON_INPUT_FORMAT_BEAN_CLASS, clazz.getCanonicalName());
             }
         }
 
         @Override
-        public BiFunctionEx<LongWritable, ?, ?> projectionFn() {
+        public BiFunctionEx<NullWritable, ?, ?> projectionFn() {
             return (k, v) -> v;
         }
 

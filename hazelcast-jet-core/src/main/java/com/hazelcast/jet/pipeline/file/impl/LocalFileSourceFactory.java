@@ -44,7 +44,6 @@ import java.util.ServiceLoader;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -103,29 +102,31 @@ public class LocalFileSourceFactory implements FileSourceFactory {
         abstract <T> FunctionEx<InputStream, Stream<T>> mapInputStreamFn(FileFormat<T> format);
     }
 
-    private static class JsonReadFileFnProvider extends AbstractReadFileFnProvider {
+    private static class JsonReadFileFnProvider implements ReadFileFnProvider {
 
-        @Nonnull @Override
-        <T> FunctionEx<InputStream, Stream<T>> mapInputStreamFn(FileFormat<T> format) {
+        @Nonnull
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T> FunctionEx<Path, Stream<T>> createReadFileFn(@Nonnull FileFormat<T> format) {
             JsonFileFormat<T> jsonFileFormat = (JsonFileFormat<T>) format;
             Class<T> formatClazz = jsonFileFormat.clazz();
 
-            return is -> {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(is, UTF_8));
-                return reader.lines()
-                             .map(mapper(formatClazz))
-                             .onClose(() -> uncheckRun(reader::close));
+            return path -> {
+                // Jackson doesn't handle empty files
+                if (path.toFile().length() == 0) {
+                    return Stream.empty();
+                }
+
+                if (formatClazz == null) {
+                    return (Stream<T>) JsonUtil.mapSequenceFrom(path);
+                } else {
+                    return JsonUtil.beanSequenceFrom(path, formatClazz);
+                }
             };
         }
 
-        @SuppressWarnings("unchecked")
-        private static <T> FunctionEx<? super String, T> mapper(Class<T> clazz) {
-            return clazz == null
-                    ? line -> (T) JsonUtil.mapFrom(line)
-                    : line -> JsonUtil.beanFrom(line, clazz);
-        }
-
-        @Nonnull @Override
+        @Nonnull
+        @Override
         public String format() {
             return JsonFileFormat.FORMAT_JSON;
         }
