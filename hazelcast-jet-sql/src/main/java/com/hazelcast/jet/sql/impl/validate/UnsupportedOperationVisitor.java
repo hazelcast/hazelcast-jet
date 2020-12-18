@@ -23,7 +23,7 @@ import com.hazelcast.jet.sql.impl.parse.SqlDropJob;
 import com.hazelcast.jet.sql.impl.parse.SqlDropSnapshot;
 import com.hazelcast.jet.sql.impl.parse.SqlOption;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlOperatorTable;
-import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeSystem;
+import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeUtils;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.runtime.Resources.ExInst;
 import org.apache.calcite.sql.SqlBasicTypeNameSpec;
@@ -205,7 +205,8 @@ public final class UnsupportedOperationVisitor extends SqlBasicVisitor<Void> {
         if (type.getTypeNameSpec() instanceof SqlUserDefinedTypeNameSpec) {
             SqlIdentifier typeName = type.getTypeName();
 
-            if (HazelcastTypeSystem.isObject(typeName) || HazelcastTypeSystem.isTimestampWithTimeZone(typeName)) {
+            if (HazelcastTypeUtils.isObjectIdentifier(typeName)
+                    || HazelcastTypeUtils.isTimestampWithTimeZoneIdentifier(typeName)) {
                 return null;
             }
         }

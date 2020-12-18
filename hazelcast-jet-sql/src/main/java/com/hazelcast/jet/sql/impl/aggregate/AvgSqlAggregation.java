@@ -18,9 +18,7 @@ package com.hazelcast.jet.sql.impl.aggregate;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.type.QueryDataType;
-import com.hazelcast.sql.impl.type.QueryDataTypeFamily;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
@@ -28,6 +26,8 @@ import java.math.BigDecimal;
 import java.util.Objects;
 
 import static com.hazelcast.sql.impl.expression.math.ExpressionMath.DECIMAL_MATH_CONTEXT;
+import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.DECIMAL;
+import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.DOUBLE;
 
 @NotThreadSafe
 public class AvgSqlAggregation extends SqlAggregation {
@@ -47,25 +47,14 @@ public class AvgSqlAggregation extends SqlAggregation {
 
     public AvgSqlAggregation(int index, QueryDataType operandType, boolean distinct) {
         super(index, true, distinct);
+        assert operandType.getTypeFamily() == DECIMAL || operandType.getTypeFamily() == DOUBLE : operandType;
         this.resultType = inferResultType(operandType);
         this.sum = new SumSqlAggregation(index, operandType);
         this.count = new CountSqlAggregation();
     }
 
     private static QueryDataType inferResultType(QueryDataType operandType) {
-        switch (operandType.getTypeFamily()) {
-            case TINYINT:
-            case SMALLINT:
-            case INTEGER:
-            case BIGINT:
-            case DECIMAL:
-                return QueryDataType.DECIMAL;
-            case REAL:
-            case DOUBLE:
-                return QueryDataType.DOUBLE;
-            default:
-                throw QueryException.error("Unsupported operand type: " + operandType);
-        }
+        return operandType;
     }
 
     @Override
@@ -93,22 +82,14 @@ public class AvgSqlAggregation extends SqlAggregation {
         if (sum == null) {
             return null;
         }
-        Object count = this.count.collect();
+        long count = (long) this.count.collect();
 
-        switch (resultType.getTypeFamily()) {
-            case TINYINT:
-            case SMALLINT:
-            case INTEGER:
-            case BIGINT:
-            case DECIMAL:
-                BigDecimal decimalSum = this.sum.resultType().getConverter().asDecimal(sum);
-                BigDecimal decimalCount = this.count.resultType().getConverter().asDecimal(count);
-                return decimalSum.divide(decimalCount, DECIMAL_MATH_CONTEXT);
-            default:
-                assert resultType.getTypeFamily() == QueryDataTypeFamily.DOUBLE;
-                double doubleSum = this.sum.resultType().getConverter().asDouble(sum);
-                double doubleCount = this.count.resultType().getConverter().asDouble(count);
-                return doubleSum / doubleCount;
+        if (resultType.getTypeFamily() == DECIMAL) {
+            BigDecimal castSum = (BigDecimal) sum;
+            return castSum.divide(BigDecimal.valueOf(count), DECIMAL_MATH_CONTEXT);
+        } else {
+            double castSum = (double) sum;
+            return castSum / count;
         }
     }
 

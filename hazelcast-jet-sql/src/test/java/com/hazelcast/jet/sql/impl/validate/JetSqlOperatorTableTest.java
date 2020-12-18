@@ -19,8 +19,7 @@ package com.hazelcast.jet.sql.impl.validate;
 import com.google.common.collect.ImmutableMap;
 import com.hazelcast.jet.sql.impl.schema.JetTableFunctionParameter;
 import com.hazelcast.sql.impl.QueryException;
-import com.hazelcast.sql.impl.calcite.validate.operators.HazelcastSqlCastFunction;
-import com.hazelcast.sql.impl.calcite.validate.types.HazelcastObjectType;
+import com.hazelcast.sql.impl.calcite.validate.operators.misc.HazelcastCastFunction;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -75,7 +74,7 @@ public class JetSqlOperatorTableTest {
                         ZERO
                 )},
                 new Object[]{new SqlBasicCall(
-                        new HazelcastSqlCastFunction(),
+                        HazelcastCastFunction.INSTANCE,
                         new SqlNode[]{literal("true"), new SqlDataTypeSpec(new SqlBasicTypeNameSpec(SqlTypeName.BOOLEAN, ZERO), ZERO)},
                         ZERO
                 )},
@@ -117,11 +116,12 @@ public class JetSqlOperatorTableTest {
     @Parameters(method = "validNodes")
     public void when_getRowTypeWithValidNode_then_returnsValue(SqlNode node, SqlTypeName type, Object expected) {
         SqlUserDefinedTableFunction sqlFunction = function("valid", type);
-        given(tableFunction.getRowType(TYPE_FACTORY, singletonList(expected))).willReturn(HazelcastObjectType.INSTANCE);
+        RelDataType objectType = HazelcastTypeFactory.INSTANCE.createSqlType(SqlTypeName.OTHER);
+        given(tableFunction.getRowType(TYPE_FACTORY, singletonList(expected))).willReturn(objectType);
 
         RelDataType rowType = sqlFunction.getRowType(TYPE_FACTORY, singletonList(node));
 
-        assertThat(rowType).isEqualTo(HazelcastObjectType.INSTANCE);
+        assertThat(rowType).isEqualTo(objectType);
     }
 
     @SuppressWarnings("unused")

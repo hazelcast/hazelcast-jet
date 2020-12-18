@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.opt;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.hazelcast.sql.impl.calcite.HazelcastRexBuilder;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
@@ -29,6 +28,7 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelDataTypeFieldImpl;
 import org.apache.calcite.rel.type.RelRecordType;
 import org.apache.calcite.rel.type.StructKind;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -52,7 +52,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class OptUtilsTest {
 
     private static final SqlTypeFactoryImpl TYPE_FACTORY = HazelcastTypeFactory.INSTANCE;
-    private static final HazelcastRexBuilder REX_BUILDER = new HazelcastRexBuilder(TYPE_FACTORY);
+    private static final RexBuilder REX_BUILDER = new RexBuilder(TYPE_FACTORY);
 
     @Mock
     private RelOptCluster cluster;

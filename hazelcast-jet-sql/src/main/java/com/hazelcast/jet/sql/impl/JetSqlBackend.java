@@ -196,7 +196,7 @@ class JetSqlBackend implements SqlBackend {
         SqlNode source = sqlCreateJob.dmlStatement();
 
         QueryParseResult dmlParseResult =
-                new QueryParseResult(source, parseResult.getParameterRowType(), parseResult.getValidator(), this);
+                new QueryParseResult(source, parseResult.getParameterMetadata(), parseResult.getValidator(), this);
         QueryConvertResult dmlConvertedResult = context.convert(dmlParseResult);
         ExecutionPlan dmlPlan = toPlan(dmlConvertedResult.getRel(), dmlConvertedResult.getFieldNames(), context);
 

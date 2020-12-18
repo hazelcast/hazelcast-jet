@@ -17,13 +17,14 @@
 package com.hazelcast.jet.sql.impl.opt;
 
 import com.google.common.collect.ImmutableList;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.QueryParameterMetadata;
-import com.hazelcast.sql.impl.calcite.SqlToQueryType;
 import com.hazelcast.sql.impl.calcite.opt.physical.visitor.RexToExpression;
 import com.hazelcast.sql.impl.calcite.opt.physical.visitor.RexToExpressionVisitor;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastRelOptTable;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
+import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeUtils;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeFieldTypeProvider;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
@@ -47,6 +48,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexVisitor;
+import org.apache.calcite.sql.type.SqlTypeName;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -59,7 +61,6 @@ import java.util.Set;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.PHYSICAL;
-import static java.util.Arrays.asList;
 
 /**
  * Static utility classes for rules.
@@ -262,7 +263,24 @@ public final class OptUtils {
         return rows;
     }
 
+    /**
+     * Converts a {@link TableField} to {@link RelDataType}.
+     */
+    public static RelDataType convert(TableField field, RelDataTypeFactory typeFactory) {
+        QueryDataType fieldType = field.getType();
+
+        SqlTypeName sqlTypeName = HazelcastTypeUtils.toCalciteType(fieldType);
+
+        if (sqlTypeName == null) {
+            throw new IllegalStateException("Unexpected type family: " + fieldType);
+        }
+
+        RelDataType relType = typeFactory.createSqlType(sqlTypeName);
+        return typeFactory.createTypeWithNullability(relType, true);
+    }
+
     private static List<QueryDataType> extractFieldTypes(RelDataType rowType) {
-        return asList(SqlToQueryType.mapRowType(rowType));
+        return Util.toList(rowType.getFieldList(),
+                f -> HazelcastTypeUtils.toHazelcastType(f.getType().getSqlTypeName()));
     }
 }
