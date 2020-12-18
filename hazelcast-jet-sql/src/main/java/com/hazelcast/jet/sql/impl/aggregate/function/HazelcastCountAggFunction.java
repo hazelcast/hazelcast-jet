@@ -18,7 +18,7 @@ package com.hazelcast.jet.sql.impl.aggregate.function;
 
 import com.hazelcast.sql.impl.calcite.validate.HazelcastCallBinding;
 import com.hazelcast.sql.impl.calcite.validate.operators.HazelcastReturnTypeInference;
-import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastOperandTypeCheckerAware;
+import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastAggFunction;
 import com.hazelcast.sql.impl.calcite.validate.param.NoOpParameterConverter;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlCall;
@@ -33,12 +33,13 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.Optionality;
 
-public class HazelcastCountFunction extends HazelcastAggFunctionBase implements HazelcastOperandTypeCheckerAware {
+public class HazelcastCountAggFunction extends HazelcastAggFunction {
 
-    public HazelcastCountFunction() {
+    public HazelcastCountAggFunction() {
         super(
                 "COUNT",
                 SqlKind.COUNT,
+                // TODO [viliam] How to use BIGINT(64)? Currently, BIGINT(63) is used
                 HazelcastReturnTypeInference.wrap(ReturnTypes.BIGINT),
                 null,
                 null,
@@ -52,13 +53,6 @@ public class HazelcastCountFunction extends HazelcastAggFunctionBase implements 
     public SqlSyntax getSyntax() {
         return SqlSyntax.FUNCTION_STAR;
     }
-
-//    @SuppressWarnings("deprecation")
-//    public List<RelDataType> getParameterTypes(RelDataTypeFactory typeFactory) {
-//        return ImmutableList.of(
-//                typeFactory.createTypeWithNullability(
-//                        typeFactory.createSqlType(SqlTypeName.ANY), true));
-//    }
 
     @Override
     public RelDataType deriveType(

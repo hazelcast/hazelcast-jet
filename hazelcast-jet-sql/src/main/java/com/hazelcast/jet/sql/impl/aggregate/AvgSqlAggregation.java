@@ -32,7 +32,7 @@ import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.DOUBLE;
 @NotThreadSafe
 public class AvgSqlAggregation extends SqlAggregation {
 
-    private QueryDataType resultType;
+    private QueryDataType operandType;
 
     private SumSqlAggregation sum;
     private CountSqlAggregation count;
@@ -48,18 +48,14 @@ public class AvgSqlAggregation extends SqlAggregation {
     public AvgSqlAggregation(int index, QueryDataType operandType, boolean distinct) {
         super(index, true, distinct);
         assert operandType.getTypeFamily() == DECIMAL || operandType.getTypeFamily() == DOUBLE : operandType;
-        this.resultType = inferResultType(operandType);
+        this.operandType = operandType;
         this.sum = new SumSqlAggregation(index, operandType);
         this.count = new CountSqlAggregation();
     }
 
-    private static QueryDataType inferResultType(QueryDataType operandType) {
-        return operandType;
-    }
-
     @Override
     public QueryDataType resultType() {
-        return resultType;
+        return operandType;
     }
 
     @Override
@@ -84,7 +80,7 @@ public class AvgSqlAggregation extends SqlAggregation {
         }
         long count = (long) this.count.collect();
 
-        if (resultType.getTypeFamily() == DECIMAL) {
+        if (operandType.getTypeFamily() == DECIMAL) {
             BigDecimal castSum = (BigDecimal) sum;
             return castSum.divide(BigDecimal.valueOf(count), DECIMAL_MATH_CONTEXT);
         } else {
@@ -95,18 +91,19 @@ public class AvgSqlAggregation extends SqlAggregation {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeObject(resultType);
+        out.writeObject(operandType);
         out.writeObject(sum);
         out.writeObject(count);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        resultType = in.readObject();
+        operandType = in.readObject();
         sum = in.readObject();
         count = in.readObject();
     }
 
+    // TODO [viliam] can we remove these?
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -116,13 +113,13 @@ public class AvgSqlAggregation extends SqlAggregation {
             return false;
         }
         AvgSqlAggregation that = (AvgSqlAggregation) o;
-        return Objects.equals(resultType, that.resultType) &&
+        return Objects.equals(operandType, that.operandType) &&
                 Objects.equals(sum, that.sum) &&
                 Objects.equals(count, that.count);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(resultType, sum, count);
+        return Objects.hash(operandType, sum, count);
     }
 }

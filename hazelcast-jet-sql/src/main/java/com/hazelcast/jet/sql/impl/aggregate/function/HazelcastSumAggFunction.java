@@ -19,8 +19,7 @@ package com.hazelcast.jet.sql.impl.aggregate.function;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastCallBinding;
 import com.hazelcast.sql.impl.calcite.validate.operand.TypedOperandChecker;
 import com.hazelcast.sql.impl.calcite.validate.operators.HazelcastReturnTypeInference;
-import com.hazelcast.sql.impl.calcite.validate.operators.ReplaceUnknownOperandTypeInference;
-import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastOperandTypeCheckerAware;
+import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastAggFunction;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeUtils;
 import org.apache.calcite.rel.type.RelDataType;
@@ -32,14 +31,14 @@ import org.apache.calcite.util.Optionality;
 import static org.apache.calcite.sql.type.SqlTypeName.DECIMAL;
 import static org.apache.calcite.sql.type.SqlTypeName.DOUBLE;
 
-public class HazelcastAvgFunction extends HazelcastAggFunctionBase implements HazelcastOperandTypeCheckerAware {
+public class HazelcastSumAggFunction extends HazelcastAggFunction {
 
-    public HazelcastAvgFunction() {
+    public HazelcastSumAggFunction() {
         super(
-                "AVG",
-                SqlKind.AVG,
-                HazelcastReturnTypeInference.wrap(ReturnTypes.AVG_AGG_FUNCTION),
-                new ReplaceUnknownOperandTypeInference(DECIMAL),
+                "SUM",
+                SqlKind.SUM,
+                HazelcastReturnTypeInference.wrap(ReturnTypes.AGG_SUM),
+                null,
                 null,
                 SqlFunctionCategory.NUMERIC,
                 false,

@@ -34,7 +34,6 @@ import static com.hazelcast.sql.impl.expression.math.ExpressionMath.DECIMAL_MATH
 public class SumSqlAggregation extends SqlAggregation {
 
     private QueryDataType operandType;
-    private QueryDataType resultType;
 
     private Object value;
 
@@ -49,29 +48,11 @@ public class SumSqlAggregation extends SqlAggregation {
     public SumSqlAggregation(int index, QueryDataType operandType, boolean distinct) {
         super(index, true, distinct);
         this.operandType = operandType;
-        this.resultType = inferResultType(operandType);
-    }
-
-    private static QueryDataType inferResultType(QueryDataType operandType) {
-        switch (operandType.getTypeFamily()) {
-            case TINYINT:
-            case SMALLINT:
-            case INTEGER:
-            case BIGINT:
-                return QueryDataType.BIGINT;
-            case DECIMAL:
-                return QueryDataType.DECIMAL;
-            case REAL:
-            case DOUBLE:
-                return QueryDataType.DOUBLE;
-            default:
-                throw QueryException.error("Unsupported operand type: " + operandType);
-        }
     }
 
     @Override
     public QueryDataType resultType() {
-        return resultType;
+        return operandType;
     }
 
     @Override
@@ -85,7 +66,7 @@ public class SumSqlAggregation extends SqlAggregation {
 
         Object value = other.value;
         if (value != null) {
-            add(value, resultType.getConverter());
+            add(value, operandType.getConverter());
         }
     }
 
@@ -94,7 +75,7 @@ public class SumSqlAggregation extends SqlAggregation {
             this.value = identity();
         }
 
-        switch (resultType.getTypeFamily()) {
+        switch (operandType.getTypeFamily()) {
             case BIGINT:
                 try {
                     this.value = Math.addExact((long) this.value, converter.asBigint(value));
@@ -107,19 +88,19 @@ public class SumSqlAggregation extends SqlAggregation {
                 this.value = ((BigDecimal) this.value).add(converter.asDecimal(value), DECIMAL_MATH_CONTEXT);
                 break;
             default:
-                assert resultType.getTypeFamily() == QueryDataTypeFamily.DOUBLE;
+                assert operandType.getTypeFamily() == QueryDataTypeFamily.DOUBLE;
                 this.value = (double) this.value + converter.asDouble(value);
         }
     }
 
     private Object identity() {
-        switch (resultType.getTypeFamily()) {
+        switch (operandType.getTypeFamily()) {
             case BIGINT:
                 return 0L;
             case DECIMAL:
                 return BigDecimal.ZERO;
             default:
-                assert resultType.getTypeFamily() == QueryDataTypeFamily.DOUBLE;
+                assert operandType.getTypeFamily() == QueryDataTypeFamily.DOUBLE;
                 return 0.0D;
         }
     }
@@ -132,14 +113,14 @@ public class SumSqlAggregation extends SqlAggregation {
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeObject(operandType);
-        out.writeObject(resultType);
+        out.writeObject(operandType);
         out.writeObject(value);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         operandType = in.readObject();
-        resultType = in.readObject();
+        operandType = in.readObject();
         value = in.readObject();
     }
 
@@ -153,12 +134,11 @@ public class SumSqlAggregation extends SqlAggregation {
         }
         SumSqlAggregation that = (SumSqlAggregation) o;
         return Objects.equals(operandType, that.operandType) &&
-                Objects.equals(resultType, that.resultType) &&
                 Objects.equals(value, that.value);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(operandType, resultType, value);
+        return Objects.hash(operandType, operandType, value);
     }
 }
