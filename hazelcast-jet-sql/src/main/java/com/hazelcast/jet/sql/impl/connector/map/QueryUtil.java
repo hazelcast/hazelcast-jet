@@ -16,16 +16,28 @@
 
 package com.hazelcast.jet.sql.impl.connector.map;
 
+import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.serialization.SerializationService;
+import com.hazelcast.internal.serialization.SerializationServiceAware;
+import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.DataSerializable;
+import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.PredicateBuilder;
 import com.hazelcast.query.PredicateBuilder.EntryObject;
 import com.hazelcast.query.Predicates;
+import com.hazelcast.query.impl.getters.Extractors;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.extract.QueryPath;
 
-final class JoinPredicateFactory {
+import java.io.IOException;
+import java.util.Map.Entry;
 
-    private JoinPredicateFactory() {
+final class QueryUtil {
+
+    private QueryUtil() {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -73,6 +85,50 @@ final class JoinPredicateFactory {
             return (Comparable<?>) value;
         } else {
             throw QueryException.error("JOIN not supported for " + value.getClass() + ": not comparable");
+        }
+    }
+
+    static Projection<Entry<Object, Object>, Object[]> toProjection(
+            KvRowProjector.Supplier rightRowProjectorSupplier
+    ) {
+        return new JoinProjection(rightRowProjectorSupplier);
+    }
+
+    private static final class JoinProjection
+            implements Projection<Entry<Object, Object>, Object[]>, DataSerializable, SerializationServiceAware {
+
+        private KvRowProjector.Supplier rightRowProjectorSupplier;
+
+        private transient InternalSerializationService serializationService;
+        private transient Extractors extractors;
+
+        @SuppressWarnings("unused")
+        private JoinProjection() {
+        }
+
+        private JoinProjection(KvRowProjector.Supplier rightRowProjectorSupplier) {
+            this.rightRowProjectorSupplier = rightRowProjectorSupplier;
+        }
+
+        @Override
+        public Object[] transform(Entry<Object, Object> entry) {
+            return rightRowProjectorSupplier.get(serializationService, extractors).project(entry);
+        }
+
+        @Override
+        public void setSerializationService(SerializationService serializationService) {
+            this.serializationService = (InternalSerializationService) serializationService;
+            this.extractors = Extractors.newBuilder(this.serializationService).build();
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+            out.writeObject(rightRowProjectorSupplier);
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
+            rightRowProjectorSupplier = in.readObject();
         }
     }
 }

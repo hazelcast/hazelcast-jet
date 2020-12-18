@@ -135,7 +135,7 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
 
         return left -> {
             Predicate<Object, Object> predicate =
-                    JoinPredicateFactory.toPredicate(left, leftEquiJoinIndices, rightEquiJoinIndices, rightPaths);
+                    QueryUtil.toPredicate(left, leftEquiJoinIndices, rightEquiJoinIndices, rightPaths);
             if (predicate == null) {
                 return empty();
             }

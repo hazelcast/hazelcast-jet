@@ -20,10 +20,10 @@ import com.hazelcast.query.Predicate;
 import com.hazelcast.sql.impl.extract.QueryPath;
 import org.junit.Test;
 
-import static com.hazelcast.jet.sql.impl.connector.map.JoinPredicateFactory.toPredicate;
+import static com.hazelcast.jet.sql.impl.connector.map.QueryUtil.toPredicate;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class JoinPredicateFactoryTest {
+public class QueryUtilTest {
 
     @Test
     public void when_leftValueIsNull_then_returnsNull() {

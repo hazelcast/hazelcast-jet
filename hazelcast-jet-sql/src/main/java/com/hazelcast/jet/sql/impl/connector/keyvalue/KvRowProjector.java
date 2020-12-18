@@ -149,6 +149,10 @@ public class KvRowProjector implements Row {
             this.projections = projections;
         }
 
+        public int columnCount() {
+            return paths.length;
+        }
+
         public QueryPath[] paths() {
             return paths;
         }

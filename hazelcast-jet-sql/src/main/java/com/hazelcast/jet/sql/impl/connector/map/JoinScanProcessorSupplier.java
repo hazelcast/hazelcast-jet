@@ -18,11 +18,9 @@ package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.jet.impl.processor.TransformBatchedP;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
@@ -31,7 +29,7 @@ import com.hazelcast.map.IMap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
-import com.hazelcast.query.impl.getters.Extractors;
+import com.hazelcast.projection.Projection;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -57,8 +55,6 @@ final class JoinScanProcessorSupplier implements ProcessorSupplier, DataSerializ
     private KvRowProjector.Supplier rightRowProjectorSupplier;
 
     private transient IMap<Object, Object> map;
-    private transient InternalSerializationService serializationService;
-    private transient Extractors extractors;
 
     @SuppressWarnings("unused")
     private JoinScanProcessorSupplier() {
@@ -77,8 +73,6 @@ final class JoinScanProcessorSupplier implements ProcessorSupplier, DataSerializ
     @Override
     public void init(@Nonnull Context context) {
         map = context.jetInstance().getMap(mapName);
-        serializationService = ((ProcSupplierCtx) context).serializationService();
-        extractors = Extractors.newBuilder(serializationService).build();
     }
 
     @Nonnull
@@ -86,9 +80,10 @@ final class JoinScanProcessorSupplier implements ProcessorSupplier, DataSerializ
     public Collection<? extends Processor> get(int count) {
         List<Processor> processors = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            KvRowProjector rightProjector = rightRowProjectorSupplier.get(serializationService, extractors);
             Processor processor =
-                    new TransformBatchedP<Object[], Object[]>(MAX_BATCH_SIZE, joinFn(joinInfo, map, rightProjector)
+                    new TransformBatchedP<Object[], Object[]>(
+                            MAX_BATCH_SIZE,
+                            joinFn(joinInfo, map, rightRowProjectorSupplier)
                     ) {
                         @Override
                         public boolean isCooperative() {
@@ -103,15 +98,18 @@ final class JoinScanProcessorSupplier implements ProcessorSupplier, DataSerializ
     private static FunctionEx<List<? super Object[]>, Traverser<Object[]>> joinFn(
             JetJoinInfo joinInfo,
             IMap<Object, Object> map,
-            KvRowProjector rightRowProjector
+            KvRowProjector.Supplier rightRowProjectorSupplier
     ) {
         boolean outer = joinInfo.isOuter();
         BiFunctionEx<Object[], Object[], Object[]> joinFn = ExpressionUtil.joinFn(joinInfo.condition());
 
+        Projection<Entry<Object, Object>, Object[]> projection = QueryUtil.toProjection(rightRowProjectorSupplier);
+
         return lefts -> {
             List<Object[]> rights = new ArrayList<>();
-            for (Entry<Object, Object> entry : map.entrySet()) {
-                Object[] right = rightRowProjector.project(entry);
+            // current rules pull projects up, hence project() cardinality won't be greater than the source's
+            // changing the rules might require revisiting
+            for (Object[] right : map.project(projection)) {
                 if (right != null) {
                     rights.add(right);
                 }
@@ -121,7 +119,7 @@ final class JoinScanProcessorSupplier implements ProcessorSupplier, DataSerializ
             for (Object left : lefts) {
                 boolean joined = join(rows, (Object[]) left, rights, joinFn);
                 if (!joined && outer) {
-                    rows.add(padRight((Object[]) left, rightRowProjector.getColumnCount()));
+                    rows.add(padRight((Object[]) left, rightRowProjectorSupplier.columnCount()));
                 }
             }
             return traverseIterable(rows);

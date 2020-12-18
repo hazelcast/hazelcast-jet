@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.connector.map;
 
-import com.google.common.collect.ImmutableSet;
-import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
@@ -28,6 +26,7 @@ import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
 import com.hazelcast.map.IMap;
+import com.hazelcast.projection.Projection;
 import com.hazelcast.sql.impl.expression.ColumnExpression;
 import com.hazelcast.sql.impl.expression.ConstantExpression;
 import com.hazelcast.sql.impl.expression.Expression;
@@ -39,7 +38,6 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.sql.impl.type.QueryDataType.BOOLEAN;
 import static com.hazelcast.sql.impl.type.QueryDataType.INT;
 import static java.util.Arrays.asList;
@@ -61,9 +59,6 @@ public class JoinScanProcessorTest {
     private KvRowProjector.Supplier rightRowProjectorSupplier;
 
     @Mock
-    private KvRowProjector rightProjector;
-
-    @Mock
     private ProcSupplierCtx supplierContext;
 
     @Mock
@@ -75,14 +70,9 @@ public class JoinScanProcessorTest {
     @Mock
     private Outbox outbox;
 
-    @Mock
-    private InternalSerializationService serializationService;
-
     @Before
     public void setUp() {
-        given(rightRowProjectorSupplier.get(any(), any())).willReturn(rightProjector);
-        given(rightProjector.getColumnCount()).willReturn(2);
-        given(supplierContext.serializationService()).willReturn(serializationService);
+        given(rightRowProjectorSupplier.columnCount()).willReturn(2);
         given(supplierContext.jetInstance()).willReturn(jetInstance);
         given(jetInstance.getMap(anyString())).willReturn(map);
         given(outbox.offer(anyInt(), any())).willReturn(true);
@@ -90,43 +80,24 @@ public class JoinScanProcessorTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void when_innerJoinFilteredOutByProjector_then_absent() throws Exception {
+    public void test_innerJoin() throws Exception {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), true);
 
-        given(map.entrySet()).willReturn(ImmutableSet.of(entry(1, "value-1"), entry(2, "value-2")));
-        given(rightProjector.project(entry(1, "value-1"))).willReturn(null);
-        given(rightProjector.project(entry(2, "value-2"))).willReturn(new Object[]{2, "value-2"});
+        given(map.project(any(Projection.class))).willReturn(asList(null, new Object[]{10, "value-10"}));
 
         // when
         processor.process(0, new TestInbox(asList(new Object[]{1}, new Object[]{2})));
         processor.complete();
 
         // then
-        verify(outbox).offer(-1, new Object[]{1, 2, "value-2"});
-        verify(outbox).offer(-1, new Object[]{2, 2, "value-2"});
+        verify(outbox).offer(-1, new Object[]{1, 10, "value-10"});
+        verify(outbox).offer(-1, new Object[]{2, 10, "value-10"});
         verifyNoMoreInteractions(outbox);
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    public void when_innerJoinProjectedByProjector_then_modified() throws Exception {
-        // given
-        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), true);
-
-        given(map.entrySet()).willReturn(ImmutableSet.of(entry(1, "value-1")));
-        given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{2, "modified"});
-
-        // when
-        processor.process(0, new TestInbox(singletonList(new Object[]{1})));
-        processor.complete();
-
-        // then
-        verify(outbox).offer(-1, new Object[]{1, 2, "modified"});
-        verifyNoMoreInteractions(outbox);
-    }
-
-    @Test
     public void when_innerJoinFilteredOutByCondition_then_absent() throws Exception {
         // given
         Processor processor = processor(ComparisonPredicate.create(
@@ -135,9 +106,8 @@ public class JoinScanProcessorTest {
                 ComparisonMode.EQUALS
         ), true);
 
-        given(map.entrySet()).willReturn(ImmutableSet.of(entry(1, "value-1"), entry(2, "value-2")));
-        given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{1, "value-1"});
-        given(rightProjector.project(entry(2, "value-2"))).willReturn(new Object[]{2, "value-2"});
+        given(map.project(any(Projection.class)))
+                .willReturn(asList(new Object[]{1, "value-1"}, new Object[]{2, "value-2"}));
 
         // when
         processor.process(0, new TestInbox(asList(new Object[]{0}, new Object[]{1})));
@@ -150,12 +120,11 @@ public class JoinScanProcessorTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void when_outerJoinFilteredOutByProjector_then_nulls() throws Exception {
+    public void test_outerJoin() throws Exception {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
 
-        given(map.entrySet()).willReturn(ImmutableSet.of(entry(1, "value-1")));
-        given(rightProjector.project(entry(1, "value-1"))).willReturn(null);
+        given(map.project(any(Projection.class))).willReturn(singletonList(null));
 
         // when
         processor.process(0, new TestInbox(asList(new Object[]{1}, new Object[]{2})));
@@ -169,23 +138,6 @@ public class JoinScanProcessorTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void when_outerJoinProjectedByProjector_then_modified() throws Exception {
-        // given
-        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
-
-        given(map.entrySet()).willReturn(ImmutableSet.of(entry(1, "value-1")));
-        given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{2, "modified"});
-
-        // when
-        processor.process(0, new TestInbox(singletonList(new Object[]{1})));
-        processor.complete();
-
-        // then
-        verify(outbox).offer(-1, new Object[]{1, 2, "modified"});
-        verifyNoMoreInteractions(outbox);
-    }
-
-    @Test
     public void when_outerJoinFilteredOutByCondition_then_nulls() throws Exception {
         // given
         Processor processor = processor(ComparisonPredicate.create(
@@ -194,8 +146,8 @@ public class JoinScanProcessorTest {
                 ComparisonMode.EQUALS
         ), false);
 
-        given(map.entrySet()).willReturn(ImmutableSet.of(entry(2, "value-2")));
-        given(rightProjector.project(entry(2, "value-2"))).willReturn(new Object[]{2, "value-2"});
+        given(map.project(any(Projection.class)))
+                .willReturn(asList(new Object[]{1, "value-1"}, new Object[]{2, "value-2"}));
 
         // when
         processor.process(0, new TestInbox(asList(new Object[]{0}, new Object[]{1})));
@@ -203,7 +155,7 @@ public class JoinScanProcessorTest {
 
         // then
         verify(outbox).offer(-1, new Object[]{0, null, null});
-        verify(outbox).offer(-1, new Object[]{1, null, null});
+        verify(outbox).offer(-1, new Object[]{1, 1, "value-1"});
         verifyNoMoreInteractions(outbox);
     }
 
