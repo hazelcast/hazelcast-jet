@@ -71,13 +71,12 @@ import static java.util.Objects.requireNonNull;
  */
 public class HadoopFileSourceFactory implements FileSourceFactory {
 
-    private final Map<String, JobConfigurer> configurers;
+    private final Map<String, JobConfigurer> configurers = new HashMap<>();
 
     /**
      * Creates the HadoopSourceFactory.
      */
     public HadoopFileSourceFactory() {
-        configurers = new HashMap<>();
 
         addJobConfigurer(configurers, new AvroFormatJobConfigurer());
         addJobConfigurer(configurers, new CsvFormatJobConfigurer());
@@ -100,36 +99,35 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
     @Nonnull
     @Override
     public <T> ProcessorMetaSupplier create(@Nonnull FileSourceConfiguration<T> fsc) {
-        try {
-            Job job = Job.getInstance();
-
-            Configuration configuration = job.getConfiguration();
-            configuration.setBoolean(FileInputFormat.INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, true);
-            configuration.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, false);
-            configuration.setBoolean(HadoopSources.SHARED_LOCAL_FS, fsc.isSharedFileSystem());
-            for (Entry<String, String> option : fsc.getOptions().entrySet()) {
-                configuration.set(option.getKey(), option.getValue());
-            }
-
-            Path inputPath = getInputPath(fsc);
-            FileInputFormat.addInputPath(job, inputPath);
-
-            FileFormat<T> fileFormat = requireNonNull(fsc.getFormat());
-            JobConfigurer configurer = this.configurers.get(fileFormat.format());
-            if (configurer == null) {
-                throw new JetException("Could not find JobConfigurer for FileFormat: " + fileFormat.format() + ". " +
-                        "Did you provide correct modules on classpath?");
-            }
-            configurer.configure(job, fileFormat);
-
-            return readHadoopP(SerializableConfiguration.asSerializable(configuration), configurer.projectionFn());
-        } catch (IOException e) {
-            throw new JetException("Could not create a source", e);
+        FileFormat<T> fileFormat = requireNonNull(fsc.getFormat());
+        JobConfigurer configurer = configurers.get(fileFormat.format());
+        if (configurer == null) {
+            throw new JetException("Could not find JobConfigurer for FileFormat: " + fileFormat.format() + ". " +
+                    "Did you provide correct modules on classpath?");
         }
+
+        return readHadoopP(job -> {
+            try {
+                Configuration configuration = job.getConfiguration();
+                configuration.setBoolean(FileInputFormat.INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, true);
+                configuration.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, false);
+                configuration.setBoolean(HadoopSources.SHARED_LOCAL_FS, fsc.isSharedFileSystem());
+                for (Entry<String, String> option : fsc.getOptions().entrySet()) {
+                    configuration.set(option.getKey(), option.getValue());
+                }
+
+                Path inputPath = getInputPath(fsc);
+                FileInputFormat.addInputPath(job, inputPath);
+
+                configurer.configure(job, fileFormat);
+            } catch (IOException e) {
+                throw new JetException("Could not create a source", e);
+            }
+        }, configurer.projectionFn());
     }
 
     @Nonnull
-    private <T> Path getInputPath(FileSourceConfiguration<T> fsc) {
+    private static <T> Path getInputPath(FileSourceConfiguration<T> fsc) {
         if (fsc.getGlob().equals("*")) {
             // * means all files in the directory, but also all directories
             // Hadoop interprets it as multiple input folders, resulting to processing files in 1st level

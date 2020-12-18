@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline.file.impl;
 
 import com.hazelcast.jet.pipeline.file.FileFormat;
 
+import java.io.Serializable;
 import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
@@ -31,7 +32,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @param <T> type of items a source using this file format will emit
  */
-public class FileSourceConfiguration<T> {
+public class FileSourceConfiguration<T> implements Serializable {
 
     private final String path;
     private final String glob;

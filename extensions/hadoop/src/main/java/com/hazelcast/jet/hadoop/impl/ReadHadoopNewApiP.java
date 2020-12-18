@@ -18,6 +18,7 @@ package com.hazelcast.jet.hadoop.impl;
 
 import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Member;
+import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Traverser;
@@ -157,19 +158,28 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
          * SerializableJobConf}, which are serializable.
          */
         @SuppressFBWarnings("SE_BAD_FIELD")
-        private final Configuration configuration;
+        private Configuration configuration;
+        private final ConsumerEx<Job> configureFn;
         private final BiFunctionEx<K, V, R> projectionFn;
 
         private transient Map<Address, List<IndexedInputSplit>> assigned;
 
-        public MetaSupplier(@Nonnull Configuration configuration, @Nonnull BiFunctionEx<K, V, R> projectionFn) {
+        public MetaSupplier(
+                @Nonnull Configuration configuration,
+                @Nonnull ConsumerEx<Job> configureFn,
+                @Nonnull BiFunctionEx<K, V, R> projectionFn) {
             this.configuration = configuration;
+            this.configureFn = configureFn;
             this.projectionFn = projectionFn;
         }
 
         @Override
         public void init(@Nonnull Context context) throws Exception {
             super.init(context);
+            Job job = Job.getInstance(configuration);
+            configureFn.accept(job);
+            configuration = SerializableConfiguration.asSerializable(job.getConfiguration());
+
             if (shouldSplitOnMembers(configuration)) {
                 assigned = new HashMap<>();
             } else {
