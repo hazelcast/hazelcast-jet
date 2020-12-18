@@ -19,6 +19,7 @@ package com.hazelcast.jet.hadoop.file;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.file.FileSources;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -26,6 +27,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
@@ -51,16 +53,12 @@ public class PathAndGlobFileSourceTest extends BaseFileFormatTest {
 
     @Test
     public void shouldReadFilesMatchingGlobInPath() {
-        assumeThatNoWindowsOS(); // * is not allowed in filename
-        assumeThat(useHadoop).isTrue();
-        FileSourceBuilder<String> source = FileSources.files(currentDir + "/src/test/*/glob") // src/test/resources/glob
-                                                      .glob("file")
-                                                      .format(FileFormat.text());
-
-        assertItemsInSource(source, "file");
+        assertThatThrownBy(() -> FileSources.files(currentDir + "/src/test/*/glob"))
+                .hasMessageContaining("Provided path must not contain any wildcard characters");
     }
 
     @Test
+    @Ignore("change - this is not allowed - to delete after confirming with ondrej")
     public void shouldReadFilesMatchingGlobInPath_moreDirs() {
         assumeThat(useHadoop).isTrue();
         // src/test/resources/globpath1/globpath and src/test/resources/globpath2/globpath
@@ -72,6 +70,7 @@ public class PathAndGlobFileSourceTest extends BaseFileFormatTest {
     }
 
     @Test
+    @Ignore("change - this is not allowed - to delete after confirming with ondrej")
     public void shouldNotReadFilesMatchingGlobInPathForDirChain() {
         assumeThat(useHadoop).isTrue();
         FileSourceBuilder<String> source = FileSources.files(currentDir + "/src/*/glob") // src/test/resources/glob
@@ -82,6 +81,7 @@ public class PathAndGlobFileSourceTest extends BaseFileFormatTest {
     }
 
     @Test
+    @Ignore("change - this is not allowed - to delete after confirming with ondrej")
     public void shouldReadFilesMatchingGlobInPathAndGlob() {
         assumeThat(useHadoop).isTrue();
         FileSourceBuilder<String> source = FileSources.files(currentDir + "/src/test/*/glob") // src/test/resources/glob

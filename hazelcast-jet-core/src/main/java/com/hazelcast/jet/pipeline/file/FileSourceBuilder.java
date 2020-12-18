@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 
+import static com.hazelcast.jet.pipeline.file.WildcardMatcher.hasWildcard;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
@@ -65,8 +66,11 @@ public class FileSourceBuilder<T> {
 
     FileSourceBuilder(@Nonnull String path) {
         this.path = requireNonNull(path, "path must not be null");
+        if (hasWildcard(path)) {
+            throw new IllegalArgumentException("Provided path must not contain any wildcard characters, path: " + path);
+        }
         if (!(hasHadoopPrefix(path) || Paths.get(path).isAbsolute())) {
-            throw new IllegalArgumentException("Provided path must be absolute. path: " + path);
+            throw new IllegalArgumentException("Provided path must be absolute, path: " + path);
         }
     }
 
