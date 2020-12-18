@@ -31,6 +31,7 @@ import com.hazelcast.query.Predicates;
 import com.hazelcast.query.impl.getters.Extractors;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.extract.QueryPath;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.io.IOException;
 import java.util.Map.Entry;
@@ -94,6 +95,10 @@ final class QueryUtil {
         return new JoinProjection(rightRowProjectorSupplier);
     }
 
+    @SuppressFBWarnings(
+            value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
+            justification = "the class is never java-serialized"
+    )
     private static final class JoinProjection
             implements Projection<Entry<Object, Object>, Object[]>, DataSerializable, SerializationServiceAware {
 
