@@ -228,6 +228,24 @@
                     </additionalDependencies>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.0.0-M3</version>
+                <executions>
+                    <execution>
+                        <id>enforce-versions</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <rules>
+                        <dependencyConvergence/>
+                    </rules>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
@@ -291,6 +309,17 @@
             <artifactId>hazelcast-jet-elasticsearch-6</artifactId>
             <version>${project.version}</version>
             <classifier>jar-with-dependencies</classifier>
+            <exclusions>
+                <!--
+                Exclude the elastic client for version 6 reported by enforcer plugin
+                It actually doesn't exclude the client, because we use fat jar.
+                The elastic clients can't be used together. Version 6 is in opt.
+                -->
+                <exclusion>
+                    <groupId>org.elasticsearch.client</groupId>
+                    <artifactId>elasticsearch-rest-high-level-client</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
