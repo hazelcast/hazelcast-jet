@@ -1003,7 +1003,17 @@ public class JetCommandLine implements Runnable {
             try {
                 res.set(jet.getSql().execute(command));
             } catch (HazelcastSqlException e) {
-                out.println(e.getMessage());
+                String errorPrompt = new AttributedStringBuilder()
+                        .style(AttributedStyle.BOLD)
+                        .append('[')
+                        .style(AttributedStyle.BOLD.foreground(AttributedStyle.RED))
+                        .append("ERROR")
+                        .style(AttributedStyle.BOLD)
+                        .append("] ")
+                        .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
+                        .append(e.getMessage())
+                        .toAnsi();
+                out.println(errorPrompt);
                 return;
             }
             if (res.get().updateCount() == -1) {
@@ -1017,16 +1027,28 @@ public class JetCommandLine implements Runnable {
                     printSeparatorLine(res.get().getRowMetadata().getColumnCount(), colWidth, out);
                 }
                 String prompt = new AttributedStringBuilder()
-                        .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
+                        .style(AttributedStyle.BOLD)
                         .append("\n")
+                        .append('[')
+                        .style(AttributedStyle.BOLD.foreground(AttributedStyle.GREEN))
+                        .append("INFO")
+                        .style(AttributedStyle.BOLD)
+                        .append("] ")
+                        .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                         .append(String.valueOf(rowCount.get()))
                         .append(" rows selected.")
                         .toAnsi();
                 out.println(prompt);
             } else {
                 String prompt = new AttributedStringBuilder()
-                        .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
+                        .style(AttributedStyle.BOLD)
                         .append("\n")
+                        .append('[')
+                        .style(AttributedStyle.BOLD.foreground(AttributedStyle.GREEN))
+                        .append("INFO")
+                        .style(AttributedStyle.BOLD)
+                        .append("] ")
+                        .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                         .append("The query is successful.")
                         .toAnsi();
                 out.println(prompt);
@@ -1040,8 +1062,15 @@ public class JetCommandLine implements Runnable {
         } catch (CancellationException e) {
             res.get().close();
             String queryCancellationPrompt = new AttributedStringBuilder()
+                    .style(AttributedStyle.BOLD)
+                    .append("\n")
+                    .append('[')
+                    .style(AttributedStyle.BOLD.foreground(AttributedStyle.GREEN))
+                    .append("INFO")
+                    .style(AttributedStyle.BOLD)
+                    .append("] ")
                     .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
-                    .append("\nQuery is cancelled. Until now, total ")
+                    .append("Query is cancelled. Until now, total ")
                     .append(String.valueOf(rowCount.get()))
                     .append(" rows selected.")
                     .toAnsi();
@@ -1143,6 +1172,12 @@ public class JetCommandLine implements Runnable {
                 .append("\thttps://jet-start.sh/docs/sql/intro\n")
                 .toAnsi();
         static final String EXIT_PROMPT = new AttributedStringBuilder()
+                .style(AttributedStyle.BOLD)
+                .append('[')
+                .style(AttributedStyle.BOLD.foreground(AttributedStyle.GREEN))
+                .append("INFO")
+                .style(AttributedStyle.BOLD)
+                .append("] ")
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("Exiting from SQL console")
                 .toAnsi();
