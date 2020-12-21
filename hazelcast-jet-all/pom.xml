@@ -76,6 +76,8 @@
                             <include>info.picocli:picocli</include>
                             <include>org.jline:jline-terminal</include>
                             <include>org.jline:jline-reader</include>
+                            <include>org.jline:jline-terminal-jansi</include>
+                            <include>org.fusesource.jansi:jansi</include>
                             <include>io.github.classgraph:classgraph</include>
                             <include>com.fasterxml.jackson.jr:jackson-jr-stree</include>
                             <include>com.fasterxml.jackson.jr:jackson-jr-objects</include>
@@ -172,6 +174,17 @@
         <dependency>
             <groupId>org.jline</groupId>
             <artifactId>jline-reader</artifactId>
+            <version>${jline.version}</version>
+        </dependency>
+        <!-- for windows -->
+        <dependency>
+            <groupId>org.fusesource.jansi</groupId>
+            <artifactId>jansi</artifactId>
+            <version>1.18</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline-terminal-jansi</artifactId>
             <version>${jline.version}</version>
         </dependency>
 
