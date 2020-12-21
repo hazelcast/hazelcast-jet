@@ -49,15 +49,14 @@ import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlRowMetadata;
 import org.jline.reader.EOFError;
+import org.jline.reader.EndOfFileException;
+import org.jline.reader.History;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
-import org.jline.reader.History;
 import org.jline.reader.ParsedLine;
 import org.jline.reader.Parser;
 import org.jline.reader.SyntaxError;
 import org.jline.reader.UserInterruptException;
-import org.jline.reader.EndOfFileException;
-
 import org.jline.reader.impl.DefaultParser;
 import org.jline.terminal.Terminal;
 import org.jline.utils.AttributedStringBuilder;
@@ -79,11 +78,10 @@ import picocli.CommandLine.ParseResult;
 import picocli.CommandLine.RunAll;
 
 import java.io.File;
+import java.io.IOError;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.io.IOError;
-
 import java.lang.reflect.InvocationTargetException;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -92,14 +90,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
 import java.util.logging.Level;
@@ -994,53 +986,13 @@ public class JetCommandLine implements Runnable {
         }
     }
 
-    private void executeSqlCmd(JetInstance jet, String command, Terminal terminal) throws InterruptedException {
+    private void executeSqlCmd(JetInstance jet, String command, Terminal terminal) {
         PrintWriter out = terminal.writer();
         final int colWidth = 20;
-        AtomicReference<SqlResult> sqlResult = new AtomicReference<>();
-        AtomicInteger rowCount = new AtomicInteger();
-        ExecutorService executor = ForkJoinPool.commonPool();
-        Future<?> executorFuture = executor.submit(() -> {
-            try {
-                sqlResult.set(jet.getSql().execute(command));
-            } catch (HazelcastSqlException e) {
-                String errorPrompt = new AttributedStringBuilder()
-                        .style(AttributedStyle.BOLD)
-                        .append('[')
-                        .style(AttributedStyle.BOLD.foreground(AttributedStyle.RED))
-                        .append("ERROR")
-                        .style(AttributedStyle.BOLD)
-                        .append("] ")
-                        .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
-                        .append(e.getMessage())
-                        .toAnsi();
-                out.println(errorPrompt);
-                return;
-            }
-            if (sqlResult.get().updateCount() == -1) {
-                printMetadataInfo(sqlResult.get().getRowMetadata(), colWidth, out);
-
-                for (SqlRow row : sqlResult.get()) {
-                    rowCount.getAndIncrement();
-                    printRow(row, colWidth, out);
-                }
-                if (rowCount.get() > 0) {
-                    printSeparatorLine(sqlResult.get().getRowMetadata().getColumnCount(), colWidth, out);
-                }
-                String prompt = new AttributedStringBuilder()
-                        .style(AttributedStyle.BOLD)
-                        .append('[')
-                        .style(AttributedStyle.BOLD.foreground(AttributedStyle.GREEN))
-                        .append("INFO")
-                        .style(AttributedStyle.BOLD)
-                        .append("] ")
-                        .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
-                        .append(String.valueOf(rowCount.get()))
-                        .append(" rows selected")
-                        .toAnsi();
-                out.println(prompt);
-            } else {
-                String prompt = new AttributedStringBuilder()
+        try (SqlResult sqlResult = jet.getSql().execute(command)) {
+            // if it's a result with an update count, just print it
+            if (sqlResult.updateCount() != -1) {
+                String message = new AttributedStringBuilder()
                         .style(AttributedStyle.BOLD)
                         .append('[')
                         .style(AttributedStyle.BOLD.foreground(AttributedStyle.GREEN))
@@ -1050,22 +1002,24 @@ public class JetCommandLine implements Runnable {
                         .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                         .append("OK")
                         .toAnsi();
-                out.println(prompt);
+                out.println(message);
+                return;
             }
-        });
-        terminal.handle(Terminal.Signal.INT, signal -> executorFuture.cancel(true));
 
+            // this is a result with rows. Print the header and rows, watch for concurrent cancellation
+            terminal.handle(Terminal.Signal.INT, signal -> sqlResult.close());
+            printMetadataInfo(sqlResult.getRowMetadata(), colWidth, out);
+            int rowCount = 0;
 
-        try {
-            executorFuture.get();
-        } catch (CancellationException e) {
-            SqlResult res = sqlResult.get();
-            while (res == null) {
-                res = sqlResult.get();
-                Thread.sleep(100);
+            for (SqlRow row : sqlResult) {
+                rowCount++;
+                printRow(row, colWidth, out);
             }
-            res.close();
-            String queryCancellationPrompt = new AttributedStringBuilder()
+
+            // bottom line after all the rows
+            printSeparatorLine(sqlResult.getRowMetadata().getColumnCount(), colWidth, out);
+
+            String message = new AttributedStringBuilder()
                     .style(AttributedStyle.BOLD)
                     .append('[')
                     .style(AttributedStyle.BOLD.foreground(AttributedStyle.GREEN))
@@ -1073,23 +1027,25 @@ public class JetCommandLine implements Runnable {
                     .style(AttributedStyle.BOLD)
                     .append("] ")
                     .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
-                    .append("OK, Cancelled (after ")
-                    .append(String.valueOf(rowCount.get()))
-                    .append(" rows)")
+                    .append(String.valueOf(rowCount))
+                    .append(" row(s) selected")
                     .toAnsi();
-            out.println(queryCancellationPrompt);
-            out.flush();
-        } catch (InterruptedException | java.util.concurrent.ExecutionException e) {
-            SqlResult res = sqlResult.get();
-            while (res == null) {
-                res = sqlResult.get();
-                Thread.sleep(100);
-            }
-            res.close();
-            e.printStackTrace();
+            out.println(message);
+        } catch (HazelcastSqlException e) {
+            // the query failed to execute
+            String errorPrompt = new AttributedStringBuilder()
+                    .style(AttributedStyle.BOLD)
+                    .append('[')
+                    .style(AttributedStyle.BOLD.foreground(AttributedStyle.RED))
+                    .append("ERROR")
+                    .style(AttributedStyle.BOLD)
+                    .append("] ")
+                    .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
+                    .append(e.getMessage())
+                    .toAnsi();
+            out.println(errorPrompt);
         }
     }
-
 
     private static void printMetadataInfo(SqlRowMetadata metadata, int colWidth, PrintWriter out) {
         int colSize = metadata.getColumnCount();
