@@ -59,6 +59,7 @@ import org.jline.reader.SyntaxError;
 import org.jline.reader.UserInterruptException;
 import org.jline.reader.impl.DefaultParser;
 import org.jline.terminal.Terminal;
+import org.jline.terminal.Terminal.Signal;
 import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.AttributedStyle;
 import org.jline.utils.InfoCmp;
@@ -92,6 +93,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
 import java.util.logging.Level;
@@ -217,6 +219,15 @@ public class JetCommandLine implements Runnable {
                     .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
                     .appName("hazelcast-jet-sql")
                     .build();
+
+            AtomicReference<SqlResult> activeSqlResult = new AtomicReference<>();
+            reader.getTerminal().handle(Signal.INT, signal -> {
+                SqlResult r = activeSqlResult.get();
+                if (r != null) {
+                    r.close();
+                }
+            });
+
             PrintWriter writer = reader.getTerminal().writer();
             writer.println(CliPrompts.STARTING_PROMPT);
             writer.flush();
@@ -276,7 +287,7 @@ public class JetCommandLine implements Runnable {
                     break;
                 }
 
-                executeSqlCmd(jet, command, reader.getTerminal());
+                executeSqlCmd(jet, command, reader.getTerminal(), activeSqlResult);
             }
         });
     }
@@ -986,10 +997,17 @@ public class JetCommandLine implements Runnable {
         }
     }
 
-    private void executeSqlCmd(JetInstance jet, String command, Terminal terminal) {
+    private void executeSqlCmd(
+            JetInstance jet,
+            String command,
+            Terminal terminal,
+            AtomicReference<SqlResult> activeSqlResult
+    ) {
         PrintWriter out = terminal.writer();
         final int colWidth = 20;
         try (SqlResult sqlResult = jet.getSql().execute(command)) {
+            activeSqlResult.set(sqlResult);
+
             // if it's a result with an update count, just print it
             if (sqlResult.updateCount() != -1) {
                 String message = new AttributedStringBuilder()
@@ -1007,7 +1025,6 @@ public class JetCommandLine implements Runnable {
             }
 
             // this is a result with rows. Print the header and rows, watch for concurrent cancellation
-            terminal.handle(Terminal.Signal.INT, signal -> sqlResult.close());
             printMetadataInfo(sqlResult.getRowMetadata(), colWidth, out);
             int rowCount = 0;
 
