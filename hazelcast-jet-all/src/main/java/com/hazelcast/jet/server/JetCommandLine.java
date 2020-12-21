@@ -994,15 +994,15 @@ public class JetCommandLine implements Runnable {
         }
     }
 
-    private void executeSqlCmd(JetInstance jet, String command, Terminal terminal) {
+    private void executeSqlCmd(JetInstance jet, String command, Terminal terminal) throws InterruptedException {
         PrintWriter out = terminal.writer();
         final int colWidth = 20;
-        AtomicReference<SqlResult> res = new AtomicReference<>();
+        AtomicReference<SqlResult> sqlResult = new AtomicReference<>();
         AtomicInteger rowCount = new AtomicInteger();
         ExecutorService executor = ForkJoinPool.commonPool();
-        Future<?> resultFuture = executor.submit(() -> {
+        Future<?> executorFuture = executor.submit(() -> {
             try {
-                res.set(jet.getSql().execute(command));
+                sqlResult.set(jet.getSql().execute(command));
             } catch (HazelcastSqlException e) {
                 String errorPrompt = new AttributedStringBuilder()
                         .style(AttributedStyle.BOLD)
@@ -1017,19 +1017,18 @@ public class JetCommandLine implements Runnable {
                 out.println(errorPrompt);
                 return;
             }
-            if (res.get().updateCount() == -1) {
-                printMetadataInfo(res.get().getRowMetadata(), colWidth, out);
+            if (sqlResult.get().updateCount() == -1) {
+                printMetadataInfo(sqlResult.get().getRowMetadata(), colWidth, out);
 
-                for (SqlRow row : res.get()) {
+                for (SqlRow row : sqlResult.get()) {
                     rowCount.getAndIncrement();
                     printRow(row, colWidth, out);
                 }
                 if (rowCount.get() > 0) {
-                    printSeparatorLine(res.get().getRowMetadata().getColumnCount(), colWidth, out);
+                    printSeparatorLine(sqlResult.get().getRowMetadata().getColumnCount(), colWidth, out);
                 }
                 String prompt = new AttributedStringBuilder()
                         .style(AttributedStyle.BOLD)
-                        .append("\n")
                         .append('[')
                         .style(AttributedStyle.BOLD.foreground(AttributedStyle.GREEN))
                         .append("INFO")
@@ -1037,48 +1036,56 @@ public class JetCommandLine implements Runnable {
                         .append("] ")
                         .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                         .append(String.valueOf(rowCount.get()))
-                        .append(" rows selected.")
+                        .append(" rows selected")
                         .toAnsi();
                 out.println(prompt);
             } else {
                 String prompt = new AttributedStringBuilder()
                         .style(AttributedStyle.BOLD)
-                        .append("\n")
                         .append('[')
                         .style(AttributedStyle.BOLD.foreground(AttributedStyle.GREEN))
                         .append("INFO")
                         .style(AttributedStyle.BOLD)
                         .append("] ")
                         .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
-                        .append("The query is successful.")
+                        .append("OK")
                         .toAnsi();
                 out.println(prompt);
             }
         });
+        terminal.handle(Terminal.Signal.INT, signal -> executorFuture.cancel(true));
 
-        terminal.handle(Terminal.Signal.INT, signal -> resultFuture.cancel(true));
 
         try {
-            resultFuture.get();
+            executorFuture.get();
         } catch (CancellationException e) {
-            res.get().close();
+            SqlResult res = sqlResult.get();
+            while (res == null) {
+                res = sqlResult.get();
+                Thread.sleep(100);
+            }
+            res.close();
             String queryCancellationPrompt = new AttributedStringBuilder()
                     .style(AttributedStyle.BOLD)
-                    .append("\n")
                     .append('[')
                     .style(AttributedStyle.BOLD.foreground(AttributedStyle.GREEN))
                     .append("INFO")
                     .style(AttributedStyle.BOLD)
                     .append("] ")
                     .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
-                    .append("Query is cancelled. Until now, total ")
+                    .append("OK, Cancelled (after ")
                     .append(String.valueOf(rowCount.get()))
-                    .append(" rows selected.")
+                    .append(" rows)")
                     .toAnsi();
             out.println(queryCancellationPrompt);
             out.flush();
         } catch (InterruptedException | java.util.concurrent.ExecutionException e) {
-            res.get().close();
+            SqlResult res = sqlResult.get();
+            while (res == null) {
+                res = sqlResult.get();
+                Thread.sleep(100);
+            }
+            res.close();
             e.printStackTrace();
         }
     }
@@ -1162,7 +1169,7 @@ public class JetCommandLine implements Runnable {
     .toAnsi();
         static final String HELP_PROMPT = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
-                .append("AVAILABLE COMMANDS:\n\n")
+                .append("AVAILABLE COMMANDS:\n")
                 .append("CLEAR\t-\tClear the terminal screen\n")
                 .append("HELP\t-\tProvide information about available commands.\n")
                 .append("HISTORY\t-\tShow the command history of the current session.\n")
