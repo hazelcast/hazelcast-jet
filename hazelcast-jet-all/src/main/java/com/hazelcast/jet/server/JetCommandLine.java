@@ -112,6 +112,7 @@ import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Collections.emptyList;
 
+@SuppressWarnings({"unused", "MismatchedQueryAndUpdateOfCollection"})
 @Command(
         name = "jet",
         description = "Utility to perform operations on a Hazelcast Jet cluster.%n" +
@@ -342,7 +343,7 @@ public class JetCommandLine implements Runnable {
                     paramLabel = "<job name or id>",
                     description = "Name of the job to suspend"
             ) String name
-    ) throws IOException {
+    ) {
         runWithJet(targets, verbosity, jet -> {
             Job job = getJob(jet, name);
             assertJobRunning(name, job);
@@ -363,7 +364,7 @@ public class JetCommandLine implements Runnable {
                     paramLabel = "<job name or id>",
                     description = "Name of the job to cancel"
             ) String name
-    ) throws IOException {
+    ) {
         runWithJet(targets, verbosity, jet -> {
             Job job = getJob(jet, name);
             assertJobActive(name, job);
@@ -392,7 +393,7 @@ public class JetCommandLine implements Runnable {
             @Option(names = {"-C", "--cancel"},
                     description = "Cancel the job after taking the snapshot")
                     boolean isTerminal
-    ) throws IOException {
+    ) {
         runWithJet(targets, verbosity, jet -> {
             Job job = getJob(jet, jobName);
             assertJobActive(jobName, job);
@@ -421,7 +422,7 @@ public class JetCommandLine implements Runnable {
                     paramLabel = "<snapshot name>",
                     description = "Name of the snapshot")
                     String snapshotName
-    ) throws IOException {
+    ) {
         runWithJet(targets, verbosity, jet -> {
             JobStateSnapshot jobStateSnapshot = jet.getJobStateSnapshot(snapshotName);
             if (jobStateSnapshot == null) {
@@ -442,7 +443,7 @@ public class JetCommandLine implements Runnable {
                     paramLabel = "<job name or id>",
                     description = "Name of the job to restart")
                     String name
-    ) throws IOException {
+    ) {
         runWithJet(targets, verbosity, jet -> {
             Job job = getJob(jet, name);
             assertJobRunning(name, job);
@@ -463,7 +464,7 @@ public class JetCommandLine implements Runnable {
                     paramLabel = "<job name or id>",
                     description = "Name of the job to resume")
                     String name
-    ) throws IOException {
+    ) {
         runWithJet(targets, verbosity, jet -> {
             Job job = getJob(jet, name);
             if (job.getStatus() != JobStatus.SUSPENDED) {
@@ -486,7 +487,7 @@ public class JetCommandLine implements Runnable {
             @Option(names = {"-a", "--all"},
                     description = "Lists all jobs including completed and failed ones")
                     boolean listAll
-    ) throws IOException {
+    ) {
         runWithJet(targets, verbosity, jet -> {
             JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
             List<JobSummary> summaries = client.getJobSummaryList();
@@ -511,7 +512,7 @@ public class JetCommandLine implements Runnable {
             @Mixin(name = "targets") TargetsMixin targets,
             @Option(names = {"-F", "--full-job-name"},
                     description = "Don't trim job name to fit, can break layout")
-                    boolean fullJobName) throws IOException {
+                    boolean fullJobName) {
         runWithJet(targets, verbosity, jet -> {
             Collection<JobStateSnapshot> snapshots = jet.getJobStateSnapshots();
             printf("%-23s %-15s %-24s %s", "TIME", "SIZE (bytes)", "JOB NAME", "SNAPSHOT NAME");
@@ -671,7 +672,7 @@ public class JetCommandLine implements Runnable {
         if (name.length() <= MAX_STR_LENGTH) {
             return name;
         }
-        return name.substring(0, Math.min(name.length(), MAX_STR_LENGTH - 1)) + "*";
+        return name.substring(0, MAX_STR_LENGTH - 1) + "*";
     }
 
     private static String formatJob(Job job) {
