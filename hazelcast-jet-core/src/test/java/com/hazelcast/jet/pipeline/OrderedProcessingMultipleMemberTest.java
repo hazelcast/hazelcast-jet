@@ -55,6 +55,15 @@ import static com.hazelcast.jet.core.test.JetAssert.assertFalse;
 import static com.hazelcast.jet.core.test.JetAssert.assertTrue;
 import static com.hazelcast.jet.core.test.JetAssert.fail;
 
+
+/**
+ *  The tests of this class run on the same Jet cluster. In order for
+ *  the tests to run quickly, we do not start a new cluster after each
+ *  test. But if some test spoils the cluster, it may also cause other
+ *  tests to fail. But since we did not expect this case, we preferred
+ *  performance in this tradeoff. Isolation between tests is provided
+ *  by using different mapJournals in each test.
+ */
 @RunWith(Parameterized.class)
 @UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
 public class OrderedProcessingMultipleMemberTest extends JetTestSupport implements Serializable {
@@ -250,7 +259,6 @@ public class OrderedProcessingMultipleMemberTest extends JetTestSupport implemen
 
         applied.groupingKey(Map.Entry::getKey)
                 .mapStateful(() -> create(keyCount), this::orderValidator)
-                .peek()
                 .writeTo(AssertionSinks.assertCollectedEventually(60,
                         list -> {
                             assertTrue("when", itemCount <= list.size());

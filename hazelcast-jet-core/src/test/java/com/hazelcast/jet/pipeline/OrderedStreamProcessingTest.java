@@ -119,8 +119,7 @@ public class OrderedStreamProcessingTest extends JetTestSupport implements Seria
                                 .mapStateful(LongAccumulator::new, (s, x) -> x)
                                 .setLocalParallelism(HIGH_LOCAL_PARALLELISM),
                         "map-stateful-global-high"
-                )
-                ,
+                ),
                 createParamSet(
                         stage -> stage
                                 .mapStateful(LongAccumulator::new, (s, x) -> x)
@@ -169,8 +168,7 @@ public class OrderedStreamProcessingTest extends JetTestSupport implements Seria
                                 .mapStateful(LongAccumulator::new, (s, x) -> x)
                                 .setLocalParallelism(LOW_LOCAL_PARALLELISM),
                         "map-stateful-global-low"
-                )
-                ,
+                ),
                 createParamSet(
                         stage -> stage
                                 .mapStateful(LongAccumulator::new, (s, x) -> x)
@@ -355,7 +353,6 @@ public class OrderedStreamProcessingTest extends JetTestSupport implements Seria
      * the generator functions are reset and emit everything from the start.
      *
      */
-    @Nonnull
     private static <T> StreamSource<T> itemsParallel(
             long eventsPerSecondPerGenerator, @Nonnull List<? extends GeneratorFunction<T>> generatorFns
     ) {
