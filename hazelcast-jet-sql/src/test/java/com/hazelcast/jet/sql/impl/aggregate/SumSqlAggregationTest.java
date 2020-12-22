@@ -36,12 +36,8 @@ public class SumSqlAggregationTest {
     @SuppressWarnings("unused")
     private Object[] types() {
         return new Object[]{
-                new Object[]{QueryDataType.TINYINT},
-                new Object[]{QueryDataType.SMALLINT},
-                new Object[]{QueryDataType.INT},
                 new Object[]{QueryDataType.BIGINT},
                 new Object[]{QueryDataType.DECIMAL},
-                new Object[]{QueryDataType.REAL},
                 new Object[]{QueryDataType.DOUBLE}
         };
     }
@@ -57,17 +53,10 @@ public class SumSqlAggregationTest {
     @SuppressWarnings("unused")
     private Object[] values() {
         return new Object[]{
-                new Object[]{QueryDataType.TINYINT, (byte) 1, (byte) 2, 3L},
-                new Object[]{QueryDataType.SMALLINT, (short) 1, (short) 2, 3L},
-                new Object[]{QueryDataType.INT, 1, 2, 3L},
                 new Object[]{QueryDataType.BIGINT, 1L, 2L, 3L},
                 new Object[]{QueryDataType.DECIMAL, new BigDecimal(1), new BigDecimal(2),
                         new BigDecimal(3)},
-                new Object[]{QueryDataType.REAL, 1F, 2F, 3D},
-                new Object[]{QueryDataType.DOUBLE, 1D, 2D, 3D},
-                new Object[]{QueryDataType.TINYINT, (byte) 1, null, 1L},
-                new Object[]{QueryDataType.TINYINT, null, (byte) 1, 1L},
-                new Object[]{QueryDataType.TINYINT, null, null, null}
+                new Object[]{QueryDataType.DOUBLE, 1D, 2D, 3D}
         };
     }
 
@@ -93,11 +82,11 @@ public class SumSqlAggregationTest {
 
     @Test
     public void test_accumulateDistinct() {
-        SumSqlAggregation aggregation = new SumSqlAggregation(0, QueryDataType.INT, true);
+        SumSqlAggregation aggregation = new SumSqlAggregation(0, QueryDataType.BIGINT, true);
         aggregation.accumulate(new Object[]{null});
-        aggregation.accumulate(new Object[]{1});
-        aggregation.accumulate(new Object[]{1});
-        aggregation.accumulate(new Object[]{2});
+        aggregation.accumulate(new Object[]{1L});
+        aggregation.accumulate(new Object[]{1L});
+        aggregation.accumulate(new Object[]{2L});
 
         assertThat(aggregation.collect()).isEqualTo(3L);
     }
@@ -118,8 +107,8 @@ public class SumSqlAggregationTest {
 
     @Test
     public void test_serialization() {
-        SumSqlAggregation original = new SumSqlAggregation(0, QueryDataType.TINYINT);
-        original.accumulate(new Object[]{(byte) 1});
+        SumSqlAggregation original = new SumSqlAggregation(0, QueryDataType.BIGINT);
+        original.accumulate(new Object[]{1L});
 
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
         SumSqlAggregation serialized = ss.toObject(ss.toData(original));

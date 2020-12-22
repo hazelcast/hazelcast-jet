@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.aggregate;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
-import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -28,7 +27,6 @@ import org.junit.runner.RunWith;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @RunWith(JUnitParamsRunner.class)
 public class AvgSqlAggregationTest {
@@ -36,13 +34,8 @@ public class AvgSqlAggregationTest {
     @SuppressWarnings("unused")
     private Object[] types() {
         return new Object[]{
-                new Object[]{QueryDataType.TINYINT},
-                new Object[]{QueryDataType.SMALLINT},
-                new Object[]{QueryDataType.INT},
-                new Object[]{QueryDataType.BIGINT},
-                new Object[]{QueryDataType.DECIMAL},
-                new Object[]{QueryDataType.REAL},
-                new Object[]{QueryDataType.DOUBLE}
+                QueryDataType.DECIMAL,
+                QueryDataType.DOUBLE
         };
     }
 
@@ -57,19 +50,11 @@ public class AvgSqlAggregationTest {
     @SuppressWarnings("unused")
     private Object[] values() {
         return new Object[]{
-                new Object[]{QueryDataType.TINYINT, (byte) 1, (byte) 2, new BigDecimal("1.5")},
-                new Object[]{QueryDataType.SMALLINT, (short) 1, (short) 2, new BigDecimal("1.5")},
-                new Object[]{QueryDataType.INT, 1, 2, new BigDecimal("1.5")},
-                new Object[]{QueryDataType.BIGINT, 1L, 2L, new BigDecimal("1.5")},
                 new Object[]{QueryDataType.DECIMAL, new BigDecimal(1), new BigDecimal(2),
                         new BigDecimal("1.5")},
                 new Object[]{QueryDataType.DECIMAL, new BigDecimal("9223372036854775808998"),
                         new BigDecimal("9223372036854775808999"), new BigDecimal("9223372036854775808998.5")},
-                new Object[]{QueryDataType.REAL, 1F, 2F, 1.5D},
-                new Object[]{QueryDataType.DOUBLE, 1D, 2D, 1.5D},
-                new Object[]{QueryDataType.TINYINT, (byte) 1, null, new BigDecimal("1")},
-                new Object[]{QueryDataType.TINYINT, null, (byte) 1, new BigDecimal("1")},
-                new Object[]{QueryDataType.TINYINT, null, null, null}
+                new Object[]{QueryDataType.DOUBLE, 1D, 2D, 1.5D}
         };
     }
 
@@ -94,24 +79,14 @@ public class AvgSqlAggregationTest {
     }
 
     @Test
-    public void test_accumulateOverflow() {
-        AvgSqlAggregation aggregation = new AvgSqlAggregation(0, QueryDataType.BIGINT);
-        aggregation.accumulate(new Object[]{Long.MAX_VALUE});
-
-        assertThatThrownBy(() -> aggregation.accumulate(new Object[]{1L}))
-                .isInstanceOf(QueryException.class)
-                .hasMessageContaining("BIGINT overflow");
-    }
-
-    @Test
     public void test_accumulateDistinct() {
-        AvgSqlAggregation aggregation = new AvgSqlAggregation(0, QueryDataType.INT, true);
+        AvgSqlAggregation aggregation = new AvgSqlAggregation(0, QueryDataType.DOUBLE, true);
         aggregation.accumulate(new Object[]{null});
-        aggregation.accumulate(new Object[]{1});
-        aggregation.accumulate(new Object[]{1});
-        aggregation.accumulate(new Object[]{2});
+        aggregation.accumulate(new Object[]{1.0});
+        aggregation.accumulate(new Object[]{1.0});
+        aggregation.accumulate(new Object[]{2.0});
 
-        assertThat(aggregation.collect()).isEqualTo(new BigDecimal("1.5"));
+        assertThat(aggregation.collect()).isEqualTo(1.5);
     }
 
     @Test
@@ -130,8 +105,8 @@ public class AvgSqlAggregationTest {
 
     @Test
     public void test_serialization() {
-        AvgSqlAggregation original = new AvgSqlAggregation(0, QueryDataType.TINYINT);
-        original.accumulate(new Object[]{(byte) 1});
+        AvgSqlAggregation original = new AvgSqlAggregation(0, QueryDataType.DOUBLE);
+        original.accumulate(new Object[]{1.0});
 
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
         AvgSqlAggregation serialized = ss.toObject(ss.toData(original));
