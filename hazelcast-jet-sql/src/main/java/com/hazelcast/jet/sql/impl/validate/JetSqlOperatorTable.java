@@ -21,6 +21,7 @@ import com.hazelcast.jet.sql.impl.aggregate.function.HazelcastCountAggFunction;
 import com.hazelcast.jet.sql.impl.aggregate.function.HazelcastMinMaxAggFunction;
 import com.hazelcast.jet.sql.impl.aggregate.function.HazelcastSumAggFunction;
 import com.hazelcast.jet.sql.impl.connector.file.FileTableFunction;
+import com.hazelcast.jet.sql.impl.validate.operators.HazelcastArgumentAssignmentOperator;
 import com.hazelcast.jet.sql.impl.validate.operators.HazelcastCollectionTableOperator;
 import com.hazelcast.jet.sql.impl.validate.operators.HazelcastRowOperator;
 import com.hazelcast.jet.sql.impl.validate.operators.HazelcastValuesOperator;
@@ -73,6 +74,8 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
     public static final SqlSpecialOperator ROW = new HazelcastRowOperator();
     public static final SqlSpecialOperator COLLECTION_TABLE =
             new HazelcastCollectionTableOperator("TABLE", SqlModality.RELATION);
+    public static final SqlSpecialOperator ARGUMENT_ASSIGNMENT =
+            new HazelcastArgumentAssignmentOperator();
 
     public static final SqlFunction SUM = new HazelcastSumAggFunction();
     public static final SqlFunction COUNT = new HazelcastCountAggFunction();
