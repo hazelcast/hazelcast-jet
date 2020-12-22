@@ -17,6 +17,7 @@ package com.hazelcast.jet.kinesis.impl;
 
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.amazonaws.services.kinesis.model.Shard;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -284,7 +285,7 @@ public class KinesisSourceP extends AbstractProcessor {
         void remove(String shardId) {
             Object[] state = states.remove(shardId);
             if (state == null) {
-                throw new RuntimeException("Removing inexistend state, shouldn't happen");
+                throw new JetException("Removing insistent state for shard " + shardId + ", shouldn't happen");
             }
         }
 

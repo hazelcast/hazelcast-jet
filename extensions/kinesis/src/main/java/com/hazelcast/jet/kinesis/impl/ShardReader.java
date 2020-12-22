@@ -22,6 +22,7 @@ import com.amazonaws.services.kinesis.model.GetShardIteratorResult;
 import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.Shard;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.retry.RetryStrategy;
@@ -90,7 +91,7 @@ class ShardReader extends AbstractShardWorker {
             case SHARD_CLOSED:
                 return handleShardClosed();
             default:
-                throw new RuntimeException("Programming error, unhandled state: " + state);
+                throw new JetException("Programming error, unhandled state: " + state);
         }
     }
 

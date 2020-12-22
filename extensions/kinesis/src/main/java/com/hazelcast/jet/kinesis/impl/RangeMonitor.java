@@ -19,6 +19,7 @@ import com.amazonaws.SdkClientException;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.amazonaws.services.kinesis.model.ListShardsResult;
 import com.amazonaws.services.kinesis.model.Shard;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.logging.ILogger;
 
@@ -186,7 +187,7 @@ public class RangeMonitor extends AbstractShardWorker {
                 return i;
             }
         }
-        throw new RuntimeException("Programming error, shard not covered by any hash range");
+        throw new JetException("Programming error, shard not covered by any hash range");
     }
 
     @Nonnull

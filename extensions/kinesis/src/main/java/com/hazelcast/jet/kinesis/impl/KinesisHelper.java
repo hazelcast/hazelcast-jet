@@ -70,7 +70,10 @@ public class KinesisHelper {
         } else {
             request.setNextToken(nextToken);
         }
-        request.setShardFilter(new ShardFilter().withType(ShardFilterType.AT_LATEST));
+
+        //include all the shards within the retention period of the data stream
+        request.setShardFilter(new ShardFilter().withType(ShardFilterType.FROM_TRIM_HORIZON));
+
         return request;
     }
 

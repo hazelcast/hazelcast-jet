@@ -186,18 +186,10 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         //wait for some data to start coming out of the pipeline, before starting the merging
         assertTrueEventually(() -> assertFalse(results.isEmpty()));
 
-        List<Shard> oldShards = Collections.emptyList();
         for (int i = 0; i < merges; i++) {
-            Set<String> oldShardIds = oldShards.stream().map(Shard::getShardId).collect(Collectors.toSet());
-            List<Shard> currentShards = listActiveShards();
-            List<Shard> newShards = currentShards.stream()
-                    .filter(shard -> !oldShardIds.contains(shard.getShardId()))
-                    .collect(toList());
-            assertTrue(newShards.size() >= 1);
-            oldShards = currentShards;
-
-            Collections.shuffle(newShards);
-            Tuple2<Shard, Shard> adjacentPair = findAdjacentPair(newShards.get(0), currentShards);
+            List<Shard> activeShards = listActiveShards();
+            Collections.shuffle(activeShards);
+            Tuple2<Shard, Shard> adjacentPair = findAdjacentPair(activeShards.get(0), activeShards);
             mergeShards(adjacentPair.f0(), adjacentPair.f1());
             HELPER.waitForStreamToActivate();
         }
@@ -242,18 +234,11 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         //wait for some data to start coming out of the pipeline, before starting the splits
         assertTrueEventually(() -> assertFalse(results.isEmpty()));
 
-        List<Shard> oldShards = Collections.emptyList();
         for (int i = 0; i < splits; i++) {
-            Set<String> oldShardIds = oldShards.stream().map(Shard::getShardId).collect(Collectors.toSet());
-            List<Shard> currentShards = listActiveShards();
-            List<Shard> newShards = currentShards.stream()
-                    .filter(shard -> !oldShardIds.contains(shard.getShardId()))
-                    .collect(toList());
-            assertTrue(newShards.size() >= 1);
-            oldShards = currentShards;
-
-            Collections.shuffle(newShards);
-            splitShard(newShards.get(0));
+            List<Shard> activeShards = listActiveShards();
+            Collections.shuffle(activeShards);
+            Shard shard = activeShards.get(0);
+            splitShard(shard);
             HELPER.waitForStreamToActivate();
         }
 
