@@ -85,12 +85,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.ListIterator;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -229,7 +224,7 @@ public class JetCommandLine implements Runnable {
             });
 
             PrintWriter writer = reader.getTerminal().writer();
-            writer.println(CliPrompts.STARTING_PROMPT);
+            writer.println(sqlStartingPrompt(jet));
             writer.flush();
 
             for (; ; ) {
@@ -237,12 +232,15 @@ public class JetCommandLine implements Runnable {
                 try {
                     command = reader.readLine(new AttributedStringBuilder()
                             .style(AttributedStyle.DEFAULT.foreground(SECONDARY_COLOR))
-                            .append("JET SQL> ").toAnsi()).trim();
-                } catch (UserInterruptException | EndOfFileException | IOError e) {
-                    // Ctrl+C, Ctrl+D, and kill signals result in exit
-                    writer.println(CliPrompts.EXIT_PROMPT);
+                            .append("sql> ").toAnsi()).trim();
+                } catch (EndOfFileException | IOError e) {
+                    // Ctrl+D, and kill signals result in exit
+                    writer.println(SQLCliPrompts.EXIT_PROMPT);
                     writer.flush();
                     break;
+                } catch (UserInterruptException e) {
+                    // Ctrl+C
+                    continue;
                 }
 
                 if (command.lastIndexOf(";") >= 0) {
@@ -257,7 +255,7 @@ public class JetCommandLine implements Runnable {
                     continue;
                 }
                 if ("help".equalsIgnoreCase(command)) {
-                    writer.println(CliPrompts.HELP_PROMPT);
+                    writer.println(SQLCliPrompts.HELP_PROMPT);
                     writer.flush();
                     continue;
                 }
@@ -282,7 +280,7 @@ public class JetCommandLine implements Runnable {
                     continue;
                 }
                 if ("exit".equalsIgnoreCase(command)) {
-                    writer.println(CliPrompts.EXIT_PROMPT);
+                    writer.println(SQLCliPrompts.EXIT_PROMPT);
                     writer.flush();
                     break;
                 }
@@ -821,7 +819,7 @@ public class JetCommandLine implements Runnable {
      * A parser for SQL-like inputs. Commands are terminated with a semicolon.
      * It is mainly taken from
      *
-     * @see <a href="https://github.com/julianhyde/sqlline/blob/master/src/main/java/sqlline/SqlLineParser.java">
+     * <a href="https://github.com/julianhyde/sqlline/blob/master/src/main/java/sqlline/SqlLineParser.java">
      * SqlLineParser</a>
      * which is licensed under the BSD-3-Clause License
      */
@@ -1124,35 +1122,42 @@ public class JetCommandLine implements Runnable {
         }
         out.println(builder.toAnsi());
     }
-
-    private static class CliPrompts {
-        static final String STARTING_PROMPT = new AttributedStringBuilder()
-                .style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR))
-                .append(
-                "\to   o   o   o---o o---o o     o---o   o   o---o o-o-o        o o---o o-o-o   o---o   o---o   o\n" +
-                "\t|   |  / \\     /  |     |     |      / \\  |       |          | |       |     |       |   |   |\n" +
-                "\to---o o---o   o   o-o   |     o     o---o o---o   |          | o-o     |     o---o   o   o   o\n" +
-                "\t|   | |   |  /    |     |     |     |   |     |   |      \\   | |       |         |   |   |   |\n" +
-                "\to   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o     o---o   o---\\\\  o---")
+    private String sqlStartingPrompt(JetInstance jet) {
+        JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
+        HazelcastClientInstanceImpl hazelcastClient = client.getHazelcastClient();
+        ClientClusterService clientClusterService = hazelcastClient.getClientClusterService();
+        MCClusterMetadata clusterMetadata =
+                FutureUtil.getValue(getClusterMetadata(hazelcastClient, clientClusterService.getMasterMember()));
+        Cluster cluster = client.getCluster();
+        Set<Member> members = cluster.getMembers();
+        return new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
-                .append("\n\t\t\t\t Welcome to the Hazelcast Jet SQL Console(BETA)")
-                .append("\n\t\t\t\t Commands end with semicolon")
-                .append("\n\t\t\t\t Type 'HELP;' to display the available commands")
-                .append("\n\t\t\t\t Press Ctrl+C to cancel streaming queries\n\n")
-    .toAnsi();
+                // TODO: Consider the case that client is connected to the Hazelcast Cluster
+                .append("Connected to Hazelcast Jet ")
+                .append(clusterMetadata.getJetVersion())
+                .append(" at ")
+                .append(members.iterator().next().getAddress().toString())
+                .append(" (+")
+                .append(String.valueOf(members.size() - 1))
+                .append(" more)\n")
+                .append("Type 'help' for instructions\n")
+                .toAnsi();
+    }
+    private static class SQLCliPrompts {
+
         static final String HELP_PROMPT = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
-                .append("AVAILABLE COMMANDS:\n")
-                .append("CLEAR\t-\tClear the terminal screen\n")
-                .append("HELP\t-\tProvide information about available commands.\n")
-                .append("HISTORY\t-\tShow the command history of the current session.\n")
-                .append("EXIT\t-\tExit from the SQL console.\n")
-                .append("\nHints:\n")
-                .append("\tPress Ctrl+C to cancel streaming queries.\n")
-                .append("\tFor more information, see the Hazelcast Jet SQL documentation:\n")
-                .append("\thttps://jet-start.sh/docs/sql/intro\n")
+                .append("Available Commands:\n")
+                .append("clear\t-\tClear the terminal screen\n")
+                .append("help\t-\tProvide information about available commands.\n")
+                .append("history\t-\tShow the command history of the current session.\n")
+                .append("exit\t-\tExit from the SQL console.\n")
+                .append("Hints:\n")
+                .append("Press Ctrl+C to cancel streaming queries.\n")
+                .append("For more information, see the Hazelcast Jet SQL documentation:\n")
+                .append("https://jet-start.sh/docs/sql/intro\n")
                 .toAnsi();
-        static final String EXIT_PROMPT = new AttributedStringBuilder()
+         static final String EXIT_PROMPT = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD)
                 .append('[')
                 .style(AttributedStyle.BOLD.foreground(AttributedStyle.GREEN))
