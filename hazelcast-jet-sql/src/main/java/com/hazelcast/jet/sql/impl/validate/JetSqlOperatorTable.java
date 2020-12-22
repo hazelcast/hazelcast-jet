@@ -21,6 +21,7 @@ import com.hazelcast.jet.sql.impl.aggregate.function.HazelcastCountAggFunction;
 import com.hazelcast.jet.sql.impl.aggregate.function.HazelcastMinMaxAggFunction;
 import com.hazelcast.jet.sql.impl.aggregate.function.HazelcastSumAggFunction;
 import com.hazelcast.jet.sql.impl.connector.file.FileTableFunction;
+import com.hazelcast.jet.sql.impl.validate.operators.HazelcastCollectionTableOperator;
 import com.hazelcast.jet.sql.impl.validate.operators.HazelcastRowOperator;
 import com.hazelcast.jet.sql.impl.validate.operators.HazelcastValuesOperator;
 import com.hazelcast.sql.impl.QueryException;
@@ -50,6 +51,7 @@ import org.apache.calcite.sql.type.SqlOperandTypeInference;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.util.ReflectiveSqlOperatorTable;
+import org.apache.calcite.sql.validate.SqlModality;
 import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.calcite.sql.validate.SqlNameMatchers;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableFunction;
@@ -69,6 +71,8 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
 
     public static final SqlSpecialOperator VALUES = new HazelcastValuesOperator();
     public static final SqlSpecialOperator ROW = new HazelcastRowOperator();
+    public static final SqlSpecialOperator COLLECTION_TABLE =
+            new HazelcastCollectionTableOperator("TABLE", SqlModality.RELATION);
 
     public static final SqlFunction SUM = new HazelcastSumAggFunction();
     public static final SqlFunction COUNT = new HazelcastCountAggFunction();
