@@ -29,8 +29,8 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Contains factory methods for creating steaming sources based on
- * Amazon Kinesis Data Streams.
+ * Contains factory methods for creating Amazon Kinesis Data Streams
+ * (KDS) sources.
  *
  * @since 4.4
  */
@@ -40,7 +40,56 @@ public final class KinesisSources {
     }
 
     /**
-     * TODO: javadoc
+     * Initiates the building of a streaming source which consumes a
+     * Kinesis data stream and emits {@code Map.Entry<String, byte[]>}
+     * items.
+     * <p>
+     * Each emitted item represents a Kinesis <em>record</em>, the basic
+     * unit of data stored in KDS. A record is composed of a sequence
+     * number, partition key, and data blob. This source ignores the
+     * sequence numbers.
+     * <p>
+     * The <em>partition key</em> is used to segregate and route records
+     * in Kinesis and is specified by the data producer, while adding
+     * data to KDS. The keys of the returned items are the record
+     * partition keys, unicode strings with a maximum length of 256
+     * characters.
+     * <p>
+     * The <em>data blob</em> of the record is returned as the values of
+     * the {@code Map.Entry} items, in the form of {@code byte} arrays.
+     * The maximum size of the data blob is 1 MB.
+     * <p>
+     * The source is <em>distributed</em>, each instance is consuming
+     * data from zero, one or more Kinesis shards, the base throughput
+     * units of KDS. One shard provides a capacity of 2MB/sec data
+     * output. Items with the same partition key always come from the
+     * same shard, one shard contains multiple partition keys. Items
+     * coming from the same shard are ordered and the source preserves
+     * this order (except on resharding). The local parallelism of the
+     * source is not defined, so will depend on the number of cores
+     * available.
+     * <p>
+     * If snapshotting is enabled shard offsets are saved to the
+     * snapshßot. After a restart, the source emits the events starting
+     * from the same offset. The source supports both
+     * <em>at-least-once</em> and <em>exactly-once</em> processing
+     * guarantees.
+     * <p>
+     * The source is able to provide native timestams, in the sense that
+     * they are read from KDS, but be aware that they are actually
+     * Kinesis ingestion times, not event times in the strictest sense.
+     * <p>
+     * As stated before the source preserves the ordering inside shards.
+     * However, Kinesis supports resharding, which lets you adjust the
+     * number of shards in your stream to adapt to changes in data flow
+     * rate through the stream. When resharding happens the source is
+     * not able to preserve the order among the last items of a shard
+     * being destroyed and the first items of new shards being created.
+     *
+     * @param stream name of the Kinesis stream being consumed by the
+     * source
+     * @return fluent builder that can be used to set properties and
+     * also to construct the source once configuration is done
      */
     @Nonnull
     public static Builder kinesis(@Nonnull String stream) {
@@ -48,7 +97,8 @@ public final class KinesisSources {
     }
 
     /**
-     * TODO: javadoc
+     * Fluent builder for constructing the Kinesis source and setting
+     * its configuration parameters.
      */
     public static final class Builder {
 
@@ -70,9 +120,6 @@ public final class KinesisSources {
         @Nonnull
         private RetryStrategy retryStrategy = DEFAULT_RETRY_STRATEGY;
 
-        /**
-         * TODO: javadoc
-         */
         private Builder(@Nonnull String stream) {
             this.stream = stream;
         }
