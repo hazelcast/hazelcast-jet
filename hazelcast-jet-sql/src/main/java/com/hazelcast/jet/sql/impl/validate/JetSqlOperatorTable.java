@@ -18,6 +18,8 @@ package com.hazelcast.jet.sql.impl.validate;
 
 import com.hazelcast.jet.sql.impl.aggregate.function.HazelcastAvgAggFunction;
 import com.hazelcast.jet.sql.impl.aggregate.function.HazelcastCountAggFunction;
+import com.hazelcast.jet.sql.impl.aggregate.function.HazelcastMinMaxAggFunction;
+import com.hazelcast.jet.sql.impl.aggregate.function.HazelcastSumAggFunction;
 import com.hazelcast.jet.sql.impl.connector.file.FileTableFunction;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
@@ -62,11 +64,11 @@ import static org.apache.calcite.sql.type.SqlTypeFamily.MAP;
 
 public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
 
-//    public static final SqlFunction SUM = new HazelcastSumFunction("SUM", SqlKind.SUM, ReturnTypes.AGG_SUM);
+    public static final SqlFunction SUM = new HazelcastSumAggFunction();
     public static final SqlFunction COUNT = new HazelcastCountAggFunction();
     public static final SqlFunction AVG = new HazelcastAvgAggFunction();
-//    public static final SqlFunction MIN = new HazelcastMinFunction("MIN", SqlKind.MIN, ReturnTypes.ARG0_NULLABLE_IF_EMPTY);
-//    public static final SqlFunction MAX = new HazelcastMaxFunction("MAX", SqlKind.MAX, ReturnTypes.ARG0_NULLABLE_IF_EMPTY);
+    public static final SqlFunction MIN = new HazelcastMinMaxAggFunction(SqlKind.MIN);
+    public static final SqlFunction MAX = new HazelcastMinMaxAggFunction(SqlKind.MAX);
 
     public static final SqlFunction CSV_FILE = from(FileTableFunction.CSV, "CSV_FILE");
     public static final SqlFunction JSON_FILE = from(FileTableFunction.JSON, "JSON_FILE");

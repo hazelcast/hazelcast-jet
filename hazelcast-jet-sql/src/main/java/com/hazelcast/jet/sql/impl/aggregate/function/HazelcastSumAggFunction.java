@@ -28,6 +28,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.util.Optionality;
 
+import static org.apache.calcite.sql.type.SqlTypeName.BIGINT;
 import static org.apache.calcite.sql.type.SqlTypeName.DECIMAL;
 import static org.apache.calcite.sql.type.SqlTypeName.DOUBLE;
 
@@ -56,9 +57,14 @@ public class HazelcastSumAggFunction extends HazelcastAggFunction {
             }
         }
 
-        RelDataType resultType = HazelcastTypeUtils.isNumericIntegerType(operandType)
-                ? HazelcastTypeFactory.INSTANCE.createSqlType(DECIMAL)
-                : HazelcastTypeFactory.INSTANCE.createSqlType(DOUBLE);
+        RelDataType resultType;
+        if (HazelcastTypeUtils.isNumericIntegerType(operandType)) {
+            resultType = HazelcastTypeFactory.INSTANCE.createSqlType(BIGINT);
+        } else if (operandType.getSqlTypeName().equals(DECIMAL)) {
+            resultType = HazelcastTypeFactory.INSTANCE.createSqlType(DECIMAL);
+        } else {
+            resultType = HazelcastTypeFactory.INSTANCE.createSqlType(DOUBLE);
+        }
 
         TypedOperandChecker checker = TypedOperandChecker.forType(resultType);
         assert checker.isNumeric();

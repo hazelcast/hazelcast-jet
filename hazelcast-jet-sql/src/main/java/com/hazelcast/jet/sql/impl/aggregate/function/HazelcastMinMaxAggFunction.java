@@ -20,52 +20,26 @@ import com.hazelcast.sql.impl.calcite.validate.HazelcastCallBinding;
 import com.hazelcast.sql.impl.calcite.validate.operators.HazelcastReturnTypeInference;
 import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastAggFunction;
 import com.hazelcast.sql.impl.calcite.validate.param.NoOpParameterConverter;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDynamicParam;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.Optionality;
 
-public class HazelcastCountAggFunction extends HazelcastAggFunction {
+public class HazelcastMinMaxAggFunction extends HazelcastAggFunction {
 
-    public HazelcastCountAggFunction() {
+    public HazelcastMinMaxAggFunction(SqlKind kind) {
         super(
-                "COUNT",
-                SqlKind.COUNT,
-                // TODO [viliam] How to use BIGINT(64)? Currently, BIGINT(63) is used
-                HazelcastReturnTypeInference.wrap(ReturnTypes.BIGINT),
+                kind.name(),
+                kind,
+                HazelcastReturnTypeInference.wrap(ReturnTypes.ARG0_NULLABLE_IF_EMPTY),
                 null,
                 null,
-                SqlFunctionCategory.NUMERIC,
+                SqlFunctionCategory.SYSTEM,
                 false,
                 false,
                 Optionality.FORBIDDEN);
-    }
-
-    @Override
-    public SqlSyntax getSyntax() {
-        return SqlSyntax.FUNCTION_STAR;
-    }
-
-    @Override
-    public RelDataType deriveType(
-            SqlValidator validator,
-            SqlValidatorScope scope,
-            SqlCall call
-    ) {
-//         Check for COUNT(*) function.  If it is, we don't want to try and derive the "*"
-        if (call.isCountStar()) {
-            return validator.getTypeFactory().createSqlType(
-                    SqlTypeName.BIGINT);
-        }
-        return super.deriveType(validator, scope, call);
     }
 
     protected boolean checkOperandTypes(HazelcastCallBinding binding, boolean throwOnFailure) {
@@ -75,7 +49,7 @@ public class HazelcastCountAggFunction extends HazelcastAggFunction {
             binding.getValidator().setParameterConverter(parameterIndex, NoOpParameterConverter.INSTANCE);
         }
 
-        // COUNT accepts any operand type
+        // MIN/MAX accepts any operand type (though it must be Comparable at runtime)
         return true;
     }
 }
