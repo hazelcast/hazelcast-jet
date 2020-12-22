@@ -125,7 +125,6 @@ public class JetCommandLine implements Runnable {
 
     private static final int MAX_STR_LENGTH = 24;
     private static final int WAIT_INTERVAL_MILLIS = 100;
-    private static final int SQL_LIST_MAX = 100;
     private static final int PRIMARY_COLOR = AttributedStyle.YELLOW;
     private static final int SECONDARY_COLOR = 12;
 
@@ -218,7 +217,6 @@ public class JetCommandLine implements Runnable {
                     .variable(LineReader.SECONDARY_PROMPT_PATTERN, new AttributedStringBuilder()
                             .style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR)).append("%M%P > ").toAnsi())
                     .variable(LineReader.INDENTATION, 2)
-                    .variable(LineReader.LIST_MAX, SQL_LIST_MAX)
                     .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
                     .appName("hazelcast-jet-sql")
                     .build();
@@ -247,7 +245,7 @@ public class JetCommandLine implements Runnable {
                     writer.flush();
                     break;
                 } catch (UserInterruptException e) {
-                    // Ctrl+C cancel the not-yet-submitted query
+                    // Ctrl+C cancels the not-yet-submitted query
                     continue;
                 }
 
