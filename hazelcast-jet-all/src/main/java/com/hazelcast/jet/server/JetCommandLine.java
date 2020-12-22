@@ -268,7 +268,8 @@ public class JetCommandLine implements Runnable {
                     continue;
                 }
                 if ("history".equalsIgnoreCase(command)) {
-                    ListIterator<History.Entry> iterator = reader.getHistory().iterator();
+                    History hist = reader.getHistory();
+                    ListIterator<History.Entry> iterator = hist.iterator();
                     while (iterator.hasNext()) {
                         History.Entry entry = iterator.next();
                         if (iterator.hasNext()) {
@@ -277,12 +278,12 @@ public class JetCommandLine implements Runnable {
                                     .append(String.valueOf(entry.index() + 1))
                                     .append(" - ")
                                     .append(entry.line())
-                                    .append("\n")
                                     .toAnsi();
                             writer.println(entryLine);
                             writer.flush();
                         } else {
                             iterator.remove();
+                            hist.resetIndex();
                         }
                     }
                     continue;
