@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.aggregate.function;
 
 import com.hazelcast.sql.impl.calcite.validate.HazelcastCallBinding;
 import com.hazelcast.sql.impl.calcite.validate.operand.TypedOperandChecker;
-import com.hazelcast.sql.impl.calcite.validate.operators.HazelcastReturnTypeInference;
 import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastAggFunction;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeUtils;
@@ -38,7 +37,7 @@ public class HazelcastSumAggFunction extends HazelcastAggFunction {
         super(
                 "SUM",
                 SqlKind.SUM,
-                HazelcastReturnTypeInference.wrap(ReturnTypes.AGG_SUM),
+                ReturnTypes.AGG_SUM,
                 null,
                 null,
                 SqlFunctionCategory.NUMERIC,

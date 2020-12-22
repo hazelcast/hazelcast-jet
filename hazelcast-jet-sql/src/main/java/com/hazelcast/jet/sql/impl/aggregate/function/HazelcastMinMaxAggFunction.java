@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.aggregate.function;
 
 import com.hazelcast.sql.impl.calcite.validate.HazelcastCallBinding;
-import com.hazelcast.sql.impl.calcite.validate.operators.HazelcastReturnTypeInference;
 import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastAggFunction;
 import com.hazelcast.sql.impl.calcite.validate.param.NoOpParameterConverter;
 import org.apache.calcite.sql.SqlDynamicParam;
@@ -33,7 +32,7 @@ public class HazelcastMinMaxAggFunction extends HazelcastAggFunction {
         super(
                 kind.name(),
                 kind,
-                HazelcastReturnTypeInference.wrap(ReturnTypes.ARG0_NULLABLE_IF_EMPTY),
+                ReturnTypes.ARG0_NULLABLE_IF_EMPTY,
                 null,
                 null,
                 SqlFunctionCategory.SYSTEM,

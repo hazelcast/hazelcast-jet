@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.aggregate.function;
 
 import com.hazelcast.sql.impl.calcite.validate.HazelcastCallBinding;
-import com.hazelcast.sql.impl.calcite.validate.operators.HazelcastReturnTypeInference;
 import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastAggFunction;
 import com.hazelcast.sql.impl.calcite.validate.param.NoOpParameterConverter;
 import org.apache.calcite.rel.type.RelDataType;
@@ -40,7 +39,7 @@ public class HazelcastCountAggFunction extends HazelcastAggFunction {
                 "COUNT",
                 SqlKind.COUNT,
                 // TODO [viliam] How to use BIGINT(64)? Currently, BIGINT(63) is used
-                HazelcastReturnTypeInference.wrap(ReturnTypes.BIGINT),
+                ReturnTypes.BIGINT,
                 null,
                 null,
                 SqlFunctionCategory.NUMERIC,
