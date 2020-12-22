@@ -89,6 +89,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Locale;
@@ -1112,27 +1113,21 @@ public class JetCommandLine implements Runnable {
     }
     private static class SQLCliConstants {
 
-        static final Set<String> COMMAND_SET = Set.of("clear", "exit", "help", "history");
+        static final Set<String> COMMAND_SET = new HashSet<>(Arrays.asList("clear", "exit", "help", "history"));
         static final String HELP_PROMPT = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("Available Commands:\n")
                 .append("clear\t- Clear the terminal screen\n")
-                .append("exit\t- Exit from the SQL console.\n")
-                .append("help\t- Provide information about available commands.\n")
-                .append("history\t- Show the command history of the current session.\n")
+                .append("exit\t- Exit from the SQL console\n")
+                .append("help\t- Provide information about available commands\n")
+                .append("history\t- Show the command history of the current session\n")
                 .append("Hints:\n")
-                .append("Use semicolon to finalize queries.\n")
-                .append("Press Ctrl+C to cancel streaming queries.\n")
+                .append("Use semicolon to finalize queries\n")
+                .append("Press Ctrl+C to cancel streaming queries\n")
                 .append("For more information, see the Hazelcast Jet SQL documentation:\n")
                 .append("https://jet-start.sh/docs/sql/intro")
                 .toAnsi();
         static final String EXIT_PROMPT = new AttributedStringBuilder()
-                .style(AttributedStyle.BOLD)
-                .append('[')
-                .style(AttributedStyle.BOLD.foreground(AttributedStyle.GREEN))
-                .append("INFO")
-                .style(AttributedStyle.BOLD)
-                .append("] ")
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("Exiting from SQL console")
                 .toAnsi();
