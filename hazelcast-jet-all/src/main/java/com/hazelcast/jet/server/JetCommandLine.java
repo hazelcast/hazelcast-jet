@@ -952,8 +952,8 @@ public class JetCommandLine implements Runnable {
                     continue;
                 } else if (line.regionMatches(i, "/*", 0, "/*".length())) {
                     int nextNonCommentedChar = line.indexOf("*/", i + "/*".length());
-                    // From one side there is an assumption that multi-line comment
-                    // is completed, from the other side nextNonCommentedChar
+                    // On one hand there is an assumption that multi-line comment
+                    // is completed, on the other hand nextNonCommentedChar
                     // could be negative or less than lastNonQuoteCommentIndex
                     // in case '/*' is a part of quoting string.
                     if (nextNonCommentedChar > lastNonQuoteCommentIndex) {
