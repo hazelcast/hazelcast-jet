@@ -1015,12 +1015,6 @@ public class JetCommandLine implements Runnable {
             // if it's a result with an update count, just print it
             if (sqlResult.updateCount() != -1) {
                 String message = new AttributedStringBuilder()
-                        .style(AttributedStyle.BOLD)
-                        .append('[')
-                        .style(AttributedStyle.BOLD.foreground(AttributedStyle.GREEN))
-                        .append("INFO")
-                        .style(AttributedStyle.BOLD)
-                        .append("] ")
                         .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                         .append("OK")
                         .toAnsi();
@@ -1041,12 +1035,6 @@ public class JetCommandLine implements Runnable {
             printSeparatorLine(sqlResult.getRowMetadata().getColumnCount(), colWidth, out);
 
             String message = new AttributedStringBuilder()
-                    .style(AttributedStyle.BOLD)
-                    .append('[')
-                    .style(AttributedStyle.BOLD.foreground(AttributedStyle.GREEN))
-                    .append("INFO")
-                    .style(AttributedStyle.BOLD)
-                    .append("] ")
                     .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                     .append(String.valueOf(rowCount))
                     .append(" row(s) selected")
@@ -1055,12 +1043,6 @@ public class JetCommandLine implements Runnable {
         } catch (HazelcastSqlException e) {
             // the query failed to execute
             String errorPrompt = new AttributedStringBuilder()
-                    .style(AttributedStyle.BOLD)
-                    .append('[')
-                    .style(AttributedStyle.BOLD.foreground(AttributedStyle.RED))
-                    .append("ERROR")
-                    .style(AttributedStyle.BOLD)
-                    .append("] ")
                     .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                     .append(e.getMessage())
                     .toAnsi();
@@ -1146,7 +1128,7 @@ public class JetCommandLine implements Runnable {
                 .append(" (+")
                 .append(String.valueOf(members.size() - 1))
                 .append(" more)\n")
-                .append("Type 'help' for instructions\n")
+                .append("Type 'help' for instructions")
                 .toAnsi();
     }
     private static class SQLCliPrompts {
@@ -1154,14 +1136,15 @@ public class JetCommandLine implements Runnable {
         static final String HELP_PROMPT = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("Available Commands:\n")
-                .append("clear\t-\tClear the terminal screen\n")
-                .append("help\t-\tProvide information about available commands.\n")
-                .append("history\t-\tShow the command history of the current session.\n")
-                .append("exit\t-\tExit from the SQL console.\n")
+                .append("clear\t- Clear the terminal screen\n")
+                .append("help\t- Provide information about available commands.\n")
+                .append("history\t- Show the command history of the current session.\n")
+                .append("exit\t- Exit from the SQL console.\n")
                 .append("Hints:\n")
+                .append("Use semicolon to finalize commands.\n")
                 .append("Press Ctrl+C to cancel streaming queries.\n")
                 .append("For more information, see the Hazelcast Jet SQL documentation:\n")
-                .append("https://jet-start.sh/docs/sql/intro\n")
+                .append("https://jet-start.sh/docs/sql/intro")
                 .toAnsi();
          static final String EXIT_PROMPT = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD)
