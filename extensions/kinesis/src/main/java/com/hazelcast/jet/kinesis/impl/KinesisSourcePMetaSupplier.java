@@ -28,15 +28,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import static java.math.BigInteger.ZERO;
-import static java.math.BigInteger.valueOf;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
 public class KinesisSourcePMetaSupplier implements ProcessorMetaSupplier {
 
     private static final long serialVersionUID = 1L;
-    private static final HashRange ENTIRE_HASH_RANGE = new HashRange(ZERO, valueOf(2).pow(128));
 
     @Nonnull
     private final AwsConfig awsConfig;
@@ -98,7 +95,7 @@ public class KinesisSourcePMetaSupplier implements ProcessorMetaSupplier {
         Map<Address, HashRange> addressRanges = new HashMap<>();
         for (int i = 0; i < addresses.size(); i++) {
             Address address = addresses.get(i);
-            addressRanges.put(address, ENTIRE_HASH_RANGE.partition(i, addresses.size()));
+            addressRanges.put(address, HashRange.DOMAIN.partition(i, addresses.size()));
         }
         return addressRanges;
     }

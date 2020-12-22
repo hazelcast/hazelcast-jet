@@ -99,7 +99,7 @@ public class RangeMonitor extends AbstractShardWorker {
         if (currentTime < nextListShardsTime) {
             return;
         }
-        listShardsResult = helper.listShardsAsync(nextToken);
+        listShardsResult = helper.listAllShardsAsync(nextToken);
         nextListShardsTime = currentTime + listShardsRateTracker.next();
     }
 

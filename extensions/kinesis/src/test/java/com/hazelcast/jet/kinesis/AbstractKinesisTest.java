@@ -180,8 +180,8 @@ class AbstractKinesisTest extends JetTestSupport {
                 .build();
     }
 
-    protected List<Shard> listActiveShards() {
-        return helper.listShards(KinesisHelper::shardActive);
+    protected List<Shard> listOpenShards() {
+        return helper.listOpenShards(KinesisHelper::shardActive);
     }
 
     protected void mergeShards(Shard shard1, Shard shard2) {

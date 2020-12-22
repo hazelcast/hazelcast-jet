@@ -27,6 +27,7 @@ import com.amazonaws.services.kinesis.model.ListShardsResult;
 import com.amazonaws.services.kinesis.model.ResourceInUseException;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
 import com.amazonaws.services.kinesis.model.Shard;
+import com.amazonaws.services.kinesis.model.ShardFilterType;
 import com.amazonaws.services.kinesis.model.StreamDescriptionSummary;
 import com.amazonaws.services.kinesis.model.StreamStatus;
 import com.hazelcast.jet.JetException;
@@ -125,8 +126,8 @@ class KinesisTestHelper {
         }
     }
 
-    public List<Shard> listShards(Predicate<? super Shard> filter) {
-        return callSafely(this::listShards).stream()
+    public List<Shard> listOpenShards(Predicate<? super Shard> filter) {
+        return callSafely(this::listOpenShards).stream()
                 .filter(filter)
                 .collect(Collectors.toList());
     }
@@ -145,11 +146,12 @@ class KinesisTestHelper {
         return StreamStatus.valueOf(statusString);
     }
 
-    private List<Shard> listShards() {
+    private List<Shard> listOpenShards() {
         List<Shard> shards = new ArrayList<>();
         String nextToken = null;
         do {
-            ListShardsRequest request = KinesisHelper.listShardsRequest(stream, nextToken);
+            ShardFilterType filterType = ShardFilterType.AT_LATEST; //only the currently open shards
+            ListShardsRequest request = KinesisHelper.listAllShardsRequest(stream, nextToken, filterType);
             ListShardsResult response = kinesis.listShards(request);
             shards.addAll(response.getShards());
             nextToken = response.getNextToken();

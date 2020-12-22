@@ -63,7 +63,7 @@ public class KinesisHelper {
         return range.contains(startingHashKey);
     }
 
-    public static ListShardsRequest listShardsRequest(String stream, @Nullable String nextToken) {
+    public static ListShardsRequest listAllShardsRequest(String stream, @Nullable String nextToken, ShardFilterType filterType) {
         ListShardsRequest request = new ListShardsRequest();
         if (nextToken == null) {
             request.setStreamName(stream);
@@ -72,7 +72,7 @@ public class KinesisHelper {
         }
 
         //include all the shards within the retention period of the data stream
-        request.setShardFilter(new ShardFilter().withType(ShardFilterType.FROM_TRIM_HORIZON));
+        request.setShardFilter(new ShardFilter().withType(filterType));
 
         return request;
     }
@@ -83,8 +83,11 @@ public class KinesisHelper {
         return kinesis.describeStreamSummaryAsync(request);
     }
 
-    public Future<ListShardsResult> listShardsAsync(String nextToken) {
-        ListShardsRequest request = listShardsRequest(stream, nextToken);
+    public Future<ListShardsResult> listAllShardsAsync(String nextToken) {
+        ShardFilterType filterType = ShardFilterType.FROM_TRIM_HORIZON;
+        //all shards within the retention period (including closed, excluding expired)
+
+        ListShardsRequest request = listAllShardsRequest(stream, nextToken, filterType);
         return kinesis.listShardsAsync(request);
     }
 

@@ -153,7 +153,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
     public void dynamicStream_2Shards_mergeBeforeData() {
         HELPER.createStream(2);
 
-        List<Shard> shards = listActiveShards();
+        List<Shard> shards = listOpenShards();
         mergeShards(shards.get(0), shards.get(1));
         HELPER.waitForStreamToActivate();
 
@@ -187,9 +187,9 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         assertTrueEventually(() -> assertFalse(results.isEmpty()));
 
         for (int i = 0; i < merges; i++) {
-            List<Shard> activeShards = listActiveShards();
-            Collections.shuffle(activeShards);
-            Tuple2<Shard, Shard> adjacentPair = findAdjacentPair(activeShards.get(0), activeShards);
+            List<Shard> openShards = listOpenShards();
+            Collections.shuffle(openShards);
+            Tuple2<Shard, Shard> adjacentPair = findAdjacentPair(openShards.get(0), openShards);
             mergeShards(adjacentPair.f0(), adjacentPair.f1());
             HELPER.waitForStreamToActivate();
         }
@@ -202,7 +202,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
     public void dynamicStream_1Shard_splitBeforeData() {
         HELPER.createStream(1);
 
-        List<Shard> shards = listActiveShards();
+        List<Shard> shards = listOpenShards();
         splitShard(shards.get(0));
         HELPER.waitForStreamToActivate();
 
@@ -235,9 +235,9 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         assertTrueEventually(() -> assertFalse(results.isEmpty()));
 
         for (int i = 0; i < splits; i++) {
-            List<Shard> activeShards = listActiveShards();
-            Collections.shuffle(activeShards);
-            Shard shard = activeShards.get(0);
+            List<Shard> openShards = listOpenShards();
+            Collections.shuffle(openShards);
+            Shard shard = openShards.get(0);
             splitShard(shard);
             HELPER.waitForStreamToActivate();
         }
@@ -300,15 +300,12 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         //wait for some data to start coming out of the pipeline
         assertTrueEventually(() -> assertFalse(results.isEmpty()));
 
-        Shard shardToSplit = listActiveShards().get(1);
-        splitShard(shardToSplit);
+        List<Shard> openShards = listOpenShards();
 
+        splitShard(openShards.get(0));
         HELPER.waitForStreamToActivate();
 
-        List<Shard> shardsAfterSplit = listActiveShards();
-        Tuple2<Shard, Shard> shardsToMerge = findAdjacentPair(shardsAfterSplit.get(0), shardsAfterSplit);
-        mergeShards(shardsToMerge.f0(), shardsToMerge.f1());
-
+        mergeShards(openShards.get(1), openShards.get(2));
         HELPER.waitForStreamToActivate();
 
         ((JobProxy) job).restart(graceful);
