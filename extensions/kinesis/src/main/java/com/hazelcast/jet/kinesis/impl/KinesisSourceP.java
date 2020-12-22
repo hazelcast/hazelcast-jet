@@ -164,8 +164,9 @@ public class KinesisSourceP extends AbstractProcessor {
                     Shard shard = reader.getShard();
                     logger.info("Shard " + shard.getShardId() + " of stream " + stream + " closed");
                     shardStates.close(shard);
-                    removeShardReader(currentReader);
                     nextReader = 0;
+                    traverser = removeShardReader(currentReader);
+                    emitFromTraverser(traverser);
                     return;
                 }
             }
@@ -230,9 +231,9 @@ public class KinesisSourceP extends AbstractProcessor {
         }
     }
 
-    private void removeShardReader(int index) {
+    private Traverser<Object> removeShardReader(int index) {
         shardReaders.remove(index);
-        eventTimeMapper.removePartition(index);
+        return eventTimeMapper.removePartition(index);
     }
 
     @Nonnull
