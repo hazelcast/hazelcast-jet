@@ -1065,7 +1065,7 @@ public class JetCommandLine implements Runnable {
         if (colValue.length() < colWidth) {
             wsLen = colWidth - colValue.length();
         } else {
-            colValue = colValue.substring(0, colWidth - 3) + "...";
+            colValue = colValue.substring(0, colWidth - 1) + "\u2026";
         }
 
         for (int j = 0; j < wsLen / 2; j++) {
