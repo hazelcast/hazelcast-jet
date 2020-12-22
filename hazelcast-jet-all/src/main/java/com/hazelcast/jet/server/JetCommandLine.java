@@ -91,6 +91,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -241,7 +242,7 @@ public class JetCommandLine implements Runnable {
                             .append("sql> ").toAnsi()).trim();
                 } catch (EndOfFileException | IOError e) {
                     // Ctrl+D, and kill signals result in exit
-                    writer.println(SQLCliPrompts.EXIT_PROMPT);
+                    writer.println(SQLCliConstants.EXIT_PROMPT);
                     writer.flush();
                     break;
                 } catch (UserInterruptException e) {
@@ -261,7 +262,7 @@ public class JetCommandLine implements Runnable {
                     continue;
                 }
                 if ("help".equalsIgnoreCase(command)) {
-                    writer.println(SQLCliPrompts.HELP_PROMPT);
+                    writer.println(SQLCliConstants.HELP_PROMPT);
                     writer.flush();
                     continue;
                 }
@@ -286,7 +287,7 @@ public class JetCommandLine implements Runnable {
                     continue;
                 }
                 if ("exit".equalsIgnoreCase(command)) {
-                    writer.println(SQLCliPrompts.EXIT_PROMPT);
+                    writer.println(SQLCliConstants.EXIT_PROMPT);
                     writer.flush();
                     break;
                 }
@@ -901,6 +902,9 @@ public class JetCommandLine implements Runnable {
                 }
             }
 
+            if (SQLCliConstants.COMMAND_SET.contains(line.toLowerCase(Locale.US))) {
+                return;
+            }
             // These EOFError exceptions are captured in LineReader's
             // readLine() method and it points out that the command
             // being written to console is not finalized and command
@@ -1106,22 +1110,23 @@ public class JetCommandLine implements Runnable {
                 .append("Type 'help' for instructions")
                 .toAnsi();
     }
-    private static class SQLCliPrompts {
+    private static class SQLCliConstants {
 
+        static final Set<String> COMMAND_SET = Set.of("clear", "exit", "help", "history");
         static final String HELP_PROMPT = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("Available Commands:\n")
                 .append("clear\t- Clear the terminal screen\n")
+                .append("exit\t- Exit from the SQL console.\n")
                 .append("help\t- Provide information about available commands.\n")
                 .append("history\t- Show the command history of the current session.\n")
-                .append("exit\t- Exit from the SQL console.\n")
                 .append("Hints:\n")
                 .append("Use semicolon to finalize queries.\n")
                 .append("Press Ctrl+C to cancel streaming queries.\n")
                 .append("For more information, see the Hazelcast Jet SQL documentation:\n")
                 .append("https://jet-start.sh/docs/sql/intro")
                 .toAnsi();
-         static final String EXIT_PROMPT = new AttributedStringBuilder()
+        static final String EXIT_PROMPT = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD)
                 .append('[')
                 .style(AttributedStyle.BOLD.foreground(AttributedStyle.GREEN))
