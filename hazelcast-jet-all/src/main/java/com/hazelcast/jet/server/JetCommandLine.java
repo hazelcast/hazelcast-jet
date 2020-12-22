@@ -245,7 +245,7 @@ public class JetCommandLine implements Runnable {
                     writer.flush();
                     break;
                 } catch (UserInterruptException e) {
-                    // Ctrl+C
+                    // Ctrl+C cancel the not-yet-submitted query
                     continue;
                 }
 
@@ -844,20 +844,22 @@ public class JetCommandLine implements Runnable {
         }
 
         private void stateCheck(String line, int cursor) {
-            boolean containsNonCommentData = false;
+            boolean containsNonWhitespaceData = false;
             int quoteStart = -1;
             int oneLineCommentStart = -1;
             int multiLineCommentStart = -1;
-            int lastNonQuoteCommentIndex = 0;
+            int lastNonquoteAndNoncommentIdx = 0;
 
             for (int i = 0; i < line.length(); i++) {
+                // If a one line comment, a multiline comment or a quote is not started before,
+                // check if the character we're on is a quote character
                 if (oneLineCommentStart == -1
                         && multiLineCommentStart == -1
                         && quoteStart < 0
                         && (isQuoteChar(line, i))) {
                     // Start a quote block
                     quoteStart = i;
-                    containsNonCommentData = true;
+                    containsNonWhitespaceData = true;
                 } else {
                     char currentChar = line.charAt(i);
                     if (quoteStart >= 0) {
@@ -866,31 +868,43 @@ public class JetCommandLine implements Runnable {
                             // End the block; arg could be empty, but that's fine
                             quoteStart = -1;
                         }
-                    } else if (oneLineCommentStart == -1 && isMultiLineComment(line, i)) {
+                    } else if (oneLineCommentStart == -1 &&
+                            line.regionMatches(i, "/*", 0, "/*".length())) {
+                        // Enter the multiline comment block
                         multiLineCommentStart = i;
+                        containsNonWhitespaceData = true;
                     } else if (multiLineCommentStart >= 0) {
-                        if (i - multiLineCommentStart > 2
-                                && currentChar == '/' && line.charAt(i - 1) == '*') {
-                            // End the block; arg could be empty, but that's fine
+                        // In a multiline comment block
+                        if (i - multiLineCommentStart > 2 &&
+                                line.regionMatches(i - 1, "*/", 0, "*/".length())) {
+                            // End the multiline block
                             multiLineCommentStart = -1;
                         }
-                    } else if (oneLineCommentStart == -1 && isOneLineComment(line, i)) {
+                    } else if (oneLineCommentStart == -1 &&
+                            line.regionMatches(i, "--", 0, "--".length())) {
+                        // Enter the one line comment block
                         oneLineCommentStart = i;
+                        containsNonWhitespaceData = true;
                     } else if (oneLineCommentStart >= 0) {
+                        // In a one line comment
                         if (currentChar == '\n') {
-                            // End the block; arg could be empty, but that's fine
+                            // End the one line comment block
                             oneLineCommentStart = -1;
                         }
                     } else {
                         // Not in a quote or comment block
-                        containsNonCommentData = true;
                         if (!Character.isWhitespace(currentChar)) {
-                            lastNonQuoteCommentIndex = i;
+                            containsNonWhitespaceData = true;
+                            lastNonquoteAndNoncommentIdx = i;
                         }
                     }
                 }
             }
 
+            // These EOFError exceptions are captured in LineReader's
+            // readLine() method and it points out that the command
+            // being written to console is not finalized and command
+            // won't be read
             if (isEofOnEscapedNewLine() && isEscapeChar(line, line.length() - 1)) {
                 throw new EOFError(-1, cursor, "Escaped new line");
             }
@@ -904,13 +918,8 @@ public class JetCommandLine implements Runnable {
                 throw new EOFError(-1, cursor, "Missing end of comment", "**");
             }
 
-            final int lastNonQuoteCommentIndex1 =
-                    lastNonQuoteCommentIndex == line.length() - 1
-                            && lastNonQuoteCommentIndex - 1 >= 0
-                            ? lastNonQuoteCommentIndex - 1 : lastNonQuoteCommentIndex;
-            if (containsNonCommentData
-                    && !isLineFinishedWithSemicolon(
-                    lastNonQuoteCommentIndex1, line)) {
+            if (containsNonWhitespaceData
+                    && !isLineFinishedWithSemicolon(lastNonquoteAndNoncommentIdx, line, cursor)) {
                 throw new EOFError(-1, cursor, "Missing semicolon (;)");
             }
         }
@@ -926,18 +935,17 @@ public class JetCommandLine implements Runnable {
          * @param buffer Input line to check for ending with ';'
          * @return true if the ends with non-commented ';'
          */
-        private boolean isLineFinishedWithSemicolon(
-                final int lastNonQuoteCommentIndex, final CharSequence buffer) {
+        private boolean isLineFinishedWithSemicolon(final int lastNonQuoteCommentIndex,
+                                                    final CharSequence buffer,
+                                                    int cursor) {
             final String line = buffer.toString();
             boolean lineEmptyOrFinishedWithSemicolon = line.isEmpty();
             boolean requiredSemicolon = false;
-            String[] oneLineComments = {"#", "--"};
             for (int i = lastNonQuoteCommentIndex; i < line.length(); i++) {
                 if (';' == line.charAt(i)) {
                     lineEmptyOrFinishedWithSemicolon = true;
                     continue;
-                } else if (i < line.length() - 1
-                        && line.regionMatches(i, "/*", 0, "/*".length())) {
+                } else if (line.regionMatches(i, "/*", 0, "/*".length())) {
                     int nextNonCommentedChar = line.indexOf("*/", i + "/*".length());
                     // From one side there is an assumption that multi-line comment
                     // is completed, from the other side nextNonCommentedChar
@@ -947,16 +955,12 @@ public class JetCommandLine implements Runnable {
                         i = nextNonCommentedChar + "*/".length();
                     }
                 } else {
-                    for (String oneLineCommentString : oneLineComments) {
-                        if (i <= buffer.length() - oneLineCommentString.length()
-                                && oneLineCommentString
-                                .regionMatches(0, line, i, oneLineCommentString.length())) {
-                            int nextLine = line.indexOf('\n', i + 1);
-                            if (nextLine > lastNonQuoteCommentIndex) {
-                                i = nextLine;
-                            } else {
-                                return !requiredSemicolon || lineEmptyOrFinishedWithSemicolon;
-                            }
+                    if (line.regionMatches(i, "--", 0, "--".length())) {
+                        int nextLine = line.indexOf('\n', i + 1);
+                        if (nextLine > lastNonQuoteCommentIndex) {
+                            i = nextLine;
+                        } else {
+                            return !requiredSemicolon || lineEmptyOrFinishedWithSemicolon;
                         }
                     }
                 }
@@ -969,35 +973,6 @@ public class JetCommandLine implements Runnable {
                 }
             }
             return !requiredSemicolon || lineEmptyOrFinishedWithSemicolon;
-        }
-
-        private boolean isMultiLineComment(final CharSequence buffer, final int pos) {
-            return pos < buffer.length() - 1
-                    && buffer.charAt(pos) == '/'
-                    && buffer.charAt(pos + 1) == '*';
-        }
-
-        private boolean isOneLineComment(final String buffer, final int pos) {
-            String[] oneLineComments = {"#", "--"};
-            final int newLinePos = buffer.indexOf('\n');
-            if ((newLinePos == -1 || newLinePos > pos)
-                    && buffer.substring(0, pos).trim().isEmpty()) {
-                for (String oneLineCommentString : oneLineComments) {
-                    if (pos <= buffer.length() - oneLineCommentString.length()
-                            && oneLineCommentString
-                            .regionMatches(0, buffer, pos, oneLineCommentString.length())) {
-                        return true;
-                    }
-                }
-            }
-            for (String oneLineCommentString : oneLineComments) {
-                if (pos <= buffer.length() - oneLineCommentString.length()
-                        && oneLineCommentString
-                        .regionMatches(0, buffer, pos, oneLineCommentString.length())) {
-                    return true;
-                }
-            }
-            return false;
         }
     }
 
@@ -1141,7 +1116,7 @@ public class JetCommandLine implements Runnable {
                 .append("history\t- Show the command history of the current session.\n")
                 .append("exit\t- Exit from the SQL console.\n")
                 .append("Hints:\n")
-                .append("Use semicolon to finalize commands.\n")
+                .append("Use semicolon to finalize queries.\n")
                 .append("Press Ctrl+C to cancel streaming queries.\n")
                 .append("For more information, see the Hazelcast Jet SQL documentation:\n")
                 .append("https://jet-start.sh/docs/sql/intro")
