@@ -88,8 +88,8 @@ public class SqlFilterProjectTest extends SqlTestSupport {
                         + ") AS t (a, b) "
                         + "WHERE a + b + 0 + CAST('1' AS TINYINT) > 4",
                 asList(
-                        new Row((byte) -2),
-                        new Row((byte) -4)
+                        new Row((short) -2),
+                        new Row((short) -4)
                 )
         );
     }
