@@ -63,7 +63,11 @@ public class KinesisHelper {
         return range.contains(startingHashKey);
     }
 
-    public static ListShardsRequest listAllShardsRequest(String stream, @Nullable String nextToken, ShardFilterType filterType) {
+    public static ListShardsRequest listAllShardsRequest(
+            String stream,
+            @Nullable String nextToken,
+            ShardFilterType filterType
+    ) {
         ListShardsRequest request = new ListShardsRequest();
         if (nextToken == null) {
             request.setStreamName(stream);
