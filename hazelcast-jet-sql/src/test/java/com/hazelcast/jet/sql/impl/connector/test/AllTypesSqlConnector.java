@@ -22,8 +22,9 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import com.hazelcast.jet.sql.impl.connector.SqlConnector;
+import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
+import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -92,6 +93,8 @@ public class AllTypesSqlConnector implements SqlConnector {
             OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC),
             null
     };
+
+    public static final SqlTestSupport.Row ALL_TYPES_ROW = new SqlTestSupport.Row(VALUES);
 
     public static void create(SqlService sqlService, String tableName) {
         sqlService.execute("CREATE MAPPING " + tableName + " TYPE " + AllTypesSqlConnector.TYPE_NAME);

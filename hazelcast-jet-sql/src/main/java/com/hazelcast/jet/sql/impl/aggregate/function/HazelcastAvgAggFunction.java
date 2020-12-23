@@ -18,6 +18,7 @@ package com.hazelcast.jet.sql.impl.aggregate.function;
 
 import com.hazelcast.sql.impl.calcite.validate.HazelcastCallBinding;
 import com.hazelcast.sql.impl.calcite.validate.operand.TypedOperandChecker;
+import com.hazelcast.sql.impl.calcite.validate.operators.ReplaceUnknownOperandTypeInference;
 import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastAggFunction;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeUtils;
@@ -27,6 +28,8 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.util.Optionality;
 
+import static com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeUtils.isNumericIntegerType;
+import static org.apache.calcite.sql.type.SqlTypeName.BIGINT;
 import static org.apache.calcite.sql.type.SqlTypeName.DECIMAL;
 import static org.apache.calcite.sql.type.SqlTypeName.DOUBLE;
 
@@ -37,7 +40,7 @@ public class HazelcastAvgAggFunction extends HazelcastAggFunction {
                 "AVG",
                 SqlKind.AVG,
                 ReturnTypes.AVG_AGG_FUNCTION,
-                null,
+                new ReplaceUnknownOperandTypeInference(BIGINT),
                 null,
                 SqlFunctionCategory.NUMERIC,
                 false,
@@ -55,7 +58,7 @@ public class HazelcastAvgAggFunction extends HazelcastAggFunction {
             }
         }
 
-        RelDataType resultType = HazelcastTypeUtils.isNumericIntegerType(operandType)
+        RelDataType resultType = isNumericIntegerType(operandType) || operandType.getSqlTypeName() == DECIMAL
                 ? HazelcastTypeFactory.INSTANCE.createSqlType(DECIMAL)
                 : HazelcastTypeFactory.INSTANCE.createSqlType(DOUBLE);
 

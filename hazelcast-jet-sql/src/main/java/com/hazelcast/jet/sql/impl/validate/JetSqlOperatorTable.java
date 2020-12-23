@@ -42,6 +42,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlUtil;
+import org.apache.calcite.sql.fun.SqlMapValueConstructor;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.FamilyOperandTypeChecker;
 import org.apache.calcite.sql.type.InferTypes;
@@ -76,6 +77,9 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
             new HazelcastCollectionTableOperator("TABLE", SqlModality.RELATION);
     public static final SqlSpecialOperator ARGUMENT_ASSIGNMENT =
             new HazelcastArgumentAssignmentOperator();
+    // TODO [viliam] this seems to work, but it doesn't extend the hz-specific classes
+    public static final SqlMapValueConstructor MAP_VALUE_CONSTRUCTOR =
+            new SqlMapValueConstructor();
 
     public static final SqlFunction SUM = new HazelcastSumAggFunction();
     public static final SqlFunction COUNT = new HazelcastCountAggFunction();
