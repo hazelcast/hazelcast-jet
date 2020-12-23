@@ -24,30 +24,31 @@ from and write data into Kinesis via Jet.
 
 ## Key Concepts
 
-A **shard** is the base throughput unit of KDS. One shard provides a
-capacity of 1MB/sec data input and 2MB/sec data output. One shard can
-support up to 1000 record publications per second. You will specify the
-number of shards needed when you create a data stream. For example, you
-can create a data stream with two shards. This data stream has a
-throughput of 2MB/sec data input and 4MB/sec data output and allows up
-to 2000 record publications per second. You can monitor shard-level
-metrics in Kinesis and add or remove shards from your data stream
-dynamically as your data throughput changes by resharding the data
-stream.
+A **shard** is the base throughput unit of KDS. Shards help break the
+stream's data flow into independent substreams, which can be processed
+in parallel. Shards preserve the order of the data items they ingest
+while ordering among different shards' items is undefined. One shard
+provides a capacity of 1MiB/sec data input and 2MiB/sec data output. One
+shard can support up to 1000 record publications per second. You will
+specify the number of shards needed when you create a data stream. For
+example, you can create a data stream with two shards. This data stream
+has a throughput of 2MiB/sec data input and 4MiB/sec data output and
+allows up to 2000 record publications per second. You can monitor
+shard-level metrics in Kinesis and add or remove shards from your data
+stream dynamically as your data throughput changes by resharding the
+data stream.
 
 A **record** is the unit of data stored in Kinesis. A record is composed
 of a sequence number, partition key, and data blob. Data blob is the
 data of interest your data producer adds to a data stream. The maximum
-size of a data blob (the data payload before Base64-encoding) is 1
-megabyte (MB).
+size of a data blob (the data payload before Base64-encoding) is 1 MiB.
 
-A **partition key** is used to segregate and route records to different
-shards of a data stream. A partition key is specified by your data
-producer while adding data to KDS. For example, assuming you have a data
-stream with two shards (shard 1 and shard 2). You can configure your
-data producer to use two partition keys (key A and key B) so that all
-records with key A are added to shard 1, and all records with key B are
-added to shard 2.
+A **partition key** is used to assign records to different shards of a
+data stream. Items with the same partition key always belong to the same
+shard. Since shards preserve the order of the items they ingest, the
+ordering of records with the same partition key is also preserved. The
+partition key is specified by your data producer while adding data to
+KDS.
 
 A **sequence number** is a unique identifier for each record. Sequence
 numbers are assigned by KDS when a data producer publishes data into it.
@@ -80,15 +81,15 @@ with KDS:
 Amazon Kinesis Data Streams enforces quite a few quotas and limits,
 which our sources and sinks need to comply with:
 
-* A single shard can ingest up to 1 MB of data per second (including
+* A single shard can ingest up to 1 MiB of data per second (including
   partition keys) or 1,000 records per second for writes.
-* The maximum size of the data payload of a record is 1 MB.
+* The maximum size of the data payload of a record is 1 MiB.
 * The
   [GetRecords](https://docs.aws.amazon.com/kinesis/latest/APIReference/API_GetRecords.html)
-  operation can retrieve up to 10 MB of data per call from a single
+  operation can retrieve up to 10 MiB of data per call from a single
   shard and up to 10,000 records per call.
 * Each shard can support up to 5 GetRecords operations per second.
-* Each shard can support up to a maximum total data read rate of 2 MB
+* Each shard can support up to a maximum total data read rate of 2 MiB
   per second.
 * The
   [ListShards](https://docs.aws.amazon.com/kinesis/latest/APIReference/API_ListShards.html)
@@ -99,7 +100,7 @@ which our sources and sinks need to comply with:
 * The
   [PutRecords](https://docs.aws.amazon.com/kinesis/latest/APIReference/API_PutRecords.html)
   operation can write at most 500 records into the stream. Each record
-  in the request can be as large as 1MB, up to a limit of 5MB for the
+  in the request can be as large as 1MiB, up to a limit of 5MiB for the
   entire request, including partition keys. Each shard can support
   writes up to 1,000 records per second, up to a maximum data write
   total of 1 MiB per second.
@@ -202,8 +203,8 @@ split), possibly located in an entirely different Jet cluster member.
 
 Moreover, it's not enough to finish reading from the parent before
 reading from the children. Even if that were achieved, data from parents
-might overtake data from children further down the Jet pipeline, in its
-various parallel components. A Kinesis source would need to make sure
+might overtake data from children further down the Jet pipeline, simply
+because it's a parallel flow. A Kinesis source would need to make sure
 that it has read all data from the parents and that data has fully
 passed through the Jet pipeline before starting to read from the
 children. Only then could it provide the same ordering as KDS while
@@ -280,9 +281,9 @@ Chain](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.h
 will be followed.
 
 If `retry strategy` is not specified, then a default of our definition
-will be used (maximum 10 retries, with exponential backoff limited to
-a maximum of 3 seconds). A source's retry strategy applies to failures
-of reading records from or listing shards of a stream.
+will be used (retry indefinitely, with exponential backoff limited to a
+maximum of 3 seconds). A source's retry strategy applies to failures of
+reading records from or listing shards of a stream.
 
 The actual source created will be of type
 `StreamSource<Map.Entry<String, byte[]>>`, so basically a stream of
@@ -290,8 +291,8 @@ partition key - record data blob pairs.
 
 ## Sink
 
-The Kinesis sink is a _distributed_, and _fault-tolerant_ data sink for
-Jet. It supports both _streaming_ and _batching_ pipelines. The
+The Kinesis sink is a _distributed_, _fault-tolerant_ data sink for Jet.
+It supports both _streaming_ and _batching_ pipelines. The
 fault-tolerance guarantee it can offer is only _at-least-once_ since
 Kinesis does not offer transaction support.
 
@@ -342,8 +343,8 @@ The flow control process is _adaptive_ in the sense that:
 
 * it kicks in only when batches start failing due to shard ingestion
   rates being tripped
-* until failures repeat, it keeps quickly increasing the sleep delays
-  to stop them from happening
+* as long as failures repeat, it keeps quickly increasing the sleep
+  delays to stop them from happening
 * once failures stop, it slowly decreases the sleep delays until they
   are eliminated (i.e., the data volume spike was only temporary) or
   until failures start happening again
@@ -377,24 +378,17 @@ items belonging to the same partition key. However, when the [flow
 control](#flow-control) mechanism kicks in, the ordering might be lost
 on occasion.
 
-This unfortunate fact originates in the way how KDS handles shard
-ingestion rate violations. When KDS receives a batch to be ingested, it
-processes each item in it one-by-one, and if some fail, it doesn't stop
-processing the batch. The result is that some items from a batch get
-rejected, some get ingested, but in a random manner. The sink does
-resend the un-ingested item, they won't get lost, but there is nothing
-it can do to preserve the initial ordering. This is very unfortunate
-since all that would be needed for avoiding this problem would be for
-Kinesis to reject all remaining items from the batch once one of them
-trips the ingestion rate limit. The designers probably made the choice
-they did to save on data traffic.
-
-Nothing that we can do about it at this point needs to be documented,
-and users of the sink need to be aware.
+This fact originates in the way how KDS handles shard ingestion rate
+violations. When KDS receives a batch to be ingested, it processes each
+item in it one-by-one, and if some fail, it doesn't stop processing the
+batch. The result is that some items from a batch get rejected, some get
+ingested, but in a random manner. The sink does resend the un-ingested
+item, they won't get lost, but there is nothing it can do to preserve
+the initial ordering.
 
 ### Fault Tolerance
 
-Since there is no transaction support in Kinesis the sink can't support
+Since there is no transaction support in Kinesis, the sink can't support
 _exactly-once_ processing. It can, however, support _at-least-once_
 processing. It does that by ensuring it flushes all data it has taken
 ownership of (taken from the `Inbox` is the more accurate, developer

@@ -102,13 +102,11 @@ public final class KinesisSources {
      */
     public static final class Builder {
 
-        private static final int MAX_RETRY_ATTEMPTS = 10;
         private static final long INITIAL_RETRY_TIMEOUT_MS = 100L;
         private static final double EXPONENTIAL_BACKOFF_MULTIPLIER = 2.0;
         private static final long MAXIMUM_RETRY_TIMEOUT_MS = 3_000L;
 
         private static final RetryStrategy DEFAULT_RETRY_STRATEGY = RetryStrategies.custom()
-                .maxAttempts(MAX_RETRY_ATTEMPTS)
                 .intervalFunction(IntervalFunction.exponentialBackoffWithCap(
                         INITIAL_RETRY_TIMEOUT_MS, EXPONENTIAL_BACKOFF_MULTIPLIER, MAXIMUM_RETRY_TIMEOUT_MS))
                 .build();
