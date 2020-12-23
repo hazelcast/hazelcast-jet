@@ -824,8 +824,7 @@ public class JetCommandLine implements Runnable {
 
     /**
      * A parser for SQL-like inputs. Commands are terminated with a semicolon.
-     * It is mainly taken from
-     *
+     * It is adapted from
      * <a href="https://github.com/julianhyde/sqlline/blob/master/src/main/java/sqlline/SqlLineParser.java">
      * SqlLineParser</a>
      * which is licensed under the BSD-3-Clause License
@@ -849,7 +848,6 @@ public class JetCommandLine implements Runnable {
             int quoteStart = -1;
             int oneLineCommentStart = -1;
             int multiLineCommentStart = -1;
-            int lastNonquoteAndNoncommentIdx = 0;
 
             for (int i = 0; i < line.length(); i++) {
                 // If a one line comment, a multiline comment or a quote is not started before,
@@ -896,7 +894,6 @@ public class JetCommandLine implements Runnable {
                         // Not in a quote or comment block
                         if (!Character.isWhitespace(currentChar)) {
                             containsNonWhitespaceData = true;
-                            lastNonquoteAndNoncommentIdx = i;
                         }
                     }
                 }
@@ -918,66 +915,20 @@ public class JetCommandLine implements Runnable {
                         line.charAt(quoteStart) == '\'' ? "quote" : "dquote");
             }
 
+            if (oneLineCommentStart != -1) {
+                throw new EOFError(-1, cursor, "One line comment");
+            }
+
             if (multiLineCommentStart != -1) {
                 throw new EOFError(-1, cursor, "Missing end of comment", "**");
             }
-
-            if (containsNonWhitespaceData
-                    && !isLineFinishedWithSemicolon(lastNonquoteAndNoncommentIdx, line, cursor)) {
+            int lastSemicolonIdx = line.lastIndexOf(';');
+            if (containsNonWhitespaceData &&
+                    (lastSemicolonIdx == -1 || lastSemicolonIdx >= cursor)) {
                 throw new EOFError(-1, cursor, "Missing semicolon (;)");
             }
         }
 
-        /**
-         * Returns whether a line (already trimmed) ends with a semicolon that
-         * is not commented with one line comment.
-         *
-         * <p>ASSUMPTION: to have correct behavior, this method must be
-         * called after quote and multi-line comments check calls, which implies that
-         * there are no non-finished quotations or multi-line comments.
-         *
-         * @param buffer Input line to check for ending with ';'
-         * @return true if the ends with non-commented ';'
-         */
-        private boolean isLineFinishedWithSemicolon(final int lastNonQuoteCommentIndex,
-                                                    final CharSequence buffer,
-                                                    int cursor) {
-            final String line = buffer.toString();
-            boolean lineEmptyOrFinishedWithSemicolon = line.isEmpty();
-            boolean requiredSemicolon = false;
-            for (int i = lastNonQuoteCommentIndex; i < line.length(); i++) {
-                if (';' == line.charAt(i)) {
-                    lineEmptyOrFinishedWithSemicolon = true;
-                    continue;
-                } else if (line.regionMatches(i, "/*", 0, "/*".length())) {
-                    int nextNonCommentedChar = line.indexOf("*/", i + "/*".length());
-                    // On one hand there is an assumption that multi-line comment
-                    // is completed, on the other hand nextNonCommentedChar
-                    // could be negative or less than lastNonQuoteCommentIndex
-                    // in case '/*' is a part of quoting string.
-                    if (nextNonCommentedChar > lastNonQuoteCommentIndex) {
-                        i = nextNonCommentedChar + "*/".length();
-                    }
-                } else {
-                    if (line.regionMatches(i, "--", 0, "--".length())) {
-                        int nextLine = line.indexOf('\n', i + 1);
-                        if (nextLine > lastNonQuoteCommentIndex) {
-                            i = nextLine;
-                        } else {
-                            return !requiredSemicolon || lineEmptyOrFinishedWithSemicolon;
-                        }
-                    }
-                }
-                requiredSemicolon = i == line.length()
-                        ? requiredSemicolon
-                        : !lineEmptyOrFinishedWithSemicolon
-                        || !Character.isWhitespace(line.charAt(i));
-                if (requiredSemicolon) {
-                    lineEmptyOrFinishedWithSemicolon = false;
-                }
-            }
-            return !requiredSemicolon || lineEmptyOrFinishedWithSemicolon;
-        }
     }
 
     private void executeSqlCmd(
