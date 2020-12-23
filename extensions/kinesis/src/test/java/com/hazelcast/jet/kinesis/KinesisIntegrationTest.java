@@ -52,7 +52,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.pipeline.test.Assertions.assertCollectedEventually;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.stream.Collectors.toList;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -154,8 +154,12 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         HELPER.createStream(2);
 
         List<Shard> shards = listOpenShards();
-        mergeShards(shards.get(0), shards.get(1));
+        Shard shard1 = shards.get(0);
+        Shard shard2 = shards.get(1);
+
+        mergeShards(shard1, shard2);
         HELPER.waitForStreamToActivate();
+        assertOpenShards(1, shard1, shard2);
 
         jet().newJob(getPipeline());
 
@@ -189,9 +193,14 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         for (int i = 0; i < merges; i++) {
             List<Shard> openShards = listOpenShards();
             Collections.shuffle(openShards);
+
             Tuple2<Shard, Shard> adjacentPair = findAdjacentPair(openShards.get(0), openShards);
-            mergeShards(adjacentPair.f0(), adjacentPair.f1());
+            Shard shard1 = adjacentPair.f0();
+            Shard shard2 = adjacentPair.f1();
+
+            mergeShards(shard1, shard2);
             HELPER.waitForStreamToActivate();
+            assertOpenShards(shards - i - 1, shard1, shard2);
         }
 
         assertMessages(expectedMessages, false, false);
@@ -202,9 +211,11 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
     public void dynamicStream_1Shard_splitBeforeData() {
         HELPER.createStream(1);
 
-        List<Shard> shards = listOpenShards();
-        splitShard(shards.get(0));
+        Shard shard = listOpenShards().get(0);
+
+        splitShard(shard);
         HELPER.waitForStreamToActivate();
+        assertOpenShards(2, shard);
 
         jet().newJob(getPipeline());
 
@@ -234,12 +245,15 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         //wait for some data to start coming out of the pipeline, before starting the splits
         assertTrueEventually(() -> assertFalse(results.isEmpty()));
 
+        List<Shard> openShards;
         for (int i = 0; i < splits; i++) {
-            List<Shard> openShards = listOpenShards();
+            openShards = listOpenShards();
             Collections.shuffle(openShards);
             Shard shard = openShards.get(0);
+
             splitShard(shard);
             HELPER.waitForStreamToActivate();
+            assertOpenShards(openShards.size() + 1, shard);
         }
 
         assertMessages(expectedMessages, false, false);
@@ -302,15 +316,32 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
 
         List<Shard> openShards = listOpenShards();
 
-        splitShard(openShards.get(0));
-        HELPER.waitForStreamToActivate();
+        Shard shard1 = openShards.get(0);
+        Shard shard2 = openShards.get(1);
+        Shard shard3 = openShards.get(2);
 
-        mergeShards(openShards.get(1), openShards.get(2));
+        splitShard(shard1);
         HELPER.waitForStreamToActivate();
+        assertOpenShards(4, shard1);
+
+        mergeShards(shard2, shard3);
+        HELPER.waitForStreamToActivate();
+        assertOpenShards(3, shard2, shard3);
 
         ((JobProxy) job).restart(graceful);
 
         assertMessages(expectedMessages, false, !graceful);
+    }
+
+    private void assertOpenShards(int count, Shard... excludedShards) {
+        assertTrueEventually(() -> {
+            Set<String> openShards = listOpenShards().stream().map(Shard::getShardId).collect(Collectors.toSet());
+            assertEquals(count, openShards.size());
+            for (Shard excludedShard : excludedShards) {
+                assertFalse(openShards.contains(excludedShard.getShardId()));
+            }
+        });
+
     }
 
 }
