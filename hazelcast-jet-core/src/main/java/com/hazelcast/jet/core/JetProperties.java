@@ -94,6 +94,10 @@ public final class JetProperties {
      * Setting this property to {@code true} allows Jet to start up even on
      * mismatch. This may be helpful if the user needs some slight IMDG version
      * change (eg. to use a hotfix).
+     * <p>
+     * <strong>NOTE:</strong> since Jet must read this property at a very early
+     * point in startup, it doesn't have an effect when you set it in a
+     * Hazelcast configuration file. You must set it as a system property.
      *
      * @since 4.4
      */
