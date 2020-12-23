@@ -45,6 +45,8 @@ import com.hazelcast.jet.impl.JobSummary;
 import com.hazelcast.jet.impl.config.ConfigProvider;
 import com.hazelcast.jet.server.JetCommandLine.JetVersionProvider;
 import com.hazelcast.sql.HazelcastSqlException;
+import com.hazelcast.sql.SqlColumnMetadata;
+import com.hazelcast.sql.SqlColumnType;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlRowMetadata;
@@ -951,18 +953,20 @@ public class JetCommandLine implements Runnable {
                 out.println(message);
                 return;
             }
-
+            SqlRowMetadata rowMetadata = sqlResult.getRowMetadata();
+            int[] colWidths = determineColumnWidths(rowMetadata);
             // this is a result with rows. Print the header and rows, watch for concurrent cancellation
-            printMetadataInfo(sqlResult.getRowMetadata(), colWidth, out);
+            printMetadataInfo(rowMetadata, colWidths, out);
+
             int rowCount = 0;
 
             for (SqlRow row : sqlResult) {
                 rowCount++;
-                printRow(row, colWidth, out);
+                printRow(row, colWidths, out);
             }
 
             // bottom line after all the rows
-            printSeparatorLine(sqlResult.getRowMetadata().getColumnCount(), colWidth, out);
+            printSeparatorLine(sqlResult.getRowMetadata().getColumnCount(), colWidths, out);
 
             String message = new AttributedStringBuilder()
                     .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
@@ -980,35 +984,79 @@ public class JetCommandLine implements Runnable {
         }
     }
 
-    private static void printMetadataInfo(SqlRowMetadata metadata, int colWidth, PrintWriter out) {
-        int colSize = metadata.getColumnCount();
-        printSeparatorLine(colSize, colWidth, out);
+    private static int[] determineColumnWidths(SqlRowMetadata metadata) {
+        int colCount = metadata.getColumnCount();
+        int[] colWidths = new int[colCount];
+        for (int i = 0; i < colCount; i++) {
+            SqlColumnMetadata colMetadata = metadata.getColumn(i);
+            SqlColumnType type = colMetadata.getType();
+            String name = colMetadata.getName();
+            switch (type) {
+                case BOOLEAN:
+                    colWidths[i] = Math.max(5, Math.min(name.length(), 20));
+                    break;
+                case BIGINT:
+                case VARCHAR:
+                case OBJECT:
+                    colWidths[i] = 20;
+                    break;
+                case DATE:
+                    colWidths[i] = Math.max(10, Math.min(name.length(), 20));
+                    break;
+                case TIMESTAMP_WITH_TIME_ZONE:
+                case DECIMAL: // Unlimited precision
+                case REAL: // Unlimited precision
+                case DOUBLE: // Unlimited precision
+                    colWidths[i] = 25;
+                    break;
+                case INTEGER:
+                    colWidths[i] = Math.max(12, Math.min(name.length(), 20));
+                    break;
+                case NULL:
+                case TINYINT:
+                    colWidths[i] = Math.max(4, Math.min(name.length(), 20));
+                    break;
+                case SMALLINT:
+                    colWidths[i] = Math.max(6, Math.min(name.length(), 20));
+                    break;
+                case TIMESTAMP:
+                    colWidths[i] = Math.max(19, Math.min(name.length(), 20));
+                    break;
+            }
+        }
+        return colWidths;
+    }
+
+    private static void printMetadataInfo(SqlRowMetadata metadata, int[] colWidths, PrintWriter out) {
+        int colCount = metadata.getColumnCount();
+        printSeparatorLine(colCount, colWidths, out);
         AttributedStringBuilder builder = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
         builder.append("|");
-        for (int i = 0; i < colSize; i++) {
+        for (int i = 0; i < colCount; i++) {
             String colName = metadata.getColumn(i).getName();
-            centralize(colWidth, builder, colName);
+            centralize(colWidths[i], builder, colName);
         }
         out.println(builder.toAnsi());
-        printSeparatorLine(colSize, colWidth, out);
+        printSeparatorLine(colCount, colWidths, out);
         out.flush();
     }
 
-    private static void printRow(SqlRow row, int colWidth, PrintWriter out) {
+    private static void printRow(SqlRow row, int[] colWidths, PrintWriter out) {
         AttributedStringBuilder builder = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
         builder.append("|");
-        int colSize = row.getMetadata().getColumnCount();
-        for (int i = 0; i < colSize; i++) {
+        int columnCount = row.getMetadata().getColumnCount();
+        for (int i = 0; i < columnCount; i++) {
             String colValue = row.getObject(i).toString();
-            centralize(colWidth, builder, colValue);
+            centralize(colWidths[i], builder, colValue);
         }
         out.println(builder.toAnsi());
         out.flush();
     }
 
     private static void centralize(int colWidth, AttributedStringBuilder builder, String colValue) {
+        colValue = colValue.replace("\n", "\\n");
         builder.style(AttributedStyle.DEFAULT.foreground(PRIMARY_COLOR));
         int wsLen = 0;
         if (colValue.length() < colWidth) {
@@ -1028,12 +1076,12 @@ public class JetCommandLine implements Runnable {
         builder.append('|');
     }
 
-    private static void printSeparatorLine(int colSize, int colWidth, PrintWriter out) {
+    private static void printSeparatorLine(int colSize, int[] colWidths, PrintWriter out) {
         AttributedStringBuilder builder = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
         builder.append('+');
         for (int i = 0; i < colSize; i++) {
-            for (int j = 0; j < colWidth; j++) {
+            for (int j = 0; j < colWidths[i]; j++) {
                 builder.append('-');
             }
             builder.append('+');
