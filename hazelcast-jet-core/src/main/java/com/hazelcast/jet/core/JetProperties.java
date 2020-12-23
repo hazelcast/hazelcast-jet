@@ -45,10 +45,10 @@ public final class JetProperties {
             = new HazelcastProperty("jet.job.scan.period", SECONDS.toMillis(5), MILLISECONDS);
 
     /**
-     * Whether a JVM shutdown hook is registered to shutdown the node gracefully
-     * when the process is terminated. The shutdown hook will terminate all running
-     * jobs and then gracefully terminate the note, in a way that is
-     * equivalent to calling {@link JetInstance#shutdown()}.
+     * Whether a JVM shutdown hook is registered to shutdown the node
+     * gracefully when the process is terminated. The shutdown hook will
+     * terminate all running jobs and then gracefully terminate the note, in a
+     * way that is equivalent to calling {@link JetInstance#shutdown()}.
      *
      * @since 3.2
      */
@@ -79,9 +79,9 @@ public final class JetProperties {
             = new HazelcastProperty("jet.job.results.max.size", 1_000);
 
     /**
-     * Root of Jet installation. Used as default location for the lossless restart
-     * store. By default it will be automatically set to the start of the Jet
-     * installation path.
+     * Root of Jet installation. Used as default location for the lossless
+     * restart store. By default it will be automatically set to the start of
+     * the Jet installation path.
      *
      * @since 3.2
      */
@@ -89,9 +89,11 @@ public final class JetProperties {
             = new HazelcastProperty("jet.home", "");
 
     /**
-     * If {@code false}, Jet will check during initialization that IMDG module has compatible version.
-     * Changing to {@code true} may be helpful if user needs some slight IMDG version change
-     * (eg. for some hotfix). Default value is false (check will be performed).
+     * Hazelcast Jet normally checks that the version of IMDG on the classpath
+     * matches exactly the version it is built for, and fails on mismatch.
+     * Setting this property to {@code true} allows Jet to start up even on
+     * mismatch. This may be helpful if the user needs some slight IMDG version
+     * change (eg. to use a hotfix).
      *
      * @since 4.4
      */
@@ -102,13 +104,15 @@ public final class JetProperties {
      * The minimum time in microseconds the cooperative worker threads will
      * sleep if none of the tasklets made any progress. Lower values increase
      * idle CPU usage but may result in decreased latency. Higher values will
-     * increase latency and very high values (>10000µs) will also limit throughput.
+     * increase latency and very high values (>10000µs) will also limit the
+     * throughput.
      * <p>
      * The default is value is {@code 25µs}.
      * <p>
-     * Note: the underlying {@link LockSupport#parkNanos(long)} call may actually
-     * sleep longer depending on the operating system (up to 15000µs on Windows).
-     * See the <a href="https://hazelcast.com/blog/locksupport-parknanos-under-the-hood-and-the-curious-case-of-parking/">
+     * Note: the underlying {@link LockSupport#parkNanos(long)} call may
+     * actually sleep longer depending on the operating system (up to 15000µs
+     * on Windows). See the <a
+     * href="https://hazelcast.com/blog/locksupport-parknanos-under-the-hood-and-the-curious-case-of-parking/">
      * Hazelcast blog post about this subject</a> for more details.
      * <p>
      * See also: {@link #JET_IDLE_COOPERATIVE_MAX_MICROSECONDS}
@@ -122,13 +126,15 @@ public final class JetProperties {
      * The maximum time in microseconds the cooperative worker threads will
      * sleep if none of the tasklets made any progress. Lower values increase
      * idle CPU usage but may result in decreased latency. Higher values will
-     * increase latency and very high values (>10000µs) will also limit throughput.
+     * increase latency and very high values (>10000µs) will also limit the
+     * throughput.
      * <p>
      * The default is value is {@code 500µs}.
      * <p>
-     * Note: the underlying {@link LockSupport#parkNanos(long)} call may actually
-     * sleep longer depending on the operating system (up to 15000µs on Windows).
-     * See the <a href="https://hazelcast.com/blog/locksupport-parknanos-under-the-hood-and-the-curious-case-of-parking/">
+     * Note: the underlying {@link LockSupport#parkNanos(long)} call may
+     * actually sleep longer depending on the operating system (up to 15000µs on
+     * Windows). See the <a
+     * href="https://hazelcast.com/blog/locksupport-parknanos-under-the-hood-and-the-curious-case-of-parking/">
      * Hazelcast blog post about this subject</a> for more details.
      * <p>
      * See also: {@link #JET_IDLE_COOPERATIVE_MIN_MICROSECONDS}
@@ -142,13 +148,15 @@ public final class JetProperties {
      * The minimum time in microseconds the non-cooperative worker threads will
      * sleep if none of the tasklets made any progress. Lower values increase
      * idle CPU usage but may result in decreased latency. Higher values will
-     * increase latency and very high values (>10000µs) will also limit throughput.
+     * increase latency and very high values (>10000µs) will also limit the
+     * throughput.
      * <p>
      * The default is value is {@code 25µs}.
      * <p>
      * Note: the underlying {@link LockSupport#parkNanos(long)} call may actually
      * sleep longer depending on the operating system (up to 15000µs on Windows).
-     * See the <a href="https://hazelcast.com/blog/locksupport-parknanos-under-the-hood-and-the-curious-case-of-parking/">
+     * See the <a
+     * href="https://hazelcast.com/blog/locksupport-parknanos-under-the-hood-and-the-curious-case-of-parking/">
      * Hazelcast blog post about this subject</a> for more details.
      * <p>
      * See also: {@link #JET_IDLE_NONCOOPERATIVE_MAX_MICROSECONDS}
@@ -162,13 +170,15 @@ public final class JetProperties {
      * The maximum time in microseconds the non-cooperative worker threads will
      * sleep if none of the tasklets made any progress. Lower values increase
      * idle CPU usage but may result in decreased latency. Higher values will
-     * increase latency and very high values (>10000µs) will also limit throughput.
+     * increase latency and very high values (>10000µs) will also limit the
+     * throughput.
      * <p>
      * The default is value is {@code 5000µs}.
      * <p>
      * Note: the underlying {@link LockSupport#parkNanos(long)} call may actually
      * sleep longer depending on the operating system (up to 15000µs on Windows).
-     * See the <a href="https://hazelcast.com/blog/locksupport-parknanos-under-the-hood-and-the-curious-case-of-parking/">
+     * See the <a
+     * href="https://hazelcast.com/blog/locksupport-parknanos-under-the-hood-and-the-curious-case-of-parking/">
      * Hazelcast blog post about this subject</a> for more details.
      * <p>
      * See also: {@link #JET_IDLE_NONCOOPERATIVE_MIN_MICROSECONDS}
