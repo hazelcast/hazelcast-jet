@@ -21,7 +21,6 @@ import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.SplitShardRequest;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
@@ -79,9 +78,7 @@ class AbstractKinesisTest extends JetTestSupport {
     public void before() {
         helper.deleteStream();
 
-        JetConfig jetConfig = new JetConfig();
-        jetConfig.getInstanceConfig().setCooperativeThreadCount(12); //todo: don't force this, let Jenkins be Jenkins
-        cluster = createJetMembers(jetConfig, MEMBER_COUNT);
+        cluster = createJetMembers(MEMBER_COUNT);
         results = jet().getMap(RESULTS);
     }
 
