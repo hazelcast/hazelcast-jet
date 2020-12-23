@@ -15,7 +15,6 @@
  */
 package com.hazelcast.jet.kinesis.impl;
 
-import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor;
@@ -36,15 +35,6 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
 
     private static final long serialVersionUID = 1L;
 
-    /**
-     * We don't want to create an AWS client for each processor instance,
-     * because they aren't light. We also can't do the other extreme, have a
-     * single AWS client shared by all processors, because there would be a lot
-     * of contention, causing problems. So we use shared clients but use them
-     * for a limited number of processor instances, specified by this constant.
-     */
-    private static final int PROCESSORS_PER_CLIENT = 12; //todo: based on nothing really...
-
     @Nonnull
     private final AwsConfig awsConfig;
     @Nonnull
@@ -58,7 +48,7 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
 
     private transient int memberCount;
     private transient ILogger logger;
-    private transient AmazonKinesisAsync[] clients;
+    private transient AmazonKinesisAsync client;
 
     public KinesisSourcePSupplier(
             @Nonnull AwsConfig awsConfig,
@@ -78,10 +68,7 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
     public void init(@Nonnull Context context) {
         memberCount = context.memberCount();
         logger = context.logger();
-
-        clients = IntStream.range(0, (int) Math.ceil((double) context.localParallelism() / PROCESSORS_PER_CLIENT))
-                .mapToObj(IGNORED -> awsConfig.buildClient())
-                .toArray(AmazonKinesisAsync[]::new);
+        client = awsConfig.buildClient();
     }
 
     @Nonnull
@@ -91,7 +78,7 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
         ShardQueue[] shardQueues = shardQueues(count);
         RangeMonitor rangeMonitor = new RangeMonitor(
                 memberCount,
-                clients[0],
+                client,
                 stream,
                 hashRange,
                 rangePartitions,
@@ -103,7 +90,7 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
         return IntStream.range(0, count)
                 .mapToObj(i ->
                         new KinesisSourceP(
-                                clients[i % clients.length],
+                                client,
                                 stream,
                                 eventTimePolicy,
                                 hashRange,
@@ -129,8 +116,8 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
 
     @Override
     public void close(@Nullable Throwable error) {
-        if (clients != null) {
-            Arrays.stream(clients).forEach(AmazonKinesis::shutdown);
+        if (client != null) {
+            client.shutdown();
         }
     }
 }
