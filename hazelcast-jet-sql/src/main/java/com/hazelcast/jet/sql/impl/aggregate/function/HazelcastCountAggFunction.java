@@ -62,7 +62,7 @@ public class HazelcastCountAggFunction extends HazelcastAggFunction {
             SqlValidatorScope scope,
             SqlCall call
     ) {
-//         Check for COUNT(*) function.  If it is, we don't want to try and derive the "*"
+        // Check for COUNT(*) function.  If it is, we don't want to try and derive the "*"
         if (call.isCountStar()) {
             return validator.getTypeFactory().createSqlType(
                     SqlTypeName.BIGINT);

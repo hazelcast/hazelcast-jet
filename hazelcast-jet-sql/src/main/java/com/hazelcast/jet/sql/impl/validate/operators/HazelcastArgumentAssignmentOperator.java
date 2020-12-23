@@ -22,6 +22,10 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 
+/**
+ * Hazelcast equivalent of {@link
+ * org.apache.calcite.sql.fun.SqlArgumentAssignmentOperator}.
+ */
 public class HazelcastArgumentAssignmentOperator extends HazelcastSpecialOperator {
     public HazelcastArgumentAssignmentOperator() {
         super(
