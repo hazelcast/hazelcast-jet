@@ -1142,6 +1142,7 @@ public class JetCommandLine implements Runnable {
         }
         out.println(builder.toAnsi());
     }
+
     private String sqlStartingPrompt(JetInstance jet) {
         JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
         HazelcastClientInstanceImpl hazelcastClient = client.getHazelcastClient();
@@ -1150,19 +1151,36 @@ public class JetCommandLine implements Runnable {
                 FutureUtil.getValue(getClusterMetadata(hazelcastClient, clientClusterService.getMasterMember()));
         Cluster cluster = client.getCluster();
         Set<Member> members = cluster.getMembers();
-        return new AttributedStringBuilder()
-                .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
-                // TODO: Consider the case that client is connected to the Hazelcast Cluster
-                .append("Connected to Hazelcast Jet ")
-                .append(clusterMetadata.getJetVersion())
-                .append(" at ")
-                .append(members.iterator().next().getAddress().toString())
-                .append(" (+")
-                .append(String.valueOf(members.size() - 1))
-                .append(" more)\n")
-                .append("Type 'help' for instructions")
-                .toAnsi();
+        String jetVersion = clusterMetadata.getJetVersion();
+        if (jetVersion != null) {
+            // if it is connected to Jet cluster
+            return new AttributedStringBuilder()
+                    .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
+                    .append("Connected to Hazelcast Jet ")
+                    .append(jetVersion)
+                    .append(" at ")
+                    .append(members.iterator().next().getAddress().toString())
+                    .append(" (+")
+                    .append(String.valueOf(members.size() - 1))
+                    .append(" more)\n")
+                    .append("Type 'help' for instructions")
+                    .toAnsi();
+        } else {
+            // if it is connected to IMDG cluster
+            return new AttributedStringBuilder()
+                    .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
+                    .append("Connected to Hazelcast IMDG ")
+                    .append(clusterMetadata.getMemberVersion())
+                    .append(" at ")
+                    .append(members.iterator().next().getAddress().toString())
+                    .append(" (+")
+                    .append(String.valueOf(members.size() - 1))
+                    .append(" more)\n")
+                    .append("Type 'help' for instructions")
+                    .toAnsi();
+        }
     }
+
     private static class SQLCliConstants {
 
         static final Set<String> COMMAND_SET = new HashSet<>(Arrays.asList("clear", "exit", "help", "history"));
