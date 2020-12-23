@@ -954,14 +954,15 @@ public class JetCommandLine implements Runnable {
             }
             SqlRowMetadata rowMetadata = sqlResult.getRowMetadata();
             int[] colWidths = determineColumnWidths(rowMetadata);
+            Alignment[] alignments = determineAlignments(rowMetadata);
+
             // this is a result with rows. Print the header and rows, watch for concurrent cancellation
-            printMetadataInfo(rowMetadata, colWidths, out);
+            printMetadataInfo(rowMetadata, colWidths, alignments, out);
 
             int rowCount = 0;
-
             for (SqlRow row : sqlResult) {
                 rowCount++;
-                printRow(row, colWidths, out);
+                printRow(row, colWidths, alignments, out);
             }
 
             // bottom line after all the rows
@@ -1031,8 +1032,38 @@ public class JetCommandLine implements Runnable {
         }
         return colWidths;
     }
-
-    private static void printMetadataInfo(SqlRowMetadata metadata, int[] colWidths, PrintWriter out) {
+    private static Alignment[] determineAlignments(SqlRowMetadata metadata) {
+        int colCount = metadata.getColumnCount();
+        Alignment[] alignments = new Alignment[colCount];
+        for (int i = 0; i < colCount; i++) {
+            SqlColumnMetadata colMetadata = metadata.getColumn(i);
+            SqlColumnType type = colMetadata.getType();
+            String colName = colMetadata.getName();
+            switch (type) {
+                case BIGINT:
+                case DECIMAL:
+                case DOUBLE:
+                case INTEGER:
+                case REAL:
+                case SMALLINT:
+                case TINYINT:
+                    alignments[i] = Alignment.RIGHT;
+                    break;
+                case BOOLEAN:
+                case DATE:
+                case NULL:
+                case OBJECT:
+                case TIMESTAMP:
+                case VARCHAR:
+                case TIMESTAMP_WITH_TIME_ZONE:
+                default:
+                    alignments[i] = Alignment.CENTER;
+            }
+        }
+        return alignments;
+    }
+    private static void printMetadataInfo(SqlRowMetadata metadata, int[] colWidths,
+                                          Alignment[] alignments, PrintWriter out) {
         int colCount = metadata.getColumnCount();
         printSeparatorLine(colCount, colWidths, out);
         AttributedStringBuilder builder = new AttributedStringBuilder()
@@ -1040,21 +1071,29 @@ public class JetCommandLine implements Runnable {
         builder.append("|");
         for (int i = 0; i < colCount; i++) {
             String colName = metadata.getColumn(i).getName();
-            centralize(colWidths[i], builder, colName);
+            if (alignments[i] == Alignment.CENTER) {
+                centralize(colWidths[i], builder, colName);
+            } else {
+                rightAlign(colWidths[i], builder, colName);
+            }
         }
         out.println(builder.toAnsi());
         printSeparatorLine(colCount, colWidths, out);
         out.flush();
     }
 
-    private static void printRow(SqlRow row, int[] colWidths, PrintWriter out) {
+    private static void printRow(SqlRow row, int[] colWidths, Alignment[] alignments, PrintWriter out) {
         AttributedStringBuilder builder = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
         builder.append("|");
         int columnCount = row.getMetadata().getColumnCount();
         for (int i = 0; i < columnCount; i++) {
-            String colValue = row.getObject(i).toString();
-            centralize(colWidths[i], builder, colValue);
+            String colValue = row.getObject(i).toString().replace("\n", "\\n");
+            if (alignments[i] == Alignment.CENTER) {
+                centralize(colWidths[i], builder, colValue);
+            } else {
+                rightAlign(colWidths[i], builder, colValue);
+            }
         }
         out.println(builder.toAnsi());
         out.flush();
@@ -1064,7 +1103,7 @@ public class JetCommandLine implements Runnable {
         colValue = colValue.replace("\n", "\\n");
         builder.style(AttributedStyle.DEFAULT.foreground(PRIMARY_COLOR));
         int wsLen = 0;
-        if (colValue.length() < colWidth) {
+        if (colValue.length() <= colWidth) {
             wsLen = colWidth - colValue.length();
         } else {
             colValue = colValue.substring(0, colWidth - 1) + "\u2026";
@@ -1077,6 +1116,16 @@ public class JetCommandLine implements Runnable {
         for (int j = 0; j < wsLen / 2 + wsLen % 2; j++) {
             builder.append(' ');
         }
+        builder.style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
+        builder.append('|');
+    }
+
+    private static void rightAlign(int colWidth, AttributedStringBuilder builder, String colValue) {
+        if (colValue.length() > colWidth) {
+            colValue = colValue.substring(0, colWidth - 1) + "\u2026";
+        }
+        builder.style(AttributedStyle.DEFAULT.foreground(PRIMARY_COLOR));
+        builder.append(String.format("%" + colWidth + "s", colValue));
         builder.style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
         builder.append('|');
     }
@@ -1148,5 +1197,8 @@ public class JetCommandLine implements Runnable {
         static final Integer TIMESTAMP_FORMAT_LENGTH = 19;
         static final Integer TIMESTAMP_WITH_TIME_ZONE_FORMAT_LENGTH = 25;
         static final Integer VARCHAR_FORMAT_LENGTH = 20;
+    }
+    private enum Alignment {
+        CENTER, RIGHT
     }
 }
