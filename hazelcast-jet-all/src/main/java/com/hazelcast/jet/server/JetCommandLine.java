@@ -940,7 +940,6 @@ public class JetCommandLine implements Runnable {
             AtomicReference<SqlResult> activeSqlResult
     ) {
         PrintWriter out = terminal.writer();
-        final int colWidth = 20;
         try (SqlResult sqlResult = jet.getSql().execute(command)) {
             activeSqlResult.set(sqlResult);
 
@@ -990,38 +989,44 @@ public class JetCommandLine implements Runnable {
         for (int i = 0; i < colCount; i++) {
             SqlColumnMetadata colMetadata = metadata.getColumn(i);
             SqlColumnType type = colMetadata.getType();
-            String name = colMetadata.getName();
+            String colName = colMetadata.getName();
             switch (type) {
                 case BOOLEAN:
-                    colWidths[i] = Math.max(5, Math.min(name.length(), 20));
+                    colWidths[i] = Math.max(SQLCliConstants.BOOLEAN_FORMAT_LENGTH,
+                            Math.min(colName.length(), SQLCliConstants.VARCHAR_FORMAT_LENGTH));
+                    break;
+                case DATE:
+                    colWidths[i] = Math.max(SQLCliConstants.DATE_FORMAT_LENGTH,
+                            Math.min(colName.length(), SQLCliConstants.VARCHAR_FORMAT_LENGTH));
+                    break;
+                case TIMESTAMP_WITH_TIME_ZONE:
+                case DECIMAL:
+                case REAL:
+                case DOUBLE:
+                    colWidths[i] = SQLCliConstants.TIMESTAMP_WITH_TIME_ZONE_FORMAT_LENGTH;
+                    break;
+                case INTEGER:
+                    colWidths[i] = Math.max(SQLCliConstants.INTEGER_FORMAT_LENGTH,
+                            Math.min(colName.length(), SQLCliConstants.VARCHAR_FORMAT_LENGTH));
+                    break;
+                case NULL:
+                case TINYINT:
+                    colWidths[i] = Math.max(SQLCliConstants.TINYINT_FORMAT_LENGTH,
+                            Math.min(colName.length(), SQLCliConstants.VARCHAR_FORMAT_LENGTH));
+                    break;
+                case SMALLINT:
+                    colWidths[i] = Math.max(SQLCliConstants.SMALLINT_FORMAT_LENGTH,
+                            Math.min(colName.length(), SQLCliConstants.VARCHAR_FORMAT_LENGTH));
+                    break;
+                case TIMESTAMP:
+                    colWidths[i] = Math.max(SQLCliConstants.TIMESTAMP_FORMAT_LENGTH,
+                            Math.min(colName.length(), SQLCliConstants.VARCHAR_FORMAT_LENGTH));
                     break;
                 case BIGINT:
                 case VARCHAR:
                 case OBJECT:
-                    colWidths[i] = 20;
-                    break;
-                case DATE:
-                    colWidths[i] = Math.max(10, Math.min(name.length(), 20));
-                    break;
-                case TIMESTAMP_WITH_TIME_ZONE:
-                case DECIMAL: // Unlimited precision
-                case REAL: // Unlimited precision
-                case DOUBLE: // Unlimited precision
-                    colWidths[i] = 25;
-                    break;
-                case INTEGER:
-                    colWidths[i] = Math.max(12, Math.min(name.length(), 20));
-                    break;
-                case NULL:
-                case TINYINT:
-                    colWidths[i] = Math.max(4, Math.min(name.length(), 20));
-                    break;
-                case SMALLINT:
-                    colWidths[i] = Math.max(6, Math.min(name.length(), 20));
-                    break;
-                case TIMESTAMP:
-                    colWidths[i] = Math.max(19, Math.min(name.length(), 20));
-                    break;
+                default:
+                    colWidths[i] = SQLCliConstants.VARCHAR_FORMAT_LENGTH;
             }
         }
         return colWidths;
@@ -1129,5 +1134,19 @@ public class JetCommandLine implements Runnable {
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("Exiting from SQL console")
                 .toAnsi();
+        static final Integer BOOLEAN_FORMAT_LENGTH = 5;
+        static final Integer BIGINT_FORMAT_LENGTH = 20;
+        static final Integer DATE_FORMAT_LENGTH = 10;
+        static final Integer DECIMAL_FORMAT_LENGTH = 25; // it has normally unlimited precision
+        static final Integer DOUBLE_FORMAT_LENGTH = 25; // it has normally unlimited precision
+        static final Integer INTEGER_FORMAT_LENGTH = 12;
+        static final Integer NULL_FORMAT_LENGTH = 4;
+        static final Integer REAL_FORMAT_LENGTH = 25; // it has normally unlimited precision
+        static final Integer OBJECT_FORMAT_LENGTH = 20;
+        static final Integer TINYINT_FORMAT_LENGTH = 4;
+        static final Integer SMALLINT_FORMAT_LENGTH = 6;
+        static final Integer TIMESTAMP_FORMAT_LENGTH = 19;
+        static final Integer TIMESTAMP_WITH_TIME_ZONE_FORMAT_LENGTH = 25;
+        static final Integer VARCHAR_FORMAT_LENGTH = 20;
     }
 }
