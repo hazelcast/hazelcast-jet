@@ -263,7 +263,7 @@ public class JetCommandLine implements Runnable {
                     continue;
                 }
                 if ("help".equalsIgnoreCase(command)) {
-                    writer.println(SQLCliConstants.HELP_PROMPT);
+                    writer.println(helpPrompt(jet));
                     writer.flush();
                     continue;
                 }
@@ -504,12 +504,12 @@ public class JetCommandLine implements Runnable {
             String format = "%-19s %-18s %-23s %s";
             printf(format, "ID", "STATUS", "SUBMISSION TIME", "NAME");
             summaries.stream()
-                     .filter(job -> listAll || isActive(job.getStatus()))
-                     .forEach(job -> {
-                         String idString = idToString(job.getJobId());
-                         String name = job.getName().equals(idString) ? "N/A" : job.getName();
-                         printf(format, idString, job.getStatus(), toLocalDateTime(job.getSubmissionTime()), name);
-                     });
+                    .filter(job -> listAll || isActive(job.getStatus()))
+                    .forEach(job -> {
+                        String idString = idToString(job.getJobId());
+                        String name = job.getName().equals(idString) ? "N/A" : job.getName();
+                        printf(format, idString, job.getStatus(), toLocalDateTime(job.getSubmissionTime()), name);
+                    });
         });
     }
 
@@ -527,15 +527,15 @@ public class JetCommandLine implements Runnable {
             Collection<JobStateSnapshot> snapshots = jet.getJobStateSnapshots();
             printf("%-23s %-15s %-24s %s", "TIME", "SIZE (bytes)", "JOB NAME", "SNAPSHOT NAME");
             snapshots.stream()
-                     .sorted(Comparator.comparing(JobStateSnapshot::name))
-                     .forEach(ss -> {
-                         LocalDateTime creationTime = toLocalDateTime(ss.creationTime());
-                         String jobName = ss.jobName() == null ? Util.idToString(ss.jobId()) : ss.jobName();
-                         if (!fullJobName) {
-                             jobName = shorten(jobName);
-                         }
-                         printf("%-23s %-,15d %-24s %s", creationTime, ss.payloadSize(), jobName, ss.name());
-                     });
+                    .sorted(Comparator.comparing(JobStateSnapshot::name))
+                    .forEach(ss -> {
+                        LocalDateTime creationTime = toLocalDateTime(ss.creationTime());
+                        String jobName = ss.jobName() == null ? Util.idToString(ss.jobId()) : ss.jobName();
+                        if (!fullJobName) {
+                            jobName = shorten(jobName);
+                        }
+                        printf("%-23s %-,15d %-24s %s", creationTime, ss.payloadSize(), jobName, ss.name());
+                    });
         });
     }
 
@@ -718,7 +718,7 @@ public class JetCommandLine implements Runnable {
         @Override
         public String[] getVersion() {
             JetBuildInfo jetBuildInfo = getBuildInfo().getJetBuildInfo();
-            return new String[] {
+            return new String[]{
                     "Hazelcast Jet " + jetBuildInfo.getVersion(),
                     "Revision " + jetBuildInfo.getRevision(),
                     "Build " + jetBuildInfo.getBuild()
@@ -743,7 +743,7 @@ public class JetCommandLine implements Runnable {
 
         @Option(names = {"-t", "--targets"},
                 description = "The cluster name and addresses to use if you want to connect to a "
-                    + "cluster other than the one configured in the configuration file. " +
+                        + "cluster other than the one configured in the configuration file. " +
                         "At least one address is required. The cluster name is optional.",
                 paramLabel = "[<cluster-name>@]<hostname>:<port>[,<hostname>:<port>]",
                 converter = TargetsMixin.Converter.class)
@@ -1032,6 +1032,7 @@ public class JetCommandLine implements Runnable {
         }
         return colWidths;
     }
+
     private static Alignment[] determineAlignments(SqlRowMetadata metadata) {
         int colCount = metadata.getColumnCount();
         Alignment[] alignments = new Alignment[colCount];
@@ -1062,6 +1063,7 @@ public class JetCommandLine implements Runnable {
         }
         return alignments;
     }
+
     private static void printMetadataInfo(SqlRowMetadata metadata, int[] colWidths,
                                           Alignment[] alignments, PrintWriter out) {
         int colCount = metadata.getColumnCount();
@@ -1181,10 +1183,14 @@ public class JetCommandLine implements Runnable {
         }
     }
 
-    private static class SQLCliConstants {
-
-        static final Set<String> COMMAND_SET = new HashSet<>(Arrays.asList("clear", "exit", "help", "history"));
-        static final String HELP_PROMPT = new AttributedStringBuilder()
+    private String helpPrompt(JetInstance jet) {
+        JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
+        HazelcastClientInstanceImpl hazelcastClient = client.getHazelcastClient();
+        ClientClusterService clientClusterService = hazelcastClient.getClientClusterService();
+        MCClusterMetadata clusterMetadata =
+                FutureUtil.getValue(getClusterMetadata(hazelcastClient, clientClusterService.getMasterMember()));
+        String jetVersion = clusterMetadata.getJetVersion();
+        AttributedStringBuilder builder = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("Available Commands:\n")
                 .append("clear\t- Clear the terminal screen\n")
@@ -1192,11 +1198,24 @@ public class JetCommandLine implements Runnable {
                 .append("help\t- Provide information about available commands\n")
                 .append("history\t- Show the command history of the current session\n")
                 .append("Hints:\n")
-                .append("Use semicolon to finalize queries\n")
-                .append("Press Ctrl+C to cancel streaming queries\n")
-                .append("For more information, see the Hazelcast Jet SQL documentation:\n")
-                .append("https://jet-start.sh/docs/sql/intro")
-                .toAnsi();
+                .append("Use semicolon to finalize queries\n");
+        if (jetVersion != null) {
+            // if it is connected to Jet cluster
+            return builder.append("Press Ctrl+C to cancel streaming queries\n")
+                    .append("For more information, see the Hazelcast Jet SQL documentation:\n")
+                    .append("https://jet-start.sh/docs/sql/intro")
+                    .toAnsi();
+        } else {
+            // if it is connected to IMDG cluster
+            return builder.append("For more information, see the Hazelcast IMDG SQL documentation:\n")
+                    .append("https://docs.hazelcast.org/docs/latest/manual/html-single/#sql")
+                    .toAnsi();
+        }
+    }
+
+    private static class SQLCliConstants {
+
+        static final Set<String> COMMAND_SET = new HashSet<>(Arrays.asList("clear", "exit", "help", "history"));
         static final String EXIT_PROMPT = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("Exiting from SQL console")
@@ -1216,7 +1235,8 @@ public class JetCommandLine implements Runnable {
         static final Integer TIMESTAMP_WITH_TIME_ZONE_FORMAT_LENGTH = 25;
         static final Integer VARCHAR_FORMAT_LENGTH = 20;
     }
+
     private enum Alignment {
-        CENTER, RIGHT
+        CENTER, LEFT, RIGHT
     }
 }
