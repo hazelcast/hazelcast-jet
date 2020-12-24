@@ -38,11 +38,8 @@ class PortableUpsertTarget implements UpsertTarget {
 
     private final Object[] values;
 
-    PortableUpsertTarget(
-            InternalSerializationService serializationService,
-            int factoryId, int classId, int classVersion
-    ) {
-        this.classDefinition = lookupClassDefinition(serializationService, factoryId, classId, classVersion);
+    PortableUpsertTarget(ClassDefinition classDefinition) {
+        this.classDefinition = classDefinition;
 
         this.values = new Object[classDefinition.getFieldCount()];
     }
@@ -59,7 +56,7 @@ class PortableUpsertTarget implements UpsertTarget {
         if (classDefinition == null) {
             throw QueryException.error(
                     "Unable to find class definition for factoryId: " + factoryId
-                    + ", classId: " + classId + ", classVersion: " + classVersion
+                            + ", classId: " + classId + ", classVersion: " + classVersion
             );
         }
         return classDefinition;
@@ -170,8 +167,8 @@ class PortableUpsertTarget implements UpsertTarget {
                 }
             } catch (Exception e) {
                 throw QueryException.error("Cannot set value " +
-                                           (value == null ? "null" : " of type " + value.getClass().getName())
-                                           + " to field \"" + name + "\" of type " + type + ": " + e.getMessage(), e);
+                        (value == null ? "null" : " of type " + value.getClass().getName())
+                        + " to field \"" + name + "\" of type " + type + ": " + e.getMessage(), e);
             }
         }
         return portable.build();

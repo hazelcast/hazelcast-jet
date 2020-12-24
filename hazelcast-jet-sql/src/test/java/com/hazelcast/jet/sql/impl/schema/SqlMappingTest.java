@@ -21,6 +21,7 @@ import com.hazelcast.jet.sql.impl.schema.model.IdentifiedPerson;
 import com.hazelcast.jet.sql.impl.schema.model.Person;
 import com.hazelcast.sql.HazelcastSqlException;
 import com.hazelcast.sql.SqlResult;
+import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -35,6 +36,8 @@ import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class SqlMappingTest extends SqlTestSupport {
 
@@ -134,7 +137,7 @@ public class SqlMappingTest extends SqlTestSupport {
         test_alias(String.class.getName(), "varchar", "char varying", "character varying");
     }
 
-    private void test_alias(String javaClassName, String ... aliases) {
+    private void test_alias(String javaClassName, String... aliases) {
         for (String alias : aliases) {
             sqlService.execute("CREATE MAPPING \"m_" + alias + "\"(__key " + alias + ") TYPE IMap " +
                     "OPTIONS('keyFormat'='java', 'keyJavaClass'='" + javaClassName + "', 'valueFormat'='json')");
@@ -171,6 +174,22 @@ public class SqlMappingTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING t2 TYPE teststream");
         sqlService.execute("CREATE MAPPING t3 TYPE TESTSTREAM");
         sqlService.execute("CREATE MAPPING t4 TYPE tEsTsTrEaM");
+    }
+
+    @Test
+    public void testDeclarativePortable() {
+        sqlService.execute("CREATE MAPPING lionKing (__key VARCHAR, kind VARCHAR, age INT) " +
+                "TYPE IMap OPTIONS " +
+                "('keyFormat' = 'java', 'keyJavaClass' = 'java.lang.String'," +
+                " 'valueFormat' = 'portable', 'valuePortableFactoryId' = '1' , 'valuePortableClassId' = '1')");
+        sqlService.execute("SINK INTO lionKing VALUES ('Simba', 'Lion', 5), ('Pumbaa', 'Warthog', 20) , ('Timon', 'Meerkat', 15)");
+        SqlResult result = sqlService.execute("SELECT __key FROM lionKing WHERE age > 1");
+        assertTrue(result.isRowSet());
+        Iterator<SqlRow> iterator = result.iterator();
+        assertEquals("Simba", iterator.next().getObject("__key"));
+        assertEquals("Pumbaa", iterator.next().getObject("__key"));
+        assertEquals("Timon", iterator.next().getObject("__key"));
+        assertFalse(iterator.hasNext());
     }
 
     @Test

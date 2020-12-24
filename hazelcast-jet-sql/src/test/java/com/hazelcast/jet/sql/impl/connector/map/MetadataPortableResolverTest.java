@@ -243,11 +243,7 @@ public class MetadataPortableResolverTest {
         );
         assertThat(metadata.getQueryTargetDescriptor()).isEqualTo(GenericQueryTargetDescriptor.DEFAULT);
         assertThat(metadata.getUpsertTargetDescriptor())
-                .isEqualToComparingFieldByField(new PortableUpsertTargetDescriptor(
-                        classDefinition.getFactoryId(),
-                        classDefinition.getClassId(),
-                        classDefinition.getVersion())
-                );
+                .isEqualToComparingFieldByField(new PortableUpsertTargetDescriptor(classDefinition));
     }
 
     private static MappingField field(String name, QueryDataType type, String externalName) {

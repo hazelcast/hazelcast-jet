@@ -18,6 +18,7 @@ package com.hazelcast.jet.sql.impl.inject;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
+import com.hazelcast.nio.serialization.ClassDefinition;
 import com.hazelcast.nio.serialization.ClassDefinitionBuilder;
 import org.junit.Test;
 
@@ -25,14 +26,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class PortableUpsertTargetDescriptorTest {
 
-    private static final InternalSerializationService SERIALIZATION_SERVICE =
-            new DefaultSerializationServiceBuilder()
-                    .addClassDefinition(new ClassDefinitionBuilder(1, 2, 3).build())
-                    .build();
+    private static final InternalSerializationService SERIALIZATION_SERVICE;
+    private static final ClassDefinition classDefinition;
+    static {
+        classDefinition = new ClassDefinitionBuilder(1, 2, 3).build();
+        SERIALIZATION_SERVICE = new DefaultSerializationServiceBuilder()
+                .addClassDefinition(classDefinition)
+                .build();
+    }
 
     @Test
     public void test_create() {
-        PortableUpsertTargetDescriptor descriptor = new PortableUpsertTargetDescriptor(1, 2, 3);
+        PortableUpsertTargetDescriptor descriptor = new PortableUpsertTargetDescriptor(classDefinition);
 
         // when
         UpsertTarget target = descriptor.create(SERIALIZATION_SERVICE);
@@ -43,7 +48,7 @@ public class PortableUpsertTargetDescriptorTest {
 
     @Test
     public void test_serialization() {
-        PortableUpsertTargetDescriptor original = new PortableUpsertTargetDescriptor(1, 2, 3);
+        PortableUpsertTargetDescriptor original = new PortableUpsertTargetDescriptor(classDefinition);
 
         // when
         PortableUpsertTargetDescriptor serialized =

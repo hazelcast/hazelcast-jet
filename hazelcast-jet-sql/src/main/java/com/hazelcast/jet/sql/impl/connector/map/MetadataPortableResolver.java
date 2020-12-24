@@ -17,11 +17,13 @@
 package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.serialization.impl.portable.PortableContext;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadata;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolver;
 import com.hazelcast.jet.sql.impl.inject.PortableUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.nio.serialization.ClassDefinition;
+import com.hazelcast.nio.serialization.ClassDefinitionBuilder;
 import com.hazelcast.nio.serialization.FieldDefinition;
 import com.hazelcast.nio.serialization.FieldType;
 import com.hazelcast.sql.impl.QueryException;
@@ -30,6 +32,7 @@ import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
+import com.hazelcast.sql.impl.type.QueryDataTypeFamily;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -68,7 +71,7 @@ final class MetadataPortableResolver implements KvMetadataResolver {
             Map<String, String> options,
             InternalSerializationService serializationService
     ) {
-        ClassDefinition classDefinition = resolveClassDefinition(isKey, options, serializationService);
+        ClassDefinition classDefinition = resolveClassDefinition(isKey, options, serializationService, userFields);
         return resolveFields(isKey, userFields, classDefinition);
     }
 
@@ -148,7 +151,7 @@ final class MetadataPortableResolver implements KvMetadataResolver {
             Map<String, String> options,
             InternalSerializationService serializationService
     ) {
-        ClassDefinition clazz = resolveClassDefinition(isKey, options, serializationService);
+        ClassDefinition clazz = resolveClassDefinition(isKey, options, serializationService, resolvedFields);
         return resolveMetadata(isKey, resolvedFields, clazz);
     }
 
@@ -172,43 +175,79 @@ final class MetadataPortableResolver implements KvMetadataResolver {
         return new KvMetadata(
                 fields,
                 GenericQueryTargetDescriptor.DEFAULT,
-                new PortableUpsertTargetDescriptor(
-                        clazz.getFactoryId(),
-                        clazz.getClassId(),
-                        clazz.getVersion()
-                )
+                new PortableUpsertTargetDescriptor(clazz)
         );
     }
 
     private ClassDefinition resolveClassDefinition(
             boolean isKey,
             Map<String, String> options,
-            InternalSerializationService serializationService
-    ) {
+            InternalSerializationService serializationService,
+            List<MappingField> userFields) {
         String factoryIdProperty = isKey ? OPTION_KEY_FACTORY_ID : OPTION_VALUE_FACTORY_ID;
-        String factoryId = options.get(factoryIdProperty);
+        String factoryIdStr = options.get(factoryIdProperty);
         String classIdProperty = isKey ? OPTION_KEY_CLASS_ID : OPTION_VALUE_CLASS_ID;
-        String classId = options.get(classIdProperty);
-        String classVersionProperty = isKey ? OPTION_KEY_CLASS_VERSION : OPTION_VALUE_CLASS_VERSION;
-        String classVersion = options.getOrDefault(classVersionProperty, "0");
+        String classIdStr = options.get(classIdProperty);
+        String versionProperty = isKey ? OPTION_KEY_CLASS_VERSION : OPTION_VALUE_CLASS_VERSION;
+        String versionStr = options.getOrDefault(versionProperty, "0");
 
-        if (factoryId == null || classId == null || classVersion == null) {
+        if (factoryIdStr == null || classIdStr == null || versionStr == null) {
             throw QueryException.error(
                     "Unable to resolve table metadata. Missing ['"
                             + factoryIdProperty + "'|'"
                             + classIdProperty + "'|'"
-                            + classVersionProperty
+                            + versionProperty
                             + "'] option(s)");
         }
 
-        ClassDefinition classDefinition = serializationService
-                .getPortableContext()
-                .lookupClassDefinition(parseInt(factoryId), parseInt(classId), parseInt(classVersion));
+        int factoryId = parseInt(factoryIdStr);
+        int classId = parseInt(classIdStr);
+        int version = parseInt(versionStr);
+        PortableContext portableContext = serializationService.getPortableContext();
+        ClassDefinition classDefinition = portableContext.lookupClassDefinition(factoryId, classId, version);
+
         if (classDefinition == null) {
-            throw QueryException.error(
-                    "Unable to find class definition for factoryId: " + factoryId
-                            + ", classId: " + classId + ", classVersion: " + classVersion
-            );
+            ClassDefinitionBuilder builder = new ClassDefinitionBuilder(factoryId, classId, version);
+            for (MappingField field : userFields) {
+                QueryDataTypeFamily typeFamily = field.type().getTypeFamily();
+                switch (typeFamily) {
+                    case VARCHAR:
+                        builder.addUTFField(field.name());
+                        break;
+                    case BOOLEAN:
+                        builder.addBooleanField(field.name());
+                        break;
+                    case TINYINT:
+                        builder.addByteField(field.name());
+                        break;
+                    case SMALLINT:
+                        builder.addShortField(field.name());
+                        break;
+                    case INTEGER:
+                        builder.addIntField(field.name());
+                        break;
+                    case REAL:
+                        builder.addFloatField(field.name());
+                        break;
+                    case DOUBLE:
+                        builder.addDoubleField(field.name());
+                        break;
+                    case DECIMAL:
+                    case BIGINT:
+                    case NULL:
+                    case TIME:
+                    case DATE:
+                    case TIMESTAMP:
+                    case TIMESTAMP_WITH_TIME_ZONE:
+                    case OBJECT:
+                    default:
+                        throw QueryException.error(
+                                "The type " + typeFamily + " is not supported for Portable. "
+                                        + "Can not create class definition factoryId: " + factoryId
+                                        + " classId: " + classId + ", version: " + version);
+                }
+            }
+            classDefinition = portableContext.registerClassDefinition(builder.build());
         }
         return classDefinition;
     }

@@ -59,10 +59,7 @@ public class PortableUpsertTargetTest {
                         .build();
         ss.getPortableContext().registerClassDefinition(classDefinition);
 
-        UpsertTarget target = new PortableUpsertTarget(
-                ss,
-                classDefinition.getFactoryId(), classDefinition.getClassId(), classDefinition.getVersion()
-        );
+        UpsertTarget target = new PortableUpsertTarget(classDefinition);
         UpsertInjector nullFieldInjector = target.createInjector("null", QueryDataType.OBJECT);
         UpsertInjector objectFieldInjector = target.createInjector("object", QueryDataType.OBJECT);
         UpsertInjector stringFieldInjector = target.createInjector("string", QueryDataType.VARCHAR);
@@ -142,10 +139,7 @@ public class PortableUpsertTargetTest {
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
         ss.getPortableContext().registerClassDefinition(classDefinition);
 
-        UpsertTarget target = new PortableUpsertTarget(
-                ss,
-                classDefinition.getFactoryId(), classDefinition.getClassId(), classDefinition.getVersion()
-        );
+        UpsertTarget target = new PortableUpsertTarget(classDefinition);
         UpsertInjector injector = target.createInjector("object", QueryDataType.OBJECT);
 
         target.init();
@@ -165,10 +159,7 @@ public class PortableUpsertTargetTest {
                         .build();
         ss.getPortableContext().registerClassDefinition(classDefinition);
 
-        UpsertTarget target = new PortableUpsertTarget(
-                ss,
-                classDefinition.getFactoryId(), classDefinition.getClassId(), classDefinition.getVersion()
-        );
+        UpsertTarget target = new PortableUpsertTarget(classDefinition);
         UpsertInjector injector = target.createInjector("field", QueryDataType.INT);
 
         target.init();
@@ -186,10 +177,7 @@ public class PortableUpsertTargetTest {
                         .build();
         ss.getPortableContext().registerClassDefinition(classDefinition);
 
-        UpsertTarget target = new PortableUpsertTarget(
-                ss,
-                classDefinition.getFactoryId(), classDefinition.getClassId(), classDefinition.getVersion()
-        );
+        UpsertTarget target = new PortableUpsertTarget(classDefinition);
         UpsertInjector injector = target.createInjector("field", QueryDataType.INT);
 
         target.init();
