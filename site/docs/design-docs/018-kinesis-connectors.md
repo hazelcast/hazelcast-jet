@@ -50,10 +50,10 @@ ordering of records with the same partition key is also preserved. The
 partition key is specified by your data producer while adding data to
 KDS.
 
-A **sequence number** is a unique identifier for each record. Sequence
-numbers are assigned by KDS when a data producer publishes data into it.
-Sequence numbers for the same partition key generally increase over
-time.
+A **sequence number** is a unique identifier for each record within its
+shard. Sequence numbers are assigned by KDS when a data producer
+publishes data into it. They can be used as offsets of the ordered
+series of records of a shard.
 
 ## APIs
 
@@ -389,10 +389,11 @@ the initial ordering.
 ### Fault Tolerance
 
 Since there is no transaction support in Kinesis, the sink can't support
-_exactly-once_ processing. It can, however, support _at-least-once_
-processing. It does that by ensuring it flushes all data it has taken
-ownership of (taken from the `Inbox` is the more accurate, developer
-speak) out to Kinesis, before saving its snapshots.
+exactly-once delivery. It can, however, support pipelines with both
+at-least-once and exactly-once processing. It does that by ensuring it
+flushes all data it has taken ownership of (taken from the `Inbox` is
+the more accurate, developer speak) out to Kinesis, before saving its
+snapshots.
 
 ### Metrics
 
