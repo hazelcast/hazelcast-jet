@@ -22,6 +22,10 @@ import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
 import com.amazonaws.services.kinesis.model.PutRecordsResult;
 import com.amazonaws.services.kinesis.model.PutRecordsResultEntry;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.internal.metrics.Probe;
+import com.hazelcast.internal.metrics.ProbeUnit;
+import com.hazelcast.internal.util.counters.Counter;
+import com.hazelcast.internal.util.counters.SwCounter;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
@@ -84,6 +88,11 @@ public class KinesisSinkP<T> implements Processor {
     @Nonnull
     private final Buffer<T> buffer;
 
+    @Probe(name = "batchSize", unit = ProbeUnit.COUNT)
+    private final Counter batchSize;
+    @Probe(name = "throttlingSleep", unit = ProbeUnit.MS)
+    private final Counter throttlingSleep = SwCounter.newSwCounter();
+
     private ILogger logger;
     private KinesisHelper helper;
     private int shardCount;
@@ -109,6 +118,7 @@ public class KinesisSinkP<T> implements Processor {
         this.monitor = monitor;
         this.shardCountProvider = shardCountProvider;
         this.buffer = new Buffer<>(keyFn, valueFn);
+        this.batchSize = SwCounter.newSwCounter(buffer.getCapacity());
         this.sendRetryTracker = new RetryTracker(retryStrategy);
     }
 
@@ -170,10 +180,8 @@ public class KinesisSinkP<T> implements Processor {
     private void updateThroughputLimitations() {
         int newShardCount = shardCountProvider.get();
         if (newShardCount > 0 && shardCount != newShardCount) {
-            int bufferSize = throughputController.computeBufferCapacity(newShardCount, sinkCount);
-            if (logger.isFineEnabled() && buffer.setCapacity(bufferSize)) {
-                logger.fine("Changing buffer capacity to " + bufferSize);
-            }
+            buffer.setCapacity(throughputController.computeBatchSize(newShardCount, sinkCount));
+            batchSize.set(buffer.getCapacity());
 
             shardCount = newShardCount;
         }
@@ -246,7 +254,9 @@ public class KinesisSinkP<T> implements Processor {
                         result.getRecords().size() + ") record(s) to stream '" + stream +
                         "'. Sending will be retried in %d ms, message reordering is likely.");
             } else {
-                this.nextSendTime += throughputController.markSuccessfulSend();
+                long sleepTimeNanos = throughputController.markSuccessfulSend();
+                this.nextSendTime += sleepTimeNanos;
+                this.throttlingSleep.set(NANOSECONDS.toMillis(sleepTimeNanos));
                 sendRetryTracker.reset();
             }
         }
@@ -268,6 +278,7 @@ public class KinesisSinkP<T> implements Processor {
     private void dealWithThroughputExceeded(@Nonnull String message) {
         long sleepTimeNanos = throughputController.markFailedSend();
         this.nextSendTime += sleepTimeNanos;
+        this.throttlingSleep.set(NANOSECONDS.toMillis(sleepTimeNanos));
         logger.warning(String.format(message, NANOSECONDS.toMillis(sleepTimeNanos)));
     }
 
@@ -306,13 +317,15 @@ public class KinesisSinkP<T> implements Processor {
             this.capacity = entries.length;
         }
 
-        boolean setCapacity(int capacity) {
+        public int getCapacity() {
+            return capacity;
+        }
+
+        void setCapacity(int capacity) {
             if (capacity < 0 || capacity > entries.length) {
                 throw new IllegalArgumentException("Capacity limited to [0, " + entries.length + ")");
             }
-            boolean change = this.capacity != capacity;
             this.capacity = capacity;
-            return change;
         }
 
         boolean add(T item) {
@@ -503,7 +516,7 @@ public class KinesisSinkP<T> implements Processor {
             this.damper = initDamper();
         }
 
-        int computeBufferCapacity(int shardCount, int sinkCount) {
+        int computeBatchSize(int shardCount, int sinkCount) {
             if (shardCount < 1) {
                 throw new IllegalArgumentException("Invalid shard count: " + shardCount);
             }
@@ -513,12 +526,12 @@ public class KinesisSinkP<T> implements Processor {
 
             int totalRecordsPerSecond = MAX_RECORD_PER_SHARD_PER_SECOND * shardCount;
             int recordPerSinkPerSecond = totalRecordsPerSecond / sinkCount;
-            int computedCapacity = recordPerSinkPerSecond / (int) (SECONDS.toMillis(1) / IDEAL_SLEEP_MS);
+            int computedBatchSize = recordPerSinkPerSecond / (int) (SECONDS.toMillis(1) / IDEAL_SLEEP_MS);
 
-            if (computedCapacity > MAX_RECORDS_IN_REQUEST) {
+            if (computedBatchSize > MAX_RECORDS_IN_REQUEST) {
                 return MAX_RECORDS_IN_REQUEST;
             } else {
-                return Math.max(computedCapacity, MIN_RECORDS_IN_REQUEST);
+                return Math.max(computedBatchSize, MIN_RECORDS_IN_REQUEST);
             }
         }
 

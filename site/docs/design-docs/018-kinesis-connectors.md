@@ -251,7 +251,7 @@ contains a field called `MillisBehindLatest` defined as following:
 > is. A value of zero indicates that record processing caught up, and
 > there are no new records to process at this moment.
 
-This value can be useful for monitoring so the sources can publish it
+This value can be useful for monitoring, so the sources can publish it
 as a per processor instance metric.
 
 ### Code Example

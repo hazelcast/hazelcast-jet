@@ -39,6 +39,8 @@ public final class KinesisSources {
     private KinesisSources() {
     }
 
+    //todo: describe exposed metrics
+
     /**
      * Initiates the building of a streaming source which consumes a
      * Kinesis data stream and emits {@code Map.Entry<String, byte[]>}

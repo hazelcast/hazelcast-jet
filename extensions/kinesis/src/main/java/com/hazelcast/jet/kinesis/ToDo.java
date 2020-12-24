@@ -20,10 +20,6 @@ package com.hazelcast.jet.kinesis;
  */
 public class ToDo {
 
-    //todo: try to test expired shard eviction
-
-    //todo: revisit the PROCESSORS_PER_CLIENT = 12 hack, it's shady, not sure if it helps or hurts
-
     //todo: tripping any shard's ingestion rate, getting messages refused randomly from the send batch will mess
     // up the order of messages; document this
 
@@ -32,12 +28,7 @@ public class ToDo {
 
     //todo: clarify what license to use
 
-    //todo: use GetRecords.IteratorAgeMilliseconds to log alerts when consumer is behind?
-    //todo: sink metrics for buffer size and current post-send sleep?
-
     //todo: update source/sink docs
-
-    //todo: use TestSupport to test the Kinesis processors
 
     //todo: test the sink and source in a real cluster with multiple nodes running in different JVMs
 

@@ -22,6 +22,12 @@ import com.amazonaws.services.kinesis.model.GetShardIteratorResult;
 import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.Shard;
+import com.hazelcast.internal.metrics.DynamicMetricsProvider;
+import com.hazelcast.internal.metrics.MetricDescriptor;
+import com.hazelcast.internal.metrics.MetricsCollectionContext;
+import com.hazelcast.internal.metrics.Probe;
+import com.hazelcast.internal.util.counters.Counter;
+import com.hazelcast.internal.util.counters.SwCounter;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
@@ -36,7 +42,7 @@ import java.util.concurrent.Future;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-class ShardReader extends AbstractShardWorker {
+class ShardReader extends AbstractShardWorker implements DynamicMetricsProvider {
 
     /* Kinesis allows for a maximum of 5 GetRecords operations per second. */
     private static final int GET_RECORD_OPS_PER_SECOND = 5;
@@ -44,6 +50,9 @@ class ShardReader extends AbstractShardWorker {
     private final Shard shard;
     private final RandomizedRateTracker getRecordsRateTracker =
             new RandomizedRateTracker(1000, GET_RECORD_OPS_PER_SECOND);
+
+    @Probe(name = "millisBehindLatest")
+    private final Counter millisBehindLatest = SwCounter.newSwCounter(-1);
 
     private State state = State.NO_SHARD_ITERATOR;
     private String shardIterator;
@@ -170,6 +179,7 @@ class ShardReader extends AbstractShardWorker {
             data = result.getRecords();
             if (!data.isEmpty()) {
                 lastSeenSeqNo = data.get(data.size() - 1).getSequenceNumber();
+                millisBehindLatest.set(result.getMillisBehindLatest());
             }
             if (shardIterator == null) {
                 state = State.SHARD_CLOSED;
@@ -252,6 +262,12 @@ class ShardReader extends AbstractShardWorker {
         Traverser<Record> traverser = Traversers.traverseIterable(data);
         data = Collections.emptyList();
         return traverser;
+    }
+
+    @Override
+    public void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
+        descriptor = descriptor.withTag("shard", shard.getShardId());
+        context.collect(descriptor, this);
     }
 
     enum Result {

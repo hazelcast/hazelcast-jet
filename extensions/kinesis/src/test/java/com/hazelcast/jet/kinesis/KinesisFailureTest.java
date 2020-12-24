@@ -114,7 +114,7 @@ public class KinesisFailureTest extends AbstractKinesisTest {
         PROXY.setConnectionCut(true);
 
         jet().newJob(getPipeline());
-        Map<String, List<String>> expectedMessages = sendMessages(false);
+        Map<String, List<String>> expectedMessages = sendMessages();
 
         SECONDS.sleep(5);
 
@@ -130,7 +130,7 @@ public class KinesisFailureTest extends AbstractKinesisTest {
         HELPER.createStream(10);
 
         jet().newJob(getPipeline());
-        Map<String, List<String>> expectedMessages = sendMessages(false);
+        Map<String, List<String>> expectedMessages = sendMessages();
 
         //wait for some data to start coming out of the pipeline
         assertTrueEventually(() -> assertFalse(results.isEmpty()));

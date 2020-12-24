@@ -17,6 +17,9 @@ package com.hazelcast.jet.kinesis.impl;
 
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.amazonaws.services.kinesis.model.Shard;
+import com.hazelcast.internal.metrics.DynamicMetricsProvider;
+import com.hazelcast.internal.metrics.MetricDescriptor;
+import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
@@ -45,7 +48,7 @@ import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.Util.toLocalTime;
 import static com.hazelcast.jet.kinesis.impl.KinesisHelper.shardBelongsToRange;
 
-public class KinesisSourceP extends AbstractProcessor {
+public class KinesisSourceP extends AbstractProcessor implements DynamicMetricsProvider {
 
     @Nonnull
     private final AmazonKinesisAsync kinesis;
@@ -241,6 +244,13 @@ public class KinesisSourceP extends AbstractProcessor {
     private ShardReader initShardReader(Shard shard, String lastSeenSeqNo) {
         logger.info("Shard " + shard.getShardId() + " of stream " + stream + " assigned to processor instance " + id);
         return new ShardReader(kinesis, stream, shard, lastSeenSeqNo, retryStrategy, logger);
+    }
+
+    @Override
+    public void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
+        for (ShardReader shardReader : shardReaders) {
+            shardReader.provideDynamicMetrics(descriptor.copy(), context);
+        }
     }
 
     private static int incrCircular(int v, int limit) {

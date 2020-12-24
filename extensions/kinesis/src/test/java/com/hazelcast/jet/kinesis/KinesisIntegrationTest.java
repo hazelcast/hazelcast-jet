@@ -100,7 +100,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
     public void timestampsAndWatermarks() {
         HELPER.createStream(1);
 
-        sendMessages(false);
+        sendMessages();
 
         try {
             Pipeline pipeline = Pipeline.create();
@@ -144,7 +144,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
 
         jet().newJob(getPipeline());
 
-        Map<String, List<String>> expectedMessages = sendMessages(true);
+        Map<String, List<String>> expectedMessages = sendMessages();
         assertMessages(expectedMessages, true, false);
     }
 
@@ -163,7 +163,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
 
         jet().newJob(getPipeline());
 
-        Map<String, List<String>> expectedMessages = sendMessages(true);
+        Map<String, List<String>> expectedMessages = sendMessages();
         assertMessages(expectedMessages, true, false);
     }
 
@@ -185,7 +185,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
 
         jet().newJob(getPipeline());
 
-        Map<String, List<String>> expectedMessages = sendMessages(false);
+        Map<String, List<String>> expectedMessages = sendMessages();
 
         //wait for some data to start coming out of the pipeline, before starting the merging
         assertTrueEventually(() -> assertFalse(results.isEmpty()));
@@ -219,7 +219,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
 
         jet().newJob(getPipeline());
 
-        Map<String, List<String>> expectedMessages = sendMessages(true);
+        Map<String, List<String>> expectedMessages = sendMessages();
         assertMessages(expectedMessages, true, false);
     }
 
@@ -240,7 +240,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
 
         jet().newJob(getPipeline());
 
-        Map<String, List<String>> expectedMessages = sendMessages(false);
+        Map<String, List<String>> expectedMessages = sendMessages();
 
         //wait for some data to start coming out of the pipeline, before starting the splits
         assertTrueEventually(() -> assertFalse(results.isEmpty()));
@@ -279,7 +279,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
                 .setSnapshotIntervalMillis(SECONDS.toMillis(1));
         Job job = jet().newJob(getPipeline(), jobConfig);
 
-        Map<String, List<String>> expectedMessages = sendMessages(false);
+        Map<String, List<String>> expectedMessages = sendMessages();
 
         //wait for some data to start coming out of the pipeline
         assertTrueEventually(() -> assertFalse(results.isEmpty()));
@@ -309,7 +309,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
                 .setSnapshotIntervalMillis(SECONDS.toMillis(1));
         Job job = jet().newJob(getPipeline(), jobConfig);
 
-        Map<String, List<String>> expectedMessages = sendMessages(false);
+        Map<String, List<String>> expectedMessages = sendMessages();
 
         //wait for some data to start coming out of the pipeline
         assertTrueEventually(() -> assertFalse(results.isEmpty()));

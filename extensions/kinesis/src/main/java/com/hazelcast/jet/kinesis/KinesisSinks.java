@@ -54,6 +54,8 @@ public final class KinesisSinks {
     private KinesisSinks() {
     }
 
+    //todo: describe exposed metrics
+
     /**
      * todo: javadoc
      */

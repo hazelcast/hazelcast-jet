@@ -20,7 +20,6 @@ import com.amazonaws.services.kinesis.model.MergeShardsRequest;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.SplitShardRequest;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
@@ -111,7 +110,7 @@ class AbstractKinesisTest extends JetTestSupport {
         return pipeline;
     }
 
-    protected Map<String, List<String>> sendMessages(boolean join) {
+    protected Map<String, List<String>> sendMessages() {
         List<Map.Entry<String, String>> msgEntryList = IntStream.range(0, MESSAGES)
                 .boxed()
                 .map(i -> entry(Integer.toString(i % KEYS), i))
@@ -127,15 +126,9 @@ class AbstractKinesisTest extends JetTestSupport {
         pipeline.readFrom(source)
                 .writeTo(sink);
 
-        Job sendJob = jet().newJob(pipeline);
+        jet().newJob(pipeline);
 
-        Map<String, List<String>> retMap = toMap(msgEntryList);
-
-        if (join) {
-            sendJob.join();
-        }
-
-        return retMap;
+        return toMap(msgEntryList);
     }
 
     protected void assertMessages(Map<String, List<String>> expected, boolean checkOrder, boolean deduplicate) {
