@@ -110,6 +110,7 @@ import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Collections.emptyList;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 @SuppressWarnings({"unused", "MismatchedQueryAndUpdateOfCollection"})
 @Command(
@@ -214,7 +215,7 @@ public class JetCommandLine implements Runnable {
     public void sql(@Mixin(name = "verbosity") Verbosity verbosity,
                     @Mixin(name = "targets") TargetsMixin targets
     ) {
-        runWithJet(targets, verbosity, jet -> {
+        runWithJet(targets, verbosity, true, jet -> {
             LineReader reader = LineReaderBuilder.builder().parser(new MultilineParser())
                     .variable(LineReader.SECONDARY_PROMPT_PATTERN, new AttributedStringBuilder()
                             .style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR)).append("%M%P > ").toAnsi())
@@ -342,7 +343,8 @@ public class JetCommandLine implements Runnable {
 
         targetsMixin.replace(targets);
 
-        JetBootstrap.executeJar(this::getJetClient, file.getAbsolutePath(), snapshotName, name, mainClass, params);
+        JetBootstrap.executeJar(() -> getJetClient(false), file.getAbsolutePath(),
+                snapshotName, name, mainClass, params);
     }
 
     @Command(description = "Suspends a running job")
@@ -354,7 +356,7 @@ public class JetCommandLine implements Runnable {
                     description = "Name of the job to suspend"
             ) String name
     ) {
-        runWithJet(targets, verbosity, jet -> {
+        runWithJet(targets, verbosity, false, jet -> {
             Job job = getJob(jet, name);
             assertJobRunning(name, job);
             printf("Suspending job %s...", formatJob(job));
@@ -375,7 +377,7 @@ public class JetCommandLine implements Runnable {
                     description = "Name of the job to cancel"
             ) String name
     ) {
-        runWithJet(targets, verbosity, jet -> {
+        runWithJet(targets, verbosity, false, jet -> {
             Job job = getJob(jet, name);
             assertJobActive(name, job);
             printf("Cancelling job %s", formatJob(job));
@@ -404,7 +406,7 @@ public class JetCommandLine implements Runnable {
                     description = "Cancel the job after taking the snapshot")
                     boolean isTerminal
     ) {
-        runWithJet(targets, verbosity, jet -> {
+        runWithJet(targets, verbosity, false, jet -> {
             Job job = getJob(jet, jobName);
             assertJobActive(jobName, job);
             if (isTerminal) {
@@ -433,7 +435,7 @@ public class JetCommandLine implements Runnable {
                     description = "Name of the snapshot")
                     String snapshotName
     ) {
-        runWithJet(targets, verbosity, jet -> {
+        runWithJet(targets, verbosity, false, jet -> {
             JobStateSnapshot jobStateSnapshot = jet.getJobStateSnapshot(snapshotName);
             if (jobStateSnapshot == null) {
                 throw new JetException(String.format("Didn't find a snapshot named '%s'", snapshotName));
@@ -454,7 +456,7 @@ public class JetCommandLine implements Runnable {
                     description = "Name of the job to restart")
                     String name
     ) {
-        runWithJet(targets, verbosity, jet -> {
+        runWithJet(targets, verbosity, false, jet -> {
             Job job = getJob(jet, name);
             assertJobRunning(name, job);
             println("Restarting job " + formatJob(job) + "...");
@@ -475,7 +477,7 @@ public class JetCommandLine implements Runnable {
                     description = "Name of the job to resume")
                     String name
     ) {
-        runWithJet(targets, verbosity, jet -> {
+        runWithJet(targets, verbosity, false, jet -> {
             Job job = getJob(jet, name);
             if (job.getStatus() != JobStatus.SUSPENDED) {
                 throw new RuntimeException("Job '" + name + "' is not suspended. Current state: " + job.getStatus());
@@ -498,7 +500,7 @@ public class JetCommandLine implements Runnable {
                     description = "Lists all jobs including completed and failed ones")
                     boolean listAll
     ) {
-        runWithJet(targets, verbosity, jet -> {
+        runWithJet(targets, verbosity, false, jet -> {
             JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
             List<JobSummary> summaries = client.getJobSummaryList();
             String format = "%-19s %-18s %-23s %s";
@@ -523,7 +525,7 @@ public class JetCommandLine implements Runnable {
             @Option(names = {"-F", "--full-job-name"},
                     description = "Don't trim job name to fit, can break layout")
                     boolean fullJobName) {
-        runWithJet(targets, verbosity, jet -> {
+        runWithJet(targets, verbosity, false, jet -> {
             Collection<JobStateSnapshot> snapshots = jet.getJobStateSnapshots();
             printf("%-23s %-15s %-24s %s", "TIME", "SIZE (bytes)", "JOB NAME", "SNAPSHOT NAME");
             snapshots.stream()
@@ -546,7 +548,7 @@ public class JetCommandLine implements Runnable {
             @Mixin(name = "verbosity") Verbosity verbosity,
             @Mixin(name = "targets") TargetsMixin targets
     ) {
-        runWithJet(targets, verbosity, jet -> {
+        runWithJet(targets, verbosity, false, jet -> {
             JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
             HazelcastClientInstanceImpl hazelcastClient = client.getHazelcastClient();
             ClientClusterService clientClusterService = hazelcastClient.getClientClusterService();
@@ -594,11 +596,12 @@ public class JetCommandLine implements Runnable {
         );
     }
 
-    private void runWithJet(TargetsMixin targets, Verbosity verbosity, ConsumerEx<JetInstance> consumer) {
+    private void runWithJet(TargetsMixin targets, Verbosity verbosity, boolean retryClusterConnectForever,
+                            ConsumerEx<JetInstance> consumer) {
         this.targetsMixin.replace(targets);
         this.verbosity.merge(verbosity);
         configureLogging();
-        JetInstance jet = getJetClient();
+        JetInstance jet = getJetClient(retryClusterConnectForever);
         try {
             consumer.accept(jet);
         } finally {
@@ -606,11 +609,11 @@ public class JetCommandLine implements Runnable {
         }
     }
 
-    private JetInstance getJetClient() {
-        return uncheckCall(() -> jetClientFn.apply(getClientConfig()));
+    private JetInstance getJetClient(boolean retryClusterConnectForever) {
+        return uncheckCall(() -> jetClientFn.apply(getClientConfig(retryClusterConnectForever)));
     }
 
-    private ClientConfig getClientConfig() throws IOException {
+    private ClientConfig getClientConfig(boolean retryClusterConnectForever) throws IOException {
         ClientConfig config;
         if (isYaml()) {
             config = new YamlClientConfigBuilder(this.config).build();
@@ -633,6 +636,15 @@ public class JetCommandLine implements Runnable {
             config.setClusterName(targetsMixin.getClusterName());
         }
 
+        if (retryClusterConnectForever) {
+            final double expBackoffMultiplier = 1.25;
+            final long clusterConnectTimeoutMillis = Long.MAX_VALUE;
+            final int maxBackOffMillis = (int) SECONDS.toMillis(15);
+            config.getConnectionStrategyConfig().getConnectionRetryConfig()
+                    .setClusterConnectTimeoutMillis(clusterConnectTimeoutMillis)
+                    .setMultiplier(expBackoffMultiplier)
+                    .setMaxBackoffMillis(maxBackOffMillis);
+        }
         return config;
     }
 
