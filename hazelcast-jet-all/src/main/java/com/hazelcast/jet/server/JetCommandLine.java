@@ -1211,21 +1211,19 @@ public class JetCommandLine implements Runnable {
         AttributedStringBuilder builder = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("Available Commands:\n")
-                .append("  clear\t- Clear the terminal screen\n")
-                .append("  exit\t- Exit the SQL console\n")
-                .append("  help\t- Provide information about available commands\n")
-                .append("  history\t- Show the command history of the current session\n")
+                .append("  clear\t- Clears the terminal screen\n")
+                .append("  exit\t- Exits from the SQL console\n")
+                .append("  help\t- Provides information about available commands\n")
+                .append("  history\t- Shows the command history of the current session\n")
                 .append("Hints:\n")
-                .append("  Use semicolon to finalize queries\n");
+                .append("  Semicolon completes a query\n");
         if (jetVersion != null) {
-            // if it is connected to Jet cluster
-            builder.append("  Press Ctrl+C to cancel streaming queries\n")
-                    .append("  For more information, see the Hazelcast Jet SQL documentation:\n")
-                    .append("  https://jet-start.sh/docs/sql/intro");
+            // connected to a Jet cluster
+            builder.append("  Ctrl+C cancels a streaming query\n")
+                   .append("  https://jet-start.sh/docs/sql/intro");
         } else {
-            // if it is connected to IMDG cluster
-            builder.append("  For more information, see the Hazelcast IMDG SQL documentation:\n")
-                    .append("  https://docs.hazelcast.org/docs/latest/manual/html-single/#sql");
+            // connected to an IMDG cluster
+            builder.append("  https://docs.hazelcast.org/docs/latest/manual/html-single/#sql");
         }
         return builder.toAnsi();
     }
