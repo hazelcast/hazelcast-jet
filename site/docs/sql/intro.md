@@ -121,22 +121,12 @@ also plan to support JDBC and non-Java clients in the future):
 
 #### Submitting the query on the CLI
 
-First, we will explain how to start Jet SQL CLI(BETA) before explaining
-how to submit queries via SQL CLI. Before starting the CLI, make sure
-Hazelcast Jet server is running. If you don't have a running jet node,
-you can start a node using the following command:
+Before starting the CLI, make sure Hazelcast Jet server is running. If
+you don't have a running jet member, you can start a member using the
+following command:
 
 ```bash
-$ $JET_HOME/bin/jet-start
-... 020-12-16 14:17:02,591 [ INFO] [main] [c.h.system]: Hazelcast Jet {jet-version}({buildno} - {revision}) starting at [192.168.1.5]:5701
-2020-12-16 14:17:02,591 [ INFO] [main] [c.h.system]: Based on Hazelcast IMDG version: {imdg-version} ({buildno} - {revision})
-2020-12-16 14:17:02,592 [ INFO] [main] [c.h.system]: Cluster name: jet
-2020-12-16 14:17:02,592 [ INFO] [main] [c.h.system]:
-        o   o   o   o---o o---o o     o---o   o   o---o o-o-o        o o---o o-o-o
-        |   |  / \     /  |     |     |      / \  |       |          | |       |
-        o---o o---o   o   o-o   |     o     o---o o---o   |          | o-o     |
-        |   | |   |  /    |     |     |     |   |     |   |      \   | |       |
-        o   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o
+$JET_HOME/bin/jet-start
 ...
 ```
 
@@ -144,22 +134,20 @@ After that, you can start the Jet SQL CLI by running this command:
 
 ```bash
 $ $JET_HOME/bin/jet sql
- o   o   o   o---o o---o o     o---o   o   o---o o-o-o        o o---o o-o-o   o---o   o---o   o
- |   |  / \     /  |     |     |      / \  |       |          | |       |     |       |   |   |
- o---o o---o   o   o-o   |     o     o---o o---o   |          | o-o     |     o---o   o   o   o
- |   | |   |  /    |     |     |     |   |     |   |      \   | |       |         |   |   |   |
- o   o o   o o---o o---o o---o o---o o   o o---o   o       o--o o---o   o     o---o   o---\\  o---
- ...
- JET SQL>
+Connected to Hazelcast Jet 4.4-SNAPSHOT at [192.168.1.5]:5701 (+0 more)
+Type 'help' for instructions
+sql>
 ```
 
-This CLI uses Jet Client to connect and send the SQL commands to the Jet
-cluster. It has multiline command support and needs a semicolon to
-understand that the command is finalized. So, make sure you use `;` at
-the end of your commands.  You can submit queries as follows:
+This CLI uses Jet client to connect and send the SQL commands to the Jet
+cluster. This CLI overrides the client's cluster connect configurations
+so that if the client-server connection is lost, it tries to reconnect
+forever. CLI has multiline command support and it requires a semicolon
+to finalize the commands. So, make sure you use `;` at the end of your
+commands.  You can submit queries as follows:
 
 ```bash
-JET SQL> CREATE EXTERNAL MAPPING trades (
+sql> CREATE EXTERNAL MAPPING trades (
     ticker VARCHAR,
     price DECIMAL,
     amount BIGINT)
@@ -169,12 +157,12 @@ OPTIONS (
     'bootstrap.servers' = '127.0.0.1:9092'
     /* ... more configuration options for the Kafka consumer */
 );
-JET SQL> /* query text ending with semicolon*/
+sql> /* query text ending with semicolon*/
 ...
 ```
 
 When you send a streaming query, you can use `CTRL+C(SIGINT)` to cancel
-this query. You can also enter `HELP;` to see the available commands.
+this query. Also, you can type `help` to see the available commands.
 
 > SQL CLI is in beta version and only use it in development environments.
 
