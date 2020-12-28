@@ -50,6 +50,7 @@ import com.hazelcast.sql.SqlColumnType;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlRowMetadata;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.jline.reader.EOFError;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.History;
@@ -613,6 +614,7 @@ public class JetCommandLine implements Runnable {
         return uncheckCall(() -> jetClientFn.apply(getClientConfig(retryClusterConnectForever)));
     }
 
+    @SuppressFBWarnings(value = "DLS_DEAD_LOCAL_STORE", justification = "Generates false positive")
     private ClientConfig getClientConfig(boolean retryClusterConnectForever) throws IOException {
         ClientConfig config;
         if (isYaml()) {
