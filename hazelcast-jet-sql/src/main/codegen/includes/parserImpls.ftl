@@ -456,3 +456,22 @@ SqlExtendedInsert SqlExtendedInsert() :
         );
     }
 }
+
+/**
+* Parses SHOW statements.
+*/
+SqlShowStatement SqlShowStatement() :
+{
+    ShowStatementTarget target;
+}
+{
+    <SHOW>
+    (
+        [ <EXTERNAL> ] <MAPPINGS> { target = ShowStatementTarget.MAPPINGS; }
+    |
+        <JOBS> { target = ShowStatementTarget.JOBS; }
+    )
+    {
+        return new SqlShowStatement(getPos(), target);
+    }
+}

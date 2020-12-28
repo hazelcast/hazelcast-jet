@@ -529,7 +529,7 @@ public class JobRepository {
         return ids;
     }
 
-    Collection<JobRecord> getJobRecords() {
+    public Collection<JobRecord> getJobRecords() {
         return jobRecords.values();
     }
 
@@ -539,6 +539,10 @@ public class JobRepository {
 
     public JobExecutionRecord getJobExecutionRecord(long jobId) {
         return jobExecutionRecords.get(jobId);
+    }
+
+    public Collection<JobExecutionRecord> getJobExecutionRecords() {
+        return jobExecutionRecords.values();
     }
 
     /**

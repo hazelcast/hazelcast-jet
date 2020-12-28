@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.sql.impl.QueryUtils.CATALOG;
 import static java.util.Arrays.asList;
@@ -98,6 +99,11 @@ public class MappingCatalog implements TableResolver {
     @Override
     public List<List<String>> getDefaultSearchPaths() {
         return SEARCH_PATHS;
+    }
+
+    @Nonnull
+    public List<String> getMappingNames() {
+        return storage.values().stream().map(Mapping::name).collect(Collectors.toList());
     }
 
     @Nonnull
