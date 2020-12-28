@@ -26,17 +26,22 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.hadoop.HadoopSources;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
+import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.Util;
-import com.hazelcast.jet.pipeline.file.impl.FileProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.file.impl.FileTraverser;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.InvalidInputException;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
@@ -128,7 +133,20 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
         return inputFormat;
     }
 
-    public static class MetaSupplier<K, V, R> extends ReadHdfsMetaSupplierBase implements FileProcessorMetaSupplier<R> {
+    private static <K, V> List<InputSplit> getSplits(Configuration configuration) throws Exception {
+        InputFormat<K, V> inputFormat = extractInputFormat(configuration);
+        Job job = Job.getInstance(configuration);
+        try {
+            return inputFormat.getSplits(job);
+        } catch (InvalidInputException e) {
+            String directory = configuration.get(INPUT_DIR, "");
+            ILogger logger = Logger.getLogger(ReadHadoopNewApiP.class);
+            logger.fine("The directory " + directory + " does not exists. This source will emit 0 items.");
+            return emptyList();
+        }
+    }
+
+    public static class MetaSupplier<K, V, R> extends ReadHdfsMetaSupplierBase<R> {
 
         static final long serialVersionUID = 1L;
 
@@ -155,9 +173,9 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
             IndexedInputSplit[] indexedInputSplits = new IndexedInputSplit[splits.size()];
             Arrays.setAll(indexedInputSplits, i -> new IndexedInputSplit(i, splits.get(i)));
             Address[] addresses = context.jetInstance().getCluster().getMembers()
-                                         .stream()
-                                         .map(Member::getAddress)
-                                         .toArray(Address[]::new);
+                    .stream()
+                    .map(Member::getAddress)
+                    .toArray(Address[]::new);
             assigned = assignSplitsToMembers(indexedInputSplits, addresses);
             printAssignments(assigned);
         }
@@ -173,17 +191,7 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
             return new HadoopFileTraverser<>(configuration, getSplits(configuration), projectionFn);
         }
 
-        private List<InputSplit> getSplits(Configuration configuration) throws Exception {
-            InputFormat<K, V> inputFormat = extractInputFormat(configuration);
-            Job job = Job.getInstance(configuration);
-            try {
-                return inputFormat.getSplits(job);
-            } catch (InvalidInputException e) {
-                String directory = job.getConfiguration().get(INPUT_DIR, "");
-                logger.fine("The directory " + directory + " does not exists. This source will emit 0 items.");
-                return emptyList();
-            }
-        }
+
     }
 
     private static final class Supplier<K, V, R> implements ProcessorSupplier {
@@ -206,7 +214,7 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
         ) {
             this.configuration = configuration;
             this.projectionFn = projectionFn;
-            this.assignedSplits = assignedSplits;
+            this.assignedSplits = reAssignSplits(assignedSplits);
         }
 
         @Nonnull
@@ -224,6 +232,30 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
                                 return new ReadHadoopNewApiP<>(configuration, mappedSplits, projectionFn);
                             }
                     ).collect(toList());
+        }
+
+        private List<IndexedInputSplit> reAssignSplits(List<IndexedInputSplit> assignedSplits) {
+            // If the local file system is marked as shared, no re-assign
+            if (configuration.getBoolean(HadoopSources.SHARED_LOCAL_FS, false)) {
+                return assignedSplits;
+            }
+            try {
+                // If any of the input paths do not belong to LocalFileSystem, no re-assign
+                Job job = Job.getInstance(configuration);
+                Path[] inputPaths = FileInputFormat.getInputPaths(job);
+                for (Path inputPath : inputPaths) {
+                    if (!(inputPath.getFileSystem(configuration) instanceof LocalFileSystem)) {
+                        return assignedSplits;
+                    }
+                }
+
+                // re-assign the splits
+                int[] index = new int[1];
+                List<InputSplit> splits = getSplits(configuration);
+                return splits.stream().map(split -> new IndexedInputSplit(index[0]++, split)).collect(toList());
+            } catch (Exception e) {
+                throw ExceptionUtil.sneakyThrow(e);
+            }
         }
     }
 
