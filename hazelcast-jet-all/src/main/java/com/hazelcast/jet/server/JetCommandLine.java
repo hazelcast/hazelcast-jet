@@ -253,8 +253,17 @@ public class JetCommandLine implements Runnable {
                     continue;
                 }
 
-                if (command.lastIndexOf(";") >= 0) {
-                    command = command.substring(0, command.lastIndexOf(";")).trim();
+                command = command.trim();
+                if (command.length() > 0 && command.lastIndexOf(";") == (command.length() - 1)) {
+                    command = command.substring(0, command.length() - 1).trim();
+                } else if (command.lastIndexOf(";") >= 0) {
+                    String errorPrompt = new AttributedStringBuilder()
+                            .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
+                            .append("There are non-whitespace characters after the semicolon")
+                            .toAnsi();
+                    writer.println(errorPrompt);
+                    writer.flush();
+                    continue;
                 }
 
                 if ("".equals(command)) {
@@ -915,7 +924,7 @@ public class JetCommandLine implements Runnable {
                 }
             }
 
-            if (SQLCliConstants.COMMAND_SET.contains(line.toLowerCase(Locale.US))) {
+            if (SQLCliConstants.COMMAND_SET.contains(line.trim().toLowerCase(Locale.US))) {
                 return;
             }
             // These EOFError exceptions are captured in LineReader's
