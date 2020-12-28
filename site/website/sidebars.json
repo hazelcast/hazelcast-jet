@@ -9,6 +9,7 @@
     ],
     "Tutorials": [
       "tutorials/kafka",
+      "tutorials/kinesis",
       {
         "type": "subcategory",
         "label": "Change Data Capture",

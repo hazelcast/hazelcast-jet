@@ -60,7 +60,7 @@ public class ShardCountMonitor extends AbstractShardWorker {
         this.shardCount = shardCount;
         this.describeStreamRetryTracker = new RetryTracker(retryStrategy);
         this.descriteStreamRateTracker = initRandomizedTracker(totalInstances);
-        this.nextDescribeStreamTime = System.nanoTime() + descriteStreamRateTracker.next();
+        this.nextDescribeStreamTime = System.nanoTime();
     }
 
     public void run() {

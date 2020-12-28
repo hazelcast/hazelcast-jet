@@ -443,9 +443,9 @@ public class KinesisSinkP<T> implements Processor {
             if (byteBuffer == null || byteBuffer.capacity() < data.length) {
                 putRecordsRequestEntry.setData(ByteBuffer.wrap(data));
             } else {
-                byteBuffer.clear();
+                ((java.nio.Buffer) byteBuffer).clear(); //cast needed due to JDK 9 breaking compatibility
                 byteBuffer.put(data);
-                byteBuffer.flip();
+                ((java.nio.Buffer) byteBuffer).flip(); //cast needed due to JDK 9 breaking compatibility
             }
 
             encodedSize = size;

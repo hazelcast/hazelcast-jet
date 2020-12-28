@@ -72,7 +72,7 @@ public class RangeMonitor extends AbstractShardWorker {
         this.shardQueues = shardQueues;
         this.listShardRetryTracker = new RetryTracker(retryStrategy);
         this.listShardsRateTracker = initRandomizedTracker(totalInstances);
-        this.nextListShardsTimeMs = System.currentTimeMillis() + listShardsRateTracker.next();
+        this.nextListShardsTimeMs = System.currentTimeMillis();
     }
 
     public void run() {
