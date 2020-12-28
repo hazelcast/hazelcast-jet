@@ -81,6 +81,8 @@ public final class HadoopSources {
      *     conf.setBoolean(HadoopSources.SHARED_LOCAL_FS, true);
      *     BatchSource<Entry<K, V>> source = HadoopSources.inputFormat(conf);
      * }</pre>
+     *
+     * @since 4.4
      */
     public static final String SHARED_LOCAL_FS = "jet.source.sharedlocalfs";
 
