@@ -1018,44 +1018,42 @@ public class JetCommandLine implements Runnable {
             String colName = colMetadata.getName();
             switch (type) {
                 case BOOLEAN:
-                    colWidths[i] = Math.max(SQLCliConstants.BOOLEAN_FORMAT_LENGTH,
-                            Math.min(colName.length(), SQLCliConstants.VARCHAR_FORMAT_LENGTH));
+                    colWidths[i] = determineColumnWidth(colName, SQLCliConstants.BOOLEAN_FORMAT_LENGTH);
                     break;
                 case DATE:
-                    colWidths[i] = Math.max(SQLCliConstants.DATE_FORMAT_LENGTH,
-                            Math.min(colName.length(), SQLCliConstants.VARCHAR_FORMAT_LENGTH));
+                    colWidths[i] = determineColumnWidth(colName, SQLCliConstants.DATE_FORMAT_LENGTH);
                     break;
                 case TIMESTAMP_WITH_TIME_ZONE:
                 case DECIMAL:
                 case REAL:
                 case DOUBLE:
-                    colWidths[i] = SQLCliConstants.TIMESTAMP_WITH_TIME_ZONE_FORMAT_LENGTH;
+                    colWidths[i] = determineColumnWidth(colName, SQLCliConstants.DOUBLE_FORMAT_LENGTH);
                     break;
                 case INTEGER:
-                    colWidths[i] = Math.max(SQLCliConstants.INTEGER_FORMAT_LENGTH,
-                            Math.min(colName.length(), SQLCliConstants.VARCHAR_FORMAT_LENGTH));
+                    colWidths[i] = determineColumnWidth(colName, SQLCliConstants.INTEGER_FORMAT_LENGTH);
                     break;
                 case NULL:
                 case TINYINT:
-                    colWidths[i] = Math.max(SQLCliConstants.TINYINT_FORMAT_LENGTH,
-                            Math.min(colName.length(), SQLCliConstants.VARCHAR_FORMAT_LENGTH));
+                    colWidths[i] = determineColumnWidth(colName, SQLCliConstants.TINYINT_FORMAT_LENGTH);
                     break;
                 case SMALLINT:
-                    colWidths[i] = Math.max(SQLCliConstants.SMALLINT_FORMAT_LENGTH,
-                            Math.min(colName.length(), SQLCliConstants.VARCHAR_FORMAT_LENGTH));
+                    colWidths[i] = determineColumnWidth(colName, SQLCliConstants.SMALLINT_FORMAT_LENGTH);
                     break;
                 case TIMESTAMP:
-                    colWidths[i] = Math.max(SQLCliConstants.TIMESTAMP_FORMAT_LENGTH,
-                            Math.min(colName.length(), SQLCliConstants.VARCHAR_FORMAT_LENGTH));
+                    colWidths[i] = determineColumnWidth(colName, SQLCliConstants.TIMESTAMP_FORMAT_LENGTH);
                     break;
                 case BIGINT:
                 case VARCHAR:
                 case OBJECT:
                 default:
-                    colWidths[i] = SQLCliConstants.VARCHAR_FORMAT_LENGTH;
+                    colWidths[i] = determineColumnWidth(colName, SQLCliConstants.VARCHAR_FORMAT_LENGTH);
             }
         }
         return colWidths;
+    }
+
+    private static int determineColumnWidth(String header, int typeLength) {
+        return Math.max(Math.min(header.length(), SQLCliConstants.VARCHAR_FORMAT_LENGTH), typeLength);
     }
 
     private static Alignment[] determineAlignments(SqlRowMetadata metadata) {
@@ -1083,7 +1081,7 @@ public class JetCommandLine implements Runnable {
                 case VARCHAR:
                 case TIMESTAMP_WITH_TIME_ZONE:
                 default:
-                    alignments[i] = Alignment.CENTER;
+                    alignments[i] = Alignment.LEFT;
             }
         }
         return alignments;
@@ -1098,11 +1096,11 @@ public class JetCommandLine implements Runnable {
         builder.append("|");
         for (int i = 0; i < colCount; i++) {
             String colName = metadata.getColumn(i).getName();
-            if (alignments[i] == Alignment.CENTER) {
-                centralize(colWidths[i], builder, colName);
-            } else {
-                rightAlign(colWidths[i], builder, colName);
-            }
+            colName = sanitize(colName, colWidths[i]);
+            builder.style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR));
+            align(colWidths[i], colName, alignments[i], builder);
+            builder.style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
+            builder.append('|');
         }
         out.println(builder.toAnsi());
         printSeparatorLine(colCount, colWidths, out);
@@ -1115,46 +1113,37 @@ public class JetCommandLine implements Runnable {
         builder.append("|");
         int columnCount = row.getMetadata().getColumnCount();
         for (int i = 0; i < columnCount; i++) {
-            String colValue = row.getObject(i).toString().replace("\n", "\\n");
-            if (alignments[i] == Alignment.CENTER) {
-                centralize(colWidths[i], builder, colValue);
-            } else {
-                rightAlign(colWidths[i], builder, colValue);
-            }
+            String colValue = row.getObject(i).toString();
+            colValue = sanitize(colValue, colWidths[i]);
+            builder.style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR));
+            align(colWidths[i], colValue, alignments[i], builder);
+            builder.style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
+            builder.append('|');
         }
         out.println(builder.toAnsi());
         out.flush();
     }
 
-    private static void centralize(int colWidth, AttributedStringBuilder builder, String colValue) {
-        colValue = colValue.replace("\n", "\\n");
-        builder.style(AttributedStyle.DEFAULT.foreground(PRIMARY_COLOR));
-        int wsLen = 0;
-        if (colValue.length() <= colWidth) {
-            wsLen = colWidth - colValue.length();
-        } else {
-            colValue = colValue.substring(0, colWidth - 1) + "\u2026";
+    private static String sanitize(String s, int width) {
+        s = s.replace("\n", "\\n");
+        if (s.length() > width) {
+            s = s.substring(0, width - 1) + "\u2026";
         }
-
-        for (int j = 0; j < wsLen / 2; j++) {
-            builder.append(' ');
-        }
-        builder.append(colValue);
-        for (int j = 0; j < wsLen / 2 + wsLen % 2; j++) {
-            builder.append(' ');
-        }
-        builder.style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
-        builder.append('|');
+        return s;
     }
 
-    private static void rightAlign(int colWidth, AttributedStringBuilder builder, String colValue) {
-        if (colValue.length() > colWidth) {
-            colValue = colValue.substring(0, colWidth - 1) + "\u2026";
+    private static void align(int width, String s, Alignment alignment, AttributedStringBuilder builder) {
+        switch(alignment) {
+            case CENTER:
+                builder.append(String.format("%-" + width + "s",
+                        String.format("%" + (s.length() + (width - s.length()) / 2) + "s", s)));
+                break;
+            case LEFT:
+                builder.append(String.format("%-" + width + "s", s));
+                break;
+            case RIGHT:
+                builder.append(String.format("%" + width + "s", s));
         }
-        builder.style(AttributedStyle.DEFAULT.foreground(PRIMARY_COLOR));
-        builder.append(String.format("%" + colWidth + "s", colValue));
-        builder.style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
-        builder.append('|');
     }
 
     private static void printSeparatorLine(int colSize, int[] colWidths, PrintWriter out) {
