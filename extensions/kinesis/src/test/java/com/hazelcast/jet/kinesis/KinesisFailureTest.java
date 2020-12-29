@@ -141,7 +141,9 @@ public class KinesisFailureTest extends AbstractKinesisTest {
         System.err.println("Network connection re-established");
         PROXY.setConnectionCut(false);
 
-        assertMessages(expectedMessages, true, false);
+        assertMessages(expectedMessages, true, true); //duplication happens due
+        // AWS SDK internals (producer retries; details here:
+        // https://docs.aws.amazon.com/streams/latest/dev/kinesis-record-processor-duplicates.html#kinesis-record-processor-duplicates-producer
     }
 
     @Test
