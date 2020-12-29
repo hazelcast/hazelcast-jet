@@ -389,11 +389,16 @@ the initial ordering.
 ### Fault Tolerance
 
 Since there is no transaction support in Kinesis, the sink can't support
-exactly-once delivery. It can, however, support pipelines with both
-at-least-once and exactly-once processing. It does that by ensuring it
-flushes all data it has taken ownership of (taken from the `Inbox` is
-the more accurate, developer speak) out to Kinesis, before saving its
-snapshots.
+exactly-once delivery. It can, however, support at-least-once
+processing. It does that by ensuring it flushes all data it has taken
+ownership of (taken from the `Inbox` is the more accurate, developer
+speak) out to Kinesis, before saving its snapshots.
+
+A further reason why exactly-once support is not possible is the API
+used to implement the sink, the AWS SDK itself. It has internal retry
+mechanisms, which can lead to duplicate publishing of records. For
+details, see the [relevant parts of its
+documentation](https://docs.aws.amazon.com/streams/latest/dev/kinesis-record-processor-duplicates.html#kinesis-record-processor-duplicates-producer).
 
 ### Metrics
 

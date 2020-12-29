@@ -90,12 +90,10 @@ public class KinesisFailureTest extends AbstractKinesisTest {
 
         PROXY = TOXIPROXY.getProxy(LOCALSTACK, 4566);
 
-        AWS_CONFIG = new AwsConfig(
-                "http://" + PROXY.getContainerIpAddress() + ":" + PROXY.getProxyPort(),
-                LOCALSTACK.getRegion(),
-                LOCALSTACK.getAccessKey(),
-                LOCALSTACK.getSecretKey()
-        );
+        AWS_CONFIG = new AwsConfig()
+                .withEndpoint("http://" + PROXY.getContainerIpAddress() + ":" + PROXY.getProxyPort())
+                .withRegion(LOCALSTACK.getRegion())
+                .withCredentials(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey());
         KINESIS = AWS_CONFIG.buildClient();
         HELPER = new KinesisTestHelper(KINESIS, STREAM, Logger.getLogger(KinesisIntegrationTest.class));
     }
@@ -141,9 +139,9 @@ public class KinesisFailureTest extends AbstractKinesisTest {
         System.err.println("Network connection re-established");
         PROXY.setConnectionCut(false);
 
-        assertMessages(expectedMessages, true, true); //duplication happens due
-        // AWS SDK internals (producer retries; details here:
-        // https://docs.aws.amazon.com/streams/latest/dev/kinesis-record-processor-duplicates.html#kinesis-record-processor-duplicates-producer
+        assertMessages(expectedMessages, true, true);
+        // duplication happens due AWS SDK internals (producer retries; details here:
+        // https://docs.aws.amazon.com/streams/latest/dev/kinesis-record-processor-duplicates.html)
     }
 
     @Test
@@ -152,10 +150,8 @@ public class KinesisFailureTest extends AbstractKinesisTest {
     public void sinkWithIncorrectCredentials() {
         HELPER.createStream(1);
 
-        AwsConfig awsConfig = new AwsConfig(null, null,
-                "wrong_key",
-                "wrong_key"
-        );
+        AwsConfig awsConfig = new AwsConfig()
+                .withCredentials("wrong_key", "wrong_key");
         Pipeline p = Pipeline.create();
         p.readFrom(TestSources.items(entry("k", new byte[0])))
                 .writeTo(KinesisSinks.kinesis(STREAM)
@@ -175,10 +171,8 @@ public class KinesisFailureTest extends AbstractKinesisTest {
     public void sourceWithIncorrectCredentials() {
         HELPER.createStream(1);
 
-        AwsConfig awsConfig = new AwsConfig(null, null,
-                "wrong_key",
-                "wrong_key"
-        );
+        AwsConfig awsConfig = new AwsConfig()
+                .withCredentials("wrong_key", "wrong_key");
         Pipeline p = Pipeline.create();
         p.readFrom(KinesisSources.kinesis(STREAM)
                     .withEndpoint(awsConfig.getEndpoint())

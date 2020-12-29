@@ -80,12 +80,10 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         //todo: force jackson versions to what we use (2.11.x) and have the resulting issue
         // fixed by Localstack (https://github.com/localstack/localstack/issues/3208)
 
-        AWS_CONFIG = new AwsConfig(
-                "http://" + LOCALSTACK.getHost() + ":" + LOCALSTACK.getMappedPort(4566),
-                LOCALSTACK.getRegion(),
-                LOCALSTACK.getAccessKey(),
-                LOCALSTACK.getSecretKey()
-        );
+        AWS_CONFIG = new AwsConfig()
+                .withEndpoint("http://" + LOCALSTACK.getHost() + ":" + LOCALSTACK.getMappedPort(4566))
+                .withRegion(LOCALSTACK.getRegion())
+                .withCredentials(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey());
         KINESIS = AWS_CONFIG.buildClient();
         HELPER = new KinesisTestHelper(KINESIS, STREAM, Logger.getLogger(KinesisIntegrationTest.class));
     }

@@ -15,6 +15,7 @@
  */
 package com.hazelcast.jet.kinesis;
 
+import com.amazonaws.ClientConfiguration;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
@@ -98,7 +99,7 @@ public final class KinesisSinks {
         @Nonnull
         private final FunctionEx<T, byte[]> valueFn;
         @Nonnull
-        private final AwsConfig config = new AwsConfig();
+        private final AwsConfig awsConfig = new AwsConfig();
         @Nonnull
         private RetryStrategy retryStrategy = DEFAULT_RETRY_STRATEGY;
 
@@ -120,7 +121,7 @@ public final class KinesisSinks {
          */
         @Nonnull
         public Builder<T> withEndpoint(@Nullable String endpoint) {
-            this.config.setEndpoint(endpoint);
+            awsConfig.withEndpoint(endpoint);
             return this;
         }
 
@@ -129,7 +130,7 @@ public final class KinesisSinks {
          */
         @Nonnull
         public Builder<T> withRegion(@Nullable String region) {
-            this.config.setRegion(region);
+            awsConfig.withRegion(region);
             return this;
         }
 
@@ -138,12 +139,23 @@ public final class KinesisSinks {
          */
         @Nonnull
         public Builder<T> withCredentials(@Nullable String accessKey, @Nullable String secretKey) {
-            this.config.setCredentials(accessKey, secretKey);
+            awsConfig.withCredentials(accessKey, secretKey);
             return this;
         }
 
         /**
          * TODO: javadoc
+         */
+        @Nonnull
+        public Builder<T> withClientConfiguration(@Nonnull ClientConfiguration clientConfiguration) {
+            awsConfig.withClientConfiguration(clientConfiguration);
+            return this;
+        }
+
+        /**
+         * TODO: javadoc
+         *
+         * TODO: document how this differs from Amazon SDK ClientConfiguration and the retry policies within
          */
         @Nonnull
         public Builder<T> withRetryStrategy(@Nonnull RetryStrategy retryStrategy) {
@@ -157,7 +169,8 @@ public final class KinesisSinks {
         @Nonnull
         public Sink<T> build() {
             String name = "Kinesis Sink (" + stream + ")";
-            KinesisSinkPSupplier<T> supplier = new KinesisSinkPSupplier<>(config, stream, keyFn, valueFn, retryStrategy);
+            KinesisSinkPSupplier<T> supplier =
+                    new KinesisSinkPSupplier<>(awsConfig, stream, keyFn, valueFn, retryStrategy);
             return new SinkImpl<>(name, ProcessorMetaSupplier.of(supplier), DISTRIBUTED_PARTITIONED, keyFn);
         }
     }

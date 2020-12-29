@@ -15,6 +15,7 @@
  */
 package com.hazelcast.jet.kinesis;
 
+import com.amazonaws.ClientConfiguration;
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
 import com.hazelcast.jet.kinesis.impl.KinesisSourcePMetaSupplier;
 import com.hazelcast.jet.pipeline.Sources;
@@ -116,7 +117,7 @@ public final class KinesisSources {
         @Nonnull
         private final String stream;
         @Nonnull
-        private final AwsConfig config = new AwsConfig();
+        private final AwsConfig awsConfig = new AwsConfig();
         @Nonnull
         private RetryStrategy retryStrategy = DEFAULT_RETRY_STRATEGY;
 
@@ -129,7 +130,7 @@ public final class KinesisSources {
          */
         @Nonnull
         public Builder withEndpoint(@Nullable String endpoint) {
-            config.setEndpoint(endpoint);
+            awsConfig.withEndpoint(endpoint);
             return this;
         }
 
@@ -138,7 +139,7 @@ public final class KinesisSources {
          */
         @Nonnull
         public Builder withRegion(@Nullable String region) {
-            config.setRegion(region);
+            awsConfig.withRegion(region);
             return this;
         }
 
@@ -147,12 +148,23 @@ public final class KinesisSources {
          */
         @Nonnull
         public Builder withCredentials(@Nullable String accessKey, @Nullable String secretKey) {
-            config.setCredentials(accessKey, secretKey);
+            awsConfig.withCredentials(accessKey, secretKey);
             return this;
         }
 
         /**
          * TODO: javadoc
+         */
+        @Nonnull
+        public Builder withClientConfiguration(@Nonnull ClientConfiguration clientConfiguration) {
+            awsConfig.withClientConfiguration(clientConfiguration);
+            return this;
+        }
+
+        /**
+         * TODO: javadoc
+         *
+         * TODO: document how this differs from Amazon SDK ClientConfiguration and the retry policies within
          */
         @Nonnull
         public Builder withRetryStrategy(@Nonnull RetryStrategy retryStrategy) {
@@ -166,7 +178,7 @@ public final class KinesisSources {
         @Nonnull
         public StreamSource<Map.Entry<String, byte[]>> build() {
             String stream = this.stream;
-            AwsConfig config = this.config;
+            AwsConfig config = this.awsConfig;
             RetryStrategy retryStrategy = this.retryStrategy;
             return Sources.streamFromProcessorWithWatermarks(
                     "Kinesis Source (" + stream + ")",

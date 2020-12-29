@@ -23,12 +23,12 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.amazonaws.services.kinesis.AmazonKinesisAsyncClientBuilder;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.util.Objects;
 
 public class AwsConfig implements Serializable {
-
-    private static final int CONNECTION_TIMEOUT = 1000;
 
     @Nullable
     private String endpoint;
@@ -39,24 +39,12 @@ public class AwsConfig implements Serializable {
     @Nullable
     private String secretKey;
 
-    public AwsConfig() {
-        this(null, null, null, null);
-    }
+    @Nonnull
+    private ClientConfiguration clientConfiguration = new ClientConfiguration();
 
-    public AwsConfig(
-            @Nullable String endpoint,
-            @Nullable String region,
-            @Nullable String accessKey,
-            @Nullable String secretKey
-    ) {
+    public AwsConfig withEndpoint(@Nullable String endpoint) {
         this.endpoint = endpoint;
-        this.region = region;
-        this.accessKey = accessKey;
-        this.secretKey = secretKey;
-    }
-
-    public void setEndpoint(@Nullable String endpoint) {
-        this.endpoint = endpoint;
+        return this;
     }
 
     @Nullable
@@ -64,8 +52,9 @@ public class AwsConfig implements Serializable {
         return endpoint;
     }
 
-    public void setRegion(@Nullable String region) {
+    public AwsConfig withRegion(@Nullable String region) {
         this.region = region;
+        return this;
     }
 
     @Nullable
@@ -73,12 +62,13 @@ public class AwsConfig implements Serializable {
         return region;
     }
 
-    public void setCredentials(@Nullable String accessKey, @Nullable String secretKey) {
+    public AwsConfig withCredentials(@Nullable String accessKey, @Nullable String secretKey) {
         if (accessKey == null ^ secretKey == null) {
             throw new IllegalArgumentException("AWS access and secret keys must be specified together");
         }
         this.accessKey = accessKey;
         this.secretKey = secretKey;
+        return this;
     }
 
     @Nullable
@@ -89,6 +79,11 @@ public class AwsConfig implements Serializable {
     @Nullable
     public String getSecretKey() {
         return secretKey;
+    }
+
+    public AwsConfig withClientConfiguration(@Nonnull ClientConfiguration clientConfiguration) {
+        this.clientConfiguration = Objects.requireNonNull(clientConfiguration, "clientConfiguration");
+        return this;
     }
 
     public AmazonKinesisAsync buildClient() {
@@ -105,7 +100,7 @@ public class AwsConfig implements Serializable {
                 new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey))
         );
 
-        builder.withClientConfiguration(new ClientConfiguration());
+        builder.withClientConfiguration(clientConfiguration);
 
         return builder.build();
     }
