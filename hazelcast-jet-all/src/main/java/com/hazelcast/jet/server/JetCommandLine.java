@@ -293,6 +293,7 @@ public class JetCommandLine implements Runnable {
                             writer.println(entryLine);
                             writer.flush();
                         } else {
+                            // remove the "history" command from the history
                             iterator.remove();
                             hist.resetIndex();
                         }
@@ -766,8 +767,8 @@ public class JetCommandLine implements Runnable {
 
         @Option(names = {"-t", "--targets"},
                 description = "The cluster name and addresses to use if you want to connect to a "
-                        + "cluster other than the one configured in the configuration file. " +
-                        "At least one address is required. The cluster name is optional.",
+                        + "cluster other than the one configured in the configuration file. "
+                        + "At least one address is required. The cluster name is optional.",
                 paramLabel = "[<cluster-name>@]<hostname>:<port>[,<hostname>:<port>]",
                 converter = TargetsMixin.Converter.class)
         private Targets targets;
@@ -852,7 +853,7 @@ public class JetCommandLine implements Runnable {
      * It is adapted from
      * <a href="https://github.com/julianhyde/sqlline/blob/master/src/main/java/sqlline/SqlLineParser.java">
      * SqlLineParser</a>
-     * which is licensed under the BSD-3-Clause License
+     * which is licensed under the BSD-3-Clause License.
      */
     private static final class MultilineParser extends DefaultParser {
 
@@ -1024,8 +1025,14 @@ public class JetCommandLine implements Runnable {
                     colWidths[i] = determineColumnWidth(colName, SQLCliConstants.DATE_FORMAT_LENGTH);
                     break;
                 case TIMESTAMP_WITH_TIME_ZONE:
+                    colWidths[i] = determineColumnWidth(colName, SQLCliConstants.TIMESTAMP_WITH_TIME_ZONE_FORMAT_LENGTH);
+                    break;
                 case DECIMAL:
+                    colWidths[i] = determineColumnWidth(colName, SQLCliConstants.DECIMAL_FORMAT_LENGTH);
+                    break;
                 case REAL:
+                    colWidths[i] = determineColumnWidth(colName, SQLCliConstants.REAL_FORMAT_LENGTH);
+                    break;
                 case DOUBLE:
                     colWidths[i] = determineColumnWidth(colName, SQLCliConstants.DOUBLE_FORMAT_LENGTH);
                     break;
@@ -1033,6 +1040,8 @@ public class JetCommandLine implements Runnable {
                     colWidths[i] = determineColumnWidth(colName, SQLCliConstants.INTEGER_FORMAT_LENGTH);
                     break;
                 case NULL:
+                    colWidths[i] = determineColumnWidth(colName, SQLCliConstants.NULL_FORMAT_LENGTH);
+                    break;
                 case TINYINT:
                     colWidths[i] = determineColumnWidth(colName, SQLCliConstants.TINYINT_FORMAT_LENGTH);
                     break;
@@ -1043,10 +1052,16 @@ public class JetCommandLine implements Runnable {
                     colWidths[i] = determineColumnWidth(colName, SQLCliConstants.TIMESTAMP_FORMAT_LENGTH);
                     break;
                 case BIGINT:
+                    colWidths[i] = determineColumnWidth(colName, SQLCliConstants.BIGINT_FORMAT_LENGTH);
+                    break;
                 case VARCHAR:
-                case OBJECT:
-                default:
                     colWidths[i] = determineColumnWidth(colName, SQLCliConstants.VARCHAR_FORMAT_LENGTH);
+                    break;
+                case OBJECT:
+                    colWidths[i] = determineColumnWidth(colName, SQLCliConstants.OBJECT_FORMAT_LENGTH);
+                    break;
+                default:
+                    throw new UnsupportedOperationException(type.toString());
             }
         }
         return colWidths;
@@ -1098,7 +1113,7 @@ public class JetCommandLine implements Runnable {
             String colName = metadata.getColumn(i).getName();
             colName = sanitize(colName, colWidths[i]);
             builder.style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR));
-            align(colWidths[i], colName, alignments[i], builder);
+            appendAligned(colWidths[i], colName, alignments[i], builder);
             builder.style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
             builder.append('|');
         }
@@ -1116,7 +1131,7 @@ public class JetCommandLine implements Runnable {
             String colValue = row.getObject(i).toString();
             colValue = sanitize(colValue, colWidths[i]);
             builder.style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR));
-            align(colWidths[i], colValue, alignments[i], builder);
+            appendAligned(colWidths[i], colValue, alignments[i], builder);
             builder.style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
             builder.append('|');
         }
@@ -1132,17 +1147,22 @@ public class JetCommandLine implements Runnable {
         return s;
     }
 
-    private static void align(int width, String s, Alignment alignment, AttributedStringBuilder builder) {
-        switch(alignment) {
-            case CENTER:
-                builder.append(String.format("%-" + width + "s",
-                        String.format("%" + (s.length() + (width - s.length()) / 2) + "s", s)));
-                break;
-            case LEFT:
-                builder.append(String.format("%-" + width + "s", s));
-                break;
-            case RIGHT:
-                builder.append(String.format("%" + width + "s", s));
+    private static void appendAligned(int width, String s, Alignment alignment, AttributedStringBuilder builder) {
+        int padding = width - s.length();
+        assert padding >= 0;
+
+        if (alignment == Alignment.RIGHT) {
+            appendPadding(builder, padding, ' ');
+        }
+        builder.append(s);
+        if (alignment == Alignment.LEFT) {
+            appendPadding(builder, padding, ' ');
+        }
+    }
+
+    private static void appendPadding(AttributedStringBuilder builder, int length, char paddingChar) {
+        for (int i = 0; i < length; i++) {
+            builder.append(paddingChar);
         }
     }
 
@@ -1151,9 +1171,7 @@ public class JetCommandLine implements Runnable {
                 .style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
         builder.append('+');
         for (int i = 0; i < colSize; i++) {
-            for (int j = 0; j < colWidths[i]; j++) {
-                builder.append('-');
-            }
+            appendPadding(builder, colWidths[i], '-');
             builder.append('+');
         }
         out.println(builder.toAnsi());
@@ -1167,34 +1185,20 @@ public class JetCommandLine implements Runnable {
                 FutureUtil.getValue(getClusterMetadata(hazelcastClient, clientClusterService.getMasterMember()));
         Cluster cluster = client.getCluster();
         Set<Member> members = cluster.getMembers();
-        String jetVersion = clusterMetadata.getJetVersion();
-        if (jetVersion != null) {
-            // if it is connected to Jet cluster
-            return new AttributedStringBuilder()
-                    .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
-                    .append("Connected to Hazelcast Jet ")
-                    .append(jetVersion)
-                    .append(" at ")
-                    .append(members.iterator().next().getAddress().toString())
-                    .append(" (+")
-                    .append(String.valueOf(members.size() - 1))
-                    .append(" more)\n")
-                    .append("Type 'help' for instructions")
-                    .toAnsi();
-        } else {
-            // if it is connected to IMDG cluster
-            return new AttributedStringBuilder()
-                    .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
-                    .append("Connected to Hazelcast IMDG ")
-                    .append(clusterMetadata.getMemberVersion())
-                    .append(" at ")
-                    .append(members.iterator().next().getAddress().toString())
-                    .append(" (+")
-                    .append(String.valueOf(members.size() - 1))
-                    .append(" more)\n")
-                    .append("Type 'help' for instructions")
-                    .toAnsi();
-        }
+        String versionString = clusterMetadata.getJetVersion() != null
+                ? "Hazelcast Jet " + clusterMetadata.getJetVersion()
+                : "Hazelcast IMDG " + clusterMetadata.getMemberVersion();
+        return new AttributedStringBuilder()
+                .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
+                .append("Connected to ")
+                .append(versionString)
+                .append(" at ")
+                .append(members.iterator().next().getAddress().toString())
+                .append(" (+")
+                .append(String.valueOf(members.size() - 1))
+                .append(" more)\n")
+                .append("Type 'help' for instructions")
+                .toAnsi();
     }
 
     private String helpPrompt(JetInstance jet) {
@@ -1207,24 +1211,23 @@ public class JetCommandLine implements Runnable {
         AttributedStringBuilder builder = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("Available Commands:\n")
-                .append("clear\t- Clear the terminal screen\n")
-                .append("exit\t- Exit from the SQL console\n")
-                .append("help\t- Provide information about available commands\n")
-                .append("history\t- Show the command history of the current session\n")
+                .append("  clear\t- Clear the terminal screen\n")
+                .append("  exit\t- Exit the SQL console\n")
+                .append("  help\t- Provide information about available commands\n")
+                .append("  history\t- Show the command history of the current session\n")
                 .append("Hints:\n")
-                .append("Use semicolon to finalize queries\n");
+                .append("  Use semicolon to finalize queries\n");
         if (jetVersion != null) {
             // if it is connected to Jet cluster
-            return builder.append("Press Ctrl+C to cancel streaming queries\n")
-                    .append("For more information, see the Hazelcast Jet SQL documentation:\n")
-                    .append("https://jet-start.sh/docs/sql/intro")
-                    .toAnsi();
+            builder.append("  Press Ctrl+C to cancel streaming queries\n")
+                    .append("  For more information, see the Hazelcast Jet SQL documentation:\n")
+                    .append("  https://jet-start.sh/docs/sql/intro");
         } else {
             // if it is connected to IMDG cluster
-            return builder.append("For more information, see the Hazelcast IMDG SQL documentation:\n")
-                    .append("https://docs.hazelcast.org/docs/latest/manual/html-single/#sql")
-                    .toAnsi();
+            builder.append("  For more information, see the Hazelcast IMDG SQL documentation:\n")
+                    .append("  https://docs.hazelcast.org/docs/latest/manual/html-single/#sql");
         }
+        return builder.toAnsi();
     }
 
     private static class SQLCliConstants {
@@ -1242,15 +1245,15 @@ public class JetCommandLine implements Runnable {
         static final Integer INTEGER_FORMAT_LENGTH = 12;
         static final Integer NULL_FORMAT_LENGTH = 4;
         static final Integer REAL_FORMAT_LENGTH = 25; // it has normally unlimited precision
-        static final Integer OBJECT_FORMAT_LENGTH = 20;
+        static final Integer OBJECT_FORMAT_LENGTH = 20; // it has normally unlimited precision
         static final Integer TINYINT_FORMAT_LENGTH = 4;
         static final Integer SMALLINT_FORMAT_LENGTH = 6;
         static final Integer TIMESTAMP_FORMAT_LENGTH = 19;
         static final Integer TIMESTAMP_WITH_TIME_ZONE_FORMAT_LENGTH = 25;
-        static final Integer VARCHAR_FORMAT_LENGTH = 20;
+        static final Integer VARCHAR_FORMAT_LENGTH = 20; // it has normally unlimited precision
     }
 
     private enum Alignment {
-        CENTER, LEFT, RIGHT
+        LEFT, RIGHT
     }
 }
