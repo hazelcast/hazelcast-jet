@@ -1211,10 +1211,10 @@ public class JetCommandLine implements Runnable {
         AttributedStringBuilder builder = new AttributedStringBuilder()
                 .style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR))
                 .append("Available Commands:\n")
-                .append("  clear\t- Clears the terminal screen\n")
-                .append("  exit\t- Exits from the SQL console\n")
-                .append("  help\t- Provides information about available commands\n")
-                .append("  history\t- Shows the command history of the current session\n")
+                .append("  clear    Clears the terminal screen\n")
+                .append("  exit     Exits from the SQL console\n")
+                .append("  help     Provides information about available commands\n")
+                .append("  history  Shows the command history of the current session\n")
                 .append("Hints:\n")
                 .append("  Semicolon completes a query\n");
         if (jetVersion != null) {
