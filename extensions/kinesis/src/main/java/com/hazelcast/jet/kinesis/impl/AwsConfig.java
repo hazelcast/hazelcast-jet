@@ -23,10 +23,8 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.amazonaws.services.kinesis.AmazonKinesisAsyncClientBuilder;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
-import java.util.Objects;
 
 public class AwsConfig implements Serializable {
 
@@ -38,9 +36,6 @@ public class AwsConfig implements Serializable {
     private String accessKey;
     @Nullable
     private String secretKey;
-
-    @Nonnull
-    private ClientConfiguration clientConfiguration = new ClientConfiguration();
 
     public AwsConfig withEndpoint(@Nullable String endpoint) {
         this.endpoint = endpoint;
@@ -81,11 +76,6 @@ public class AwsConfig implements Serializable {
         return secretKey;
     }
 
-    public AwsConfig withClientConfiguration(@Nonnull ClientConfiguration clientConfiguration) {
-        this.clientConfiguration = Objects.requireNonNull(clientConfiguration, "clientConfiguration");
-        return this;
-    }
-
     public AmazonKinesisAsync buildClient() {
         AmazonKinesisAsyncClientBuilder builder = AmazonKinesisAsyncClientBuilder.standard();
         if (endpoint == null) {
@@ -100,7 +90,7 @@ public class AwsConfig implements Serializable {
                 new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey))
         );
 
-        builder.withClientConfiguration(clientConfiguration);
+        builder.withClientConfiguration(new ClientConfiguration());
 
         return builder.build();
     }

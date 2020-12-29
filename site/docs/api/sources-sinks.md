@@ -418,7 +418,7 @@ p.readFrom(Sources.files("/home/data/web-logs"))
  .writeTo(Sinks.logger());
 ```
 
-#### JSON Files
+#### JSON Files
 
 For JSON files, the source expects the content of the files as
 [streaming JSON](https://en.wikipedia.org/wiki/JSON_streaming) content,
@@ -476,7 +476,7 @@ p.readFrom(Sources.filesBuilder(sourceDir).glob("*.csv").build(path ->
 ).writeTo(Sinks.logger());
 ```
 
-#### Data Locality for Files
+#### Data Locality for Files
 
 For a local file system, the sources expect to see on each node just the
 files that node should read. You can achieve the effect of a distributed
@@ -485,7 +485,7 @@ For shared file system, the sources can split the work so that each node
 will read a part of the files by configuring the option
 `FilesBuilder.sharedFileSystem()`.
 
-#### File Sink
+#### File Sink
 
 The file sink, like the source works with text and creates a line of
 output for each record. When the rolling option is used it will roll the
@@ -519,7 +519,7 @@ output files on all members and combine their contents.
 The sink also supports exactly-once processing and can work
 transactionally.
 
-#### File Watcher
+#### File Watcher
 
 File watcher is a streaming file source, where only the new files or
 appended lines are emitted. If the files are modified in more complex
@@ -541,7 +541,7 @@ p.readFrom(Sources.jsonWatcher("/home/data", Person.class))
  .writeTo(Sinks.logger());
 ```
 
-### Apache Avro
+### Apache Avro
 
 [Apache Avro](https://avro.apache.org/) is a binary data storage format
 which is schema based. The connectors are similar to the local file
@@ -688,7 +688,7 @@ To obtain the hadoop classpath, use the `hadoop classpath` command and
 append the output to the `CLASSPATH` environment variable before
 starting Jet.
 
-### Amazon S3
+### Amazon S3
 
 The Amazon S3 connectors are text-based connectors that can read and
 write files to Amazon S3 storage.
@@ -830,6 +830,8 @@ compile 'com.hazelcast.jet:hazelcast-jet-kafka:{jet-version}'
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
+> TODO: more!
+
 #### Fault-tolerance
 
 One of the most important features of using Kafka as a source is that
@@ -883,7 +885,73 @@ The Kafka sink and source are based on version 2.2.0, this means Kafka
 connector will work with any client and broker having version equal to
 or greater than 1.0.0.
 
-### JMS
+### Amazon Kinesis
+
+[Amazon Kinesis Data
+Streams](https://aws.amazon.com/kinesis/data-streams/) (KDS) is a
+massively scalable and durable real-time data streaming service. All
+data items passing through it, _records_, are assigned a _partition
+key_. Records with the same partition key are ordered. Partition keys
+are grouped into _shards_, the base throughput unit of KDS. The input
+and output rates of shards is limited. Streams can be resharded at any
+time.
+
+To read from Kinesis, the only requirement is to provide a KDS stream
+name. (Kinesis does not handle deserialization itself, it only provides
+serialized binary data.)
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(KinesisSources.kinesis(STREAM).build())
+  .withNativeTimestamps(0)
+  .writeTo(Sinks.logger());
+```
+
+The shards are distributed across the Jet cluster, so that each node is
+responsible for reading a subset of the partition keys.
+
+When used as a sink, in order to be able to write out any type of data
+items, the requirements are: KDS stream name, key function (specifies
+how to compute the partition key from an input item), and the value
+function (specifies how to compute the data blob from an input item;
+practically serialization).
+
+```java
+FunctionEx<Log, String> keyFn = l -> l.service();
+FunctionEx<Log, byte[]> valueFn = l -> l.message().getBytes();
+Sink<Log> sink = KinesisSinks.kinesis("stream", keyFn, valueFn).build();
+
+p.readFrom(Sources.files("home/logs"))
+ .map(line -> LogParser.parse(line))
+ .writeTo(sink);
+```
+
+To use the Kinesis connectors, you need to copy the
+`hazelcast-jet-kinesis` module from the `opt` folder to the `lib` folder
+and add the following dependency to your application:
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```groovy
+
+compile 'com.hazelcast.jet:hazelcast-jet-kinesis:{jet-version}'
+```
+
+<!--Maven-->
+
+```xml
+<dependency>
+  <groupId>com.hazelcast.jet</groupId>
+  <artifactId>hazelcast-jet-kinesis</artifactId>
+  <version>{jet-version}</version>
+</dependency>
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+### JMS
 
 JMS (Java Message Service) is a standard API for communicating with
 various message brokers using the queue or publish-subscribe patterns.
@@ -906,7 +974,7 @@ node or submit them with the job. The Jet JMS connector is a part of the
 `hazelcast-jet` module, so requires no other dependencies than the
 client jar.
 
-#### JMS Source Connector
+#### JMS Source Connector
 
 A very simple pipeline which consumes messages from a given ActiveMQ
 queue and then logs them is given below:
@@ -989,7 +1057,7 @@ in the exactly-once mode, but message IDs are not saved to the snapshot.
 If you have no processing guarantee enabled, the processor will consume
 the messages in the `DUPS_OK_ACKNOWLEDGE` mode.
 
-#### JMS Sink Connector
+#### JMS Sink Connector
 
 The JMS sink uses the supplied function to create a `Message` object for
 each input item. The following code snippets show writing to a JMS queue
@@ -1011,7 +1079,7 @@ p.readFrom(Sources.list("inputList"))
  );
 ```
 
-#### Fault Tolerance
+#### Fault Tolerance
 
 The JMS sink supports the exactly-once guarantee. It uses two-phase XA
 transactions, messages are committed consistent with the last state
@@ -1053,7 +1121,7 @@ tests](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/xa-test)
 to get more information. This only applies to JMS sink, the source
 doesn't use XA transactions.
 
-#### Connection Handling
+#### Connection Handling
 
 The JMS source and sink open one connection to the JMS server for each
 member and each vertex. Then each parallel worker of the source creates
@@ -1064,12 +1132,12 @@ connector to fail. Most of the clients offer a configuration parameter
 to enable auto-reconnection, refer to the specific client documentation
 for details.
 
-### Apache Pulsar
+### Apache Pulsar
 
 >This connector is currently under incubation. For more
 >information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/pulsar).
 
-## In-memory Data Structures
+## In-memory Data Structures
 
 Jet comes out of the box with some [in-memory distributed data
 structures](data-structures) which can be used as a data source or a
@@ -1094,7 +1162,7 @@ p.readFrom(Sources.map(userCache));
  .writeTo(Sinks.logger()));
 ```
 
-#### Event Journal
+#### Event Journal
 
 The map can also be used as a streaming data source by utilizing its so
 called _event journal_. The journal for a map is by default not enabled,
@@ -1206,7 +1274,7 @@ setting their values to `null`. To put it another way, if these map sink
 variants set the entry’s value to null, the entry will be removed
 from the map.
 
-#### Predicates and Projections
+#### Predicates and Projections
 
 If your use case calls for some filtering and/or transformation of the
 data you retrieve, you can optimize the pipeline by providing a
@@ -1224,7 +1292,7 @@ p.readFrom(Sources.map(personCache,
 );
 ```
 
-### ICache
+### ICache
 
 ICache is mostly equivalent to IMap, the main difference being that it's
 compliant with the JCache standard API. As a sink, since `ICache`
@@ -1253,7 +1321,7 @@ p.readFrom(Sources.list(inputList))
 List isn't suitable to use as a streaming sink because items are always
 appended and eventually the member will run out of memory.
 
-### Reliable Topic
+### Reliable Topic
 
 Reliable Topic provides a simple pub/sub messaging API which can be
 used as a data sink within Jet.
@@ -1271,7 +1339,7 @@ p.readFrom(TestSources.itemStream(100))
 A simple example is supplied above. For a more advanced version, also
 see [Observables](#observable)
 
-### Same vs. Different Cluster
+### Same vs. Different Cluster
 
 It's possible to use the data structures that are part of the same Jet
 cluster, and share the same memory and computation resources with
@@ -1294,7 +1362,7 @@ p.readFrom(Sources.remoteMap("inputMap", cfg));
 ...
 ```
 
-#### Compatibility
+#### Compatibility
 
 When reading or writing to remote sources, Jet internally creates a
 client. This client uses the embedded IMDG version to connect to the
@@ -1314,14 +1382,14 @@ version.
 |Jet 4.2    |Hazelcast 4.0.1    |Hazelcast 4.y.z|
 |Jet 4.3    |Hazelcast 4.0.3    |Hazelcast 4.y.z|
 
-## Databases
+## Databases
 
 Jet supports a wide variety of relational and NoSQL databases as a data
 source or sink. While most traditional databases are batch oriented,
 there's emerging techniques that allow to bridge the gap to streaming
 which we will explore.
 
-### JDBC
+### JDBC
 
 JDBC is a well-established database API supported by every major
 relational (and many non-relational) database implementations including
@@ -1367,7 +1435,7 @@ The JDBC source only works in batching mode, meaning the query is only
 executed once, for streaming changes from the database you can follow the
 [Change Data Capture tutorial](../tutorials/cdc.md).
 
-#### JDBC Data Sink
+#### JDBC Data Sink
 
 Jet is also able to output the results of a job to a database using the
 JDBC driver by using an update query.
@@ -1745,7 +1813,7 @@ For details see Elasticsearch documentation section on
 >This connector is currently under incubation. For more
 >information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/influxdb).
 
-### Redis
+### Redis
 
 >This connector is currently under incubation. For more
 >information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/redis).
@@ -1858,7 +1926,7 @@ the client:
 `Observable` can also implement `onError` and `onComplete` methods to
 get notified of job completion and errors.
 
-#### Futures
+#### Futures
 
 `Observable` also support a conversion to a future to collect the
 results.
@@ -1889,7 +1957,7 @@ try {
 }
 ```
 
-#### Cleanup
+#### Cleanup
 
 As `Observable`s are backed by `Ringbuffer`s stored in the cluster which
 should be cleaned up by the client, once they are no longer necessary
@@ -1898,7 +1966,7 @@ memory used by it will be not be recovered by the cluster. It's possible
 to get a list of all observables using the
 `JetInstance.getObservables()` method.
 
-### Socket
+### Socket
 
 The socket sources and sinks opens a TCP socket to the supplied address
 and either read from or write to the socket. The sockets are text-based
@@ -1945,9 +2013,9 @@ so this source is mostly aimed for simple IPC or testing.
 >This connector is currently under incubation. For more
 >information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/twitter).
 
-## Summary
+## Summary
 
-### Sources
+### Sources
 
 Below is a summary of various sources and where to find them. Some
 sources are batch and some are stream oriented. The processing guarantee
@@ -1963,8 +2031,9 @@ restarted in face of an intermittent failure.
 |`ElasticSources.elastic`|`hazelcast-jet-elasticsearch-7 (elasticsearch-7)`|batch|N/A|
 |`HadoopSources.inputFormat`|`hazelcast-jet-hadoop (hadoop)`|batch|N/A|
 |`KafkaSources.kafka`|`hazelcast-jet-kafka (kafka)`|stream|exactly-once|
-|`MySqlCdcSources.mysql`|`hazelcast-jet-cdc-mysql (cdc-mysql)`|stream|at-least-once|
-|`PostgresCdcSources.postgres`|`hazelcast-jet-cdc-postgres (cdc-postgres)`|stream|at-least-once|
+|`KinesisSources.kinesis`|`hazelcast-jet-kinesis (kinesis)`|stream|exactly-once|
+|`MySqlCdcSources.mysql`|`hazelcast-jet-cdc-mysql (cdc-mysql)`|stream|exactly-once|
+|`PostgresCdcSources.postgres`|`hazelcast-jet-cdc-postgres (cdc-postgres)`|stream|exactly-once|
 |`PulsarSources.pulsarConsumer`|`hazelcast-jet-contrib-pulsar`|stream|N/A|
 |`PulsarSources.pulsarReader`|`hazelcast-jet-contrib-pulsar`|stream|exactly-once|
 |`S3Sources.s3`|`hazelcast-jet-s3 (s3)`|batch|N/A|
@@ -2002,6 +2071,7 @@ processing even with at-least-once sinks.
 |`ElasticSinks.elastic`|`hazelcast-jet-elasticsearch-7 (elasticsearch-7)`|yes|at-least-once|
 |`HadoopSinks.outputFormat`|`hazelcast-jet-hadoop (hadoop)`|no|N/A|
 |`KafkaSinks.kafka`|`hazelcast-jet-kafka (kafka)`|yes|exactly-once|
+|`KinesisSinks.kinesis`|`hazelcast-jet-kinesis (kinesis)`|yes|at-least-once|
 |`PulsarSources.pulsarSink`|`hazelcast-jet-contrib-pulsar`|yes|at-least-once|
 |`S3Sinks.s3`|`hazelcast-jet-s3 (s3)`|no|N/A|
 |`Sinks.cache`|`hazelcast-jet`|yes|at-least-once|
@@ -2015,7 +2085,7 @@ processing even with at-least-once sinks.
 |`Sinks.reliableTopic`|`hazelcast-jet`|yes|at-least-once|
 |`Sinks.socket`|`hazelcast-jet`|yes|at-least-once|
 
-## Custom Sources and Sinks
+## Custom Sources and Sinks
 
 If Jet doesn’t natively support the data source/sink you need, you can
 build a connector for it yourself by using the
@@ -2023,7 +2093,7 @@ build a connector for it yourself by using the
 and
 [SinkBuilder](/javadoc/{jet-version}/com/hazelcast/jet/pipeline/SinkBuilder.html).
 
-### SourceBuilder
+### SourceBuilder
 
 To make a custom source connector you need two basic ingredients:
 

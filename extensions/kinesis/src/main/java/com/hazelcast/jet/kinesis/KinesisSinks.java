@@ -15,7 +15,6 @@
  */
 package com.hazelcast.jet.kinesis;
 
-import com.amazonaws.ClientConfiguration;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
@@ -140,15 +139,6 @@ public final class KinesisSinks {
         @Nonnull
         public Builder<T> withCredentials(@Nullable String accessKey, @Nullable String secretKey) {
             awsConfig.withCredentials(accessKey, secretKey);
-            return this;
-        }
-
-        /**
-         * TODO: javadoc
-         */
-        @Nonnull
-        public Builder<T> withClientConfiguration(@Nonnull ClientConfiguration clientConfiguration) {
-            awsConfig.withClientConfiguration(clientConfiguration);
             return this;
         }
 

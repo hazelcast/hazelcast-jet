@@ -15,7 +15,6 @@
  */
 package com.hazelcast.jet.kinesis;
 
-import com.amazonaws.ClientConfiguration;
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
 import com.hazelcast.jet.kinesis.impl.KinesisSourcePMetaSupplier;
 import com.hazelcast.jet.pipeline.Sources;
@@ -149,15 +148,6 @@ public final class KinesisSources {
         @Nonnull
         public Builder withCredentials(@Nullable String accessKey, @Nullable String secretKey) {
             awsConfig.withCredentials(accessKey, secretKey);
-            return this;
-        }
-
-        /**
-         * TODO: javadoc
-         */
-        @Nonnull
-        public Builder withClientConfiguration(@Nonnull ClientConfiguration clientConfiguration) {
-            awsConfig.withClientConfiguration(clientConfiguration);
             return this;
         }
 
