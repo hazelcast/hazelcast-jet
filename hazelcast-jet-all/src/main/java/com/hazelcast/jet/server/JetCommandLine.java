@@ -873,7 +873,7 @@ public class JetCommandLine implements Runnable {
             int quoteStart = -1;
             int oneLineCommentStart = -1;
             int multiLineCommentStart = -1;
-
+            int lastSemicolonIdx = -1;
             for (int i = 0; i < line.length(); i++) {
                 // If a one line comment, a multiline comment or a quote is not started before,
                 // check if the character we're on is a quote character
@@ -917,7 +917,9 @@ public class JetCommandLine implements Runnable {
                         }
                     } else {
                         // Not in a quote or comment block
-                        if (!Character.isWhitespace(currentChar)) {
+                        if (currentChar == ';') {
+                            lastSemicolonIdx = i;
+                        } else if (!Character.isWhitespace(currentChar)) {
                             containsNonWhitespaceData = true;
                         }
                     }
@@ -947,7 +949,7 @@ public class JetCommandLine implements Runnable {
             if (multiLineCommentStart != -1) {
                 throw new EOFError(-1, cursor, "Missing end of comment", "**");
             }
-            int lastSemicolonIdx = line.lastIndexOf(';');
+
             if (containsNonWhitespaceData &&
                     (lastSemicolonIdx == -1 || lastSemicolonIdx >= cursor)) {
                 throw new EOFError(-1, cursor, "Missing semicolon (;)");
