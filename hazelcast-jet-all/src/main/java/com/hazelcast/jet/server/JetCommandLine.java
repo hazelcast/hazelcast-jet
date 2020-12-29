@@ -254,7 +254,7 @@ public class JetCommandLine implements Runnable {
                 }
 
                 command = command.trim();
-                if (command.length() > 0 && command.lastIndexOf(";") == (command.length() - 1)) {
+                if (command.length() > 0 && command.charAt(command.length() - 1) == ';') {
                     command = command.substring(0, command.length() - 1).trim();
                 } else if (command.lastIndexOf(";") >= 0) {
                     String errorPrompt = new AttributedStringBuilder()
