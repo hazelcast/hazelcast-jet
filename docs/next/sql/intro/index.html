@@ -90,9 +90,9 @@ to an <a href="/docs/next/sql/imap-connector">IMap</a> in the Jet cluster</li>
 <li>JDBC</li>
 </ul>
 <h2><a class="anchor" aria-hidden="true" id="installation"></a><a href="#installation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installation</h2>
-<p>When you use the distribution package, the <code>hazelcast-jet-sql</code> is not on
-the class path by default. Make sure to move the
-<code>hazelcast-jet-sql-4.4-SNAPSHOT.jar</code> file from the <code>opt/</code> to the <code>lib/</code>
+<p>When you use the distribution package, the <code>hazelcast-jet-sql</code> is on
+the class path by default. Nevertheless, make sure to have the
+<code>hazelcast-jet-sql-4.4-SNAPSHOT.jar</code> file in the <code>lib/</code>
 directory.</p>
 <p>If you use Jet in embedded mode, besides the <code>hazelcast-jet</code> dependency
 add also the <code>hazelcast-jet-sql</code> dep:</p>
@@ -138,15 +138,53 @@ value. For other possible values see the <a href="kafka-connector">Kafka
 Connector</a> page. The options not handled by Jet, such
 as the <code>bootstrap.servers</code> above, are all passed directly to the Kafka
 consumer or producer.</p>
-<p>// TODO document the CLI</p>
-<p>To submit the above query, use the Java API (we plan to support JDBC and
-non-Java clients in the future):</p>
+<p>To submit the above query, you can use the SQL CLI or the Java API (we
+also plan to support JDBC and non-Java clients in the future):</p>
+<h4><a class="anchor" aria-hidden="true" id="submitting-the-query-on-the-cli"></a><a href="#submitting-the-query-on-the-cli" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Submitting the query on the CLI</h4>
+<p>Before starting the CLI, make sure Hazelcast Jet server is running. If
+you don't have a running jet member, you can start a member using the
+following command:</p>
+<pre><code class="hljs css language-bash"><span class="hljs-variable">$JET_HOME</span>/bin/jet-start
+...
+</code></pre>
+<p>After that, you can start the Jet SQL CLI by running this command:</p>
+<pre><code class="hljs css language-bash">$ <span class="hljs-variable">$JET_HOME</span>/bin/jet sql
+Connected to Hazelcast Jet 4.4-SNAPSHOT at [192.168.1.5]:5701 (+0 more)
+Type <span class="hljs-string">'help'</span> <span class="hljs-keyword">for</span> instructions
+sql&gt;
+</code></pre>
+<p>This CLI uses Jet client to connect and send the SQL commands to the Jet
+cluster. This CLI overrides the client's cluster connect configurations
+so that if the client-server connection is lost, it tries to reconnect
+forever. CLI has multiline command support and it requires a semicolon
+to finalize the commands. So, make sure you use <code>;</code> at the end of your
+commands.  You can submit queries as follows:</p>
+<pre><code class="hljs css language-bash">sql&gt; CREATE EXTERNAL MAPPING trades (
+    ticker VARCHAR,
+    price DECIMAL,
+    amount BIGINT)
+TYPE Kafka
+OPTIONS (
+    <span class="hljs-string">'valueFormat'</span> = <span class="hljs-string">'json'</span>,
+    <span class="hljs-string">'bootstrap.servers'</span> = <span class="hljs-string">'127.0.0.1:9092'</span>
+    /* ... more configuration options <span class="hljs-keyword">for</span> the Kafka consumer */
+);
+sql&gt; /* query text ending with semicolon*/
+...
+</code></pre>
+<p>When you send a streaming query, you can use <code>CTRL+C(SIGINT)</code> to cancel
+this query. Also, you can type <code>help</code> to see the available commands.</p>
+<blockquote>
+<p>SQL CLI is in beta version and only use it in development environments.</p>
+</blockquote>
+<h4><a class="anchor" aria-hidden="true" id="submitting-the-query-using-java-api"></a><a href="#submitting-the-query-using-java-api" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Submitting the query using Java API</h4>
+<p>You can also use native Java API to execute SQL queries on Jet:</p>
 <pre><code class="hljs css language-java"><span class="token class-name">JetInstance</span> inst <span class="token operator">=</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">;</span>
 inst<span class="token punctuation">.</span><span class="token function">getSql</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span> <span class="token comment">/* query text */</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="querying-the-kafka-topic"></a><a href="#querying-the-kafka-topic" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Querying the Kafka Topic</h3>
-<p>A SQL query can now be used to read from the <code>trades</code> topic, as if it
-was a table:</p>
+<p>After creating mapping, SQL query can now be used to read from the
+<code>trades</code> topic, as if it was a table:</p>
 <pre><code class="hljs css language-java"><span class="token class-name">JetInstance</span> inst <span class="token operator">=</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">;</span>
 <span class="token keyword">try</span> <span class="token punctuation">(</span><span class="token class-name">SqlResult</span> result <span class="token operator">=</span> inst<span class="token punctuation">.</span><span class="token function">getSql</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span><span class="token string">"SELECT * FROM trades"</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
     <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">SqlRow</span> row <span class="token operator">:</span> result<span class="token punctuation">)</span> <span class="token punctuation">{</span>
