@@ -830,8 +830,6 @@ compile 'com.hazelcast.jet:hazelcast-jet-kafka:{jet-version}'
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-> TODO: more!
-
 #### Fault-tolerance
 
 One of the most important features of using Kafka as a source is that
@@ -890,11 +888,12 @@ or greater than 1.0.0.
 [Amazon Kinesis Data
 Streams](https://aws.amazon.com/kinesis/data-streams/) (KDS) is a
 massively scalable and durable real-time data streaming service. All
-data items passing through it, _records_, are assigned a _partition
-key_. Records with the same partition key are ordered. Partition keys
-are grouped into _shards_, the base throughput unit of KDS. The input
-and output rates of shards is limited. Streams can be resharded at any
-time.
+data items passing through it, called _records_, are assigned a
+_partition key_. As the name suggests, partition keys group related
+records together. Records with the same partition key are also ordered.
+Partition keys are grouped into _shards_, the base throughput unit of
+KDS. The input and output rates of shards is limited. Streams can be
+resharded at any time.
 
 To read from Kinesis, the only requirement is to provide a KDS stream
 name. (Kinesis does not handle deserialization itself, it only provides
@@ -950,6 +949,58 @@ compile 'com.hazelcast.jet:hazelcast-jet-kinesis:{jet-version}'
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Fault-tolerance
+
+Amazon Kinesis persists its data and makes it possible to replay it (on
+a per shard basis). This enables fault-tolerance. If a job has a
+processing guarantee configured, then Jet will periodically save the
+current shard offsets internally and then replay from the saved offsets
+when the job is restarted. If no processing guarantee is enabled, the
+source will start reading from the oldest available data, determined by
+the KDS retention period (defaults to 24 hours, can be as long as 365
+days).
+
+While the source is suitable for both at-least-once and exactly-once
+pipelines, the only processing guarantee the sink can support is
+at-least-once. This is caused by the lack of transaction support in
+Kinesis (can't write data into it with transactional guarantees) and the
+AWS SDK occasionally causing data duplication on its own (see [Producer
+Retries](https://docs.aws.amazon.com/streams/latest/dev/kinesis-record-processor-duplicates.html#kinesis-record-processor-duplicates-producer)
+in the documentation).
+
+#### Ordering
+
+As stated before, Kinesis preserves the order of records with the same
+partition keys (or, more generally, the order of records belonging to
+the same shard). However, neither the source nor the sink can fully
+uphold this guarantee.
+
+The problem scenario for the source is resharding. Resharding is the
+process of adjusting the number of shards of a stream to adapt to data
+flow rate changes. It is done voluntarily and explicitly by the stream's
+owner, and it does not interrupt the flow of data through the stream.
+During resharding, some (old) shards get closed, and new ones are
+created - some partition keys transition from an old shard to a new one.
+To keep the ordering for such a partition key in transit, Jet would need
+to make sure that it finishes reading all the data from the old shard
+before starting to read data from the new one. Jet would also need to
+ensure that the new shard's data can't possibly overtake the old ones
+data inside the Jet pipeline. Currently, Jet does not have a mechanism
+to ensure this for such a distributed source.
+
+The problem scenario for the sink is the ingestion data rate of a shard
+being tripped. A KDS shard has an ingestion rate of 1MiB per second. If
+you try to write more into it, then some records will be rejected. This
+rejection breaks the ordering because the sinks write data in batches,
+and the shards don't just reject entire batches but random items from
+them. What's rejected can (and is) retried, but the batch's original
+ordering can't be preserved. The sink can't entirely avoid all
+rejections because it's distributed, multiple instances of it write
+into the same shard, and coordinating an aggregated rate among them is
+not something currently possible in Jet. Truth be told, though, Kinesis
+also only preserves the order of successfully ingested records, not the
+order in which ingestion was attempted.
 
 ### JMS
 
