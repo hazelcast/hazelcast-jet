@@ -32,7 +32,8 @@ import java.util.Map;
 import static com.hazelcast.jet.impl.pipeline.SinkImpl.Type.DISTRIBUTED_PARTITIONED;
 
 /**
- * todo: javadoc
+ * Contains factory methods for creating Amazon Kinesis Data Streams
+ * (KDS) sinks.
  *
  * @since 4.4
  */
@@ -47,17 +48,115 @@ public final class KinesisSinks {
     /**
      * The length of a record's data blob (byte array length), plus the record's
      * key size (no. of unicode characters in the key) must not be larger than
-     * 1M.
+     * 1MiB.
      */
     public static final int MAX_RECORD_SIZE = 1024 * 1024;
+
+    /**
+     * Name of one of the metrics exposed by the since, used to monitor
+     * the current sending batch size. The batch size is computed based
+     * on the number of shards in the stream. The more shards, the
+     * bigger the batch size (the more data the stream can ingest).
+     * Maximum value is 500, limit imposed by Kinesis.
+     */
+    public static final String BATCH_SIZE_METRIC = "batchSize";
+
+    /**
+     * Name of one of the metrics exposed by the since, used to monitor
+     * the current sleep delay between consecutive sends (in
+     * milliseconds). When the flow control mechanism is deactivated,
+     * the value should always be zero. If flow control kicks in, the
+     * value keeps increasing until shard ingestion rates are no longer
+     * tripped, then stabilizes, then slowly decreases back to zero (if
+     * the data rate was just a spike and is not sustained).
+     */
+    public static final String THROTTLING_SLEEP_METRIC = "throttlingSleep";
 
     private KinesisSinks() {
     }
 
-    //todo: describe exposed metrics
-
     /**
-     * todo: javadoc
+     * Initiates the building of a sink that publishes messages into
+     * Amazon Kinesis Data Streams (KDS).
+     * <p>
+     * The basic unit of data stored in KDS is the <em>record</em>. A
+     * record is composed of a sequence number, partition key, and data
+     * blob. The sequence numbers is assigned by KDS, on ingestion, the
+     * other two have to be specified by the sink.
+     * <p>
+     * The key function we provide specifies how <em>partition keys</em>
+     * should be assigned to the items about to be published. The
+     * partition keys have the role of grouping related records so that
+     * Kinesis can handle them accordingly. Partition keys are unicode
+     * strings with a maximum length of 256 characters.
+     * <p>
+     * The value function we provide specifies how the useful data
+     * content can be extracted from the items about to be published.
+     * It's basically serialization of the messages (Kinesis doesn't
+     * handle neirther serialization nor deserialization internally).
+     * The length of the resulting byte array, plus the length of the
+     * partition key can't be longer than 1MiB.
+     * <p>
+     * The sink is <em>distributed</em>, each instance is handling a
+     * subset of possible partition keys. In Jet terms the input edges
+     * of the sink processors are distributed and partitioned by the
+     * same key function we provide for computing the partition keys. As
+     * a result each item with the same partition key will end up in the
+     * same distributed sink instance.
+     * <p>
+     * The sink can be used in both streaming and batching pipelines.
+     * <p>
+     * The only processing guarantee the sink can support is
+     * <em>at-least-once</em>. This is caused by the lack of transaction
+     * support in Kinesis (can't write data into it with transactional
+     * guarantees) and the AWS SDK occasionally causing data duplication
+     * on its own (@see <a
+     * href="https://docs.aws.amazon.com/streams/latest/dev/kinesis-record-processor-duplicates.html#kinesis-record-processor-duplicates-producer">Producer
+     * Retries</a> in the documentation).
+     * <p>
+     * The sink preserves the ordering of items for the same partition
+     * key, as long as the streams ingestion rate is not tripped.
+     * Ingestion rates in kinesis are specified on a per <em>shard</em>
+     * basis, which is the base throughput unit. One shard provides a
+     * capacity of 1MiB/sec data input and 2MiB/sec data output. One
+     * shard can support up to 1000 record publications per second. The
+     * owner of the Kinesis stream specifies the number of shards needed
+     * on stream creation. It can be changed later, without stopping the
+     * data flow.
+     * <p>
+     * If the sinks attempts to write more into a shard, than allowed,
+     * some records will be rejected. This rejection breaks the ordering
+     * because the sinks write data in batches, and the shards don't
+     * just reject entire batches but random records from them. What's
+     * rejected can (and is) retried, but the batch's original ordering
+     * can't be preserved.
+     * <p>
+     * The sink isn't able to avoid rejections entirely because multiple
+     * instances of it write into the same shard, and coordinating an
+     * aggregated rate among them is not something currently possible in
+     * Jet.
+     * <p>
+     * The sink has a flow control mechanism, which tries to minimize
+     * the amount of ingestion rate tripping, when it starts happening,
+     * by reducing the send batch size and introducing adaptive sleep
+     * delays between consecutive sends. However the only shure way to
+     * avoid the problem is having enough shards and a good spread of
+     * partition keys (partition keys are assigned to shard based on an
+     * MD5 hash function; each shard owns a partition of the hash
+     * space).
+     * <p>
+     * The sink exposes metrics that can be used to monitor the flow
+     * control mechanism. One of them is the
+     * {@link KinesisSinks#BATCH_SIZE_METRIC send batch size}, the other
+     * one is the
+     * {@link KinesisSinks#THROTTLING_SLEEP_METRIC sleep delay between consecutive sends}.
+     *
+     * @param stream  name of the Kinesis stream being written into
+     * @param keyFn   function for computing partition keys
+     * @param valueFn function for computing serialized message data
+     * content
+     * @return fluent builder that can be used to set properties and
+     * also to construct the sink once configuration is done
      */
     @Nonnull
     public static <T> Builder<T> kinesis(
@@ -69,7 +168,11 @@ public final class KinesisSinks {
     }
 
     /**
-     * todo: javadoc
+     * Convenience method for a specific type of sink, one that ingests
+     * items of type {@code Map.Entry<String, byte[]} and assumes that
+     * the entries key is the partition key and the entries value is the
+     * record data blob. No explicit key nor value function needs to be
+     * specified.
      */
     @Nonnull
     public static Builder<Map.Entry<String, byte[]>> kinesis(@Nonnull String stream) {
@@ -77,8 +180,8 @@ public final class KinesisSinks {
     }
 
     /**
-     * todo: javadoc
-     * @param <T>
+     * Fluent builder for constructing the Kinesis sink and setting its
+     * configuration parameters.
      */
     public static final class Builder<T> {
 
@@ -103,7 +206,8 @@ public final class KinesisSinks {
         private RetryStrategy retryStrategy = DEFAULT_RETRY_STRATEGY;
 
         /**
-         * TODO: javadoc
+         * Fluent builder for constructing the Kinesis sink and setting
+         * its configuration parameters.
          */
         private Builder(
                 @Nonnull String stream,
@@ -116,7 +220,17 @@ public final class KinesisSinks {
         }
 
         /**
-         * TODO: javadoc
+         * Specifies the AWS Kinesis endpoint (URL of the entry point
+         * for the AWS web service) to connect to. The general syntax of
+         * these endpoint URLs is
+         * "{@code protocol://service-code.region-code.amazonaws.com}",
+         * so for example for Kinesis, for the {@code us-west-2} region
+         * we could have
+         * "{@code https://dynamodb.us-west-2.amazonaws.com}". For local
+         * testing it might be "{@code http://localhost:4566}".
+         * <p>
+         * If not specified (or specified as {@code null}), the default
+         * endpoint for the specified region will be used.
          */
         @Nonnull
         public Builder<T> withEndpoint(@Nullable String endpoint) {
@@ -125,7 +239,15 @@ public final class KinesisSinks {
         }
 
         /**
-         * TODO: javadoc
+         * Specifies the AWS Region (collection of AWS resources in a
+         * geographic area) to connect to. Region names are of form
+         * "{@code us-west-1}", "{@code eu-central-1}" and so on.
+         * <p>
+         * If not specified (or specified as {@code null}), the default
+         * region set via external means will be used (either from you
+         * local {@code .aws/config} file, or from the
+         * {@code AWS_REGION} environment variable). If no such default
+         * is set, then "{@code us-east-1}" will be used.
          */
         @Nonnull
         public Builder<T> withRegion(@Nullable String region) {
@@ -134,7 +256,17 @@ public final class KinesisSinks {
         }
 
         /**
-         * TODO: javadoc
+         * Specifies the AWS credentials to use for authentication
+         * purposes.
+         * <p>
+         * If not specified (or specified as {@code null}), then keys
+         * specified via external means will be used. This can mean the
+         * local {@code .aws/credentials} file, or the
+         * {@code AWS_ACCESS_KEY_ID} and {@code AWS_SECRET_ACCESS_KEY}
+         * environmental variables.
+         * <p>
+         * Either both key must be set to non {@code null} values or
+         * neither.
          */
         @Nonnull
         public Builder<T> withCredentials(@Nullable String accessKey, @Nullable String secretKey) {
@@ -143,9 +275,12 @@ public final class KinesisSinks {
         }
 
         /**
-         * TODO: javadoc
-         *
-         * TODO: document how this differs from Amazon SDK ClientConfiguration and the retry policies within
+         * Specifies how the sink should behave when writing data to the
+         * stream fails. The default behaviour is that it retries the
+         * read operation indefinitely, but after an exponentially
+         * increasing delay; starts with 100 milliseconds and doubles on
+         * each subsequent failure. A successful read resets it. The
+         * delay is capped at 3 seconds.
          */
         @Nonnull
         public Builder<T> withRetryStrategy(@Nonnull RetryStrategy retryStrategy) {
@@ -154,7 +289,7 @@ public final class KinesisSinks {
         }
 
         /**
-         * TODO: javadoc
+         * Construct the sink based on the options provided so far.
          */
         @Nonnull
         public Sink<T> build() {

@@ -88,9 +88,9 @@ public class KinesisSinkP<T> implements Processor {
     @Nonnull
     private final Buffer<T> buffer;
 
-    @Probe(name = "batchSize", unit = ProbeUnit.COUNT)
+    @Probe(name = KinesisSinks.BATCH_SIZE_METRIC, unit = ProbeUnit.COUNT)
     private final Counter batchSize;
-    @Probe(name = "throttlingSleep", unit = ProbeUnit.MS)
+    @Probe(name = KinesisSinks.THROTTLING_SLEEP_METRIC, unit = ProbeUnit.MS)
     private final Counter throttlingSleep = SwCounter.newSwCounter();
 
     private ILogger logger;

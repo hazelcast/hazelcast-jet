@@ -77,8 +77,8 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
     @BeforeClass
     public static void beforeClass() {
         System.setProperty(SDKGlobalConfiguration.AWS_CBOR_DISABLE_SYSTEM_PROPERTY, "true");
-        //todo: force jackson versions to what we use (2.11.x) and have the resulting issue
-        // fixed by Localstack (https://github.com/localstack/localstack/issues/3208)
+        // with the jackson versions we use (2.11.x) Localstack doesn't without disabling CBOR
+        // https://github.com/localstack/localstack/issues/3208
 
         AWS_CONFIG = new AwsConfig()
                 .withEndpoint("http://" + LOCALSTACK.getHost() + ":" + LOCALSTACK.getMappedPort(4566))

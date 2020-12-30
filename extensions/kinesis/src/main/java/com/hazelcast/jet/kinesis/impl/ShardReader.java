@@ -31,6 +31,7 @@ import com.hazelcast.internal.util.counters.SwCounter;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
+import com.hazelcast.jet.kinesis.KinesisSources;
 import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.logging.ILogger;
 
@@ -51,7 +52,7 @@ class ShardReader extends AbstractShardWorker implements DynamicMetricsProvider 
     private final RandomizedRateTracker getRecordsRateTracker =
             new RandomizedRateTracker(1000, GET_RECORD_OPS_PER_SECOND);
 
-    @Probe(name = "millisBehindLatest")
+    @Probe(name = KinesisSources.MILLIS_BEHIND_LATEST_METRIC)
     private final Counter millisBehindLatest = SwCounter.newSwCounter(-1);
 
     private State state = State.NO_SHARD_ITERATOR;
