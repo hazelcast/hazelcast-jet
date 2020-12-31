@@ -89,8 +89,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     @Nonnull
     public FunctionAdapter fnAdapter;
-    final boolean isRebalanceOutput;
-    final FunctionEx<? super T, ?> rebalanceKeyFn;
+    boolean isRebalanceOutput;
+    FunctionEx<? super T, ?> rebalanceKeyFn;
 
     private ComputeStageImplBase(
             @Nonnull Transform transform,
@@ -517,9 +517,12 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     ) {
         checkSerializable(shouldLogFn, "shouldLogFn");
         checkSerializable(toStringFn, "toStringFn");
-        return attach(new PeekTransform(transform, fnAdapter.adaptFilterFn(shouldLogFn),
+        ComputeStageImplBase peekStage = attach(new PeekTransform(transform, fnAdapter.adaptFilterFn(shouldLogFn),
                 fnAdapter.adaptToStringFn(toStringFn)
         ), fnAdapter);
+        peekStage.isRebalanceOutput = isRebalanceOutput;
+        peekStage.rebalanceKeyFn = rebalanceKeyFn;
+        return (RET) peekStage;
     }
 
     @Nonnull

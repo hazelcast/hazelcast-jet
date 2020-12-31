@@ -113,6 +113,48 @@ public class RebalanceBatchStageTest extends PipelineTestSupport {
     }
 
     @Test
+    public void when_rebalanceAndPeekAndMap_then_dagEdgeDistributed() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+        BatchStage<Integer> srcStage = batchStageFromList(input);
+        FunctionEx<Integer, String> formatFn = i -> String.format("%04d-string", i);
+
+        // When
+        BatchStage<String> mapped = srcStage.rebalance().peek().map(formatFn);
+
+        // Then
+        mapped.writeTo(sink);
+        DAG dag = p.toDag();
+        Edge srcToMap = dag.getInboundEdges("map").get(0);
+        assertTrue("Rebalancing should make the edge distributed", srcToMap.isDistributed());
+        assertNull("Didn't rebalance by key, the edge must not be partitioned", srcToMap.getPartitioner());
+        execute();
+        assertEquals(streamToString(input.stream(), formatFn),
+                streamToString(sinkStreamOf(String.class), identity()));
+    }
+
+    @Test
+    public void when_rebalanceByKeyAndPeekAndMap_then_dagEdgePartitionedDistributed() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+        BatchStage<Integer> srcStage = batchStageFromList(input);
+        FunctionEx<Integer, String> formatFn = i -> String.format("%04d-string", i);
+
+        // When
+        BatchStage<String> mapped = srcStage.rebalance(i -> i).peek().map(formatFn);
+
+        // Then
+        mapped.writeTo(sink);
+        DAG dag = p.toDag();
+        Edge srcToMap = dag.getInboundEdges("map").get(0);
+        assertTrue("Rebalancing should make the edge distributed", srcToMap.isDistributed());
+        assertNotNull("Rebalancing by key, the edge must be partitioned", srcToMap.getPartitioner());
+        execute();
+        assertEquals(streamToString(input.stream(), formatFn),
+                streamToString(sinkStreamOf(String.class), identity()));
+    }
+
+    @Test
     public void when_mergeWithRebalanced_thenOnlyRebalancedEdgeDistributed() {
         // Given
         Iterator<Integer> sequence = IntStream.iterate(0, i -> i + 1).boxed().iterator();
