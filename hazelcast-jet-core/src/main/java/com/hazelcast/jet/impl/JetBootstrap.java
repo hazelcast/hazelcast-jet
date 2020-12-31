@@ -61,6 +61,7 @@ import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
 import static com.hazelcast.jet.core.JobStatus.STARTING;
@@ -159,25 +160,38 @@ public final class JetBootstrap {
         int previousCount = -1;
         while (true) {
             uncheckRun(() -> Thread.sleep(JOB_START_CHECK_INTERVAL_MILLIS));
-            submittedJobs.removeIf(job -> !STARTUP_STATUSES.contains(job.getStatus()));
-            if (submittedJobs.isEmpty()) {
+            List<Job> startedJobs = submittedJobs.stream()
+                .filter(job -> !STARTUP_STATUSES.contains(job.getStatus()))
+                .collect(Collectors.toList());
+
+            submittedJobs = submittedJobs.stream()
+                    .filter(job -> !startedJobs.contains(job))
+                    .collect(Collectors.toList());
+
+            int remainingCount = submittedJobs.size();
+
+            if (submittedJobs.isEmpty() && remainingCount == previousCount) {
                 break;
             }
-            int remainingCount = submittedJobs.size();
             if (remainingCount == previousCount) {
                 continue;
             }
+            for (Job job : startedJobs) {
+                // The change of job statuses after the check above
+                // won't be a problem here. Because they cannot revert
+                // back to startup statuses.
+                if (job.getName() != null) {
+                    System.out.println("Job '" + job.getName() + "' is " + job.getStatus().name() + ".");
+                } else {
+                    System.out.println("Job " + job.getIdString() + " is " + job.getStatus().name() + ".");
+                }
+            }
             if (remainingCount == 1) {
                 System.out.println("A job is still starting...");
-            } else {
+            } else if (remainingCount > 1) {
                 System.out.format("%,d jobs are still starting...%n", remainingCount);
             }
             previousCount = remainingCount;
-        }
-        if (submittedCount == 1) {
-            System.out.println("Job started.");
-        } else {
-            System.out.format("Started %,d jobs.%n", submittedCount);
         }
     }
 
