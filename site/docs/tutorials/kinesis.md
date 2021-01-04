@@ -146,7 +146,7 @@ dependencies {
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-## 4. Publish an Event Stream to Kinesis
+## 4. Publish a Stream to Kinesis
 
 This code publishes "tweets" (just some simple strings) to the Kinesis
  data stream `Tweets`, with varying intensity:
@@ -220,7 +220,7 @@ mvn package
 
 Let it run in the background while we go on to creating the next class.
 
-## 5. Use Hazelcast Jet to Analyze the Event Stream
+## 5. Use Jet to Analyze the Stream
 
 This code lets Jet connect to Kinesis and show how many events per
  second were published to the Kinesis stream at a given time:
@@ -303,9 +303,15 @@ Sample output:
 ... At 16:11:28:500 Kinesis got 8 tweets per second
 ```
 
-Once you're done with it, cancel the jobs:
+## 6. Clean-up
+
+Once you're done, cancel the Jet jobs:
 
 ```bash
 <path_to_jet>/bin/jet cancel tweet-publisher
 <path_to_jet>/bin/jet cancel kinesis-traffic-monitor
 ```
+
+Also, clean up the "Tweets" stream from Kinesis (use the [AWS
+ Console](https://console.aws.amazon.com/kinesis) or the
+ [CLI](https://docs.aws.amazon.com/streams/latest/dev/fundamental-stream.html#clean-up)).
