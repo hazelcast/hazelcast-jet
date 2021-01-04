@@ -19,6 +19,7 @@ package com.hazelcast.jet.sql.impl.connector;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.sql.impl.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -253,23 +254,35 @@ public interface SqlConnector {
     }
 
     /**
-     * Returns a supplier for a joining vertex reading the Object[] input
-     * - on the left side of a join - and connecting it with the source - on
-     * the right side of a join - according to the {@code joinInfo}.
-     * The source is read according to {@code projection}/{@code predicate}.
-     * The output type is Object[].
+     * Creates a sub-DAG to read the given {@code table} as a part of a
+     * nested-loop join. The ingress vertex of the returned sub-DAG will
+     * receive items from the left side of the join as {@code Object[]}. For
+     * each record it must read the matching records from the {@code table},
+     * according to the {@code joinInfo}. The egress vertex should emit joined
+     * records, again as {@code Object[]}. The length of an output record is
+     * {@code inputRecordLength + projection.size()}. See {@link
+     * ExpressionUtil#join} for a utility to create the output records.
      * <p>
-     * The field indexes in the predicate and projection refer to the
-     * zero-based indexes of the original fields of the {@code table}. For
-     * example, if the table has fields {@code a, b, c} and the query is:
+     * The given {@code predicate} and {@code projection} apply only to the
+     * records of the {@code table} (i.e. of the right-side of the join, before
+     * joining). For example, if the table has fields {@code a, b, c} and the
+     * query is:
+     *
      * <pre>{@code
      *     SELECT l.v, r.b
      *     FROM l
      *     JOIN r ON l.v = r.b
      *     WHERE r.c=10
      * }</pre>
+     *
      * then the projection will be <code>{1}</code> and the predicate will be
      * <code>{2}=10</code>.
+     * <p>
+     * The implementation should do these steps for each received <em>left</em>
+     * row:<ul>
+     *     <li>TODO
+     *     <li>find rows matching the {@code predicate} and the
+     * </ul>
      *
      * @param table      the table object
      * @param predicate  SQL expression to filter the rows
