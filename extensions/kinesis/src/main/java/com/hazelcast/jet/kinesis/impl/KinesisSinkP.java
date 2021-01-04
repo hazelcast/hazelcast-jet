@@ -38,6 +38,7 @@ import com.hazelcast.logging.ILogger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -76,6 +77,11 @@ public class KinesisSinkP<T> implements Processor {
      * including partition keys is 5M.
      */
     private static final int MAX_REQUEST_SIZE_IN_BYTES = 5 * 1024 * 1024;
+
+    /**
+     * Kinesis always uses UTF-8 to encode strings.
+     */
+    private static final Charset KINESIS_STRING_ENCODING = StandardCharsets.UTF_8;
 
     @Nonnull
     private final AmazonKinesisAsync kinesis;
@@ -417,7 +423,7 @@ public class KinesisSinkP<T> implements Processor {
         }
 
         private int getKeyLength(String key) {
-            return key.getBytes(StandardCharsets.UTF_8).length; //todo: does AWS actually use UTF-8?
+            return key.getBytes(KINESIS_STRING_ENCODING).length;
         }
 
         private static BufferEntry[] initEntries() {

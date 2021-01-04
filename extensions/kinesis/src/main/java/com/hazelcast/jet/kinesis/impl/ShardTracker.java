@@ -69,7 +69,7 @@ public class ShardTracker {
     }
 
     private int findOwner(BigInteger startingHashKey) {
-        for (int i = 0; i < rangePartitions.length; i++) { //todo: could do binary search, but is it worth it?
+        for (int i = 0; i < rangePartitions.length; i++) {
             HashRange range = rangePartitions[i];
             if (KinesisHelper.shardBelongsToRange(startingHashKey, range)) {
                 return i;

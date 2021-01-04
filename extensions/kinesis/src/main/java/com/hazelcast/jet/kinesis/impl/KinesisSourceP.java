@@ -37,7 +37,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -159,7 +161,7 @@ public class KinesisSourceP extends AbstractProcessor implements DynamicMetricsP
                 if (ShardReader.Result.HAS_DATA.equals(result)) {
                     traverser = reader.clearData()
                             .flatMap(record -> eventTimeMapper.flatMapEvent(
-                                    entry(record.getPartitionKey(), record.getData().array()), //todo: shady?
+                                    entry(record.getPartitionKey(), toArray(record)),
                                     currentReader,
                                     record.getApproximateArrivalTimestamp().getTime()
                             ));
@@ -254,6 +256,17 @@ public class KinesisSourceP extends AbstractProcessor implements DynamicMetricsP
     public void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
         for (ShardReader shardReader : shardReaders) {
             shardReader.provideDynamicMetrics(descriptor.copy(), context);
+        }
+    }
+
+    private static byte[] toArray(com.amazonaws.services.kinesis.model.Record record) {
+        ByteBuffer buffer = record.getData();
+        int position = buffer.position();
+        int limit = buffer.limit();
+        if (position == 0 && limit == buffer.capacity()) {
+            return buffer.array();
+        } else {
+            return Arrays.copyOfRange(buffer.array(), position, limit);
         }
     }
 
