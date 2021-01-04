@@ -299,7 +299,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         restart_dynamicStream(false);
     }
 
-    private void restart_dynamicStream(boolean graceful) { //todo: have seen this fail on the real backend, investigate
+    private void restart_dynamicStream(boolean graceful) {
         HELPER.createStream(3);
 
         JobConfig jobConfig = new JobConfig()

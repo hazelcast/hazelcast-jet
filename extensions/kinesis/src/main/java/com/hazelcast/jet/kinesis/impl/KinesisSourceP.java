@@ -29,9 +29,13 @@ import com.hazelcast.jet.core.EventTimeMapper;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -75,7 +79,7 @@ public class KinesisSourceP extends AbstractProcessor implements DynamicMetricsP
     private ILogger logger;
 
     private Traverser<Object> traverser = Traversers.empty();
-    private Traverser<Entry<BroadcastKey<String>, Object[]>> snapshotTraverser;
+    private Traverser<Entry<BroadcastKey<String>, ShardState>> snapshotTraverser;
 
     private int nextReader;
 
@@ -149,7 +153,7 @@ public class KinesisSourceP extends AbstractProcessor implements DynamicMetricsP
             for (int i = 0; i < shardReaders.size(); i++) {
                 int currentReader = nextReader;
                 ShardReader reader = shardReaders.get(currentReader);
-                nextReader = incrCircular(currentReader, shardReaders.size());
+                nextReader = incrementCircular(currentReader, shardReaders.size());
 
                 ShardReader.Result result = reader.probe(currentTime);
                 if (ShardReader.Result.HAS_DATA.equals(result)) {
@@ -200,15 +204,15 @@ public class KinesisSourceP extends AbstractProcessor implements DynamicMetricsP
 
     @Override
     protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
-        String shardId = ((BroadcastKey<String>) key).key();
+        ShardState state = (ShardState) value;
 
-        Object[] shardState = (Object[]) value;
-        BigInteger startingHashKey = ShardStates.startingHashKey(shardState);
+        String shardId = state.getShardId();
+        BigInteger startingHashKey = state.getStartingHashKey();
 
         if (shardBelongsToRange(startingHashKey, processorHashRange)) {
-            boolean closed = ShardStates.closed(shardState);
-            String seqNo = ShardStates.lastSeenSeqNo(shardState);
-            Long watermark = ShardStates.watermark(shardState);
+            boolean closed = state.isClosed();
+            String seqNo = state.getLastSeenSeqNo();
+            Long watermark = state.getWatermark();
             shardStates.update(shardId, startingHashKey, closed, seqNo, watermark);
         }
 
@@ -219,16 +223,16 @@ public class KinesisSourceP extends AbstractProcessor implements DynamicMetricsP
 
     private void addShardReader(Shard shard) {
         String shardId = shard.getShardId();
-        Object[] shardState = shardStates.get(shardId);
-        if (!ShardStates.closed(shardState)) {
+        ShardState shardState = shardStates.get(shardId);
+        if (!shardState.isClosed()) {
             int readerIndex = shardReaders.size();
 
-            String lastSeenSeqNo = ShardStates.lastSeenSeqNo(shardState);
+            String lastSeenSeqNo = shardState.getLastSeenSeqNo();
             shardReaders.add(initShardReader(shard, lastSeenSeqNo));
 
             eventTimeMapper.addPartitions(1);
 
-            Long watermark = ShardStates.watermark(shardState);
+            Long watermark = shardState.getWatermark();
             if (watermark != null) {
                 eventTimeMapper.restoreWatermark(readerIndex, watermark);
             }
@@ -253,7 +257,7 @@ public class KinesisSourceP extends AbstractProcessor implements DynamicMetricsP
         }
     }
 
-    private static int incrCircular(int v, int limit) {
+    private static int incrementCircular(int v, int limit) {
         v++;
         if (v == limit) {
             v = 0;
@@ -261,18 +265,9 @@ public class KinesisSourceP extends AbstractProcessor implements DynamicMetricsP
         return v;
     }
 
-    private static class ShardStates { //todo: use IdentifiedDataSerializable instead (SlidingWindowP.SnapshotKey)
+    private static class ShardStates {
 
-        private static final int STATE_LENGTH = 4;
-
-        private static final int STARTING_HASH_KEY_INDEX = 0;
-        private static final int IS_CLOSED_INDEX = 1;
-        private static final int LAST_SEEN_SEQ_NO_INDEX = 2;
-        private static final int WATERMARK_INDEX = 3;
-
-        private static final Object[] NO_STATE = new Object[STATE_LENGTH];
-
-        private final Map<String, Object[]> states = new HashMap<>();
+        private final Map<String, ShardState> states = new HashMap<>();
 
         void update(Shard shard, String seqNo, Long watermark) {
             BigInteger startingHashKey = new BigInteger(shard.getHashKeyRange().getStartingHashKey());
@@ -285,76 +280,137 @@ public class KinesisSourceP extends AbstractProcessor implements DynamicMetricsP
         }
 
         void update(String shardId, BigInteger startingHashKey, boolean closed, String lastSeenSeqNo, Long watermark) {
-            Object[] stateValues = states.computeIfAbsent(shardId, IGNORED -> new Object[STATE_LENGTH]);
-            stateValues[STARTING_HASH_KEY_INDEX] = startingHashKey;
-            stateValues[IS_CLOSED_INDEX] = closed;
-            stateValues[LAST_SEEN_SEQ_NO_INDEX] = lastSeenSeqNo;
-            stateValues[WATERMARK_INDEX] = watermark;
+            ShardState state = states.computeIfAbsent(shardId, ShardState::new);
+            state.setStartingHashKey(startingHashKey);
+            state.setClosed(closed);
+            state.setLastSeenSeqNo(lastSeenSeqNo);
+            state.setWatermark(watermark);
         }
 
         void remove(String shardId) {
-            Object[] state = states.remove(shardId);
+            ShardState state = states.remove(shardId);
             if (state == null) {
                 throw new JetException("Removing insistent state for shard " + shardId + ", shouldn't happen");
             }
         }
 
-        Object[] get(String shardId) {
-            return states.getOrDefault(shardId, NO_STATE);
+        ShardState get(String shardId) {
+            return states.getOrDefault(shardId, ShardState.EMPTY);
         }
 
-        Stream<Entry<BroadcastKey<String>, Object[]>> snapshotEntries() {
+        Stream<Entry<BroadcastKey<String>, ShardState>> snapshotEntries() {
             return states.entrySet().stream()
                     .map(e -> entry(broadcastKey(e.getKey()), e.getValue()));
         }
 
         @Override
         public String toString() {
-            return states.entrySet().stream().map(this::toString).collect(Collectors.joining(", "));
+            return states.values().stream().map(ShardState::toString).collect(Collectors.joining(", "));
         }
 
-        private String toString(Map.Entry<String, Object[]> entry) {
+    }
+
+    public static final class ShardState implements IdentifiedDataSerializable {
+
+        public static final ShardState EMPTY = new ShardState();
+
+        private String shardId;
+        private BigInteger startingHashKey;
+        private boolean closed;
+        private String lastSeenSeqNo;
+        private Long watermark;
+
+        public ShardState() {
+        }
+
+        public ShardState(String shardId) {
+            this.shardId = shardId;
+        }
+
+        public String getShardId() {
+            return shardId;
+        }
+
+        public void setShardId(String shardId) {
+            this.shardId = shardId;
+        }
+
+        public BigInteger getStartingHashKey() {
+            return startingHashKey;
+        }
+
+        public void setStartingHashKey(BigInteger startingHashKey) {
+            this.startingHashKey = startingHashKey;
+        }
+
+        public boolean isClosed() {
+            return closed;
+        }
+
+        public void setClosed(boolean closed) {
+            this.closed = closed;
+        }
+
+        public String getLastSeenSeqNo() {
+            return lastSeenSeqNo;
+        }
+
+        public void setLastSeenSeqNo(String lastSeenSeqNo) {
+            this.lastSeenSeqNo = lastSeenSeqNo;
+        }
+
+        public Long getWatermark() {
+            return watermark;
+        }
+
+        public void setWatermark(Long watermark) {
+            this.watermark = watermark;
+        }
+
+        @Override
+        public int getFactoryId() {
+            return KinesisDataSerializerHook.FACTORY_ID;
+        }
+
+        @Override
+        public int getClassId() {
+            return KinesisDataSerializerHook.KINESIS_SOURCE_P_SHARD_STATE;
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+            out.writeUTF(shardId);
+            out.writeObject(startingHashKey);
+            out.writeBoolean(closed);
+            out.writeUTF(lastSeenSeqNo);
+            out.writeObject(watermark);
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
+            shardId = in.readUTF();
+            startingHashKey = in.readObject();
+            closed = in.readBoolean();
+            lastSeenSeqNo = in.readUTF();
+            watermark = in.readObject();
+        }
+
+        @Override
+        public String toString() {
             StringBuilder sb = new StringBuilder();
 
-            String shardId = entry.getKey();
             sb.append(shardId).append(": ");
-
-            Object[] state = entry.getValue();
-
-            BigInteger startingHashKey = startingHashKey(state);
             sb.append("startingHashKey=").append(startingHashKey);
-
-            boolean closed = closed(state);
             sb.append(", closed=").append(closed);
 
             if (!closed) {
-                String lastSeenSeqNo = lastSeenSeqNo(state);
                 sb.append(", lastSeenSeqNo=").append(lastSeenSeqNo);
-
-                Long watermark = watermark(state);
                 if (watermark != null) {
                     sb.append(", watermark=").append(toLocalTime(watermark));
                 }
             }
 
             return sb.toString();
-        }
-
-        static BigInteger startingHashKey(Object[] state) {
-            return (BigInteger) state[STARTING_HASH_KEY_INDEX];
-        }
-
-        static boolean closed(Object[] state) {
-            Boolean closed = (Boolean) state[IS_CLOSED_INDEX];
-            return closed != null && closed;
-        }
-
-        static String lastSeenSeqNo(Object[] state) {
-            return (String) state[LAST_SEEN_SEQ_NO_INDEX];
-        }
-
-        static Long watermark(Object[] state) {
-            return (Long) state[WATERMARK_INDEX];
         }
     }
 }
