@@ -28,6 +28,7 @@
             <useProjectArtifact>false</useProjectArtifact>
             <includes>
                 <include>com.hazelcast.jet:hazelcast-jet</include>
+                <include>com.hazelcast.jet:hazelcast-jet-sql</include>
                 <include>org.apache.logging.log4j:*</include>
                 <include>org.slf4j:*</include>
                 <include>io.prometheus.jmx:jmx_prometheus_javaagent</include>
@@ -52,7 +53,6 @@
                 <include>com.hazelcast.jet:hazelcast-jet-kafka</include>
                 <include>com.hazelcast.jet:hazelcast-jet-kinesis</include>
                 <include>com.hazelcast.jet:hazelcast-jet-s3</include>
-                <include>com.hazelcast.jet:hazelcast-jet-sql</include>
             </includes>
             <outputDirectory>opt</outputDirectory>
             <outputFileNameMapping>${artifact.artifactId}-${artifact.baseVersion}.${artifact.extension}</outputFileNameMapping>
