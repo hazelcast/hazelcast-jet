@@ -34,7 +34,8 @@ public class HazelcastArgumentAssignmentOperator extends HazelcastSpecialOperato
                 20,
                 true,
                 ReturnTypes.ARG0,
-                InferTypes.RETURN_TYPE);
+                InferTypes.RETURN_TYPE,
+                null);
     }
 
     @Override

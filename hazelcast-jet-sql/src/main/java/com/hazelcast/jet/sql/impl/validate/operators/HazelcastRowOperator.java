@@ -19,13 +19,16 @@ package com.hazelcast.jet.sql.impl.validate.operators;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastCallBinding;
 import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastSpecialOperator;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperandCountRange;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.fun.SqlRowOperator;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
+import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.util.Pair;
 
 import java.util.AbstractList;
@@ -42,12 +45,38 @@ public class HazelcastRowOperator extends HazelcastSpecialOperator {
                 MDX_PRECEDENCE,
                 false,
                 null,
-                InferTypes.RETURN_TYPE);
+                InferTypes.RETURN_TYPE,
+                new SqlOperandTypeChecker() {
+                    @Override
+                    public boolean checkOperandTypes(SqlCallBinding callBinding, boolean throwOnFailure) {
+                        return true;
+                    }
+
+                    @Override
+                    public SqlOperandCountRange getOperandCountRange() {
+                        return null;
+                    }
+
+                    @Override
+                    public String getAllowedSignatures(SqlOperator op, String opName) {
+                        return null;
+                    }
+
+                    @Override
+                    public Consistency getConsistency() {
+                        return null;
+                    }
+
+                    @Override
+                    public boolean isOptional(int i) {
+                        return false;
+                    }
+                });
     }
 
     @Override
     protected boolean checkOperandTypes(HazelcastCallBinding callBinding, boolean throwOnFailure) {
-        return true;
+    return true;
     }
 
     @Override
