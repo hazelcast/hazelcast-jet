@@ -510,10 +510,10 @@ public class KinesisSinkP<T> implements Processor {
          */
         private static final int DEGRADATION_VS_RECOVERY_SPEED_RATIO = 10;
 
-        private final Damper<Long> damper;
+        private final SlowRecoveryDegrader<Long> sleepTracker;
 
         ThroughputController() {
-            this.damper = initDamper();
+            this.sleepTracker = initSleepTracker();
         }
 
         int computeBatchSize(int shardCount, int sinkCount) {
@@ -536,16 +536,16 @@ public class KinesisSinkP<T> implements Processor {
         }
 
         long markSuccessfulSend() {
-            damper.ok();
-            return damper.output();
+            sleepTracker.ok();
+            return sleepTracker.output();
         }
 
         long markFailedSend() {
-            damper.error();
-            return damper.output();
+            sleepTracker.error();
+            return sleepTracker.output();
         }
 
-        private static Damper<Long> initDamper() {
+        private static SlowRecoveryDegrader<Long> initSleepTracker() {
             List<Long> list = new ArrayList<>();
 
             //default sleep when there haven't been errors for a while
@@ -556,7 +556,7 @@ public class KinesisSinkP<T> implements Processor {
                 list.add(MILLISECONDS.toNanos(millis));
             }
 
-            return new Damper<>(DEGRADATION_VS_RECOVERY_SPEED_RATIO, list.toArray(new Long[0]));
+            return new SlowRecoveryDegrader<>(DEGRADATION_VS_RECOVERY_SPEED_RATIO, list.toArray(new Long[0]));
         }
     }
 }

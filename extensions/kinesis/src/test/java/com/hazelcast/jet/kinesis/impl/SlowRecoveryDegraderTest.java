@@ -19,26 +19,26 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class DamperTest {
+public class SlowRecoveryDegraderTest {
 
     private static final int K = 10;
     private static final Integer[] OUTPUTS = {500, 400, 300, 200, 100};
 
-    private Damper<Integer> absorber = new Damper<>(K, OUTPUTS);
+    private SlowRecoveryDegrader<Integer> degrader = new SlowRecoveryDegrader<>(K, OUTPUTS);
 
     @Test
     public void oneErrorAndBack() {
         assertOutput(500);
 
-        absorber.error();
+        degrader.error();
         assertOutput(400);
 
         for (int i = 0; i < K - 1; i++) {
-            absorber.ok();
+            degrader.ok();
             assertOutput(400);
         }
 
-        absorber.ok();
+        degrader.ok();
         assertOutput(500);
     }
 
@@ -46,23 +46,23 @@ public class DamperTest {
     public void twoErrorsAndBack() {
         assertOutput(500);
 
-        absorber.error();
+        degrader.error();
         assertOutput(400);
 
-        absorber.error();
+        degrader.error();
         assertOutput(300);
 
         for (int i = 0; i < K - 1; i++) {
-            absorber.ok();
+            degrader.ok();
             assertOutput(300);
         }
 
         for (int i = 0; i < K; i++) {
-            absorber.ok();
+            degrader.ok();
             assertOutput(400);
         }
 
-        absorber.ok();
+        degrader.ok();
         assertOutput(500);
     }
 
@@ -70,17 +70,17 @@ public class DamperTest {
     public void lotsOfErrors() {
         assertOutput(500);
 
-        absorber.error();
+        degrader.error();
         assertOutput(400);
 
-        absorber.error();
+        degrader.error();
         assertOutput(300);
 
-        absorber.error();
+        degrader.error();
         assertOutput(200);
 
         for (int i = 0; i < OUTPUTS.length; i++) {
-            absorber.error();
+            degrader.error();
             assertOutput(100);
         }
     }
@@ -89,41 +89,41 @@ public class DamperTest {
     public void backAndForth() {
         assertOutput(500);
 
-        absorber.error();
+        degrader.error();
         assertOutput(400);
 
-        absorber.ok();
-        absorber.ok();
-        absorber.ok();
+        degrader.ok();
+        degrader.ok();
+        degrader.ok();
         assertOutput(400);
 
-        absorber.error();
+        degrader.error();
         assertOutput(300);
 
-        absorber.error();
+        degrader.error();
         assertOutput(200);
 
-        absorber.ok();
-        absorber.ok();
-        absorber.ok();
+        degrader.ok();
+        degrader.ok();
+        degrader.ok();
         assertOutput(200);
 
-        absorber.error();
+        degrader.error();
         assertOutput(100);
 
-        absorber.error();
+        degrader.error();
         assertOutput(100);
 
         for (int i = 0; i < K - 1; i++) {
-            absorber.ok();
+            degrader.ok();
             assertOutput(100);
         }
 
-        absorber.ok();
+        degrader.ok();
         assertOutput(200);
     }
 
     private void assertOutput(int output) {
-        assertEquals(output, absorber.output().intValue());
+        assertEquals(output, degrader.output().intValue());
     }
 }
