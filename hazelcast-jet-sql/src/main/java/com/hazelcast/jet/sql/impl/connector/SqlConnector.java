@@ -187,7 +187,7 @@ public interface SqlConnector {
 
     /**
      * Creates a {@link Table} object with the given fields. Should return
-     * quickly; specificially it should not attempt to connect to the remote
+     * quickly; specifically it should not attempt to connect to the remote
      * service.
      * <p>
      * Jet calls this method for each statement execution and for each mapping.
@@ -263,19 +263,22 @@ public interface SqlConnector {
      * zero-based indexes of the original fields of the {@code table}. For
      * example, if the table has fields {@code a, b, c} and the query is:
      * <pre>{@code
-     *     SELECT l.v, r.b FROM l JOIN r ON l.v = r.b WHERE r.c=10
+     *     SELECT l.v, r.b
+     *     FROM l
+     *     JOIN r ON l.v = r.b
+     *     WHERE r.c=10
      * }</pre>
-     * Then the projection will be {@code {1}} and the predicate will be {@code
-     * {2}=10}.
+     * then the projection will be <code>{1}</code> and the predicate will be
+     * <code>{2}=10</code>.
      *
      * @param table      the table object
      * @param predicate  SQL expression to filter the rows
      * @param projection the list of fields to return
      * @param joinInfo   {@link JetJoinInfo}
-     * @return {@link NestedLoopJoin}
+     * @return {@link VertexWithInputConfig}
      */
     @Nonnull
-    default NestedLoopJoin nestedLoopReader(
+    default VertexWithInputConfig nestedLoopReader(
             @Nonnull DAG dag,
             @Nonnull Table table,
             @Nullable Expression<Boolean> predicate,
@@ -315,26 +318,22 @@ public interface SqlConnector {
     }
 
     /**
-     * Definition of a nested loop join.
-     * <p>
-     * Contains:<ul>
-     * <li>{@code vertex}: the joining vertex to be added to the DAG,
-     * that reads the Object[] input - on the left side of a join - and
-     * connects it with the source - on the right side of a join
-     * <li>{@code configureEdgeFn}: function to configure the edge the
-     * joining vertex is connected to
-     * </ul>
+     * Definition of a vertex along with a function to configure the input
+     * edge(s).
      */
-    class NestedLoopJoin {
+    class VertexWithInputConfig {
 
         private final Vertex vertex;
         private final Consumer<Edge> configureEdgeFn;
 
-        public NestedLoopJoin(Vertex vertex) {
+        /**
+         * Creates a Vertex with default edge config (local, unicast).
+         */
+        public VertexWithInputConfig(Vertex vertex) {
             this(vertex, null);
         }
 
-        public NestedLoopJoin(Vertex vertex, Consumer<Edge> configureEdgeFn) {
+        public VertexWithInputConfig(Vertex vertex, Consumer<Edge> configureEdgeFn) {
             this.vertex = vertex;
             this.configureEdgeFn = configureEdgeFn;
         }

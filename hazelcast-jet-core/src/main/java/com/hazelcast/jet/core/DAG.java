@@ -100,7 +100,9 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     }
 
     /**
-     * Creates a vertex from a {@code Supplier<Processor>} and adds it to this DAG.
+     * Creates a vertex from a {@code Supplier<Processor>} and adds it to this
+     * DAG. The vertex will be given a unique name created from the {@code
+     * namePrefix}.
      *
      * @see Vertex#Vertex(String, SupplierEx)
      *
@@ -129,7 +131,9 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     }
 
     /**
-     * Creates a vertex from a {@code ProcessorSupplier} and adds it to this DAG.
+     * Creates a vertex from a {@code ProcessorSupplier} and adds it to this
+     * DAG. The vertex will be given a unique name created from the {@code
+     * namePrefix}.
      *
      * @see Vertex#Vertex(String, ProcessorSupplier)
      *
@@ -157,7 +161,9 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     }
 
     /**
-     * Creates a vertex from a {@code ProcessorMetaSupplier} and adds it to this DAG.
+     * Creates a vertex from a {@code ProcessorMetaSupplier} and adds it to
+     * this DAG. The vertex will be given a unique name created from the {@code
+     * namePrefix}.
      *
      * @see Vertex#Vertex(String, ProcessorMetaSupplier)
      *
@@ -284,13 +290,13 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     }
 
     /**
-     * Creates a unique {@code Vertex} name with a given prefix.
+     * Creates a {@code Vertex} name that is unique in this DAG and starts with
+     * the given prefix.
      */
     private String uniqueName(String namePrefix) {
-        int i = 0;
-        String name  = namePrefix;
-        while (nameToVertex.containsKey(name)) {
-            name = namePrefix + '-' + ++i;
+        String name = namePrefix;
+        for (int i = 2; nameToVertex.containsKey(name); i++) {
+            name = namePrefix + '-' + i;
         }
         return name;
     }

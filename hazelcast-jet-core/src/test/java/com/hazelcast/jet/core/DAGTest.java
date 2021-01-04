@@ -62,7 +62,7 @@ public class DAGTest {
         assertSame(a0, dag.getVertex("a"));
 
         Vertex a1 = dag.newUniqueVertex("a", PROCESSOR_SUPPLIER);
-        assertSame(a1, dag.getVertex("a-1"));
+        assertSame(a1, dag.getVertex("a-2"));
     }
 
     @Test

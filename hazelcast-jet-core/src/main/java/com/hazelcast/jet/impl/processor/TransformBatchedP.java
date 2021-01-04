@@ -26,9 +26,9 @@ import java.util.List;
 import java.util.function.Function;
 
 /**
- * Processor which exploits natural batching of {@link Inbox} items.
- * For each received batch of items, emits all the items from the
- * traverser returned by the given list-of-items-to-traverser function.
+ * Processor which exploits natural batching of {@link Inbox} items. For
+ * each received batch of items it emits all the items from the traverser
+ * returned by the given itemList-to-traverser function.
  *
  * @param <T> received item type
  * @param <R> emitted item type

@@ -133,7 +133,7 @@ public class IMapSqlConnector implements SqlConnector {
     }
 
     @Nonnull @Override
-    public NestedLoopJoin nestedLoopReader(
+    public VertexWithInputConfig nestedLoopReader(
             @Nonnull DAG dag,
             @Nonnull Table table0,
             @Nullable Expression<Boolean> predicate,
@@ -152,7 +152,7 @@ public class IMapSqlConnector implements SqlConnector {
         KvRowProjector.Supplier rightRowProjectorSupplier =
                 KvRowProjector.supplier(paths, types, keyDescriptor, valueDescriptor, predicate, projections);
 
-        return Joiner.join(dag, name, toString(table), joinInfo, rightRowProjectorSupplier);
+        return IMapJoiner.join(dag, name, toString(table), joinInfo, rightRowProjectorSupplier);
     }
 
     @Override

@@ -20,7 +20,7 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
-import com.hazelcast.jet.sql.impl.connector.SqlConnector.NestedLoopJoin;
+import com.hazelcast.jet.sql.impl.connector.SqlConnector.VertexWithInputConfig;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
 import com.hazelcast.sql.impl.extract.QueryPath;
 import junitparams.JUnitParamsRunner;
@@ -39,7 +39,7 @@ import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.BDDMockito.given;
 
 @RunWith(JUnitParamsRunner.class)
-public class JoinerTest {
+public class IMapJoinerTest {
 
     @Mock
     private DAG dag;
@@ -68,7 +68,7 @@ public class JoinerTest {
         given(dag.newUniqueVertex(contains("Lookup"), isA(JoinByPrimitiveKeyProcessorSupplier.class))).willReturn(vertex);
 
         // when
-        NestedLoopJoin join = Joiner.join(
+        VertexWithInputConfig vertexWithConfig = IMapJoiner.join(
                 dag,
                 "imap-name",
                 "table-name",
@@ -77,8 +77,8 @@ public class JoinerTest {
         );
 
         // then
-        assertThat(join.vertex()).isEqualTo(vertex);
-        assertThat(join.configureEdgeFn()).isNotNull();
+        assertThat(vertexWithConfig.vertex()).isEqualTo(vertex);
+        assertThat(vertexWithConfig.configureEdgeFn()).isNotNull();
     }
 
     @Test
@@ -88,7 +88,7 @@ public class JoinerTest {
         given(dag.newUniqueVertex(contains("Predicate"), isA(ProcessorMetaSupplier.class))).willReturn(vertex);
 
         // when
-        NestedLoopJoin join = Joiner.join(
+        VertexWithInputConfig vertexWithConfig = IMapJoiner.join(
                 dag,
                 "imap-name",
                 "table-name",
@@ -97,8 +97,8 @@ public class JoinerTest {
         );
 
         // then
-        assertThat(join.vertex()).isEqualTo(vertex);
-        assertThat(join.configureEdgeFn()).isNotNull();
+        assertThat(vertexWithConfig.vertex()).isEqualTo(vertex);
+        assertThat(vertexWithConfig.configureEdgeFn()).isNotNull();
     }
 
     @Test
@@ -109,7 +109,7 @@ public class JoinerTest {
                 .willReturn(vertex);
 
         // when
-        NestedLoopJoin join = Joiner.join(
+        VertexWithInputConfig vertexWithConfig = IMapJoiner.join(
                 dag,
                 "imap-name",
                 "table-name",
@@ -118,8 +118,8 @@ public class JoinerTest {
         );
 
         // then
-        assertThat(join.vertex()).isEqualTo(vertex);
-        assertThat(join.configureEdgeFn()).isNull();
+        assertThat(vertexWithConfig.vertex()).isEqualTo(vertex);
+        assertThat(vertexWithConfig.configureEdgeFn()).isNull();
     }
 
     @Test
@@ -130,7 +130,7 @@ public class JoinerTest {
         given(dag.newUniqueVertex(contains("Scan"), isA(JoinScanProcessorSupplier.class))).willReturn(vertex);
 
         // when
-        NestedLoopJoin join = Joiner.join(
+        VertexWithInputConfig vertexWithConfig = IMapJoiner.join(
                 dag,
                 "imap-name",
                 "table-name",
@@ -139,8 +139,8 @@ public class JoinerTest {
         );
 
         // then
-        assertThat(join.vertex()).isEqualTo(vertex);
-        assertThat(join.configureEdgeFn()).isNull();
+        assertThat(vertexWithConfig.vertex()).isEqualTo(vertex);
+        assertThat(vertexWithConfig.configureEdgeFn()).isNull();
     }
 
     private static JetJoinInfo joinInfo(boolean inner, int[] leftEquiJoinIndices, int[] rightEquiJoinIndices) {

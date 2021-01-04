@@ -19,16 +19,16 @@ package com.hazelcast.jet.sql.impl.connector.map;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
-import com.hazelcast.jet.sql.impl.connector.SqlConnector.NestedLoopJoin;
+import com.hazelcast.jet.sql.impl.connector.SqlConnector.VertexWithInputConfig;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
 import com.hazelcast.sql.impl.extract.QueryPath;
 
-final class Joiner {
+final class IMapJoiner {
 
-    private Joiner() {
+    private IMapJoiner() {
     }
 
-    static NestedLoopJoin join(
+    static VertexWithInputConfig join(
             DAG dag,
             String mapName,
             String tableName,
@@ -37,7 +37,7 @@ final class Joiner {
     ) {
         int leftEquiJoinPrimitiveKeyIndex = leftEquiJoinPrimitiveKeyIndex(joinInfo, rightRowProjectorSupplier.paths());
         if (leftEquiJoinPrimitiveKeyIndex > -1) {
-            return new NestedLoopJoin(
+            return new VertexWithInputConfig(
                     dag.newUniqueVertex(
                             "Join(Lookup-" + tableName + ")",
                             new JoinByPrimitiveKeyProcessorSupplier(
@@ -51,22 +51,22 @@ final class Joiner {
                     edge -> edge.distributed().partitioned(extractPrimitiveKeyFn(leftEquiJoinPrimitiveKeyIndex))
             );
         } else if (joinInfo.isEquiJoin() && joinInfo.isInner()) {
-            return new NestedLoopJoin(
+            return new VertexWithInputConfig(
                     dag.newUniqueVertex(
                             "Join(Predicate-" + tableName + ")",
                             JoinByPredicateInnerProcessorSupplier.supplier(joinInfo, mapName, rightRowProjectorSupplier)
                     ),
                     edge -> edge.distributed().fanout()
             );
-        } else if (joinInfo.isEquiJoin() && joinInfo.isOuter()) {
-            return new NestedLoopJoin(
+        } else if (joinInfo.isEquiJoin() && joinInfo.isLeftOuter()) {
+            return new VertexWithInputConfig(
                     dag.newUniqueVertex(
                             "Join(Predicate-" + tableName + ")",
                             new JoinByPredicateOuterProcessorSupplier(joinInfo, mapName, rightRowProjectorSupplier)
                     )
             );
         } else {
-            return new NestedLoopJoin(
+            return new VertexWithInputConfig(
                     dag.newUniqueVertex(
                             "Join(Scan-" + tableName + ")",
                             new JoinScanProcessorSupplier(joinInfo, mapName, rightRowProjectorSupplier)
@@ -76,10 +76,24 @@ final class Joiner {
         // TODO: detect and handle always-false condition ?
     }
 
-    private static int leftEquiJoinPrimitiveKeyIndex(JetJoinInfo joinInfo, QueryPath[] paths) {
+    /**
+     * Find the index of the field of the left side of a join that is in equals
+     * predicate with the entire right-side key. Returns -1 if there's no
+     * equi-join condition or the equi-join doesn't compare the key object of
+     * the right side.
+     * <p>
+     * For example, in:
+     * <pre>{@code
+     *     SELECT *
+     *     FROM l
+     *     JOIN r ON l.field1=right.__key
+     * }</pre>
+     * it will return the index of {@code field1} in the left table.
+     */
+    private static int leftEquiJoinPrimitiveKeyIndex(JetJoinInfo joinInfo, QueryPath[] rightPaths) {
         int[] rightEquiJoinIndices = joinInfo.rightEquiJoinIndices();
         for (int i = 0; i < rightEquiJoinIndices.length; i++) {
-            QueryPath path = paths[rightEquiJoinIndices[i]];
+            QueryPath path = rightPaths[rightEquiJoinIndices[i]];
             if (path.isTop() && path.isKey()) {
                 return joinInfo.leftEquiJoinIndices()[i];
             }

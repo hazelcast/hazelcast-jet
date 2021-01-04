@@ -74,7 +74,7 @@ public class JetJoinInfo implements DataSerializable {
         return inner;
     }
 
-    public boolean isOuter() {
+    public boolean isLeftOuter() {
         return !inner;
     }
 

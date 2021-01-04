@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl;
 
-import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
 import com.hazelcast.sql.impl.expression.Expression;
@@ -61,16 +60,22 @@ public final class ExpressionUtil {
         };
     }
 
-    public static BiFunctionEx<Object[], Object[], Object[]> joinFn(
+    /**
+     * Concatenates {@code left} and {@code right} rows into one row, evaluates
+     * the {@code predicate} on it. If the predicate passed, returns the joined
+     * row, or returns {@code null} otherwise,
+     */
+    @Nullable
+    public static Object[] join(
+            @Nonnull Object[] left,
+            @Nonnull Object[] right,
             @Nonnull Expression<Boolean> predicate
     ) {
-        return (left, right) -> {
-            Object[] joined = Arrays.copyOf(left, left.length + right.length);
-            System.arraycopy(right, 0, joined, left.length, right.length);
+        Object[] joined = Arrays.copyOf(left, left.length + right.length);
+        System.arraycopy(right, 0, joined, left.length, right.length);
 
-            Row row = new HeapRow(joined);
-            return Boolean.TRUE.equals(evaluate(predicate, row)) ? joined : null;
-        };
+        Row row = new HeapRow(joined);
+        return Boolean.TRUE.equals(evaluate(predicate, row)) ? joined : null;
     }
 
     /**

@@ -24,6 +24,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceOrderedP;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
@@ -37,6 +38,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -44,7 +46,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Traversers.singleton;
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.impl.util.Util.padRight;
+import static com.hazelcast.jet.impl.util.Util.extendArray;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 @SuppressFBWarnings(
@@ -98,40 +100,36 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
 
         List<Processor> processors = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
+            ServiceContext context = new ServiceContext(map, rightRowProjectorSupplier.get());
             Processor processor = new AsyncTransformUsingServiceOrderedP<>(
-                    ServiceFactories.iMapService(mapName),
-                    map,
+                    ServiceFactories.nonSharedService(ctx -> context),
+                    null,
                     MAX_CONCURRENT_OPS,
-                    joinFn(inner, leftEquiJoinIndex, condition, rightRowProjectorSupplier)
+                    joinFn(inner, leftEquiJoinIndex, condition)
             );
             processors.add(processor);
         }
         return processors;
     }
 
-    private static BiFunctionEx<IMap<Object, Object>, Object[], CompletableFuture<Traverser<Object[]>>> joinFn(
+    private static BiFunctionEx<ServiceContext, Object[], CompletableFuture<Traverser<Object[]>>> joinFn(
             boolean inner,
             int leftEquiJoinIndex,
-            Expression<Boolean> condition,
-            SupplierEx<KvRowProjector> rightRowProjectorSupplier
+            Expression<Boolean> condition
     ) {
-        BiFunctionEx<Object[], Object[], Object[]> joinFn = ExpressionUtil.joinFn(condition);
-
-        return (map, left) -> {
+        return (ctx, left) -> {
             Object key = left[leftEquiJoinIndex];
-            // TODO: somehow avoid projector instantiation for each row ?
-            KvRowProjector rightRowProjector = rightRowProjectorSupplier.get();
-
             if (key == null) {
-                return inner ? null : completedFuture(singleton(padRight(left, rightRowProjector.getColumnCount())));
+                return inner ? null
+                        : completedFuture(singleton(extendArray(left, ctx.rightRowProjector.getColumnCount())));
             }
 
-            return map.getAsync(key).toCompletableFuture()
+            return ctx.map.getAsync(key).toCompletableFuture()
                       .thenApply(value -> {
-                          Object[] joined = join(left, key, value, rightRowProjector, joinFn);
+                          Object[] joined = join(left, key, value, ctx.rightRowProjector, condition);
                           return joined != null ? singleton(joined)
                                   : inner ? null
-                                  : singleton(padRight(left, rightRowProjector.getColumnCount()));
+                                  : singleton(extendArray(left, ctx.rightRowProjector.getColumnCount()));
                       });
         };
     }
@@ -141,7 +139,7 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
             Object key,
             Object value,
             KvRowProjector rightRowProjector,
-            BiFunctionEx<Object[], Object[], Object[]> joinFn
+            Expression<Boolean> condition
     ) {
         if (value == null) {
             return null;
@@ -152,7 +150,25 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
             return null;
         }
 
-        return joinFn.apply(left, right);
+        return ExpressionUtil.join(left, right, condition);
+    }
+
+    /**
+     * This class must be serializable because ServiceFactory requires it, but
+     * is never serialized because we create our ServiceFactory only when
+     * creating the processor.
+     * <p>
+     * We could add an assert that will break when we try to serialize, but the
+     * {@link Util#checkSerializable(Object, String)} method serializes it.
+     */
+    private static final class ServiceContext implements Serializable {
+        final transient IMap<Object, Object> map;
+        final transient KvRowProjector rightRowProjector;
+
+        private ServiceContext(IMap<Object, Object> map, KvRowProjector rightRowProjector) {
+            this.map = map;
+            this.rightRowProjector = rightRowProjector;
+        }
     }
 
     @Override

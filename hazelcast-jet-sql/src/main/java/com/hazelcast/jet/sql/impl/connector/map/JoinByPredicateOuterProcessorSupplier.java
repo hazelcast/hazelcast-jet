@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.connector.map;
 
-import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Traverser;
@@ -33,6 +32,7 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.impl.getters.Extractors;
+import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.extract.QueryPath;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -46,7 +46,7 @@ import java.util.Set;
 
 import static com.hazelcast.jet.Traversers.singleton;
 import static com.hazelcast.jet.Traversers.traverseIterable;
-import static com.hazelcast.jet.impl.util.Util.padRight;
+import static com.hazelcast.jet.impl.util.Util.extendArray;
 
 @SuppressFBWarnings(
         value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
@@ -71,7 +71,7 @@ final class JoinByPredicateOuterProcessorSupplier implements ProcessorSupplier, 
             String mapName,
             KvRowProjector.Supplier rightRowProjectorSupplier
     ) {
-        assert joinInfo.isEquiJoin() && joinInfo.isOuter();
+        assert joinInfo.isEquiJoin() && joinInfo.isLeftOuter();
 
         this.joinInfo = joinInfo;
         this.mapName = mapName;
@@ -113,18 +113,17 @@ final class JoinByPredicateOuterProcessorSupplier implements ProcessorSupplier, 
     ) {
         int[] leftEquiJoinIndices = joinInfo.leftEquiJoinIndices();
         int[] rightEquiJoinIndices = joinInfo.rightEquiJoinIndices();
-        BiFunctionEx<Object[], Object[], Object[]> joinFn = ExpressionUtil.joinFn(joinInfo.nonEquiCondition());
 
         return left -> {
             Predicate<Object, Object> predicate =
                     QueryUtil.toPredicate(left, leftEquiJoinIndices, rightEquiJoinIndices, rightPaths);
             if (predicate == null) {
-                return singleton(padRight(left, rightRowProjector.getColumnCount()));
+                return singleton(extendArray(left, rightRowProjector.getColumnCount()));
             }
 
-            List<Object[]> joined = join(left, map.entrySet(predicate), rightRowProjector, joinFn);
+            List<Object[]> joined = join(left, map.entrySet(predicate), rightRowProjector, joinInfo.nonEquiCondition());
             return joined.isEmpty()
-                    ? singleton(padRight(left, rightRowProjector.getColumnCount()))
+                    ? singleton(extendArray(left, rightRowProjector.getColumnCount()))
                     : traverseIterable(joined);
         };
     }
@@ -133,7 +132,7 @@ final class JoinByPredicateOuterProcessorSupplier implements ProcessorSupplier, 
             Object[] left,
             Set<Entry<Object, Object>> entries,
             KvRowProjector rightRowProjector,
-            BiFunctionEx<Object[], Object[], Object[]> joinFn
+            Expression<Boolean> condition
     ) {
         List<Object[]> rows = new ArrayList<>();
         for (Entry<Object, Object> entry : entries) {
@@ -142,7 +141,7 @@ final class JoinByPredicateOuterProcessorSupplier implements ProcessorSupplier, 
                 continue;
             }
 
-            Object[] joined = joinFn.apply(left, right);
+            Object[] joined = ExpressionUtil.join(left, right, condition);
             if (joined != null) {
                 rows.add(joined);
             }

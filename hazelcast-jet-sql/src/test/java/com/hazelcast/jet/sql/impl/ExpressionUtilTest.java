@@ -80,7 +80,7 @@ public class ExpressionUtilTest {
     @Test
     @Parameters(method = "joinParameters")
     public void test_joinFn(Expression<Boolean> predicate, Object[] left, Object[] right, Object[] expected) {
-        Object[] joined = ExpressionUtil.joinFn(predicate).apply(left, right);
+        Object[] joined = ExpressionUtil.join(left, right, predicate);
 
         assertThat(joined).isEqualTo(expected);
     }

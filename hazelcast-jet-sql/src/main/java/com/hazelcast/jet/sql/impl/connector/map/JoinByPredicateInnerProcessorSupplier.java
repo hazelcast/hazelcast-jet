@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.cluster.Address;
-import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.util.collection.PartitionIdSet;
@@ -39,6 +38,7 @@ import com.hazelcast.partition.Partition;
 import com.hazelcast.partition.PartitionService;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.impl.getters.Extractors;
+import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.extract.QueryPath;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -131,7 +131,6 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
     ) {
         int[] leftEquiJoinIndices = joinInfo.leftEquiJoinIndices();
         int[] rightEquiJoinIndices = joinInfo.rightEquiJoinIndices();
-        BiFunctionEx<Object[], Object[], Object[]> joinFn = ExpressionUtil.joinFn(joinInfo.nonEquiCondition());
 
         return left -> {
             Predicate<Object, Object> predicate =
@@ -140,7 +139,8 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
                 return empty();
             }
 
-            List<Object[]> joined = join(left, map.entrySet(predicate, partitions.copy()), rightRowProjector, joinFn);
+            List<Object[]> joined = join(left, map.entrySet(predicate, partitions.copy()), rightRowProjector,
+                    joinInfo.nonEquiCondition());
             return traverseIterable(joined);
         };
     }
@@ -149,7 +149,7 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
             Object[] left,
             Set<Entry<Object, Object>> entries,
             KvRowProjector rightRowProjector,
-            BiFunctionEx<Object[], Object[], Object[]> joinFn
+            Expression<Boolean> condition
     ) {
         List<Object[]> rows = new ArrayList<>();
         for (Entry<Object, Object> entry : entries) {
@@ -158,7 +158,7 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
                 continue;
             }
 
-            Object[] joined = joinFn.apply(left, right);
+            Object[] joined = ExpressionUtil.join(left, right, condition);
             if (joined != null) {
                 rows.add(joined);
             }
