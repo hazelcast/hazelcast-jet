@@ -63,6 +63,7 @@ public class FileSourceBuilder<T> {
     private FileFormat<T> format;
     private boolean useHadoop;
     private boolean sharedFileSystem;
+    private boolean ignoreFileNotFound;
 
     FileSourceBuilder(@Nonnull String path) {
         this.path = requireNonNull(path, "path must not be null");
@@ -142,6 +143,18 @@ public class FileSourceBuilder<T> {
         return this;
     }
 
+
+    /**
+     * TODO
+     * @param ignoreFileNotFound
+     * @return
+     */
+    @Nonnull
+    public FileSourceBuilder<T> ignoreFileNotFound(boolean ignoreFileNotFound) {
+        this.ignoreFileNotFound = ignoreFileNotFound;
+        return this;
+    }
+
     /**
      * Specifies an arbitrary option for the underlying source. If you are
      * looking for a missing option, check out the {@link FileFormat} class
@@ -183,7 +196,7 @@ public class FileSourceBuilder<T> {
         }
 
         FileSourceConfiguration<T> fsc = new FileSourceConfiguration<>(
-                path, glob, format, sharedFileSystem, options
+                path, glob, format, sharedFileSystem, ignoreFileNotFound, options
         );
 
         if (shouldUseHadoop()) {

@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.hadoop.file;
 
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.file.FileSources;
@@ -176,20 +177,41 @@ public class PathAndGlobFileSourceTest extends BaseFileFormatTest {
     }
 
     @Test
-    public void shouldNotReadAnyFileForNonMatchingGlob() {
-        FileSourceBuilder<String> source = FileSources.files(currentDir + "/src/test/resources/glob")
-                                                      .glob("doesnotmatch")
-                                                      .format(FileFormat.text());
-
-        assertItemsInSource(source, items -> assertThat(items).isEmpty());
-    }
-
-    @Test
-    public void shouldNotReadAnyFileForNonExistingFolder() {
+    public void shouldFailForNonExistingFolder() {
         FileSourceBuilder<String> source = FileSources.files(currentDir + "/src/test/resources/notexists")
                                                       .glob("*")
                                                       .format(FileFormat.text());
 
+        assertJobFailed(source, JetException.class, "does not exists");
+    }
+
+    @Test
+    public void shouldFailWhenPathPointsToAFile() {
+        FileSourceBuilder<String> source = FileSources.files(currentDir + "/src/test/resources/file.txt")
+                                                      .glob("*")
+                                                      .format(FileFormat.text());
+
+        assertJobFailed(source, JetException.class, "must point to a directory, not a file.");
+    }
+
+    @Test
+    public void shouldFailForGlobNotMatchingAnyFile() {
+        FileSourceBuilder<String> source = FileSources.files(currentDir + "/src/test/resources/")
+                                                      .glob("file-does-not-exist.txt")
+                                                      .format(FileFormat.text());
+
+        assertJobFailed(source, JetException.class, "matches no files in directory");
+    }
+
+    @Test
+    public void shouldReturnZeroResultsForGlobNotMatchingAnyFileWithIgnoreFileNotFoundFlag() {
+        FileSourceBuilder<String> source = FileSources.files(currentDir + "/src/test/resources/")
+                                                      .glob("file-does-not-exist.txt")
+                                                      .ignoreFileNotFound(true)
+                                                      .format(FileFormat.text());
+
         assertItemsInSource(source, items -> assertThat(items).isEmpty());
     }
+
+
 }

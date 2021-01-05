@@ -339,7 +339,22 @@ public final class SourceProcessors {
             boolean sharedFileSystem,
             @Nonnull FunctionEx<? super Path, ? extends Stream<I>> readFileFn
     ) {
-        return ReadFilesP.metaSupplier(directory, glob, sharedFileSystem, readFileFn);
+        return readFilesP(directory, glob, sharedFileSystem, true, readFileFn);
+    }
+
+    /**
+     * Returns a supplier of processors for {@link Sources#filesBuilder}.
+     * See {@link FileSourceBuilder#build} for more details.
+     */
+    @Nonnull
+    public static <I> ProcessorMetaSupplier readFilesP(
+            @Nonnull String directory,
+            @Nonnull String glob,
+            boolean sharedFileSystem,
+            boolean ignoreFileNotFound,
+            @Nonnull FunctionEx<? super Path, ? extends Stream<I>> readFileFn
+    ) {
+        return ReadFilesP.metaSupplier(directory, glob, sharedFileSystem, ignoreFileNotFound, readFileFn);
     }
 
     /**

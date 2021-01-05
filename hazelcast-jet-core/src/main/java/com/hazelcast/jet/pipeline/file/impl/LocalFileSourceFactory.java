@@ -83,7 +83,8 @@ public class LocalFileSourceFactory implements FileSourceFactory {
                     "Did you provide correct modules on classpath?");
         }
         FunctionEx<Path, Stream<T>> mapFn = readFileFnProvider.createReadFileFn(format);
-        return SourceProcessors.readFilesP(fsc.getPath(), fsc.getGlob(), fsc.isSharedFileSystem(), mapFn);
+        return SourceProcessors.readFilesP(fsc.getPath(), fsc.getGlob(), fsc.isSharedFileSystem(),
+                fsc.isIgnoreFileNotFound(), mapFn);
     }
 
     @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")

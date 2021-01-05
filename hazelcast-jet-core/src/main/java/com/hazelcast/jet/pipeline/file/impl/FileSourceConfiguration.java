@@ -38,6 +38,7 @@ public class FileSourceConfiguration<T> implements Serializable {
     private final String glob;
     private final FileFormat<T> format;
     private final boolean sharedFileSystem;
+    private final boolean ignoreFileNotFound;
 
     private final Map<String, String> options;
 
@@ -45,11 +46,12 @@ public class FileSourceConfiguration<T> implements Serializable {
      * Create FileSourceConfiguration instance
      */
     public FileSourceConfiguration(String path, String glob, FileFormat<T> format,
-                                   boolean sharedFileSystem, Map<String, String> options) {
+                                   boolean sharedFileSystem, boolean ignoreFileNotFound, Map<String, String> options) {
         this.path = requireNonNull(path);
         this.glob = requireNonNull(glob);
         this.format = requireNonNull(format);
         this.sharedFileSystem = sharedFileSystem;
+        this.ignoreFileNotFound = ignoreFileNotFound;
         this.options = requireNonNull(options);
     }
 
@@ -82,6 +84,13 @@ public class FileSourceConfiguration<T> implements Serializable {
     }
 
     /**
+     * Returns if the Source should ignore no files at the location specified by the path and the glob
+     */
+    public boolean isIgnoreFileNotFound() {
+        return ignoreFileNotFound;
+    }
+
+    /**
      * Returns the options configured for the file source.
      */
     public Map<String, String> getOptions() {
@@ -95,6 +104,7 @@ public class FileSourceConfiguration<T> implements Serializable {
                 ", glob='" + glob + '\'' +
                 ", format=" + format +
                 ", sharedFileSystem=" + sharedFileSystem +
+                ", ignoreFileNotFound=" + ignoreFileNotFound +
                 ", options=" + options +
                 '}';
     }
