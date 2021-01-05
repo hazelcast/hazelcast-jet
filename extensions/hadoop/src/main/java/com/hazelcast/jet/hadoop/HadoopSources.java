@@ -71,7 +71,7 @@ public final class HadoopSources {
     /**
      * When reading files from local file system using Hadoop, each processor
      * reads files from its own local file system. If the local file system
-     * is shared between members, e.g multiple members on a machine, you should
+     * is shared between members, e.g NFS mounted filesystem, you should
      * configure this property as {@code true}.
      * <p>
      * Here is how you can configure the source. Default value is {@code false}:

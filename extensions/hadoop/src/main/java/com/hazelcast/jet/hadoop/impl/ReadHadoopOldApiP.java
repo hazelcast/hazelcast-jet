@@ -24,12 +24,13 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.hadoop.HadoopSources;
-import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.file.impl.FileTraverser;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputSplit;
@@ -39,6 +40,7 @@ import org.apache.hadoop.mapred.RecordReader;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -98,16 +100,20 @@ public final class ReadHadoopOldApiP<K, V, R> extends AbstractProcessor {
         @Override
         public void init(@Nonnull Context context) throws Exception {
             super.init(context);
-            int totalParallelism = context.totalParallelism();
-            InputFormat inputFormat = jobConf.getInputFormat();
-            InputSplit[] splits = inputFormat.getSplits(jobConf, totalParallelism);
-            IndexedInputSplit[] indexedInputSplits = new IndexedInputSplit[splits.length];
-            Arrays.setAll(indexedInputSplits, i -> new IndexedInputSplit(i, splits[i]));
+            if (shouldSplitOnMembers(jobConf)) {
+                assigned = new HashMap<>();
+            } else {
+                int totalParallelism = context.totalParallelism();
+                InputFormat inputFormat = jobConf.getInputFormat();
+                InputSplit[] splits = inputFormat.getSplits(jobConf, totalParallelism);
+                IndexedInputSplit[] indexedInputSplits = new IndexedInputSplit[splits.length];
+                Arrays.setAll(indexedInputSplits, i -> new IndexedInputSplit(i, splits[i]));
 
-            Address[] addrs = context.jetInstance().getCluster().getMembers()
-                    .stream().map(Member::getAddress).toArray(Address[]::new);
-            assigned = assignSplitsToMembers(indexedInputSplits, addrs);
-            printAssignments(assigned);
+                Address[] addrs = context.jetInstance().getCluster().getMembers()
+                        .stream().map(Member::getAddress).toArray(Address[]::new);
+                assigned = assignSplitsToMembers(indexedInputSplits, addrs);
+                printAssignments(assigned);
+            }
         }
 
         @Nonnull
@@ -140,42 +146,51 @@ public final class ReadHadoopOldApiP<K, V, R> extends AbstractProcessor {
         @Override
         @Nonnull
         public List<Processor> get(int count) {
-            List<IndexedInputSplit> reAssignedSplits = reAssignSplits(assignedSplits, count);
-            Map<Integer, List<IndexedInputSplit>> processorToSplits = Util.distributeObjects(count, reAssignedSplits);
-            return processorToSplits
+            List<InputSplit> inputSplits;
+            if (shouldSplitOnMembers(jobConf)) {
+                inputSplits = uncheckCall(() -> asList(jobConf.getInputFormat().getSplits(jobConf, count)));
+            } else {
+                inputSplits = assignedSplits.stream().map(IndexedInputSplit::getOldSplit).collect(toList());
+            }
+            return Util.distributeObjects(count, inputSplits)
                     .values().stream()
-                    .map(splits -> {
-                        List<InputSplit> mappedSplits = splits
-                                .stream()
-                                .map(IndexedInputSplit::getOldSplit)
-                                .collect(toList());
-                        return new ReadHadoopOldApiP<>(jobConf, mappedSplits, projectionFn);
-                    })
+                    .map(splits -> new ReadHadoopOldApiP<>(jobConf, splits, projectionFn))
                     .collect(toList());
         }
+    }
 
-        private List<IndexedInputSplit> reAssignSplits(List<IndexedInputSplit> assignedSplits, int count) {
-            // If the local file system is marked as shared, no re-assign
-            if (jobConf.getBoolean(HadoopSources.SHARED_LOCAL_FS, false)) {
-                return assignedSplits;
-            }
-            try {
-                // If any of the input paths do not belong to LocalFileSystem, no re-assign
-                Path[] inputPaths = FileInputFormat.getInputPaths(jobConf);
-                for (Path inputPath : inputPaths) {
-                    if (!(inputPath.getFileSystem(jobConf) instanceof LocalFileSystem)) {
-                        return assignedSplits;
-                    }
-                }
-
-                // re-assign the splits
-                int[] index = new int[1];
-                InputSplit[] splits = jobConf.getInputFormat().getSplits(jobConf, count);
-                return Arrays.stream(splits).map(split -> new IndexedInputSplit(index[0]++, split)).collect(toList());
-            } catch (Exception e) {
-                throw ExceptionUtil.sneakyThrow(e);
+    /**
+     * If all the input paths are of LocalFileSystem and not marked as shared
+     * (see {@link HadoopSources#SHARED_LOCAL_FS}), split the input paths on
+     * members.
+     */
+    private static boolean shouldSplitOnMembers(JobConf jobConf) {
+        // If the local file system is marked as shared, don't split on members
+        if (jobConf.getBoolean(HadoopSources.SHARED_LOCAL_FS, false)) {
+            return false;
+        }
+        // Local file system is not marked as shared, throw exception if
+        // there are local file system and shared file system in the inputs.
+        Path[] inputPaths = FileInputFormat.getInputPaths(jobConf);
+        boolean hasLocalFileSystem = false;
+        boolean hasSharedFileSystem = false;
+        for (Path inputPath : inputPaths) {
+            if (isLocalFileSystem(inputPath, jobConf)) {
+                hasLocalFileSystem = true;
+            } else {
+                hasSharedFileSystem = true;
             }
         }
+        if (hasLocalFileSystem && hasSharedFileSystem) {
+            throw new IllegalArgumentException(
+                    "LocalFileSystem should be marked as shared when used with other shared file systems");
+        }
+        return hasLocalFileSystem;
+    }
+
+    private static boolean isLocalFileSystem(Path inputPath, JobConf jobConf) {
+        FileSystem fileSystem = uncheckCall(() -> inputPath.getFileSystem(jobConf));
+        return fileSystem instanceof LocalFileSystem || fileSystem instanceof RawLocalFileSystem;
     }
 
     private static final class HadoopFileTraverser<K, V, R> implements FileTraverser<R> {
