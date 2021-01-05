@@ -77,7 +77,6 @@ public class FileSourceConfiguration<T> implements Serializable {
     /**
      * Returns if the filesystem is shared. Only valid for local filesystem, distributed filesystems are always shared.
      */
-
     public boolean isSharedFileSystem() {
         return sharedFileSystem;
     }
