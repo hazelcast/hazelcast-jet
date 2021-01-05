@@ -41,6 +41,7 @@ import org.apache.avro.reflect.ReflectData;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -53,6 +54,7 @@ import org.apache.parquet.avro.AvroParquetInputFormat;
 
 import javax.annotation.Nonnull;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -112,11 +114,12 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
                 configuration.setBoolean(FileInputFormat.INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, true);
                 configuration.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, false);
                 configuration.setBoolean(HadoopSources.SHARED_LOCAL_FS, fsc.isSharedFileSystem());
+                configuration.setBoolean(HadoopSources.IGNORE_FILE_NOT_FOUND, fsc.isIgnoreFileNotFound());
                 for (Entry<String, String> option : fsc.getOptions().entrySet()) {
                     configuration.set(option.getKey(), option.getValue());
                 }
 
-                Path inputPath = getInputPath(fsc);
+                Path inputPath = getInputPath(fsc, configuration);
                 FileInputFormat.addInputPath(job, inputPath);
 
                 configurer.configure(job, fileFormat);
@@ -127,7 +130,21 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
     }
 
     @Nonnull
-    private static <T> Path getInputPath(FileSourceConfiguration<T> fsc) {
+    private static <T> Path getInputPath(FileSourceConfiguration<T> fsc, Configuration configuration)
+            throws IOException {
+
+        // validate that fsc.getPath() is a directory, not a file to keep same behavior as local file connector and
+        // to avoid surprises for the user
+        Path path = new Path(fsc.getPath());
+        try {
+            FileSystem fs = path.getFileSystem(configuration);
+            if (!fs.getFileStatus(path).isDirectory()) {
+                throw new JetException("The given path (" + path + ") must point to a directory, not a file.");
+            }
+        } catch (FileNotFoundException e) {
+            throw new JetException("The directory " + path + " does not exists.");
+        }
+
         if (fsc.getGlob().equals("*")) {
             // * means all files in the directory, but also all directories
             // Hadoop interprets it as multiple input folders, resulting to processing files in 1st level

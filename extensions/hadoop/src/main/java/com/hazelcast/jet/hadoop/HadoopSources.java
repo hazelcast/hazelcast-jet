@@ -86,6 +86,11 @@ public final class HadoopSources {
      */
     public static final String SHARED_LOCAL_FS = "jet.source.sharedlocalfs";
 
+    /**
+     * @since 4.4
+     */
+    public static final String IGNORE_FILE_NOT_FOUND = "jet.source.ignorefilenotfound";
+
     private HadoopSources() {
     }
 

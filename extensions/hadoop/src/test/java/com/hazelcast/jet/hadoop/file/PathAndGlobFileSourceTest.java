@@ -200,7 +200,7 @@ public class PathAndGlobFileSourceTest extends BaseFileFormatTest {
                                                       .glob("file-does-not-exist.txt")
                                                       .format(FileFormat.text());
 
-        assertJobFailed(source, JetException.class, "matches no files in directory");
+        assertJobFailed(source, JetException.class, "matches no files");
     }
 
     @Test

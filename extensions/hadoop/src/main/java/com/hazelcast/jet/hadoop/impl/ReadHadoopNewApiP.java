@@ -21,6 +21,7 @@ import com.hazelcast.cluster.Member;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
@@ -143,9 +144,14 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
             return inputFormat.getSplits(job);
         } catch (InvalidInputException e) {
             String directory = configuration.get(INPUT_DIR, "");
-            ILogger logger = Logger.getLogger(ReadHadoopNewApiP.class);
-            logger.fine("The directory " + directory + " does not exists. This source will emit 0 items.");
-            return emptyList();
+            boolean ignoreFileNotFound = configuration.getBoolean(HadoopSources.IGNORE_FILE_NOT_FOUND, true);
+            if (ignoreFileNotFound) {
+                ILogger logger = Logger.getLogger(ReadHadoopNewApiP.class);
+                logger.fine("The directory " + directory + " does not exists. This source will emit 0 items.");
+                return emptyList();
+            } else {
+                throw new JetException("The input " + directory + " matches no files");
+            }
         }
     }
 

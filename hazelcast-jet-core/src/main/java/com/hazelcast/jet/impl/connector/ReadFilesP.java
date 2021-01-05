@@ -219,16 +219,15 @@ public final class ReadFilesP<T> extends AbstractProcessor {
 
         private Iterator<Path> paths() throws IOException {
             File file = directory.toFile();
-            if (file.exists()) {
-                if (file.isDirectory()) {
-                    directoryStream = Files.newDirectoryStream(directory, glob);
-                    return directoryStream.iterator();
-                } else {
-                    throw new JetException("The given path (" + directory + ") must point to a directory, not a file.");
-                }
-            } else {
+            if (!file.exists()) {
                 throw new JetException("The directory " + directory + " does not exists.");
             }
+            if (!file.isDirectory()) {
+                throw new JetException("The given path (" + directory + ") must point to a directory, not a file.");
+            }
+
+            directoryStream = Files.newDirectoryStream(directory, glob);
+            return directoryStream.iterator();
         }
 
         private Traverser<T> processFile(Path file) {
