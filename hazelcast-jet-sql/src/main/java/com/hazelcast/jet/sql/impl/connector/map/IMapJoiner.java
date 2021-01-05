@@ -38,7 +38,7 @@ final class IMapJoiner {
         int leftEquiJoinPrimitiveKeyIndex = leftEquiJoinPrimitiveKeyIndex(joinInfo, rightRowProjectorSupplier.paths());
         if (leftEquiJoinPrimitiveKeyIndex > -1) {
             // This branch handles the case when there's an equi-join condition for the __key field.
-            // For example: SELECT * FROM left [LEFT] JOIN right ON left.field1=right.__key /* ... more conditions on right */
+            // For example: SELECT * FROM left [LEFT] JOIN right ON left.field1=right.__key
             // In this case we'll use map.get() for the right map to get the matching entry by key and evaluate the
             // remaining conditions on the returned row.
             return new VertexWithInputConfig(
@@ -64,7 +64,8 @@ final class IMapJoiner {
                 // item to all members and each member will query local partitions
                 return new VertexWithInputConfig(
                         dag.newUniqueVertex("Join(Predicate-" + tableName + ")",
-                                JoinByPredicateInnerProcessorSupplier.supplier(joinInfo, mapName, rightRowProjectorSupplier)),
+                                JoinByPredicateInnerProcessorSupplier.supplier(
+                                        joinInfo, mapName, rightRowProjectorSupplier)),
                         edge -> edge.distributed().fanout());
             }
             if (joinInfo.isLeftOuter()) {
@@ -76,8 +77,9 @@ final class IMapJoiner {
             }
             throw new IllegalStateException("Unsupported state: " + joinInfo);
         } else {
-            // This is the fallback case when there's not an equi-join: it can be a cross-join or join on another condition.
-            // For example: SELECT * FROM houses h JOIN renters r WHERE h.rent BETWEEN r.min_rent AND r.max_rent
+            // This is the fallback case when there's not an equi-join: it can be a cross-join or join on
+            // another condition. For example:
+            // SELECT * FROM houses h JOIN renters r WHERE h.rent BETWEEN r.min_rent AND r.max_rent
             return new VertexWithInputConfig(
                     dag.newUniqueVertex(
                             "Join(Scan-" + tableName + ")",
