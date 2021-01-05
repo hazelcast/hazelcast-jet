@@ -170,20 +170,20 @@ public final class ReadHadoopOldApiP<K, V, R> extends AbstractProcessor {
             return false;
         }
         // Local file system is not marked as shared, throw exception if
-        // there are local file system and shared file system in the inputs.
+        // there are local file system and remote file system in the inputs.
         Path[] inputPaths = FileInputFormat.getInputPaths(jobConf);
         boolean hasLocalFileSystem = false;
-        boolean hasSharedFileSystem = false;
+        boolean hasRemoteFileSystem = false;
         for (Path inputPath : inputPaths) {
             if (isLocalFileSystem(inputPath, jobConf)) {
                 hasLocalFileSystem = true;
             } else {
-                hasSharedFileSystem = true;
+                hasRemoteFileSystem = true;
             }
         }
-        if (hasLocalFileSystem && hasSharedFileSystem) {
+        if (hasLocalFileSystem && hasRemoteFileSystem) {
             throw new IllegalArgumentException(
-                    "LocalFileSystem should be marked as shared when used with other shared file systems");
+                    "LocalFileSystem should be marked as shared when used with other remote file systems");
         }
         return hasLocalFileSystem;
     }
