@@ -1128,13 +1128,7 @@ public class JetCommandLine implements Runnable {
         builder.append("|");
         int columnCount = row.getMetadata().getColumnCount();
         for (int i = 0; i < columnCount; i++) {
-            String colString;
-            Object columnValue = row.getObject(i);
-            if (columnValue != null) {
-                colString = sanitize(columnValue.toString(), colWidths[i]);
-            } else {
-                colString = "NULL";
-            }
+            String colString = row.getObject(i) != null ? sanitize(row.getObject(i).toString(), colWidths[i]) : "NULL";
             builder.style(AttributedStyle.BOLD.foreground(PRIMARY_COLOR));
             appendAligned(colWidths[i], colString, alignments[i], builder);
             builder.style(AttributedStyle.BOLD.foreground(SECONDARY_COLOR));
