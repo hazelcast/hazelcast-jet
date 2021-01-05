@@ -36,13 +36,13 @@ import java.util.function.Function;
 public class TransformBatchedP<T, R> extends AbstractProcessor {
 
     private final int maxBatchSize;
-    private final Function<List<? super T>, ? extends Traverser<? extends R>> mapper;
+    private final Function<? super List<T>, ? extends Traverser<? extends R>> mapper;
 
     private Traverser<? extends R> outputTraverser;
 
     public TransformBatchedP(
             int maxBatchSize,
-            Function<List<? super T>, ? extends Traverser<? extends R>> mapper
+            Function<? super List<T>, ? extends Traverser<? extends R>> mapper
     ) {
         this.maxBatchSize = maxBatchSize;
         this.mapper = mapper;
