@@ -54,29 +54,34 @@ final class IMapJoiner {
                     ),
                     edge -> edge.distributed().partitioned(extractPrimitiveKeyFn(leftEquiJoinPrimitiveKeyIndex))
             );
-        } else if (joinInfo.isEquiJoin() && joinInfo.isInner()) {
-            // This branch handles the case when there's any equi-join, but not for __key (that was handled above)
+        } else if (joinInfo.isEquiJoin()) {
+            // This branch handles the case when there's an equi-join, but not for __key (that was handled above)
             // For example: SELECT * FROM left JOIN right ON left.field1=right.field1
             // In this case we'll construct a com.hazelcast.query.Predicate that will find matching rows using
             // the `map.entrySet(predicate)` method.
-            return new VertexWithInputConfig(
-                    dag.newUniqueVertex("Join(Predicate-" + tableName + ")",
-                            JoinByPredicateInnerProcessorSupplier.supplier(joinInfo, mapName, rightRowProjectorSupplier)),
-                    edge -> edge.distributed().fanout());
-        } else if (joinInfo.isEquiJoin() && joinInfo.isLeftOuter()) {
-            return new VertexWithInputConfig(
-                    dag.newUniqueVertex(
-                            "Join(Predicate-" + tableName + ")",
-                            new JoinByPredicateOuterProcessorSupplier(joinInfo, mapName, rightRowProjectorSupplier)
-                    )
-            );
+            if (joinInfo.isInner()) {
+                // in case of an inner join we'll use `entrySet(predicate, partitionIdSet)` - we'll fan-out each left
+                // item to all members and each member will query local partitions
+                return new VertexWithInputConfig(
+                        dag.newUniqueVertex("Join(Predicate-" + tableName + ")",
+                                JoinByPredicateInnerProcessorSupplier.supplier(joinInfo, mapName, rightRowProjectorSupplier)),
+                        edge -> edge.distributed().fanout());
+            }
+            if (joinInfo.isLeftOuter()) {
+                // in case of an left join one member will query all partitions in the `entrySet(predicate)` operation
+                return new VertexWithInputConfig(
+                        dag.newUniqueVertex(
+                                "Join(Predicate-" + tableName + ")",
+                                new JoinByPredicateOuterProcessorSupplier(joinInfo, mapName, rightRowProjectorSupplier)));
+            }
+            throw new IllegalStateException("Unsupported state: " + joinInfo);
         } else {
+            // This is the fallback case when there's not an equi-join: it can be a cross-join or join on another condition.
+            // For example: SELECT * FROM houses h JOIN renters r WHERE h.rent BETWEEN r.min_rent AND r.max_rent
             return new VertexWithInputConfig(
                     dag.newUniqueVertex(
                             "Join(Scan-" + tableName + ")",
-                            new JoinScanProcessorSupplier(joinInfo, mapName, rightRowProjectorSupplier)
-                    )
-            );
+                            new JoinScanProcessorSupplier(joinInfo, mapName, rightRowProjectorSupplier)));
         }
         // TODO: detect and handle always-false condition ?
     }
