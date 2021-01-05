@@ -48,12 +48,19 @@ class ShardReader extends AbstractShardWorker implements DynamicMetricsProvider 
     /* Kinesis allows for a maximum of 5 GetRecords operations per second. */
     private static final int GET_RECORD_OPS_PER_SECOND = 5;
 
+    /**
+     * Amount of time to sleep before retrying the GetRecords operation,
+     * if throughput is exceeded. Should never happen, because we have
+     * throughput limitation in place.
+     */
+    private static final int SLEEP_ON_THROUGHPUT_EXCEEDED_MS = 200;
+
     private final Shard shard;
     private final RandomizedRateTracker getRecordsRateTracker =
             new RandomizedRateTracker(1000, GET_RECORD_OPS_PER_SECOND);
 
     @Probe(name = KinesisSources.MILLIS_BEHIND_LATEST_METRIC)
-    private final Counter millisBehindLatest = SwCounter.newSwCounter(-1);
+    private final Counter millisBehindLatestMetric = SwCounter.newSwCounter(-1);
 
     private State state = State.NO_SHARD_ITERATOR;
     private String shardIterator;
@@ -180,7 +187,7 @@ class ShardReader extends AbstractShardWorker implements DynamicMetricsProvider 
             data = result.getRecords();
             if (!data.isEmpty()) {
                 lastSeenSeqNo = data.get(data.size() - 1).getSequenceNumber();
-                millisBehindLatest.set(result.getMillisBehindLatest());
+                millisBehindLatestMetric.set(result.getMillisBehindLatest());
             }
             if (shardIterator == null) {
                 state = State.SHARD_CLOSED;
@@ -198,11 +205,9 @@ class ShardReader extends AbstractShardWorker implements DynamicMetricsProvider 
     }
 
     private Result dealWithThroughputExceeded() {
-        //todo: this should be handled by a Damper, like in the sink, not like this
-        readRecordRetryTracker.attemptFailed();
-        long timeoutMillis = readRecordRetryTracker.getNextWaitTimeMillis();
+        long timeoutMillis = SLEEP_ON_THROUGHPUT_EXCEEDED_MS;
         logger.warning(String.format("Data throughput rate exceeded. Backing off and retrying in %d ms.", timeoutMillis));
-        nextGetRecordsTime = System.nanoTime() + MILLISECONDS.toNanos(timeoutMillis);
+        updateGetNextRecordsTime(System.nanoTime(), MILLISECONDS.toNanos(timeoutMillis));
         state = State.NEED_TO_REQUEST_RECORDS;
         return Result.NOTHING;
     }
@@ -213,7 +218,7 @@ class ShardReader extends AbstractShardWorker implements DynamicMetricsProvider 
             long timeoutMillis = readRecordRetryTracker.getNextWaitTimeMillis();
             logger.warning(String.format("Failed reading records, retrying in %d. Cause: %s",
                     timeoutMillis, e.getMessage()));
-            nextGetRecordsTime = System.nanoTime() + MILLISECONDS.toNanos(timeoutMillis);
+            updateGetNextRecordsTime(System.nanoTime(), MILLISECONDS.toNanos(timeoutMillis));
             state = State.NEED_TO_REQUEST_RECORDS;
             return Result.NOTHING;
         } else {
@@ -243,7 +248,7 @@ class ShardReader extends AbstractShardWorker implements DynamicMetricsProvider 
             return false;
         }
         recordsResult = helper.getRecordsAsync(shardIterator);
-        nextGetRecordsTime = currentTime + getRecordsRateTracker.next();
+        updateGetNextRecordsTime(currentTime, 0L);
         return true;
     }
 
@@ -269,6 +274,10 @@ class ShardReader extends AbstractShardWorker implements DynamicMetricsProvider 
     public void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
         descriptor = descriptor.withTag("shard", shard.getShardId());
         context.collect(descriptor, this);
+    }
+
+    private void updateGetNextRecordsTime(long currentTime, long minimumIncrease) {
+        nextGetRecordsTime = currentTime + Math.max(minimumIncrease, getRecordsRateTracker.next());
     }
 
     enum Result {

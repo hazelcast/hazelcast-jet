@@ -104,9 +104,6 @@ public class RangeMonitor extends AbstractShardWorker {
             } catch (SdkClientException e) {
                 dealWithListShardsFailure(e);
                 return;
-
-                //todo: catch LimitExceededException and handle it differently
-                //todo: check against /amazon/kinesis/leases/KinesisShardDetector.java#L188
             } catch (Throwable t) {
                 throw rethrow(t);
             } finally {

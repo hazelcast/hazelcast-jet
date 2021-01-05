@@ -40,7 +40,6 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -95,9 +94,9 @@ public class KinesisSinkP<T> implements Processor {
     private final Buffer<T> buffer;
 
     @Probe(name = KinesisSinks.BATCH_SIZE_METRIC, unit = ProbeUnit.COUNT)
-    private final Counter batchSize;
+    private final Counter batchSizeMetric;
     @Probe(name = KinesisSinks.THROTTLING_SLEEP_METRIC, unit = ProbeUnit.MS)
-    private final Counter throttlingSleep = SwCounter.newSwCounter();
+    private final Counter sleepMetric = SwCounter.newSwCounter();
 
     private ILogger logger;
     private KinesisHelper helper;
@@ -124,7 +123,7 @@ public class KinesisSinkP<T> implements Processor {
         this.monitor = monitor;
         this.shardCountProvider = shardCountProvider;
         this.buffer = new Buffer<>(keyFn, valueFn);
-        this.batchSize = SwCounter.newSwCounter(buffer.getCapacity());
+        this.batchSizeMetric = SwCounter.newSwCounter(buffer.getCapacity());
         this.sendRetryTracker = new RetryTracker(retryStrategy);
     }
 
@@ -187,7 +186,7 @@ public class KinesisSinkP<T> implements Processor {
         int newShardCount = shardCountProvider.get();
         if (newShardCount > 0 && shardCount != newShardCount) {
             buffer.setCapacity(throughputController.computeBatchSize(newShardCount, sinkCount));
-            batchSize.set(buffer.getCapacity());
+            batchSizeMetric.set(buffer.getCapacity());
 
             shardCount = newShardCount;
         }
@@ -260,9 +259,9 @@ public class KinesisSinkP<T> implements Processor {
                         result.getRecords().size() + ") record(s) to stream '" + stream +
                         "'. Sending will be retried in %d ms, message reordering is likely.");
             } else {
-                long sleepTimeNanos = throughputController.markSuccessfulSend();
+                long sleepTimeNanos = throughputController.markSuccess();
                 this.nextSendTime += sleepTimeNanos;
-                this.throttlingSleep.set(NANOSECONDS.toMillis(sleepTimeNanos));
+                this.sleepMetric.set(NANOSECONDS.toMillis(sleepTimeNanos));
                 sendRetryTracker.reset();
             }
         }
@@ -282,9 +281,9 @@ public class KinesisSinkP<T> implements Processor {
     }
 
     private void dealWithThroughputExceeded(@Nonnull String message) {
-        long sleepTimeNanos = throughputController.markFailedSend();
+        long sleepTimeNanos = throughputController.markFailure();
         this.nextSendTime += sleepTimeNanos;
-        this.throttlingSleep.set(NANOSECONDS.toMillis(sleepTimeNanos));
+        this.sleepMetric.set(NANOSECONDS.toMillis(sleepTimeNanos));
         logger.warning(String.format(message, NANOSECONDS.toMillis(sleepTimeNanos)));
     }
 
@@ -473,54 +472,12 @@ public class KinesisSinkP<T> implements Processor {
      * ingestion rate limiter, while also sending out data with the maximum
      * rate possible.
      */
-    private static final class ThroughputController {
+    private static final class ThroughputController extends SleepController {
 
         /**
          * The ideal sleep duratio after sends, while rate limiting is necessary.
          */
         private static final int IDEAL_SLEEP_MS = 250;
-
-        /**
-         * Minimum sleep duration after sends, while rate limiting is necessary.
-         */
-        private static final long MINIMUM_SLEEP_MS = 100L;
-
-        /**
-         * Maximum sleep duration after sends, while rate limiting is necessary.
-         */
-        private static final long MAXIMUM_SLEEP_MS = 10_000L;
-
-        /**
-         * The increment of increasing/decreasing the sleep duration while
-         * adaptively searching for the best value.
-         */
-        private static final int SLEEP_INCREMENT = 25;
-
-        /**
-         * When adjusting the sleep duration we want to handle the effects in a
-         * non-equal manner. If we set a sleep duration and then still get
-         * messages rejected by the stream, we immediately increase the
-         * duration.
-         * <p>
-         * On successful sends however we don't necessarily want to react
-         * immediately. A success means that the sleep duration we have used is
-         * good, so we should keep it and use it for following sends.
-         * <p>
-         * Keeping the last used sleep duration for ever is also not a good idea,
-         * because the data flow might have decreased in the meantime and we
-         * might be sleeping too much. So we want to slowly decrease, just
-         * not as fast as we have increased it.
-         * <p>
-         * The relative ratio of these two speeds is what this constant
-         * expresses.
-         */
-        private static final int DEGRADATION_VS_RECOVERY_SPEED_RATIO = 10;
-
-        private final SlowRecoveryDegrader<Long> sleepTracker;
-
-        ThroughputController() {
-            this.sleepTracker = initSleepTracker();
-        }
 
         int computeBatchSize(int shardCount, int sinkCount) {
             if (shardCount < 1) {
@@ -541,28 +498,5 @@ public class KinesisSinkP<T> implements Processor {
             }
         }
 
-        long markSuccessfulSend() {
-            sleepTracker.ok();
-            return sleepTracker.output();
-        }
-
-        long markFailedSend() {
-            sleepTracker.error();
-            return sleepTracker.output();
-        }
-
-        private static SlowRecoveryDegrader<Long> initSleepTracker() {
-            List<Long> list = new ArrayList<>();
-
-            //default sleep when there haven't been errors for a while
-            list.add(0L);
-
-            //increasing sleeps when errors keep repeating
-            for (long millis = MINIMUM_SLEEP_MS; millis <= MAXIMUM_SLEEP_MS; millis += SLEEP_INCREMENT) {
-                list.add(MILLISECONDS.toNanos(millis));
-            }
-
-            return new SlowRecoveryDegrader<>(DEGRADATION_VS_RECOVERY_SPEED_RATIO, list.toArray(new Long[0]));
-        }
     }
 }
