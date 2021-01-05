@@ -88,7 +88,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     static final FunctionAdapter DO_NOT_ADAPT = new FunctionAdapter();
 
     @Nonnull
-    public FunctionAdapter fnAdapter;
+    public final FunctionAdapter fnAdapter;
     boolean isRebalanceOutput;
     FunctionEx<? super T, ?> rebalanceKeyFn;
 
