@@ -23,10 +23,7 @@ import com.hazelcast.sql.impl.expression.FunctionalPredicateExpression;
 import com.hazelcast.sql.impl.expression.math.MultiplyFunction;
 import com.hazelcast.sql.impl.expression.predicate.ComparisonMode;
 import com.hazelcast.sql.impl.expression.predicate.ComparisonPredicate;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.util.List;
 
@@ -36,51 +33,54 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@RunWith(JUnitParamsRunner.class)
 public class ExpressionUtilTest {
 
-    @SuppressWarnings("unused")
-    private Object[] joinParameters() {
-        return new Object[]{
-                new Object[]{
-                        ConstantExpression.create(true, BOOLEAN),
-                        new Object[]{1},
-                        new Object[]{2},
-                        new Object[]{1, 2}
-                },
-                new Object[]{
-                        ConstantExpression.create(false, BOOLEAN),
-                        new Object[]{1},
-                        new Object[]{2},
-                        null
-                },
-                new Object[]{
-                        ComparisonPredicate.create(
-                                ColumnExpression.create(0, INT),
-                                ColumnExpression.create(1, INT),
-                                ComparisonMode.GREATER_THAN
-                        ),
-                        new Object[]{1},
-                        new Object[]{2},
-                        null
-                },
-                new Object[]{
-                        ComparisonPredicate.create(
-                                ColumnExpression.create(0, INT),
-                                ColumnExpression.create(1, INT),
-                                ComparisonMode.LESS_THAN
-                        ),
-                        new Object[]{2},
-                        new Object[]{1},
-                        null
-                }
-        };
+    @SuppressWarnings("unchecked")
+    @Test
+    public void test_join_1() {
+        test_join(
+                (Expression<Boolean>) ConstantExpression.create(true, BOOLEAN),
+                new Object[]{1},
+                new Object[]{2},
+                new Object[]{1, 2});
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void test_join_2() {
+        test_join(
+                (Expression<Boolean>) ConstantExpression.create(true, BOOLEAN),
+                new Object[]{1},
+                new Object[]{2},
+                new Object[]{1, 2});
     }
 
     @Test
-    @Parameters(method = "joinParameters")
-    public void test_joinFn(Expression<Boolean> predicate, Object[] left, Object[] right, Object[] expected) {
-        Object[] joined = ExpressionUtil.join(left, right, predicate);
+    public void test_join_3() {
+        test_join(
+                ComparisonPredicate.create(
+                        ColumnExpression.create(0, INT),
+                        ColumnExpression.create(1, INT),
+                        ComparisonMode.GREATER_THAN),
+                new Object[]{1},
+                new Object[]{2},
+                null);
+    }
+
+    @Test
+    public void test_join_4() {
+        test_join(
+                ComparisonPredicate.create(
+                        ColumnExpression.create(0, INT),
+                        ColumnExpression.create(1, INT),
+                        ComparisonMode.LESS_THAN),
+                new Object[]{2},
+                new Object[]{1},
+                null);
+    }
+
+    private void test_join(Expression<Boolean> predicate, Object[] leftRow, Object[] rightRow, Object[] expected) {
+        Object[] joined = ExpressionUtil.join(leftRow, rightRow, predicate);
 
         assertThat(joined).isEqualTo(expected);
     }

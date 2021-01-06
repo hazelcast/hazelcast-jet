@@ -61,18 +61,18 @@ public final class ExpressionUtil {
     }
 
     /**
-     * Concatenates {@code left} and {@code right} rows into one row, evaluates
-     * the {@code predicate} on it. If the predicate passed, returns the joined
-     * row, or returns {@code null} otherwise,
+     * Concatenates {@code leftRow} and {@code rightRow} into one, evaluates
+     * the {@code predicate} on it, and if the predicate passed, returns the
+     * joined row; returns {@code null} if the predicate didn't pass.
      */
     @Nullable
     public static Object[] join(
-            @Nonnull Object[] left,
-            @Nonnull Object[] right,
+            @Nonnull Object[] leftRow,
+            @Nonnull Object[] rightRow,
             @Nonnull Expression<Boolean> predicate
     ) {
-        Object[] joined = Arrays.copyOf(left, left.length + right.length);
-        System.arraycopy(right, 0, joined, left.length, right.length);
+        Object[] joined = Arrays.copyOf(leftRow, leftRow.length + rightRow.length);
+        System.arraycopy(rightRow, 0, joined, leftRow.length, rightRow.length);
 
         Row row = new HeapRow(joined);
         return Boolean.TRUE.equals(evaluate(predicate, row)) ? joined : null;
