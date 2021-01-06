@@ -106,6 +106,10 @@ final class JoinScanProcessorSupplier implements ProcessorSupplier, DataSerializ
 
         return lefts -> {
             List<Object[]> rights = new ArrayList<>();
+            // TODO it would be nice if we executed the project() with the predicate that the rightRowProjector
+            //  uses, maybe the majority of rows are rejected. In general it's good to do filtering as closely to the
+            //  source as possible. However, the predicate has state. Without a state the predicate will have to
+            //  create QueryTargets and extractors for each row.
             // current rules pull projects up, hence project() cardinality won't be greater than the source's
             // changing the rules might require revisiting
             for (Object[] right : map.project(projection)) {
