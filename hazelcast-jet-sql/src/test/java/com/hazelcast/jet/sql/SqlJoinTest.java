@@ -64,7 +64,8 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_semiJoin() {
         TestBatchSqlConnector.create(sqlService, "b", 0);
 
-        assertThatThrownBy(() -> sqlService.execute("SELECT 1 FROM b WHERE EXISTS (SELECT 1 FROM b AS b2 WHERE b.v = b2.v)"))
+        assertThatThrownBy(() -> sqlService.execute(
+                    "SELECT 1 FROM b WHERE EXISTS (SELECT 1 FROM b AS b2 WHERE b.v = b2.v)"))
                 .hasCauseInstanceOf(QueryException.class)
                 .hasMessageContaining("EXISTS not supported");
     }

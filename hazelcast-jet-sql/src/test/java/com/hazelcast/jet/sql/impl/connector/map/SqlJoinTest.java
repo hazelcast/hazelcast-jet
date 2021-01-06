@@ -608,7 +608,7 @@ public class SqlJoinTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_innerJoinSelect() {
+    public void test_joinSubquery() {
         String leftName = randomName();
         TestBatchSqlConnector.create(sqlService, leftName, 1);
 
@@ -622,7 +622,7 @@ public class SqlJoinTest extends SqlTestSupport {
                         "JOIN (SELECT * FROM " + mapName + ") AS m ON l.v = m.__key"
                 ))
                 .hasCauseInstanceOf(QueryException.class)
-                .hasMessageContaining("SELECT/VALUES on the right side of a join not supported");
+                .hasMessageContaining("Sub-query not supported on the right side of a join");
 
         // SELECT * FROM left JOIN (SELECT SUM(__key) AS __key FROM map) AS m ON l.v = m.__key
         // SELECT * FROM left JOIN LATERAL (SELECT __key, this FROM map WHERE __key < 3) AS m ON 1 = 1
@@ -630,7 +630,7 @@ public class SqlJoinTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_innerJoinValues() {
+    public void test_joinValues() {
         String leftName = randomName();
         TestBatchSqlConnector.create(sqlService, leftName, 1);
 
@@ -639,7 +639,7 @@ public class SqlJoinTest extends SqlTestSupport {
                         "SELECT * FROM " + leftName + " l JOIN (VALUES (1)) AS r (__key) ON l.v = r.__key"
                 ))
                 .hasCauseInstanceOf(QueryException.class)
-                .hasMessageContaining("SELECT/VALUES on the right side of a join not supported");
+                .hasMessageContaining("VALUES clause not supported on the right side of a join");
     }
 
     @Test

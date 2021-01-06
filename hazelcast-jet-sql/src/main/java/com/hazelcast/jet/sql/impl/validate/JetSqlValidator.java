@@ -132,23 +132,17 @@ public class JetSqlValidator extends HazelcastSqlValidator {
     protected void validateJoin(SqlJoin join, SqlValidatorScope scope) {
         super.validateJoin(join, scope);
 
-        class FindSelectOrValuesVisitor extends SqlBasicVisitor<Void> {
-            boolean found;
-
+        // the right side of a join must not be a subquery or a VALUES clause
+        join.getRight().accept(new SqlBasicVisitor<Void>() {
             public Void visit(SqlCall call) {
-                if (call.getKind() == SqlKind.SELECT || call.getKind() == VALUES) {
-                    found = true;
-                    return null;
-                } else {
-                    return call.getOperator().acceptCall(this, call);
+                if (call.getKind() == SqlKind.SELECT) {
+                    throw newValidationError(join, RESOURCE.joiningSubqueryNotSupported());
+                } else if (call.getKind() == VALUES) {
+                    throw newValidationError(join, RESOURCE.joiningValuesNotSupported());
                 }
-            }
-        }
 
-        FindSelectOrValuesVisitor visitor = new FindSelectOrValuesVisitor();
-        join.getRight().accept(visitor);
-        if (visitor.found) {
-            throw newValidationError(join, RESOURCE.selectValuesOnRightSideOfJoinNotSupported());
-        }
+                return call.getOperator().acceptCall(this, call);
+            }
+        });
     }
 }
