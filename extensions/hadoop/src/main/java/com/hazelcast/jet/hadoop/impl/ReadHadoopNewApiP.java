@@ -18,8 +18,8 @@ package com.hazelcast.jet.hadoop.impl;
 
 import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Member;
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
@@ -182,9 +182,7 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
         @Override
         public void init(@Nonnull Context context) throws Exception {
             super.init(context);
-            Job job = Job.getInstance(configuration);
-            configureFn.accept(job);
-            configuration = SerializableConfiguration.asSerializable(job.getConfiguration());
+            updateConfiguration();
 
             if (shouldSplitOnMembers(configuration)) {
                 assigned = new HashMap<>();
@@ -209,7 +207,15 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
 
         @Override
         public FileTraverser<R> traverser() throws Exception {
+            updateConfiguration();
+
             return new HadoopFileTraverser<>(configuration, getSplits(configuration), projectionFn);
+        }
+
+        private void updateConfiguration() throws IOException {
+            Job job = Job.getInstance(configuration);
+            configureFn.accept(job);
+            configuration = SerializableConfiguration.asSerializable(job.getConfiguration());
         }
     }
 
