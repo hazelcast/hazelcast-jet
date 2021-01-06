@@ -21,6 +21,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.sql.impl.expression.Expression;
+import org.apache.calcite.rel.core.JoinRelType;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -40,7 +41,7 @@ import java.util.Arrays;
  */
 public class JetJoinInfo implements DataSerializable {
 
-    private boolean inner;
+    private JoinRelType joinType;
 
     private int[] leftEquiJoinIndices;
     private int[] rightEquiJoinIndices;
@@ -53,7 +54,7 @@ public class JetJoinInfo implements DataSerializable {
     }
 
     public JetJoinInfo(
-            boolean inner,
+            JoinRelType joinType,
             int[] leftEquiJoinIndices,
             int[] rightEquiJoinIndices,
             Expression<Boolean> nonEquiCondition,
@@ -61,7 +62,7 @@ public class JetJoinInfo implements DataSerializable {
     ) {
         Preconditions.checkTrue(leftEquiJoinIndices.length == rightEquiJoinIndices.length, "indices length mismatch");
 
-        this.inner = inner;
+        this.joinType = joinType;
 
         this.leftEquiJoinIndices = leftEquiJoinIndices;
         this.rightEquiJoinIndices = rightEquiJoinIndices;
@@ -71,11 +72,11 @@ public class JetJoinInfo implements DataSerializable {
     }
 
     public boolean isInner() {
-        return inner;
+        return joinType == JoinRelType.INNER;
     }
 
     public boolean isLeftOuter() {
-        return !inner;
+        return joinType == JoinRelType.LEFT;
     }
 
     public int[] leftEquiJoinIndices() {
@@ -100,7 +101,7 @@ public class JetJoinInfo implements DataSerializable {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeBoolean(inner);
+        out.writeUTF(joinType.name());
         out.writeObject(leftEquiJoinIndices);
         out.writeObject(rightEquiJoinIndices);
         out.writeObject(nonEquiCondition);
@@ -109,7 +110,7 @@ public class JetJoinInfo implements DataSerializable {
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        inner = in.readBoolean();
+        joinType = JoinRelType.valueOf(in.readUTF());
         leftEquiJoinIndices = in.readObject();
         rightEquiJoinIndices = in.readObject();
         nonEquiCondition = in.readObject();
@@ -119,7 +120,7 @@ public class JetJoinInfo implements DataSerializable {
     @Override
     public String toString() {
         return "JetJoinInfo{" +
-               "inner=" + inner +
+               "joinType=" + joinType.name() +
                ", leftEquiJoinIndices=" + Arrays.toString(leftEquiJoinIndices) +
                ", rightEquiJoinIndices=" + Arrays.toString(rightEquiJoinIndices) +
                ", nonEquiCondition=" + nonEquiCondition +

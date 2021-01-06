@@ -42,6 +42,8 @@ import static com.hazelcast.sql.impl.type.QueryDataType.BOOLEAN;
 import static com.hazelcast.sql.impl.type.QueryDataType.INT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.apache.calcite.rel.core.JoinRelType.INNER;
+import static org.apache.calcite.rel.core.JoinRelType.LEFT;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -161,7 +163,7 @@ public class JoinScanProcessorTest {
 
     private Processor processor(Expression<Boolean> condition, boolean inner) throws Exception {
         ProcessorSupplier supplier = new JoinScanProcessorSupplier(
-                new JetJoinInfo(inner, new int[0], new int[0], null, condition),
+                new JetJoinInfo(inner ? INNER : LEFT, new int[0], new int[0], null, condition),
                 "map",
                 rightRowProjectorSupplier
         );

@@ -46,6 +46,7 @@ import static com.hazelcast.sql.impl.type.QueryDataType.BOOLEAN;
 import static com.hazelcast.sql.impl.type.QueryDataType.INT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.apache.calcite.rel.core.JoinRelType.LEFT;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -153,7 +154,7 @@ public class JoinByPredicateOuterProcessorTest {
 
     private Processor processor(Expression<Boolean> nonEquiCondition) throws Exception {
         ProcessorSupplier supplier = new JoinByPredicateOuterProcessorSupplier(
-                new JetJoinInfo(false, new int[]{0}, new int[]{0}, nonEquiCondition, null),
+                new JetJoinInfo(LEFT, new int[]{0}, new int[]{0}, nonEquiCondition, null),
                 "map",
                 rightRowProjectorSupplier
         );
