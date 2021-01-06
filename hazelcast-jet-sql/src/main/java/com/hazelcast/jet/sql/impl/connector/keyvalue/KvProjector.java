@@ -32,6 +32,12 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.sql.impl.type.converter.ToConverters.getToConverter;
 
+/**
+ * A utility to convert a row represented as {@code Object[]} to a
+ * key-value entry represented as {@code Entry<Object, Object>}.
+ * <p>
+ * {@link KvProjector} does the reverse.
+ */
 class KvProjector {
 
     private final QueryDataType[] types;

@@ -45,6 +45,10 @@ public final class KvProcessors {
     private KvProcessors() {
     }
 
+    /**
+     * Returns a supplier of processors that convert a map entry represented as
+     *  {@code Entry<Object, Object>} to a row represented as {@code Object[]}.
+     */
     public static ProcessorSupplier rowProjector(
             QueryPath[] paths,
             QueryDataType[] types,
@@ -57,6 +61,11 @@ public final class KvProcessors {
                 KvRowProjector.supplier(paths, types, keyDescriptor, valueDescriptor, predicate, projection));
     }
 
+    /**
+     * Returns a supplier of processors that convert a row represented as
+     * {@code Object[]} to an entry represented as {@code Entry<Object,
+     * Object>}.
+     */
     public static ProcessorSupplier entryProjector(
             QueryPath[] paths,
             QueryDataType[] types,

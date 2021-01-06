@@ -36,6 +36,12 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.sql.impl.ExpressionUtil.evaluate;
 
+/**
+ * A utility to convert a key-value entry represented as {@code
+ * Entry<Object, Object>} to a row represented as {@code Object[]}.
+ * <p>
+ * {@link KvProjector} does the reverse.
+ */
 public class KvRowProjector implements Row {
 
     private final QueryTarget keyTarget;
