@@ -90,6 +90,21 @@
                             <tarLongFileMode>posix</tarLongFileMode>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>distro-assembly-lite</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <finalName>hazelcast-jet-${project.version}</finalName>
+                            <appendAssemblyId>true</appendAssemblyId>
+                            <descriptors>
+                                <descriptor>src/assembly-descriptor-lite.xml</descriptor>
+                            </descriptors>
+                            <tarLongFileMode>posix</tarLongFileMode>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>
@@ -217,21 +232,24 @@
     </build>
 
     <dependencies>
+        <!-- Jet modules-->
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>${log4j2.version}</version>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-spring</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
-            <version>${log4j2.version}</version>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-sql</artifactId>
+            <version>${project.version}</version>
+            <classifier>jar-with-dependencies</classifier>
         </dependency>
+        <!-- Jet extensions -->
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-avro</artifactId>
@@ -270,14 +288,9 @@
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-protobuf</artifactId>
+            <artifactId>hazelcast-jet-elasticsearch-6</artifactId>
             <version>${project.version}</version>
             <classifier>jar-with-dependencies</classifier>
-        </dependency>
-        <dependency>
-            <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-spring</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
@@ -287,12 +300,37 @@
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-hadoop</artifactId>
+            <artifactId>hazelcast-jet-files-azure</artifactId>
             <version>${project.version}</version>
+            <classifier>jar-with-dependencies</classifier>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-files-gcs</artifactId>
+            <version>${project.version}</version>
+            <classifier>jar-with-dependencies</classifier>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-files-s3</artifactId>
+            <version>${project.version}</version>
+            <classifier>jar-with-dependencies</classifier>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-hadoop-all</artifactId>
+            <version>${project.version}</version>
+            <classifier>jar-with-dependencies</classifier>
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-kafka</artifactId>
+            <version>${project.version}</version>
+            <classifier>jar-with-dependencies</classifier>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-protobuf</artifactId>
             <version>${project.version}</version>
             <classifier>jar-with-dependencies</classifier>
         </dependency>
@@ -308,16 +346,22 @@
             <version>${project.version}</version>
             <classifier>jar-with-dependencies</classifier>
         </dependency>
-        <dependency>
-            <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-sql</artifactId>
-            <version>${project.version}</version>
-            <classifier>jar-with-dependencies</classifier>
-        </dependency>
+        <!-- Examples -->
         <dependency>
             <groupId>com.hazelcast.jet.examples</groupId>
             <artifactId>hazelcast-jet-examples-hello-world</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>${log4j2.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <version>${log4j2.version}</version>
         </dependency>
         <!-- Prometheus to expose JMX metrics as HTTP endpoint -->
         <dependency>

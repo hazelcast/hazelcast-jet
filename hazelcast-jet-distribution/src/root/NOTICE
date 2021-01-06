@@ -29,10 +29,15 @@ Apache License, Version 2.0
   Jackson dataformat: Smile:2.8.11
   Jackson-dataformat-YAML:2.8.11
   Jackson datatype: JSR310:2.10.0
+  Jackson-JAXRS-base:2.10.3
+  Jackson-JAXRS-JSON:2.10.3
   jackson-jr-annotation-support:2.11.2
   jackson-jr-objects:2.11.2
+  Jackson module: JAXB Annotations:2.10.3
+  Woodstox:5.0.3
   mysql-binlog-connector-java:0.20.1
   compiler:0.9.3
+  JCIP Annotations under Apache License:1.0-1
   Google Android Annotations Library:4.1.1.4
   proto-google-common-protos:1.17.0
   FindBugs-jsr305:3.0.2
@@ -43,11 +48,21 @@ Apache License, Version 2.0
   Guava ListenableFuture only:9999.0-empty-to-avoid-conflict-with-guava
   J2ObjC Annotations:1.3
   project ':json-path':2.4.0
+  Nimbus JOSE+JWT:7.9
+  OkHttp:2.7.5
+  Okio:1.6.0
   T-Digest:3.2
   Netty Reactive Streams Implementation:2.0.3
   Netty Reactive Streams HTTP support:2.0.3
-  Apache Commons Codec:1.11
+  Apache Commons BeanUtils:1.9.4
+  Commons CLI:1.2
+  Apache Commons Codec:1.9
+  Apache Commons Collections:3.2.2
+  Apache Commons IO:2.5
+  Commons Lang:2.4
   Commons Logging:1.1.3
+  Apache Commons Net:3.6
+  Commons Pool:1.6
   picocli - a mighty tiny Command Line Interface:3.9.0
   Debezium API:1.2.1.Final
   Debezium Connector for MySQL:1.2.1.Final
@@ -61,6 +76,7 @@ Apache License, Version 2.0
   io.grpc:grpc-protobuf:1.31.0
   io.grpc:grpc-protobuf-lite:1.31.0
   io.grpc:grpc-stub:1.31.0
+  The Netty Project:3.5.13.Final
   Netty/Buffer:4.1.39.Final
   Netty/Codec:4.1.39.Final
   Netty/Codec/HTTP:4.1.39.Final
@@ -73,12 +89,38 @@ Apache License, Version 2.0
   Netty/Transport/Native/Unix/Common:4.1.39.Final
   perfmark:perfmark-api:0.19.0
   jmx_prometheus_javaagent:0.13.0
+  fastutil:7.0.13
   Joda-Time:2.10.1
+  Apache Log4j:1.2.17
+  ASM based accessors helper used by json-smart:1.2
+  JSON Small and Fast Parser:2.3
   Apache Avro:1.8.2
+  Apache Avro IPC:1.8.2
+  Apache Avro Mapred API:1.8.2
   Calcite Core:1.23.0
   Calcite Linq4j:1.23.0
   Apache Calcite Avatica:1.16.0
   Apache Commons Compress:1.8.1
+  Apache Commons Configuration:2.1.1
+  Apache Commons Lang:3.7
+  Commons Math:3.1.1
+  Apache Commons Text:1.4
+  Curator Client:4.2.0
+  Curator Framework:4.2.0
+  Curator Recipes:4.2.0
+  Apache Hadoop Annotations:3.3.0
+  Apache Hadoop Auth:3.3.0
+  Apache Hadoop Client Aggregator:3.3.0
+  Apache Hadoop Common:3.3.0
+  Apache Hadoop HDFS Client:3.3.0
+  Apache Hadoop MapReduce Common:3.3.0
+  Apache Hadoop MapReduce Core:3.3.0
+  Apache Hadoop MapReduce JobClient:3.3.0
+  Apache Hadoop YARN API:3.3.0
+  Apache Hadoop YARN Client:3.3.0
+  Apache Hadoop YARN Common:3.3.0
+  Apache Hadoop shaded Protobuf 3.7:1.0.0
+  htrace-core4:4.1.0-incubating
   Apache HttpAsyncClient:4.1.4
   Apache HttpClient:4.5.7
   Apache HttpCore:4.4.11
@@ -86,6 +128,21 @@ Apache License, Version 2.0
   Apache Kafka:2.2.0
   Apache Kafka:2.2.0
   Apache Kafka:2.2.0
+  Kerby-kerb Admin:1.0.1
+  Kerby-kerb Client:1.0.1
+  Kerby-kerb Common:1.0.1
+  Kerby-kerb core:1.0.1
+  Kerby-kerb Crypto:1.0.1
+  Kerby-kerb Identity:1.0.1
+  Kerby-kerb Server:1.0.1
+  Kerb Simple Kdc:1.0.1
+  Kerby-kerb Util:1.0.1
+  Kerby ASN1 Project:1.0.1
+  Kerby Config:1.0.1
+  Kerby PKIX Project:1.0.1
+  Kerby Util:1.0.1
+  Kerby XDR Project:1.0.1
+  Token provider:1.0.1
   Apache Log4j API:2.13.3
   Apache Log4j Core:2.13.3
   Apache Log4j SLF4J Binding:2.13.3
@@ -104,8 +161,24 @@ Apache License, Version 2.0
   Lucene Spatial Extras:8.0.0
   Lucene Spatial 3D:8.0.0
   Lucene Suggest:8.0.0
+  Apache Parquet Avro:1.10.1
+  Apache Parquet Column:1.10.1
+  Apache Parquet Common:1.10.1
+  Apache Parquet Encodings:1.10.1
+  Apache Parquet Format:2.4.0
+  Apache Parquet Hadoop:1.10.1
+  Apache Parquet Jackson:1.10.1
+  Apache Velocity:1.7
   Jackson:1.9.13
   Data Mapper for Jackson:1.9.13
+  Jetty :: Asynchronous HTTP Client:9.4.20.v20190813
+  Jetty :: Http Utility:9.4.20.v20190813
+  Jetty :: IO Utility:9.4.20.v20190813
+  Jetty :: Utilities:9.4.20.v20190813
+  Jetty :: XML utilities:9.4.20.v20190813
+  Jetty :: Websocket :: API:9.4.20.v20190813
+  Jetty :: Websocket :: Client:9.4.20.v20190813
+  Jetty :: Websocket :: Common:9.4.20.v20190813
   server:7.0.0
   elasticsearch-cli:7.0.0
   core:7.0.0
@@ -119,8 +192,10 @@ Apache License, Version 2.0
   lang-mustache:7.0.0
   parent-join:7.0.0
   rank-eval:7.0.0
-  jansi:1.18
   LZ4 and xxHash:1.5.0
+  Jetty Server:6.1.26
+  Jetty Utilities:6.1.26
+  Servlet Specification API:2.5-20081211
   SnakeYAML Engine:1.0
   snappy-java:1.1.1.3
   SnakeYAML:1.17
@@ -141,6 +216,7 @@ Apache License, Version 2.0
   AWS Event Stream:1.0.1
 BSD 2-Clause License
   zstd-jni:1.3.8-1
+  dnsjava:2.1.7
   PostgreSQL JDBC Driver:42.2.14
 BSD 3-Clause License
   Protocol Buffers [Core]:3.13.0
@@ -148,15 +224,42 @@ BSD 3-Clause License
   ANTLR 4 Runtime:4.7.2
   commons-compiler:3.0.11
   janino:3.0.11
+  Stax2 API:3.1.4
+  JLine Bundle:3.9.0
   JLine Reader:3.16.0
   JLine Terminal:3.16.0
-  JLine JANSI Terminal:3.16.0
+  ASM Core:5.0.4
 CC0
   reactive-streams:1.0.2
+CDDL
+  JavaBeans Activation Framework API jar:1.2.0
+  Java Servlet API:3.1.0
+  jsr311-api:1.1.1
+CDDL 1.1
+  jersey-client:1.19
+  jersey-core:1.19
+  Java Architecture for XML Binding:2.2.11
 EPL 2.0
   javax.ws.rs-api:2.1.1
+Eclipse Distribution License - v 1.0
+  JavaBeans Activation Framework API jar:1.2.1
+  jakarta.xml.bind-api:2.3.2
+Eclipse Public License - Version 1.0
+  Jetty :: Asynchronous HTTP Client:9.4.20.v20190813
+  Jetty :: Http Utility:9.4.20.v20190813
+  Jetty :: IO Utility:9.4.20.v20190813
+  Jetty :: Utilities:9.4.20.v20190813
+  Jetty :: XML utilities:9.4.20.v20190813
+  Jetty :: Websocket :: API:9.4.20.v20190813
+  Jetty :: Websocket :: Client:9.4.20.v20190813
+  Jetty :: Websocket :: Common:9.4.20.v20190813
+  Jetty Server:6.1.26
+  Jetty Utilities:6.1.26
 GPL2 w/ CPE
+  jersey-client:1.19
+  jersey-core:1.19
   javax.ws.rs-api:2.1.1
+  Java Architecture for XML Binding:2.2.11
 MIT License
   ClassGraph:4.8.66
   JOpt Simple:5.0.2
@@ -169,6 +272,8 @@ Public Domain, per Creative Commons CC0
   HdrHistogram:2.1.9
 The GNU General Public License, v2 with FOSS exception
   MySQL Connector/J:8.0.16
+The Go license
+  re2j:1.1
 
 -----
 
