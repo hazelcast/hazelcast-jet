@@ -51,12 +51,13 @@ BatchSource<String> source = FileSources.files("/path/to/my/directory")
                                         .build();
 ```
 
-The `path` parameter takes an absolute path. It must point to a
-directory. The directory is not read recursively. The files in the
-directory can be filtered by specifying a glob parameter - a pattern
-with wildcard characters (`*`, `?`). For example, if a folder contains
-log files, named using `YYYY-MM-DD.log` pattern, you can read all the
-files from January 2020 by setting the following parameters:
+The `path` parameter takes an absolute path. It must point to a single
+directory, it must not contain any wildcard characters. The directory is
+not read recursively. The files in the directory can be filtered by
+specifying a glob parameter - a pattern with wildcard characters (`*`,
+`?`). For example, if a folder contains log files, named using
+`YYYY-MM-DD.log` pattern, you can read all the files from January 2020
+by setting the following parameters:
 
 ```java
 BatchSource<String> source = FileSources.files("/var/log/")
