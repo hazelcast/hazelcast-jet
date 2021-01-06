@@ -160,7 +160,7 @@ public class JoinByPredicateInnerProcessorTest {
                 new JetJoinInfo(INNER, new int[]{0}, new int[]{0}, nonEquiCondition, null),
                 "map",
                 1,
-                singletonList(1),
+                singletonList(0),
                 rightRowProjectorSupplier
         );
         supplier.init(supplierContext);
