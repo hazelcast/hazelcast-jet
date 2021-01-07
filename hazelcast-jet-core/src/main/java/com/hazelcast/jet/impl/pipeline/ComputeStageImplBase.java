@@ -23,6 +23,7 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.function.ToLongFunctionEx;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -89,8 +90,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     @Nonnull
     public final FunctionAdapter fnAdapter;
-    boolean isRebalanceOutput;
-    FunctionEx<? super T, ?> rebalanceKeyFn;
+    final boolean isRebalanceOutput;
+    final FunctionEx<? super T, ?> rebalanceKeyFn;
 
     private ComputeStageImplBase(
             @Nonnull Transform transform,
@@ -517,12 +518,12 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     ) {
         checkSerializable(shouldLogFn, "shouldLogFn");
         checkSerializable(toStringFn, "toStringFn");
-        ComputeStageImplBase peekStage = attach(new PeekTransform(transform, fnAdapter.adaptFilterFn(shouldLogFn),
+        if (isRebalanceOutput) {
+            throw new JetException("peek() not supported after rebalance()");
+        }
+        return attach(new PeekTransform(transform, fnAdapter.adaptFilterFn(shouldLogFn),
                 fnAdapter.adaptToStringFn(toStringFn)
         ), fnAdapter);
-        peekStage.isRebalanceOutput = isRebalanceOutput;
-        peekStage.rebalanceKeyFn = rebalanceKeyFn;
-        return (RET) peekStage;
     }
 
     @Nonnull
