@@ -212,7 +212,8 @@ resharding.
 
 This is currently not possible in Jet. Hopefully, future versions will
 address the problem. Users of the Kinesis source need to be aware that
-some data reordering might occur on resharding.
+some data reordering might occur on resharding and try to time their
+resharding activities, if possible, to utilize lulls in the data flow.
 
 ### Fault Tolerance
 
@@ -385,6 +386,11 @@ batch. The result is that some items from a batch get rejected, some get
 ingested, but in a random manner. The sink does resend the un-ingested
 item, they won't get lost, but there is nothing it can do to preserve
 the initial ordering.
+
+The advice we can give to Kinesis sink users, if they care about
+ordering at all, is to try to have enough shards to accommodate even
+occasional spikes in their data rate and to make sure that their
+partition keys are spread out adequately over all shards.
 
 ### Fault Tolerance
 

@@ -920,8 +920,8 @@ FunctionEx<Log, String> keyFn = l -> l.service();
 FunctionEx<Log, byte[]> valueFn = l -> l.message().getBytes();
 Sink<Log> sink = KinesisSinks.kinesis("stream", keyFn, valueFn).build();
 
-p.readFrom(Sources.files("home/logs"))
- .map(line -> LogParser.parse(line))
+p.readFrom(Sources.files("home/logs")) //read lines of text from log files
+ .map(line -> LogParser.parse(line))   //parse lines into "Log" data objects
  .writeTo(sink);
 ```
 
@@ -987,7 +987,8 @@ to make sure that it finishes reading all the data from the old shard
 before starting to read data from the new one. Jet would also need to
 ensure that the new shard's data can't possibly overtake the old ones
 data inside the Jet pipeline. Currently, Jet does not have a mechanism
-to ensure this for such a distributed source.
+to ensure this for such a distributed source. Best to time resharding
+to when there are lulls in the data flow.
 
 The problem scenario for the sink is the ingestion data rate of a shard
 being tripped. A KDS shard has an ingestion rate of 1MiB per second. If
@@ -996,11 +997,12 @@ rejection breaks the ordering because the sinks write data in batches,
 and the shards don't just reject entire batches but random items from
 them. What's rejected can (and is) retried, but the batch's original
 ordering can't be preserved. The sink can't entirely avoid all
-rejections because it's distributed, multiple instances of it write
-into the same shard, and coordinating an aggregated rate among them is
-not something currently possible in Jet. Truth be told, though, Kinesis
-also only preserves the order of successfully ingested records, not the
-order in which ingestion was attempted.
+rejections because it's distributed, multiple instances of it write into
+the same shard, and coordinating an aggregated rate among them is not
+something currently possible in Jet. Truth be told, though, Kinesis also
+only preserves the order of successfully ingested records, not the order
+in which ingestion was attempted. Having enough shards and properly
+spreading out partition keys should prevent the problem from happening.
 
 ### JMS
 
