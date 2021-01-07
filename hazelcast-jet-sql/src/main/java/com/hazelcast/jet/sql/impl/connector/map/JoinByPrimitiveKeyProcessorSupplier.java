@@ -120,7 +120,8 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
         return (ctx, left) -> {
             Object key = left[leftEquiJoinIndex];
             if (key == null) {
-                return inner ? null
+                return inner
+                        ? null
                         : completedFuture(singleton(extendArray(left, ctx.rightRowProjector.getColumnCount())));
             }
 
@@ -153,24 +154,6 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
         return ExpressionUtil.join(left, right, condition);
     }
 
-    /**
-     * This class must be serializable because ServiceFactory requires it, but
-     * is never serialized because we create our ServiceFactory only when
-     * creating the processor.
-     * <p>
-     * We could add an assert that will break when we try to serialize, but the
-     * {@link Util#checkSerializable(Object, String)} method serializes it.
-     */
-    private static final class ServiceContext implements Serializable {
-        final transient IMap<Object, Object> map;
-        final transient KvRowProjector rightRowProjector;
-
-        private ServiceContext(IMap<Object, Object> map, KvRowProjector rightRowProjector) {
-            this.map = map;
-            this.rightRowProjector = rightRowProjector;
-        }
-    }
-
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeBoolean(inner);
@@ -187,5 +170,28 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
         condition = in.readObject();
         mapName = in.readObject();
         rightRowProjectorSupplier = in.readObject();
+    }
+
+    /**
+     * This class must be serializable because ServiceFactory requires it, but
+     * is never serialized because we create our ServiceFactory only when
+     * creating the processor.
+     * <p>
+     * We could add an assert that will break when we try to serialize, but the
+     * {@link Util#checkSerializable(Object, String)} method serializes it.
+     */
+    @SuppressFBWarnings(
+            value = {"SE_TRANSIENT_FIELD_NOT_RESTORED"},
+            justification = "the class is never serialized"
+    )
+    private static final class ServiceContext implements Serializable {
+
+        private final transient IMap<Object, Object> map;
+        private final transient KvRowProjector rightRowProjector;
+
+        private ServiceContext(IMap<Object, Object> map, KvRowProjector rightRowProjector) {
+            this.map = map;
+            this.rightRowProjector = rightRowProjector;
+        }
     }
 }

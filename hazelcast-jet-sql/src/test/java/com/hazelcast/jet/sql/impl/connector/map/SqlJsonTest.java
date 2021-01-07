@@ -216,7 +216,7 @@ public class SqlJsonTest extends SqlTestSupport {
                         + ")"
                 ))
                 .isInstanceOf(HazelcastSqlException.class)
-                .hasMessage("Invaslid external name: " + field);
+                .hasMessage("Invalid external name: " + field);
     }
 
     @Test

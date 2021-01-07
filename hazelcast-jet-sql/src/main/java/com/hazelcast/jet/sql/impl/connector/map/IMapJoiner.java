@@ -63,17 +63,22 @@ final class IMapJoiner {
                 // in case of an inner join we'll use `entrySet(predicate, partitionIdSet)` - we'll fan-out each left
                 // item to all members and each member will query local partitions
                 return new VertexWithInputConfig(
-                        dag.newUniqueVertex("Join(Predicate-" + tableName + ")",
-                                JoinByPredicateInnerProcessorSupplier.supplier(
-                                        joinInfo, mapName, rightRowProjectorSupplier)),
-                        edge -> edge.distributed().fanout());
+                        dag.newUniqueVertex(
+                                "Join(Predicate-" + tableName + ")",
+                                JoinByPredicateInnerProcessorSupplier
+                                        .supplier(joinInfo, mapName, rightRowProjectorSupplier)
+                        ),
+                        edge -> edge.distributed().fanout()
+                );
             }
             if (joinInfo.isLeftOuter()) {
                 // in case of an left join one member will query all partitions in the `entrySet(predicate)` operation
                 return new VertexWithInputConfig(
                         dag.newUniqueVertex(
                                 "Join(Predicate-" + tableName + ")",
-                                new JoinByPredicateOuterProcessorSupplier(joinInfo, mapName, rightRowProjectorSupplier)));
+                                new JoinByPredicateOuterProcessorSupplier(joinInfo, mapName, rightRowProjectorSupplier)
+                        )
+                );
             }
             throw new IllegalStateException("Unsupported state: " + joinInfo);
         } else {
@@ -83,7 +88,9 @@ final class IMapJoiner {
             return new VertexWithInputConfig(
                     dag.newUniqueVertex(
                             "Join(Scan-" + tableName + ")",
-                            new JoinScanProcessorSupplier(joinInfo, mapName, rightRowProjectorSupplier)));
+                            new JoinScanProcessorSupplier(joinInfo, mapName, rightRowProjectorSupplier)
+                    )
+            );
         }
         // TODO: detect and handle always-false condition ?
     }

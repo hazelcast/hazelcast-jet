@@ -134,6 +134,7 @@ public class JetSqlValidator extends HazelcastSqlValidator {
 
         // the right side of a join must not be a subquery or a VALUES clause
         join.getRight().accept(new SqlBasicVisitor<Void>() {
+            @Override
             public Void visit(SqlCall call) {
                 if (call.getKind() == SqlKind.SELECT) {
                     throw newValidationError(join, RESOURCE.joiningSubqueryNotSupported());
