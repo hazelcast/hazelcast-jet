@@ -36,6 +36,7 @@ import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.predicate.ComparisonMode;
 import com.hazelcast.sql.impl.expression.predicate.ComparisonPredicate;
 import com.hazelcast.sql.impl.extract.QueryPath;
+import org.apache.calcite.rel.core.JoinRelType;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -48,6 +49,7 @@ import static com.hazelcast.sql.impl.type.QueryDataType.INT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.apache.calcite.rel.core.JoinRelType.INNER;
+import static org.apache.calcite.rel.core.JoinRelType.LEFT;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -56,7 +58,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @RunWith(MockitoJUnitRunner.class)
-public class JoinByPredicateInnerProcessorTest {
+public class JoinByEquiJoinProcessorTest {
 
     @Mock
     private MapProxyImpl<Object, Object> map;
@@ -86,6 +88,7 @@ public class JoinByPredicateInnerProcessorTest {
     public void setUp() {
         given(rightRowProjectorSupplier.paths()).willReturn(new QueryPath[]{QueryPath.KEY_PATH});
         given(rightRowProjectorSupplier.get(any(), any())).willReturn(rightProjector);
+        given(rightProjector.getColumnCount()).willReturn(2);
         given(supplierContext.serializationService()).willReturn(serializationService);
         given(supplierContext.jetInstance()).willReturn(jetInstance);
         given(jetInstance.getMap(anyString())).willReturn(map);
@@ -94,9 +97,9 @@ public class JoinByPredicateInnerProcessorTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void when_filteredOutByProjector_then_absent() throws Exception {
+    public void when_filteredOutByProjector_inner_then_absent() throws Exception {
         // given
-        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
+        Processor processor = processor(INNER, (Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
 
         given(map.entrySet(any(Predicate.class), any(PartitionIdSet.class)))
                 .willReturn(ImmutableSet.of(entry(1, "value-1"), entry(2, "value-2")));
@@ -115,9 +118,9 @@ public class JoinByPredicateInnerProcessorTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void when_projectedByProjector_then_modified() throws Exception {
+    public void when_projectedByProjector_then_modified_inner() throws Exception {
         // given
-        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
+        Processor processor = processor(INNER, (Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
 
         given(map.entrySet(any(Predicate.class), any(PartitionIdSet.class)))
                 .willReturn(ImmutableSet.of(entry(1, "value-1")));
@@ -133,13 +136,15 @@ public class JoinByPredicateInnerProcessorTest {
     }
 
     @Test
-    public void when_filteredOutByCondition_then_absent() throws Exception {
+    public void when_filteredOutByCondition_inner_then_absent() throws Exception {
         // given
-        Processor processor = processor(ComparisonPredicate.create(
-                ColumnExpression.create(0, INT),
-                ColumnExpression.create(1, INT),
-                ComparisonMode.EQUALS
-        ));
+        Processor processor = processor(
+                INNER,
+                ComparisonPredicate.create(
+                        ColumnExpression.create(0, INT),
+                        ColumnExpression.create(1, INT),
+                        ComparisonMode.EQUALS
+                ));
 
         given(map.entrySet(any(Predicate.class), any(PartitionIdSet.class)))
                 .willReturn(ImmutableSet.of(entry(1, "value-1"), entry(2, "value-2")));
@@ -155,9 +160,71 @@ public class JoinByPredicateInnerProcessorTest {
         verifyNoMoreInteractions(outbox);
     }
 
-    private Processor processor(Expression<Boolean> nonEquiCondition) throws Exception {
-        ProcessorSupplier supplier = new JoinByPredicateInnerProcessorSupplier(
-                new JetJoinInfo(INNER, new int[]{0}, new int[]{0}, nonEquiCondition, null),
+    @Test
+    @SuppressWarnings("unchecked")
+    public void when_filteredOutByProjector_outer_then_nulls() throws Exception {
+        // given
+        Processor processor = processor(LEFT, (Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
+
+        given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1")));
+        given(rightProjector.project(entry(1, "value-1"))).willReturn(null);
+
+        // when
+        processor.process(0, new TestInbox(asList(new Object[]{1}, new Object[]{2})));
+        processor.complete();
+
+        // then
+        verify(outbox).offer(-1, new Object[]{1, null, null});
+        verify(outbox).offer(-1, new Object[]{2, null, null});
+        verifyNoMoreInteractions(outbox);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void when_projectedByProjector_then_modified_outer() throws Exception {
+        // given
+        Processor processor = processor(LEFT, (Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
+
+        given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1")));
+        given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{2, "modified"});
+
+        // when
+        processor.process(0, new TestInbox(singletonList(new Object[]{1})));
+        processor.complete();
+
+        // then
+        verify(outbox).offer(-1, new Object[]{1, 2, "modified"});
+        verifyNoMoreInteractions(outbox);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void when_filteredOutByCondition_outer_then_nulls() throws Exception {
+        // given
+        Processor processor = processor(
+                LEFT,
+                ComparisonPredicate.create(
+                        ColumnExpression.create(0, INT),
+                        ColumnExpression.create(1, INT),
+                        ComparisonMode.EQUALS
+                ));
+
+        given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(2, "value-2")));
+        given(rightProjector.project(entry(2, "value-2"))).willReturn(new Object[]{2, "value-2"});
+
+        // when
+        processor.process(0, new TestInbox(asList(new Object[]{0}, new Object[]{1})));
+        processor.complete();
+
+        // then
+        verify(outbox).offer(-1, new Object[]{0, null, null});
+        verify(outbox).offer(-1, new Object[]{1, null, null});
+        verifyNoMoreInteractions(outbox);
+    }
+
+    private Processor processor(JoinRelType joinType, Expression<Boolean> nonEquiCondition) throws Exception {
+        ProcessorSupplier supplier = new JoinByEquiJoinProcessorSupplier(
+                new JetJoinInfo(joinType, new int[]{0}, new int[]{0}, nonEquiCondition, null),
                 "map",
                 1,
                 singletonList(0),

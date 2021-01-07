@@ -38,7 +38,9 @@ import static com.hazelcast.jet.sql.impl.ExpressionUtil.evaluate;
 
 /**
  * A utility to convert a key-value entry represented as {@code
- * Entry<Object, Object>} to a row represented as {@code Object[]}.
+ * Entry<Object, Object>} to a row represented as {@code Object[]}. As a
+ * convenience, it also contains a {@link #predicate} - it is applied
+ * before projecting.
  * <p>
  * {@link KvProjector} does the reverse.
  */

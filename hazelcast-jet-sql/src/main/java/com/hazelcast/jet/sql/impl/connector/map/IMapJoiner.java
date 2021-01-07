@@ -59,28 +59,19 @@ final class IMapJoiner {
             // For example: SELECT * FROM left JOIN right ON left.field1=right.field1
             // In this case we'll construct a com.hazelcast.query.Predicate that will find matching rows using
             // the `map.entrySet(predicate)` method.
-            if (joinInfo.isInner()) {
-                // in case of an inner join we'll use `entrySet(predicate, partitionIdSet)` - we'll fan-out each left
-                // item to all members and each member will query local partitions
-                return new VertexWithInputConfig(
-                        dag.newUniqueVertex(
-                                "Join(Predicate-" + tableName + ")",
-                                JoinByPredicateInnerProcessorSupplier
-                                        .supplier(joinInfo, mapName, rightRowProjectorSupplier)
-                        ),
-                        edge -> edge.distributed().fanout()
-                );
-            }
-            if (joinInfo.isLeftOuter()) {
-                // in case of an left join one member will query all partitions in the `entrySet(predicate)` operation
-                return new VertexWithInputConfig(
-                        dag.newUniqueVertex(
-                                "Join(Predicate-" + tableName + ")",
-                                new JoinByPredicateOuterProcessorSupplier(joinInfo, mapName, rightRowProjectorSupplier)
-                        )
-                );
-            }
-            throw new IllegalStateException("Unsupported state: " + joinInfo);
+            assert joinInfo.isLeftOuter() || joinInfo.isInner();
+            return new VertexWithInputConfig(
+                    dag.newUniqueVertex("Join(Predicate-" + tableName + ")",
+                            JoinByEquiJoinProcessorSupplier.supplier(
+                                    joinInfo, mapName, rightRowProjectorSupplier)),
+                    edge -> {
+                        // In case of an inner join we'll use `entrySet(predicate, partitionIdSet)` - we'll fan-out each
+                        // left item to all members and each member will query a subset of partitions (the local ones).
+                        // Otherwise, a default edge is used (local unicast)
+                        if (joinInfo.isInner()) {
+                            edge.distributed().fanout();
+                        }
+                    });
         } else {
             // This is the fallback case when there's not an equi-join: it can be a cross-join or join on
             // another condition. For example:

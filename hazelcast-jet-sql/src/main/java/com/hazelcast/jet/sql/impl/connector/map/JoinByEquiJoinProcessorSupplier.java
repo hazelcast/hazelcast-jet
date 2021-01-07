@@ -43,6 +43,7 @@ import com.hazelcast.sql.impl.extract.QueryPath;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -53,7 +54,9 @@ import java.util.Set;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.Traversers.empty;
+import static com.hazelcast.jet.Traversers.singleton;
 import static com.hazelcast.jet.Traversers.traverseIterable;
+import static com.hazelcast.jet.impl.util.Util.extendArray;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
@@ -62,7 +65,7 @@ import static java.util.stream.Collectors.toList;
         value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
         justification = "the class is never java-serialized"
 )
-final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, DataSerializable {
+final class JoinByEquiJoinProcessorSupplier implements ProcessorSupplier, DataSerializable {
 
     private JetJoinInfo joinInfo;
     private String mapName;
@@ -75,17 +78,17 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
     private transient Extractors extractors;
 
     @SuppressWarnings("unused")
-    private JoinByPredicateInnerProcessorSupplier() {
+    private JoinByEquiJoinProcessorSupplier() {
     }
 
-    JoinByPredicateInnerProcessorSupplier(
-            JetJoinInfo joinInfo,
-            String mapName,
+    JoinByEquiJoinProcessorSupplier(
+            @Nonnull JetJoinInfo joinInfo,
+            @Nonnull String mapName,
             int partitionCount,
-            List<Integer> partitions,
-            KvRowProjector.Supplier rightRowProjectorSupplier
+            @Nullable List<Integer> partitions,
+            @Nonnull KvRowProjector.Supplier rightRowProjectorSupplier
     ) {
-        assert joinInfo.isEquiJoin() && joinInfo.isInner();
+        assert joinInfo.isEquiJoin() && (joinInfo.isInner() || joinInfo.isLeftOuter());
 
         this.joinInfo = joinInfo;
         this.mapName = mapName;
@@ -106,7 +109,9 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
     public Collection<? extends Processor> get(int count) {
         List<Processor> processors = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            PartitionIdSet partitions = new PartitionIdSet(partitionCount, this.partitions);
+            PartitionIdSet partitions = this.partitions != null
+                    ? new PartitionIdSet(partitionCount, this.partitions)
+                    : null;
             QueryPath[] rightPaths = rightRowProjectorSupplier.paths();
             KvRowProjector rightProjector = rightRowProjectorSupplier.get(serializationService, extractors);
             Processor processor =
@@ -136,12 +141,18 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
             Predicate<Object, Object> predicate =
                     QueryUtil.toPredicate(left, leftEquiJoinIndices, rightEquiJoinIndices, rightPaths);
             if (predicate == null) {
-                return empty();
+                return joinInfo.isInner()
+                        ? empty()
+                        : singleton(extendArray(left, rightRowProjector.getColumnCount()));
             }
 
-            List<Object[]> joined = join(left, map.entrySet(predicate, partitions.copy()), rightRowProjector,
-                    joinInfo.nonEquiCondition());
-            return traverseIterable(joined);
+            Set<Entry<Object, Object>> matchingRows = joinInfo.isInner()
+                    ? map.entrySet(predicate, partitions.copy())
+                    : map.entrySet(predicate);
+            List<Object[]> joined = join(left, matchingRows, rightRowProjector, joinInfo.nonEquiCondition());
+            return joined.isEmpty() && joinInfo.isLeftOuter()
+                    ? singleton(extendArray(left, rightRowProjector.getColumnCount()))
+                    : traverseIterable(joined);
         };
     }
 
@@ -213,7 +224,7 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
                 String mapName,
                 KvRowProjector.Supplier rightRowProjectorSupplier
         ) {
-            assert joinInfo.isEquiJoin() && joinInfo.isInner();
+            assert joinInfo.isEquiJoin() && (joinInfo.isInner() || joinInfo.isLeftOuter());
 
             this.joinInfo = joinInfo;
             this.mapName = mapName;
@@ -228,24 +239,34 @@ final class JoinByPredicateInnerProcessorSupplier implements ProcessorSupplier, 
         @Nonnull
         @Override
         public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-            Set<Partition> partitions = partitionService.getPartitions();
-            int partitionCount = partitions.size();
-            Map<Address, List<Integer>> partitionsByMember = Util.assignPartitions(
-                    addresses,
-                    partitions.stream()
-                              .collect(groupingBy(
-                                      partition -> partition.getOwner().getAddress(),
-                                      mapping(Partition::getPartitionId, toList()))
-                              )
-            );
+            if (joinInfo.isInner()) {
+                Set<Partition> partitions = partitionService.getPartitions();
+                int partitionCount = partitions.size();
+                Map<Address, List<Integer>> partitionsByMember = Util.assignPartitions(
+                        addresses,
+                        partitions.stream()
+                                  .collect(groupingBy(
+                                          partition -> partition.getOwner().getAddress(),
+                                          mapping(Partition::getPartitionId, toList()))
+                                  )
+                );
 
-            return address -> new JoinByPredicateInnerProcessorSupplier(
-                    joinInfo,
-                    mapName,
-                    partitionCount,
-                    partitionsByMember.get(address),
-                    rightRowProjectorSupplier
-            );
+                return address -> new JoinByEquiJoinProcessorSupplier(
+                        joinInfo,
+                        mapName,
+                        partitionCount,
+                        partitionsByMember.get(address),
+                        rightRowProjectorSupplier
+                );
+            } else {
+                return address -> new JoinByEquiJoinProcessorSupplier(
+                        joinInfo,
+                        mapName,
+                        0,
+                        null,
+                        rightRowProjectorSupplier
+                );
+            }
         }
 
         @Override

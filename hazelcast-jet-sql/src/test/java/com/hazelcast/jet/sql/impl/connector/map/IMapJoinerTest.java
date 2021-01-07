@@ -108,7 +108,7 @@ public class IMapJoinerTest {
     public void test_joinByPredicateOuter() {
         // given
         given(rightRowProjectorSupplier.paths()).willReturn(new QueryPath[]{QueryPath.create("path")});
-        given(dag.newUniqueVertex(contains("Predicate"), isA(JoinByPredicateOuterProcessorSupplier.class)))
+        given(dag.newUniqueVertex(contains("Predicate"), isA(JoinByEquiJoinProcessorSupplier.class)))
                 .willReturn(vertex);
 
         // when
