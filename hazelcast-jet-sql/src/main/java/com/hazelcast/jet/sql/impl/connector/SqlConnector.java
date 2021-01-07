@@ -255,13 +255,12 @@ public interface SqlConnector {
 
     /**
      * Creates a sub-DAG to read the given {@code table} as a part of a
-     * nested-loop join. The ingress vertex of the returned sub-DAG will
-     * receive items from the left side of the join as {@code Object[]}. For
-     * each record it must read the matching records from the {@code table},
-     * according to the {@code joinInfo}. The egress vertex should emit joined
-     * records, again as {@code Object[]}. The length of an output record is
-     * {@code inputRecordLength + projection.size()}. See {@link
-     * ExpressionUtil#join} for a utility to create the output records.
+     * nested-loop join. The returned vertex will receive items from the left
+     * side of the join as {@code Object[]}. For each record it must read the
+     * matching records from the {@code table}, according to the {@code
+     * joinInfo} and emit joined records, again as {@code Object[]}. The length
+     * of the output array is {@code inputRecordLength + projection.size()}.
+     * See {@link ExpressionUtil#join} for a utility to create output records.
      * <p>
      * The given {@code predicate} and {@code projection} apply only to the
      * records of the {@code table} (i.e. of the right-side of the join, before
@@ -278,10 +277,13 @@ public interface SqlConnector {
      * then the projection will be <code>{1}</code> and the predicate will be
      * <code>{2}=10</code>.
      * <p>
-     * The implementation should do these steps for each received <em>left</em>
-     * row:<ul>
-     *     <li>TODO
-     *     <li>find rows matching the {@code predicate} and the
+     * The implementation should do these steps for each received row:
+     * <ul>
+     *     <li>find rows in {@code table} matching the {@code predicate}
+     *     <li>join all these rows using {@link ExpressionUtil#join} with the
+     *         received row
+     *     <li>if no rows matched and {@code joinInfo.isLeftOuter() == true)},
+     *
      * </ul>
      *
      * @param table      the table object
