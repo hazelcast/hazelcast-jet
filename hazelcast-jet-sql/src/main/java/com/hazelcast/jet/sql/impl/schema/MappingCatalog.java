@@ -96,14 +96,14 @@ public class MappingCatalog implements TableResolver {
     }
 
     @Nonnull
-    @Override
-    public List<List<String>> getDefaultSearchPaths() {
-        return SEARCH_PATHS;
+    public List<String> getMappingNames() {
+        return storage.values().stream().map(Mapping::name).collect(Collectors.toList());
     }
 
     @Nonnull
-    public List<String> getMappingNames() {
-        return storage.values().stream().map(Mapping::name).collect(Collectors.toList());
+    @Override
+    public List<List<String>> getDefaultSearchPaths() {
+        return SEARCH_PATHS;
     }
 
     @Nonnull

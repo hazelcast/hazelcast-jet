@@ -339,12 +339,12 @@ interface JetPlan extends SqlPlan {
 
     class ShowStatementPlan implements JetPlan {
 
-        private final JetPlanExecutor planExecutor;
         private final ShowStatementTarget showTarget;
+        private final JetPlanExecutor planExecutor;
 
         ShowStatementPlan(ShowStatementTarget showTarget, JetPlanExecutor planExecutor) {
-            this.planExecutor = planExecutor;
             this.showTarget = showTarget;
+            this.planExecutor = planExecutor;
         }
 
         public ShowStatementTarget getShowTarget() {

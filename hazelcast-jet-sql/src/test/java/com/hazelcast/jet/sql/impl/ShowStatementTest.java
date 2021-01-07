@@ -37,7 +37,7 @@ import java.util.stream.IntStream;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class ShowStatementTest extends SqlTestSupport {
 
@@ -53,23 +53,23 @@ public class ShowStatementTest extends SqlTestSupport {
         SqlRowMetadata expectedMetadata =
                 new SqlRowMetadata(singletonList(new SqlColumnMetadata("name", SqlColumnType.VARCHAR)));
 
-        assertEquals(expectedMetadata, sqlService.execute("show mappings").getRowMetadata());
-        assertEquals(expectedMetadata, sqlService.execute("show jobs").getRowMetadata());
-    }
-
-    @Test
-    public void test_showMapping() {
-        List<String> mappings = IntStream.range(0, 5).mapToObj(i -> "t" + i).collect(toList());
-        for (String name : mappings) {
-            TestBatchSqlConnector.create(sqlService, name, 1);
-        }
-
-        assertRowsOrdered("show mappings", Util.toList(mappings, n -> new Row(n)));
+        assertThat(sqlService.execute("show mappings").getRowMetadata()).isEqualTo(expectedMetadata);
+        assertThat(sqlService.execute("show jobs").getRowMetadata()).isEqualTo(expectedMetadata);
     }
 
     @Test
     public void when_showMapping_empty() {
         assertRowsOrdered("show mappings", emptyList());
+    }
+
+    @Test
+    public void test_showMapping() {
+        List<String> mappingNames = IntStream.range(0, 5).mapToObj(i -> "t" + i).collect(toList());
+        for (String mappingName : mappingNames) {
+            TestBatchSqlConnector.create(sqlService, mappingName, 1);
+        }
+
+        assertRowsOrdered("show mappings", Util.toList(mappingNames, Row::new));
     }
 
     @Test
@@ -84,7 +84,12 @@ public class ShowStatementTest extends SqlTestSupport {
         for (int i = 0; i < 10; i++) {
             myMap.put(i, i);
         }
-        sqlService.execute("show mappings");
+        assertRowsOrdered("show mappings", emptyList());
+    }
+
+    @Test
+    public void test_showJobsEmpty() {
+        assertRowsOrdered("show jobs", emptyList());
     }
 
     @Test
@@ -95,11 +100,6 @@ public class ShowStatementTest extends SqlTestSupport {
                 "sink into m " +
                 "select v, v from t");
         assertRowsOrdered("show jobs", singletonList(new Row("testJob")));
-    }
-
-    @Test
-    public void test_showJobsEmpty() {
-        assertRowsOrdered("show jobs", emptyList());
     }
 
     @Test

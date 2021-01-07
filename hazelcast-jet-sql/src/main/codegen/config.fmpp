@@ -48,13 +48,13 @@ data: {
     keywords: [
       "IF"
       "JOB"
-      "MAPPING"
-      "SINK"
-      "SUSPEND"
-      "RESUME"
-      "SNAPSHOT"
-      "MAPPINGS"
       "JOBS"
+      "MAPPING"
+      "MAPPINGS"
+      "RESUME"
+      "SINK"
+      "SNAPSHOT"
+      "SUSPEND"
     ]
 
     # List of keywords from "keywords" section that are not reserved.

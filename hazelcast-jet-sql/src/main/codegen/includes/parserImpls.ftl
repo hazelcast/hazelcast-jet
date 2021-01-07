@@ -413,6 +413,25 @@ SqlOption SqlOption() :
 }
 
 /**
+* Parses SHOW statements.
+*/
+SqlShowStatement SqlShowStatement() :
+{
+    ShowStatementTarget target;
+}
+{
+    <SHOW>
+    (
+        [ <EXTERNAL> ] <MAPPINGS> { target = ShowStatementTarget.MAPPINGS; }
+    |
+        <JOBS> { target = ShowStatementTarget.JOBS; }
+    )
+    {
+        return new SqlShowStatement(getPos(), target);
+    }
+}
+
+/**
  * Parses INSERT/SINK INTO statement.
  */
 SqlExtendedInsert SqlExtendedInsert() :
@@ -454,24 +473,5 @@ SqlExtendedInsert SqlExtendedInsert() :
             columns,
             span.end(source)
         );
-    }
-}
-
-/**
-* Parses SHOW statements.
-*/
-SqlShowStatement SqlShowStatement() :
-{
-    ShowStatementTarget target;
-}
-{
-    <SHOW>
-    (
-        [ <EXTERNAL> ] <MAPPINGS> { target = ShowStatementTarget.MAPPINGS; }
-    |
-        <JOBS> { target = ShowStatementTarget.JOBS; }
-    )
-    {
-        return new SqlShowStatement(getPos(), target);
     }
 }

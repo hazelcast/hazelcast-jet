@@ -30,16 +30,18 @@ import java.util.List;
 
 public class SqlShowStatement extends SqlCall {
 
-    public static final SqlSpecialOperator SHOW_MAPPINGS =
-            new SqlSpecialOperator("SHOW EXTERNAL TABLES", SqlKind.OTHER);
-    public static final SqlSpecialOperator SHOW_JOBS =
-            new SqlSpecialOperator("SHOW JOBS", SqlKind.OTHER);
+    public static final SqlSpecialOperator SHOW_MAPPINGS = new SqlSpecialOperator("SHOW EXTERNAL TABLES", SqlKind.OTHER);
+    public static final SqlSpecialOperator SHOW_JOBS = new SqlSpecialOperator("SHOW JOBS", SqlKind.OTHER);
 
     private final ShowStatementTarget target;
 
     public SqlShowStatement(SqlParserPos pos, ShowStatementTarget target) {
         super(pos);
         this.target = target;
+    }
+
+    public ShowStatementTarget getTarget() {
+        return target;
     }
 
     @Nonnull
@@ -57,10 +59,6 @@ public class SqlShowStatement extends SqlCall {
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
         writer.keyword(target.operator.getName());
-    }
-
-    public ShowStatementTarget getTarget() {
-        return target;
     }
 
     /**

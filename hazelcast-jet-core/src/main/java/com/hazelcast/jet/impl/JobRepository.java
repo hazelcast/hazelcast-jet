@@ -541,10 +541,6 @@ public class JobRepository {
         return jobExecutionRecords.get(jobId);
     }
 
-    public Collection<JobExecutionRecord> getJobExecutionRecords() {
-        return jobExecutionRecords.values();
-    }
-
     /**
      * Gets the job resources map
      */

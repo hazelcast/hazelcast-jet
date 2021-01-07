@@ -197,7 +197,7 @@ class JetPlanExecutor {
             JetService jetService = ((HazelcastInstanceImpl) jetInstance.getHazelcastInstance()).node.nodeEngine
                     .getService(JetService.SERVICE_NAME);
             rows = jetService.getJobRepository().getJobRecords().stream()
-                    .map(r -> r.getConfig().getName())
+                    .map(record -> record.getConfig().getName())
                     .filter(Objects::nonNull);
         }
 
@@ -206,6 +206,7 @@ class JetPlanExecutor {
                 rows.sorted()
                     .map(name -> new SqlRowImpl(metadata, new HeapRow(new Object[]{name})))
                     .collect(Collectors.toList()),
-                metadata);
+                metadata
+        );
     }
 }
