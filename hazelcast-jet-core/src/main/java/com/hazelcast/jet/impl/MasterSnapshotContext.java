@@ -243,12 +243,10 @@ class MasterSnapshotContext {
             // the decision moment for regular snapshots: after this the snapshot is ready to be restored from
             mc.writeJobExecutionRecord(false);
 
-            if (logger.isFineEnabled()) {
-                logger.fine(String.format("Snapshot %d phase 1 for %s completed with status %s in %dms, " +
+            logFine(logger, "Snapshot %d phase 1 for %s completed with status %s in %dms, " +
                                 "%,d bytes, %,d keys in %,d chunks, stored in '%s', proceeding to phase 2",
                         snapshotId, mc.jobIdString(), isSuccess ? "SUCCESS" : "FAILURE",
-                        stats.duration(), stats.numBytes(), stats.numKeys(), stats.numChunks(), snapshotMapName));
-            }
+                        stats.duration(), stats.numBytes(), stats.numKeys(), stats.numChunks(), snapshotMapName);
             if (!isSuccess) {
                 logger.warning(mc.jobIdString() + " snapshot " + snapshotId + " phase 1 failed on some member(s), " +
                         "one of the failures: " + mergedResult.getError());
@@ -338,11 +336,11 @@ class MasterSnapshotContext {
             } finally {
                 mc.unlock();
             }
-            if (logger.isFineEnabled()) {
-                logger.fine("Snapshot " + snapshotId + " for " + mc.jobIdString() + " completed in "
-                        + (System.currentTimeMillis() - startTime) + "ms, status="
-                        + (phase1Error == null ? "success" : "failure: " + phase1Error));
-            }
+            logFine(logger, "Snapshot %d for %s completed in %d ms, status=%s",
+                    snapshotId,
+                    mc.jobIdString(),
+                    (System.currentTimeMillis() - startTime),
+                    phase1Error == null ? "success" : "failure: " + phase1Error);
 
             tryBeginSnapshot();
         });
