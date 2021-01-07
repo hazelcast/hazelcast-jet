@@ -921,8 +921,8 @@ FunctionEx<Log, byte[]> valueFn = l -> l.message().getBytes();
 Sink<Log> sink = KinesisSinks.kinesis("stream", keyFn, valueFn).build();
 
 p.readFrom(Sources.files("home/logs")) //read lines of text from log files
- .map(line -> LogParser.parse(line))   //parse lines into "Log" data objects
- .writeTo(sink);
+ .map(line -> LogParser.parse(line))   //parse lines into Log data objects
+ .writeTo(sink);                       //write Log objects out to Kinesis
 ```
 
 To use the Kinesis connectors, you need to copy the
