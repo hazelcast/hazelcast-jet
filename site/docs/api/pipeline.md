@@ -87,13 +87,38 @@ member machines.
 
 #### Preserving Event Order
 
-In some use cases, the order of events with the same key should be
-preserved, in order to be able to apply stateful processing logic on
-them.
+As mentioned above, Jet models the data processing job as a pipeline
+model. A pipeline consists of stages and each stage except sink and
+source accepts the events from previous stages, processes these events,
+and then passes the transformed events to the next downstream stage. Jet
+creates multiple tasklets (also called coroutine) for each stage to
+process each stage in a parallel manner, and the processed data is
+transferred between tasklets of separate stages. Keeping the order of
+processed events in a pipeline depends on how the event transfer between
+the stages takes place.
+
+By default, Jet adopts a round-robin manner in data transfer between
+stages to shape the data traffic as well as possible. This means that an
+event that comes out of any processing tasklet of a stage can go to any
+tasklet of the downstream stage. Since we do not apply any restriction
+to data flow with this data transfer method, we get the best performance
+with it. However, it is not possible to keep the event order with this
+round-robin data transfer manner.
+
+If the pipeline is stateless or has no order-dependent stateful logic,
+the change of the event order will not affect the processing outcome.
+Maintaining the order in such pipelines does not matter. But when a
+pipeline contains an order-dependent stateful logic, its outcome will be
+affected by the change of event order. Also, external services that a
+pipeline interacts with can be stateful and their state can also be
+order dependent. When a pipeline has a particularly stateful element, it
+should be checked if it is order-dependent.
 
 `Pipeline` has a property named `preserveOrder` and enabling this
 property instructs Jet to keep the order of events with the same
-partitioning key by avoiding the usage of round-robin edges.
+partitioning key by avoiding the usage of round-robin edges and a unique
+data transfer path from source to sink is determined in the pipeline for
+each partition.
 
 You can enable this property as follows:
 
@@ -101,6 +126,9 @@ You can enable this property as follows:
 Pipeline p = Pipeline.create();
 p.setPreserveOrder(true);
 ```
+
+Enabling this property puts a restriction on the data flow in the
+pipeline, and this results in loss of performance to protect the order.
 
 > Note that: Changing the partition keys in the different stages of the
 pipeline may cause out-of-order.
