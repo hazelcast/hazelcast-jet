@@ -193,6 +193,25 @@ public class SqlMappingTest extends SqlTestSupport {
     }
 
     @Test
+    public void testDeclarativePortable_changePortableVersion() {
+        //Added to show changing portable version is not working at the moment. And it needs to be fixed. 
+        sqlService.execute("CREATE MAPPING lionKing (__key VARCHAR, kind VARCHAR, age INT) " +
+                "TYPE IMap OPTIONS " +
+                "('keyFormat' = 'java', 'keyJavaClass' = 'java.lang.String'," +
+                " 'valueFormat' = 'portable', 'valuePortableFactoryId' = '1' , 'valuePortableClassId' = '1')");
+        sqlService.execute("CREATE OR REPLACE MAPPING lionKing (__key VARCHAR, kind VARCHAR, age INT, id INT) " +
+                "TYPE IMap OPTIONS " +
+                "('keyFormat' = 'java', 'keyJavaClass' = 'java.lang.String'," +
+                " 'valueFormat' = 'portable', 'valuePortableFactoryId' = '1' , 'valuePortableClassId' = '1' , 'valuePortableVersion'='2')");
+        sqlService.execute("SINK INTO lionKing VALUES ('Simba', 'Lion', 5, 20)");
+        SqlResult result = sqlService.execute("SELECT __key FROM lionKing WHERE age > 1");
+        assertTrue(result.isRowSet());
+        Iterator<SqlRow> iterator = result.iterator();
+        assertEquals("Simba", iterator.next().getObject("__key"));
+        assertFalse(iterator.hasNext());
+    }
+
+    @Test
     public void when_dropFromPartitionedSchema_then_fail() {
         instance().getMap("my_map").put(42, 43);
         // check that we can query that table
