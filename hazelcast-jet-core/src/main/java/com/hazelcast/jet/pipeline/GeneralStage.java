@@ -1184,6 +1184,8 @@ public interface GeneralStage<T> extends Stage {
      * receive it. Its primary purpose is for development use, when running Jet
      * on a local machine.
      * <p>
+     * Note that peek() after rebalance() operation is not supported.
+     * <p>
      * Sample usage:
      * <pre>{@code
      * users.peek(
