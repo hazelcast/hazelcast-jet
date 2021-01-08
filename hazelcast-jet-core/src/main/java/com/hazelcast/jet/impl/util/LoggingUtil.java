@@ -50,12 +50,6 @@ public final class LoggingUtil {
         }
     }
 
-    public static void logFine(ILogger logger, String template, Object... args) {
-        if (logger.isFineEnabled()) {
-            logger.fine(String.format(template, args));
-        }
-    }
-
     public static void logFinest(ILogger logger, String template, Object arg1) {
         if (logger.isFinestEnabled()) {
             logger.finest(String.format(template, arg1));
