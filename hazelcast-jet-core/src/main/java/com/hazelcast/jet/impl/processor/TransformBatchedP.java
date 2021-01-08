@@ -58,6 +58,20 @@ public class TransformBatchedP<T, R> extends AbstractProcessor {
 
     @Override
     public boolean tryProcess() {
+        return tryFlush();
+    }
+
+    @Override
+    public boolean saveToSnapshot() {
+        return tryFlush();
+    }
+
+    @Override
+    public boolean complete() {
+        return tryFlush();
+    }
+
+    private boolean tryFlush() {
         if (outputTraverser == null) {
             return true;
         }
