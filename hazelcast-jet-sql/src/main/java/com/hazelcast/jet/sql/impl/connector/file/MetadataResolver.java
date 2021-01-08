@@ -36,6 +36,7 @@ import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_GLOB;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_PATH;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_SHARED_FILE_SYSTEM;
+import static java.util.Collections.emptyList;
 import static java.util.Map.Entry;
 
 abstract class MetadataResolver<T> {
@@ -66,7 +67,7 @@ abstract class MetadataResolver<T> {
 
         try (FileTraverser<T> traverser = fileProcessorMetaSupplier.traverser()) {
             T sample = traverser.next();
-            return resolveFieldsFromSample(sample);
+            return sample == null ? emptyList() : resolveFieldsFromSample(sample);
         } catch (Exception e) {
             throw sneakyThrow(e);
         }

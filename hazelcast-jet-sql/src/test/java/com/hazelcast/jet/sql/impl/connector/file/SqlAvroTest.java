@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.jet.sql.SqlTestSupport;
+import com.hazelcast.sql.HazelcastSqlException;
 import com.hazelcast.sql.SqlService;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericRecordBuilder;
@@ -223,6 +224,17 @@ public class SqlAvroTest extends SqlTestSupport {
                         new GenericRecordBuilder(SchemaBuilder.record("object").fields().endRecord()).build()
                 ))
         );
+    }
+
+    @Test
+    public void when_couldNotGetSample_then_fails() {
+        assertThatThrownBy(() -> sqlService.execute(
+                "SELECT *"
+                + " FROM TABLE ("
+                + "AVRO_FILE ('/non/existing/path/')"
+                + ")"
+        )).isInstanceOf(HazelcastSqlException.class)
+          .hasMessageContaining("The resolved field list is empty");
     }
 
     @Test

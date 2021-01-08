@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.jet.sql.SqlTestSupport;
+import com.hazelcast.sql.HazelcastSqlException;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -223,6 +224,17 @@ public class SqlJsonTest extends SqlTestSupport {
                         emptyMap()
                 ))
         );
+    }
+
+    @Test
+    public void when_couldNotGetSample_then_fails() {
+        assertThatThrownBy(() -> sqlService.execute(
+                "SELECT *"
+                + " FROM TABLE ("
+                + "JSON_FILE ('/non/existing/path/')"
+                + ")"
+        )).isInstanceOf(HazelcastSqlException.class)
+          .hasMessageContaining("The resolved field list is empty");
     }
 
     @Test
