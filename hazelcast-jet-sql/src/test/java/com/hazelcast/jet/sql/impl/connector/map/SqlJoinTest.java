@@ -623,10 +623,6 @@ public class SqlJoinTest extends SqlTestSupport {
                 ))
                 .hasCauseInstanceOf(QueryException.class)
                 .hasMessageContaining("Sub-query not supported on the right side of a join");
-
-        // SELECT * FROM left JOIN (SELECT SUM(__key) AS __key FROM map) AS m ON l.v = m.__key
-        // SELECT * FROM left JOIN LATERAL (SELECT __key, this FROM map WHERE __key < 3) AS m ON 1 = 1
-        // SELECT * FROM left JOIN LATERAL (SELECT __key FROM map WHERE __key > l.v) m ON 1 = 1
     }
 
     @Test

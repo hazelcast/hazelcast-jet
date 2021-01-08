@@ -37,6 +37,7 @@ public class TransformBatchedP<T, R> extends AbstractProcessor {
 
     private final Function<? super List<T>, ? extends Traverser<? extends R>> mapper;
 
+    private int pendingItems;
     private Traverser<? extends R> outputTraverser;
 
     public TransformBatchedP(Function<? super List<T>, ? extends Traverser<? extends R>> mapper) {
@@ -45,42 +46,31 @@ public class TransformBatchedP<T, R> extends AbstractProcessor {
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
-        if (outputTraverser == null) {
-            List<T> batch = new ArrayList<>(inbox.size());
-            inbox.drainTo(batch);
+        if (pendingItems == 0) {
+            List<T> batch = drain(inbox);
+            pendingItems = batch.size();
             outputTraverser = mapper.apply(batch);
         }
 
         if (emitFromTraverser(outputTraverser)) {
+            clear(inbox);
+            pendingItems = 0;
             outputTraverser = null;
         }
     }
 
-    @Override
-    public boolean tryProcess() {
-        return tryFlush();
-    }
-
-    @Override
-    public boolean saveToSnapshot() {
-        return tryFlush();
-    }
-
-    @Override
-    public boolean complete() {
-        return tryFlush();
-    }
-
-    private boolean tryFlush() {
-        if (outputTraverser == null) {
-            return true;
+    @SuppressWarnings("unchecked")
+    private List<T> drain(Inbox inbox) {
+        List<T> batch = new ArrayList<>(inbox.size());
+        for (Object item : inbox) {
+            batch.add((T) item);
         }
+        return batch;
+    }
 
-        if (emitFromTraverser(outputTraverser)) {
-            outputTraverser = null;
-            return true;
+    private void clear(Inbox inbox) {
+        for (int i = 0; i < pendingItems; i++) {
+            inbox.poll();
         }
-
-        return false;
     }
 }
