@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.function.BiFunctionEx;
-import com.hazelcast.function.SupplierEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.Processor;
@@ -95,12 +94,10 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
     @Nonnull
     @Override
     public Collection<? extends Processor> get(int count) {
-        SupplierEx<KvRowProjector> rightRowProjectorSupplier =
-                () -> this.rightRowProjectorSupplier.get(serializationService, extractors);
-
         List<Processor> processors = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            ServiceContext context = new ServiceContext(map, rightRowProjectorSupplier.get());
+            ServiceContext context =
+                    new ServiceContext(map, rightRowProjectorSupplier.get(serializationService, extractors));
             Processor processor = new AsyncTransformUsingServiceOrderedP<>(
                     ServiceFactories.nonSharedService(ctx -> context),
                     null,

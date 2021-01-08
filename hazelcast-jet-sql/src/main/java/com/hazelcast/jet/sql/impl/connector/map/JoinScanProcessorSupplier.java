@@ -48,8 +48,6 @@ import static com.hazelcast.jet.impl.util.Util.extendArray;
 )
 final class JoinScanProcessorSupplier implements ProcessorSupplier, DataSerializable {
 
-    private static final int MAX_BATCH_SIZE = 1024;
-
     private JetJoinInfo joinInfo;
     private String mapName;
     private KvRowProjector.Supplier rightRowProjectorSupplier;
@@ -81,10 +79,7 @@ final class JoinScanProcessorSupplier implements ProcessorSupplier, DataSerializ
         List<Processor> processors = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             Processor processor =
-                    new TransformBatchedP<Object[], Object[]>(
-                            MAX_BATCH_SIZE,
-                            joinFn(joinInfo, map, rightRowProjectorSupplier)
-                    ) {
+                    new TransformBatchedP<Object[], Object[]>(joinFn(joinInfo, map, rightRowProjectorSupplier)) {
                         @Override
                         public boolean isCooperative() {
                             return false;
@@ -100,8 +95,6 @@ final class JoinScanProcessorSupplier implements ProcessorSupplier, DataSerializ
             IMap<Object, Object> map,
             KvRowProjector.Supplier rightRowProjectorSupplier
     ) {
-        boolean outer = joinInfo.isLeftOuter();
-
         Projection<Entry<Object, Object>, Object[]> projection = QueryUtil.toProjection(rightRowProjectorSupplier);
 
         return lefts -> {
@@ -121,7 +114,7 @@ final class JoinScanProcessorSupplier implements ProcessorSupplier, DataSerializ
             List<Object[]> rows = new ArrayList<>();
             for (Object[] left : lefts) {
                 boolean joined = join(rows, left, rights, joinInfo.condition());
-                if (!joined && outer) {
+                if (!joined && joinInfo.isLeftOuter()) {
                     rows.add(extendArray(left, rightRowProjectorSupplier.columnCount()));
                 }
             }

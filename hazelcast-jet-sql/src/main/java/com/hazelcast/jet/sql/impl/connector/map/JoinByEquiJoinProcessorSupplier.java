@@ -134,12 +134,13 @@ final class JoinByEquiJoinProcessorSupplier implements ProcessorSupplier, DataSe
             QueryPath[] rightPaths,
             KvRowProjector rightRowProjector
     ) {
-        int[] leftEquiJoinIndices = joinInfo.leftEquiJoinIndices();
-        int[] rightEquiJoinIndices = joinInfo.rightEquiJoinIndices();
-
         return left -> {
-            Predicate<Object, Object> predicate =
-                    QueryUtil.toPredicate(left, leftEquiJoinIndices, rightEquiJoinIndices, rightPaths);
+            Predicate<Object, Object> predicate = QueryUtil.toPredicate(
+                    left,
+                    joinInfo.leftEquiJoinIndices(),
+                    joinInfo.rightEquiJoinIndices(),
+                    rightPaths
+            );
             if (predicate == null) {
                 return joinInfo.isInner()
                         ? empty()

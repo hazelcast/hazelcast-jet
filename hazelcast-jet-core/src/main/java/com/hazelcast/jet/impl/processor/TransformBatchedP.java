@@ -35,29 +35,38 @@ import java.util.function.Function;
  */
 public class TransformBatchedP<T, R> extends AbstractProcessor {
 
-    private final int maxBatchSize;
     private final Function<? super List<T>, ? extends Traverser<? extends R>> mapper;
 
     private Traverser<? extends R> outputTraverser;
 
-    public TransformBatchedP(
-            int maxBatchSize,
-            Function<? super List<T>, ? extends Traverser<? extends R>> mapper
-    ) {
-        this.maxBatchSize = maxBatchSize;
+    public TransformBatchedP(Function<? super List<T>, ? extends Traverser<? extends R>> mapper) {
         this.mapper = mapper;
     }
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
         if (outputTraverser == null) {
-            List<T> batch = new ArrayList<>(Math.min(inbox.size(), maxBatchSize));
-            inbox.drainTo(batch, maxBatchSize);
+            List<T> batch = new ArrayList<>(inbox.size());
+            inbox.drainTo(batch);
             outputTraverser = mapper.apply(batch);
         }
 
         if (emitFromTraverser(outputTraverser)) {
             outputTraverser = null;
         }
+    }
+
+    @Override
+    public boolean tryProcess() {
+        if (outputTraverser == null) {
+            return true;
+        }
+
+        if (emitFromTraverser(outputTraverser)) {
+            outputTraverser = null;
+            return true;
+        }
+
+        return false;
     }
 }
