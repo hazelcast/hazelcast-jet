@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map.Entry;
 
+import static com.hazelcast.internal.util.Preconditions.checkTrue;
 import static com.hazelcast.jet.sql.impl.ExpressionUtil.evaluate;
 
 /**
@@ -62,6 +63,7 @@ public class KvRowProjector implements Row {
             Expression<Boolean> predicate,
             List<Expression<?>> projections
     ) {
+        checkTrue(paths.length == types.length, "paths.length != types.length");
         this.keyTarget = keyTarget;
         this.valueTarget = valueTarget;
         this.extractors = createExtractors(paths, types, keyTarget, valueTarget);
@@ -112,7 +114,7 @@ public class KvRowProjector implements Row {
 
     @Override
     public int getColumnCount() {
-        return extractors.length;
+        return projections.size();
     }
 
     public static Supplier supplier(
