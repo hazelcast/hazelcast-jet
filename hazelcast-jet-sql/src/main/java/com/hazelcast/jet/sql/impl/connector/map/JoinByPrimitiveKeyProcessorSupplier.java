@@ -16,14 +16,11 @@
 
 package com.hazelcast.jet.sql.impl.connector.map;
 
-import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceOrderedP;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
@@ -41,7 +38,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Traversers.singleton;
 import static com.hazelcast.jet.Util.entry;
@@ -96,40 +92,29 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
     public Collection<? extends Processor> get(int count) {
         List<Processor> processors = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            ServiceContext context =
-                    new ServiceContext(map, rightRowProjectorSupplier.get(serializationService, extractors));
+            KvRowProjector projector = rightRowProjectorSupplier.get(serializationService, extractors);
+            TransientReference<IMap<Object, Object>> context = new TransientReference<>(map);
             Processor processor = new AsyncTransformUsingServiceOrderedP<>(
                     ServiceFactories.nonSharedService(ctx -> context),
                     null,
                     MAX_CONCURRENT_OPS,
-                    joinFn(inner, leftEquiJoinIndex, condition)
+                    (TransientReference<IMap<Object, Object>> ctx, Object[] left) -> {
+                        Object key = left[leftEquiJoinIndex];
+                        if (key == null) {
+                            return inner ? null : completedFuture(null);
+                        }
+                        return ctx.ref.getAsync(key).toCompletableFuture();
+                    },
+                    (left, value) -> {
+                        Object[] joined = join(left, left[leftEquiJoinIndex], value, projector, condition);
+                        return joined != null ? singleton(joined)
+                                : inner ? null
+                                : singleton(extendArray(left, projector.getColumnCount()));
+                    }
             );
             processors.add(processor);
         }
         return processors;
-    }
-
-    private static BiFunctionEx<ServiceContext, Object[], CompletableFuture<Traverser<Object[]>>> joinFn(
-            boolean inner,
-            int leftEquiJoinIndex,
-            Expression<Boolean> condition
-    ) {
-        return (ctx, left) -> {
-            Object key = left[leftEquiJoinIndex];
-            if (key == null) {
-                return inner
-                        ? null
-                        : completedFuture(singleton(extendArray(left, ctx.rightRowProjector.getColumnCount())));
-            }
-
-            return ctx.map.getAsync(key).toCompletableFuture()
-                      .thenApply(value -> {
-                          Object[] joined = join(left, key, value, ctx.rightRowProjector, condition);
-                          return joined != null ? singleton(joined)
-                                  : inner ? null
-                                  : singleton(extendArray(left, ctx.rightRowProjector.getColumnCount()));
-                      });
-        };
     }
 
     private static Object[] join(
@@ -170,25 +155,20 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
     }
 
     /**
-     * This class must be serializable because ServiceFactory requires it, but
-     * is never serialized because we create our ServiceFactory only when
-     * creating the processor.
-     * <p>
-     * We could add an assert that will break when we try to serialize, but the
-     * {@link Util#checkSerializable(Object, String)} method serializes it.
+     * A reference to an object, which is serializable, but the reference is
+     * transient. Used to workaround the need for ServiceContext to be
+     * serializable, but never actually serialized.
      */
     @SuppressFBWarnings(
             value = {"SE_TRANSIENT_FIELD_NOT_RESTORED"},
             justification = "the class is never serialized"
     )
-    private static final class ServiceContext implements Serializable {
+    private static final class TransientReference<T> implements Serializable {
 
-        private final transient IMap<Object, Object> map;
-        private final transient KvRowProjector rightRowProjector;
+        private final transient T ref;
 
-        private ServiceContext(IMap<Object, Object> map, KvRowProjector rightRowProjector) {
-            this.map = map;
-            this.rightRowProjector = rightRowProjector;
+        private TransientReference(T ref) {
+            this.ref = ref;
         }
     }
 }

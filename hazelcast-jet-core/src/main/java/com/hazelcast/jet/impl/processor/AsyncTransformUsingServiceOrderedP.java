@@ -47,11 +47,13 @@ import static com.hazelcast.jet.impl.processor.ProcessorSupplierWithService.supp
  *
  * @param <S> context object type
  * @param <T> received item type
+ * @param <IR> intermediate result type
  * @param <R> emitted item type
  */
-public class AsyncTransformUsingServiceOrderedP<C, S, T, R> extends AbstractAsyncTransformUsingServiceP<C, S> {
+public class AsyncTransformUsingServiceOrderedP<C, S, T, IR, R> extends AbstractAsyncTransformUsingServiceP<C, S> {
 
-    private final BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> callAsyncFn;
+    private final BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<IR>> callAsyncFn;
+    private final BiFunctionEx<? super T, ? super IR, ? extends Traverser<? extends R>> mapResultFn;
 
     // The queue holds both watermarks and output items
     private ArrayDeque<Object> queue;
@@ -71,10 +73,12 @@ public class AsyncTransformUsingServiceOrderedP<C, S, T, R> extends AbstractAsyn
             @Nonnull ServiceFactory<C, S> serviceFactory,
             @Nullable C serviceContext,
             int maxConcurrentOps,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> callAsyncFn
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<IR>> callAsyncFn,
+            @Nonnull BiFunctionEx<? super T, ? super IR, ? extends Traverser<? extends R>> mapResultFn
     ) {
         super(serviceFactory, serviceContext, maxConcurrentOps, true);
         this.callAsyncFn = callAsyncFn;
+        this.mapResultFn = mapResultFn;
     }
 
     @Override
@@ -91,7 +95,7 @@ public class AsyncTransformUsingServiceOrderedP<C, S, T, R> extends AbstractAsyn
         }
         @SuppressWarnings("unchecked")
         T castItem = (T) item;
-        CompletableFuture<? extends Traverser<? extends R>> future = callAsyncFn.apply(service, castItem);
+        CompletableFuture<IR> future = callAsyncFn.apply(service, castItem);
         if (future != null) {
             queue.add(tuple2(castItem, future));
         }
@@ -166,12 +170,15 @@ public class AsyncTransformUsingServiceOrderedP<C, S, T, R> extends AbstractAsyn
                 queuedWmCount--;
             } else {
                 @SuppressWarnings("unchecked")
-                CompletableFuture<Traverser<R>> f = ((Tuple2<T, CompletableFuture<Traverser<R>>>) o).f1();
-                if (!f.isDone()) {
+                Tuple2<T, CompletableFuture<IR>> cast = (Tuple2<T, CompletableFuture<IR>>) o;
+                T item = cast.f0();
+                CompletableFuture<IR> future = cast.f1();
+                assert future != null;
+                if (!future.isDone()) {
                     return false;
                 }
                 try {
-                    currentTraverser = f.get();
+                    currentTraverser = mapResultFn.apply(item, future.get());
                     if (currentTraverser == null) {
                         currentTraverser = Traversers.empty();
                     }
@@ -193,6 +200,6 @@ public class AsyncTransformUsingServiceOrderedP<C, S, T, R> extends AbstractAsyn
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> callAsyncFn
     ) {
         return supplierWithService(serviceFactory, (serviceFn, context) ->
-                new AsyncTransformUsingServiceOrderedP<>(serviceFn, context, maxConcurrentOps, callAsyncFn));
+                new AsyncTransformUsingServiceOrderedP<>(serviceFn, context, maxConcurrentOps, callAsyncFn, (i, r) -> r));
     }
 }

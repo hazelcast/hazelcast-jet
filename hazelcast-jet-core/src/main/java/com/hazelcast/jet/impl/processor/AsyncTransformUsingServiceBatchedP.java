@@ -44,7 +44,7 @@ import static com.hazelcast.jet.impl.processor.ProcessorSupplierWithService.supp
  * @param <R> emitted item type
  */
 public final class AsyncTransformUsingServiceBatchedP<C, S, T, R>
-        extends AsyncTransformUsingServiceOrderedP<C, S, List<T>, R> {
+        extends AsyncTransformUsingServiceOrderedP<C, S, List<T>, Traverser<R>, R> {
 
     private final int maxBatchSize;
 
@@ -58,7 +58,7 @@ public final class AsyncTransformUsingServiceBatchedP<C, S, T, R>
             int maxBatchSize,
             @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<Traverser<R>>> callAsyncFn
     ) {
-        super(serviceFactory, serviceContext, maxConcurrentOps, callAsyncFn);
+        super(serviceFactory, serviceContext, maxConcurrentOps, callAsyncFn, (i, r) -> r);
         this.maxBatchSize = maxBatchSize;
     }
 
