@@ -30,7 +30,7 @@ import java.util.List;
 
 public class SqlShowStatement extends SqlCall {
 
-    public static final SqlSpecialOperator SHOW_MAPPINGS = new SqlSpecialOperator("SHOW EXTERNAL TABLES", SqlKind.OTHER);
+    public static final SqlSpecialOperator SHOW_MAPPINGS = new SqlSpecialOperator("SHOW EXTERNAL MAPPINGS", SqlKind.OTHER);
     public static final SqlSpecialOperator SHOW_JOBS = new SqlSpecialOperator("SHOW JOBS", SqlKind.OTHER);
 
     private final ShowStatementTarget target;
