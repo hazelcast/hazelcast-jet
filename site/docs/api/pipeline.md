@@ -108,7 +108,8 @@ round-robin data transfer manner.
 If the pipeline is stateless or has no order-dependent stateful logic,
 the change of the event order will not affect the processing outcome.
 Maintaining the order in such pipelines does not matter. But when a
-pipeline contains an order-dependent stateful logic, its outcome will be
+pipeline contains a stage with order-dependent stateful logic, its
+ outcome will be
 affected by the change of event order. Also, external services that a
 pipeline interacts with can be stateful and their state can also be
 order dependent. When a pipeline has a particularly stateful element, it
