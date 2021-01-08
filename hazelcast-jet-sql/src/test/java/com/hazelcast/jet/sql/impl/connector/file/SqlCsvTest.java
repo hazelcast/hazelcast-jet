@@ -51,13 +51,13 @@ public class SqlCsvTest extends SqlTestSupport {
     public void test_nulls() {
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
-                           + "nonExistingField VARCHAR"
-                           + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
-                           + "OPTIONS ("
-                           + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
-                           + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
-                           + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.csv" + '\''
-                           + ")"
+                + "nonExistingField VARCHAR"
+                + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ("
+                + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.csv" + '\''
+                + ")"
         );
 
         assertRowsAnyOrder(
@@ -70,14 +70,14 @@ public class SqlCsvTest extends SqlTestSupport {
     public void test_fieldsMapping() {
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
-                           + "id TINYINT EXTERNAL NAME byte"
-                           + ", name VARCHAR EXTERNAL NAME string"
-                           + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
-                           + "OPTIONS ("
-                           + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
-                           + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
-                           + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.csv" + '\''
-                           + ")"
+                + "id TINYINT EXTERNAL NAME byte"
+                + ", name VARCHAR EXTERNAL NAME string"
+                + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ("
+                + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.csv" + '\''
+                + ")"
         );
 
         assertRowsAnyOrder(
@@ -90,26 +90,26 @@ public class SqlCsvTest extends SqlTestSupport {
     public void test_allTypes() {
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
-                           + "string VARCHAR"
-                           + ", \"boolean\" BOOLEAN"
-                           + ", byte TINYINT"
-                           + ", short SMALLINT"
-                           + ", \"int\" INT"
-                           + ", long BIGINT"
-                           + ", \"float\" REAL"
-                           + ", \"double\" DOUBLE"
-                           + ", \"decimal\" DECIMAL"
-                           + ", \"time\" TIME"
-                           + ", \"date\" DATE"
-                           + ", \"timestamp\" TIMESTAMP"
-                           + ", timestampTz TIMESTAMP WITH TIME ZONE"
-                           + ", object OBJECT"
-                           + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
-                           + "OPTIONS ( "
-                           + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
-                           + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
-                           + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.csv" + '\''
-                           + ")"
+                + "string VARCHAR"
+                + ", \"boolean\" BOOLEAN"
+                + ", byte TINYINT"
+                + ", short SMALLINT"
+                + ", \"int\" INT"
+                + ", long BIGINT"
+                + ", \"float\" REAL"
+                + ", \"double\" DOUBLE"
+                + ", \"decimal\" DECIMAL"
+                + ", \"time\" TIME"
+                + ", \"date\" DATE"
+                + ", \"timestamp\" TIMESTAMP"
+                + ", timestampTz TIMESTAMP WITH TIME ZONE"
+                + ", object OBJECT"
+                + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.csv" + '\''
+                + ")"
         );
 
         assertRowsAnyOrder(
@@ -137,30 +137,30 @@ public class SqlCsvTest extends SqlTestSupport {
     public void test_schemaDiscovery() {
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + ' '
-                           + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
-                           + "OPTIONS ( "
-                           + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
-                           + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
-                           + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.csv" + '\''
-                           + ")"
+                + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.csv" + '\''
+                + ")"
         );
 
         assertRowsAnyOrder(
                 "SELECT "
-                + "string"
-                + ", \"boolean\""
-                + ", byte"
-                + ", short"
-                + ", \"int\""
-                + ", long"
-                + ", \"float\""
-                + ", \"double\""
-                + ", \"decimal\""
-                + ", \"time\""
-                + ", \"date\""
-                + ", \"timestamp\""
-                + ", \"timestampTz\""
-                + " FROM " + name,
+                        + "string"
+                        + ", \"boolean\""
+                        + ", byte"
+                        + ", short"
+                        + ", \"int\""
+                        + ", long"
+                        + ", \"float\""
+                        + ", \"double\""
+                        + ", \"decimal\""
+                        + ", \"time\""
+                        + ", \"date\""
+                        + ", \"timestamp\""
+                        + ", \"timestampTz\""
+                        + " FROM " + name,
                 singletonList(new Row(
                         "string",
                         "true",
@@ -183,26 +183,26 @@ public class SqlCsvTest extends SqlTestSupport {
     public void test_tableFunction() {
         assertRowsAnyOrder(
                 "SELECT "
-                + "string"
-                + ", \"boolean\""
-                + ", byte"
-                + ", short"
-                + ", \"int\""
-                + ", long"
-                + ", \"float\""
-                + ", \"double\""
-                + ", \"decimal\""
-                + ", \"time\""
-                + ", \"date\""
-                + ", \"timestamp\""
-                + ", \"timestampTz\""
-                + " FROM TABLE ("
-                + "csv_file ("
-                + " path => '" + RESOURCES_PATH + "'"
-                + " , glob => 'file.csv'"
-                + " , options => MAP['key', 'value']"
-                + ")"
-                + ")",
+                        + "string"
+                        + ", \"boolean\""
+                        + ", byte"
+                        + ", short"
+                        + ", \"int\""
+                        + ", long"
+                        + ", \"float\""
+                        + ", \"double\""
+                        + ", \"decimal\""
+                        + ", \"time\""
+                        + ", \"date\""
+                        + ", \"timestamp\""
+                        + ", \"timestampTz\""
+                        + " FROM TABLE ("
+                        + "csv_file ("
+                        + " path => '" + RESOURCES_PATH + "'"
+                        + " , glob => 'file.csv'"
+                        + " , options => MAP['key', 'value']"
+                        + ")"
+                        + ")",
                 singletonList(new Row(
                         "string",
                         "true",
@@ -226,10 +226,7 @@ public class SqlCsvTest extends SqlTestSupport {
         assertThatThrownBy(() -> sqlService.execute(
                 "SELECT *"
                 + " FROM TABLE ("
-                + "csv_file ("
-                + " path => '/non/existing/path/'"
-                + " , glob => 'file.csv'"
-                + ")"
+                + "csv_file (path => '/non/existing/path/')"
                 + ")"
         )).isInstanceOf(HazelcastSqlException.class)
           .hasMessageContaining("The resolved field list is empty");
@@ -239,12 +236,12 @@ public class SqlCsvTest extends SqlTestSupport {
     public void when_conversionFails_then_queryFails() {
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " (string INT) "
-                           + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
-                           + "OPTIONS ( "
-                           + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
-                           + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
-                           + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.csv" + '\''
-                           + ")"
+                + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "file.csv" + '\''
+                + ")"
         );
 
         assertThatThrownBy(() -> sqlService.execute("SELECT * FROM " + name).iterator().hasNext())
@@ -255,12 +252,12 @@ public class SqlCsvTest extends SqlTestSupport {
     public void when_columnsSpecified_then_fileNotAccessed() {
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " (field INT) "
-                           + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
-                           + "OPTIONS ( "
-                           + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
-                           + ", '" + FileSqlConnector.OPTION_PATH + "'='/non-existent-directory'"
-                           + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "foo.csv" + '\''
-                           + ")"
+                + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='/non-existent-directory'"
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "foo.csv" + '\''
+                + ")"
         );
     }
 }
