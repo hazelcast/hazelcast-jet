@@ -85,7 +85,8 @@ public class IMapJoinerTest {
     }
 
     @Test
-    public void test_joinByPredicateInner() {
+    @Parameters(method = "joinTypes")
+    public void test_joinByPredicate(JoinRelType joinType) {
         // given
         given(rightRowProjectorSupplier.paths()).willReturn(new QueryPath[]{QueryPath.create("path")});
         given(dag.newUniqueVertex(contains("Predicate"), isA(ProcessorMetaSupplier.class))).willReturn(vertex);
@@ -95,34 +96,13 @@ public class IMapJoinerTest {
                 dag,
                 "imap-name",
                 "table-name",
-                joinInfo(INNER, new int[]{0}, new int[]{0}),
+                joinInfo(joinType, new int[]{0}, new int[]{0}),
                 rightRowProjectorSupplier
         );
 
         // then
         assertThat(vertexWithConfig.vertex()).isEqualTo(vertex);
         assertThat(vertexWithConfig.configureEdgeFn()).isNotNull();
-    }
-
-    @Test
-    public void test_joinByPredicateOuter() {
-        // given
-        given(rightRowProjectorSupplier.paths()).willReturn(new QueryPath[]{QueryPath.create("path")});
-        given(dag.newUniqueVertex(contains("Predicate"), isA(JoinByEquiJoinProcessorSupplier.class)))
-                .willReturn(vertex);
-
-        // when
-        VertexWithInputConfig vertexWithConfig = IMapJoiner.join(
-                dag,
-                "imap-name",
-                "table-name",
-                joinInfo(LEFT, new int[]{0}, new int[]{0}),
-                rightRowProjectorSupplier
-        );
-
-        // then
-        assertThat(vertexWithConfig.vertex()).isEqualTo(vertex);
-        assertThat(vertexWithConfig.configureEdgeFn()).isNull();
     }
 
     @Test

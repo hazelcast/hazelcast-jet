@@ -283,7 +283,8 @@ public interface SqlConnector {
      *     <li>join all these rows using {@link ExpressionUtil#join} with the
      *         received row
      *     <li>if no rows matched and {@code joinInfo.isLeftOuter() == true)},
-     *
+     *         the input row from the left side should be padded with {@code
+     *         null}s and returned
      * </ul>
      *
      * @param table      the table object

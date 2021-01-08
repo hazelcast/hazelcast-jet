@@ -118,7 +118,7 @@ public class JoinByEquiJoinProcessorTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void when_projectedByProjector_then_modified_inner() throws Exception {
+    public void when_projectedByProjector_inner_then_modified() throws Exception {
         // given
         Processor processor = processor(INNER, (Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
 
@@ -181,7 +181,7 @@ public class JoinByEquiJoinProcessorTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void when_projectedByProjector_then_modified_outer() throws Exception {
+    public void when_projectedByProjector_outer_then_modified() throws Exception {
         // given
         Processor processor = processor(LEFT, (Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
 
@@ -198,7 +198,6 @@ public class JoinByEquiJoinProcessorTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void when_filteredOutByCondition_outer_then_nulls() throws Exception {
         // given
         Processor processor = processor(

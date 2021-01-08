@@ -61,9 +61,10 @@ final class IMapJoiner {
             // the `map.entrySet(predicate)` method.
             assert joinInfo.isLeftOuter() || joinInfo.isInner();
             return new VertexWithInputConfig(
-                    dag.newUniqueVertex("Join(Predicate-" + tableName + ")",
-                            JoinByEquiJoinProcessorSupplier.supplier(
-                                    joinInfo, mapName, rightRowProjectorSupplier)),
+                    dag.newUniqueVertex(
+                            "Join(Predicate-" + tableName + ")",
+                            JoinByEquiJoinProcessorSupplier.supplier(joinInfo, mapName, rightRowProjectorSupplier)
+                    ),
                     edge -> {
                         // In case of an inner join we'll use `entrySet(predicate, partitionIdSet)` - we'll fan-out each
                         // left item to all members and each member will query a subset of partitions (the local ones).
