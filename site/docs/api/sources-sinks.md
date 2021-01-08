@@ -320,8 +320,7 @@ and
 Provide a location of the keyfile via
 `google.cloud.auth.service.account.json.keyfile` source option, using
 `FileSourceBuilder#option` method on the source builder. Note that
-the file must be available on the node where you submit the job and on
-the cluster members.
+the file must be available on all the cluster members.
 
 For additional ways to authenticate see
 [Google Cloud Hadoop connector](https://github.com/GoogleCloudDataproc/hadoop-connectors/blob/master/gcs/CONFIGURATION.md#authentication).

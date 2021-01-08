@@ -25,9 +25,9 @@ import com.hazelcast.jet.hadoop.impl.ReadHadoopOldApiP;
 import com.hazelcast.jet.hadoop.impl.SerializableConfiguration;
 import com.hazelcast.jet.hadoop.impl.WriteHadoopNewApiP;
 import com.hazelcast.jet.hadoop.impl.WriteHadoopOldApiP;
+import com.hazelcast.jet.pipeline.file.FileSources;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 
 import javax.annotation.Nonnull;
@@ -61,12 +61,16 @@ public final class HadoopProcessors {
     }
 
     /**
-     * Returns a supplier of processors for
-     * {@link HadoopSources#inputFormat(Configuration, BiFunctionEx)}.
+     * Returns a supplier of processors for {@link FileSources#files(String)}.
+     *
+     * The configuration happens via provided {@code configureFn} function on the
+     * job coordinator node. This is useful in cases where setting up the
+     * configuration requires access to the server and only the cluster members
+     * have the access.
      */
     @Nonnull
     public static <K, V, R> ProcessorMetaSupplier readHadoopP(
-            @Nonnull ConsumerEx<Job> configureFn,
+            @Nonnull ConsumerEx<Configuration> configureFn,
             @Nonnull BiFunctionEx<K, V, R> projectionFn
     ) {
         return new ReadHadoopNewApiP.MetaSupplier<>(

@@ -150,7 +150,7 @@ public class FileSourceBuilder<T> {
      * When there is no file matching the glob specified by
      * {@link #glob(String)} (or the default glob) Jet throws an exception by
      * default. This might be problematic in some cases, where the directory
-     * is empty. To override this behaviour set this to true. The source
+     * is empty. To override this behaviour set this to true.
      * <p>
      * If set to true and there are no files in the directory the source will
      * produce 0 items.

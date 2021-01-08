@@ -108,9 +108,8 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
                     "Did you provide correct modules on classpath?");
         }
 
-        return readHadoopP(job -> {
+        return readHadoopP(configuration -> {
             try {
-                Configuration configuration = job.getConfiguration();
                 configuration.setBoolean(FileInputFormat.INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, true);
                 configuration.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, false);
                 configuration.setBoolean(HadoopSources.SHARED_LOCAL_FS, fsc.isSharedFileSystem());
@@ -119,10 +118,18 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
                     configuration.set(option.getKey(), option.getValue());
                 }
 
+                // Some methods we use to configure actually take a Job
+                Job job = Job.getInstance(configuration);
                 Path inputPath = getInputPath(fsc, configuration);
                 FileInputFormat.addInputPath(job, inputPath);
 
                 configurer.configure(job, fileFormat);
+
+                // The job creates a copy of the configuration, so we need to copy the new setting to the original
+                // configuration instance
+                for (Entry<String, String> entry : job.getConfiguration()) {
+                    configuration.set(entry.getKey(), entry.getValue());
+                }
             } catch (IOException e) {
                 throw new JetException("Could not create a source", e);
             }

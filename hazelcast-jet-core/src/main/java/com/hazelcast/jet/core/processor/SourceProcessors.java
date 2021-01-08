@@ -47,6 +47,7 @@ import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.SourceBuilder.SourceBuffer;
 import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.file.FileSources;
 import com.hazelcast.map.EventJournalMapEvent;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
@@ -343,8 +344,8 @@ public final class SourceProcessors {
     }
 
     /**
-     * Returns a supplier of processors for {@link Sources#filesBuilder}.
-     * See {@link FileSourceBuilder#build} for more details.
+     * Returns a supplier of processors for {@link FileSources#files(String)}
+     * to read local files.
      */
     @Nonnull
     public static <I> ProcessorMetaSupplier readFilesP(

@@ -165,14 +165,14 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
          */
         @SuppressFBWarnings("SE_BAD_FIELD")
         private Configuration configuration;
-        private final ConsumerEx<Job> configureFn;
+        private final ConsumerEx<Configuration> configureFn;
         private final BiFunctionEx<K, V, R> projectionFn;
 
         private transient Map<Address, List<IndexedInputSplit>> assigned;
 
         public MetaSupplier(
                 @Nonnull Configuration configuration,
-                @Nonnull ConsumerEx<Job> configureFn,
+                @Nonnull ConsumerEx<Configuration> configureFn,
                 @Nonnull BiFunctionEx<K, V, R> projectionFn) {
             this.configuration = configuration;
             this.configureFn = configureFn;
@@ -212,15 +212,12 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
             return new HadoopFileTraverser<>(configuration, getSplits(configuration), projectionFn);
         }
 
-        private void updateConfiguration() throws IOException {
-            Job job = Job.getInstance(configuration);
-            configureFn.accept(job);
-            configuration = SerializableConfiguration.asSerializable(job.getConfiguration());
+        private void updateConfiguration() {
+            configureFn.accept(configuration);
         }
     }
 
     private static final class Supplier<K, V, R> implements ProcessorSupplier {
-
         static final long serialVersionUID = 1L;
 
         /**
