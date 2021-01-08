@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.jet.sql.SqlTestSupport;
-import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
