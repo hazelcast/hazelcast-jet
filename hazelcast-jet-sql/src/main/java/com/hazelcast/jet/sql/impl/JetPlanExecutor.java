@@ -40,13 +40,10 @@ import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.SqlResultImpl;
 import com.hazelcast.sql.impl.row.HeapRow;
-import com.hazelcast.sql.impl.row.Row;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
@@ -190,25 +187,21 @@ class JetPlanExecutor {
 
     public SqlResult execute(ShowStatementPlan plan) {
         SqlRowMetadata metadata = new SqlRowMetadata(singletonList(new SqlColumnMetadata("name", SqlColumnType.VARCHAR)));
-        Stream<String> rowStream;
+        Stream<String> rows;
         if (plan.getShowTarget() == ShowStatementTarget.MAPPINGS) {
-            rowStream = catalog.getMappingNames().stream();
+            rows = catalog.getMappingNames().stream();
         } else {
             assert plan.getShowTarget() == ShowStatementTarget.JOBS;
             JetService jetService = ((HazelcastInstanceImpl) jetInstance.getHazelcastInstance()).node.nodeEngine
                     .getService(JetService.SERVICE_NAME);
-            rowStream = jetService.getJobRepository().getJobRecords().stream()
-                    .map(record -> record.getConfig().getName())
-                    .filter(Objects::nonNull);
+            rows = jetService.getJobRepository().getJobRecords().stream()
+                             .map(record -> record.getConfig().getName())
+                             .filter(Objects::nonNull);
         }
-
-        List<Row> rows = rowStream.sorted()
-                                  .map(name -> new HeapRow(new Object[]{name}))
-                                  .collect(Collectors.toList());
 
         return new JetSqlResultImpl(
                 QueryId.create(jetInstance.getHazelcastInstance().getLocalEndpoint().getUuid()),
-                new JetStaticQueryResultProducer(rows.iterator()),
+                new JetStaticQueryResultProducer(rows.sorted().map(name -> new HeapRow(new Object[]{name})).iterator()),
                 metadata
         );
     }

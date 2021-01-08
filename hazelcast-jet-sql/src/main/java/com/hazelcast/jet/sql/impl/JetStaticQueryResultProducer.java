@@ -26,10 +26,11 @@ import java.util.concurrent.TimeUnit;
 
 public class JetStaticQueryResultProducer implements QueryResultProducer {
 
-    private final Iterator<Row> iterator;
+    private final Iterator<? extends Row> iterator;
+
     private boolean iteratorRequested;
 
-    public JetStaticQueryResultProducer(Iterator<Row> iterator) {
+    public JetStaticQueryResultProducer(Iterator<? extends Row> iterator) {
         this.iterator = iterator;
     }
 
