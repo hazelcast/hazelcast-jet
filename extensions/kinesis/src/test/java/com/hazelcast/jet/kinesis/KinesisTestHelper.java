@@ -51,7 +51,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 class KinesisTestHelper {
 
     static final RetryStrategy RETRY_STRATEGY = RetryStrategies.custom()
-            .maxAttempts(10)
+            .maxAttempts(30)
             .intervalFunction(IntervalFunction.exponentialBackoffWithCap(250L, 2.0, 1000L))
             .build();
 
@@ -67,21 +67,20 @@ class KinesisTestHelper {
     }
 
     public boolean streamExists() {
-        Set<String> streams = new HashSet<>(callSafely(this::listStreams));
+        Set<String> streams = new HashSet<>(callSafely(this::listStreams, "stream listing"));
         return streams.contains(stream);
     }
 
     public void waitForStreamToActivate() {
         int attempt = 0;
         while (true) {
-            StreamStatus status = callSafely(this::getStreamStatus);
+            StreamStatus status = callSafely(this::getStreamStatus, "stream status");
             switch (status) {
                 case ACTIVE:
                     return;
                 case CREATING:
                 case UPDATING:
-                    logger.info("Waiting for stream " + stream + " to become active...");
-                    wait(++attempt);
+                    wait(++attempt, "stream activation");
                     break;
                 case DELETING:
                     throw new JetException("Stream is being deleted");
@@ -94,10 +93,9 @@ class KinesisTestHelper {
     public void waitForStreamToDisappear() {
         int attempt = 0;
         while (true) {
-            List<String> streams = callSafely(this::listStreams);
+            List<String> streams = callSafely(this::listStreams, "stream disappearance");
             if (streams.contains(stream)) {
-                logger.info("Waiting for stream " + stream + " to disappear...");
-                wait(++attempt);
+                wait(++attempt, "stream disappearance");
             } else {
                 return;
             }
@@ -114,20 +112,20 @@ class KinesisTestHelper {
             request.setShardCount(shardCount);
             request.setStreamName(stream);
             return kinesis.createStream(request);
-        });
+        }, "stream creation");
 
         waitForStreamToActivate();
     }
 
     public void deleteStream() {
         if (streamExists()) {
-            callSafely(() -> kinesis.deleteStream(stream));
+            callSafely(() -> kinesis.deleteStream(stream), "stream deletion");
             waitForStreamToDisappear();
         }
     }
 
     public List<Shard> listOpenShards(Predicate<? super Shard> filter) {
-        return callSafely(this::listOpenShards).stream()
+        return callSafely(this::listOpenShards, "open shard listing").stream()
                 .filter(filter)
                 .collect(Collectors.toList());
     }
@@ -159,7 +157,7 @@ class KinesisTestHelper {
         return shards;
     }
 
-    private <T> T callSafely(Callable<T> callable) {
+    private <T> T callSafely(Callable<T> callable, String action) {
         int attempt = 0;
         while (true) {
             try {
@@ -188,17 +186,22 @@ class KinesisTestHelper {
                 throw rethrow(e);
             }
 
-            wait(++attempt);
+            wait(++attempt, action);
         }
     }
 
-    private static void wait(int attempt) {
+    private void wait(int attempt, String action) {
+        if (attempt > RETRY_STRATEGY.getMaxAttempts()) {
+            throw new JetException(String.format("Abort waiting for %s, too many attempts", action));
+        }
+
+        logger.info(String.format("Waiting for %s ...", action));
         long duration = RETRY_STRATEGY.getIntervalFunction().waitAfterAttempt(attempt);
         try {
             TimeUnit.MILLISECONDS.sleep(duration);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new JetException("Waiting for stream to activate interrupted");
+            throw new JetException(String.format("Waiting for %s interrupted", action));
         }
     }
 
