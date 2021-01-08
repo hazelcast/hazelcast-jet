@@ -112,7 +112,7 @@ pipeline contains a stage with order-dependent stateful logic, its
  outcome will be
 affected by the change of event order. Also, external services that a
 pipeline interacts with can be stateful and their state can also be
-order dependent. When a pipeline has a particularly stateful element, it
+order dependent. When a pipeline has a stateful element, it
 should be checked if it is order-dependent.
 
 `Pipeline` has a property named `preserveOrder` and enabling this
