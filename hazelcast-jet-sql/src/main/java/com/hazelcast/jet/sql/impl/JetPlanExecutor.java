@@ -39,9 +39,10 @@ import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.SqlResultImpl;
-import com.hazelcast.sql.impl.SqlRowImpl;
 import com.hazelcast.sql.impl.row.HeapRow;
+import com.hazelcast.sql.impl.row.Row;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
@@ -189,23 +190,25 @@ class JetPlanExecutor {
 
     public SqlResult execute(ShowStatementPlan plan) {
         SqlRowMetadata metadata = new SqlRowMetadata(singletonList(new SqlColumnMetadata("name", SqlColumnType.VARCHAR)));
-        Stream<String> rows;
+        Stream<String> rowStream;
         if (plan.getShowTarget() == ShowStatementTarget.MAPPINGS) {
-            rows = catalog.getMappingNames().stream();
+            rowStream = catalog.getMappingNames().stream();
         } else {
             assert plan.getShowTarget() == ShowStatementTarget.JOBS;
             JetService jetService = ((HazelcastInstanceImpl) jetInstance.getHazelcastInstance()).node.nodeEngine
                     .getService(JetService.SERVICE_NAME);
-            rows = jetService.getJobRepository().getJobRecords().stream()
+            rowStream = jetService.getJobRepository().getJobRecords().stream()
                     .map(record -> record.getConfig().getName())
                     .filter(Objects::nonNull);
         }
 
-        return new JetStaticSqlResultImpl(
+        List<Row> rows = rowStream.sorted()
+                                  .map(name -> new HeapRow(new Object[]{name}))
+                                  .collect(Collectors.toList());
+
+        return new JetSqlResultImpl(
                 QueryId.create(jetInstance.getHazelcastInstance().getLocalEndpoint().getUuid()),
-                rows.sorted()
-                    .map(name -> new SqlRowImpl(metadata, new HeapRow(new Object[]{name})))
-                    .collect(Collectors.toList()),
+                new JetStaticQueryResultProducer(rows.iterator()),
                 metadata
         );
     }
