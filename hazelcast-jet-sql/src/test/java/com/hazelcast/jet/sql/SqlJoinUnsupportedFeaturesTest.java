@@ -24,7 +24,7 @@ import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class SqlJoinTest extends SqlTestSupport {
+public class SqlJoinUnsupportedFeaturesTest extends SqlTestSupport {
 
     private static SqlService sqlService;
 
