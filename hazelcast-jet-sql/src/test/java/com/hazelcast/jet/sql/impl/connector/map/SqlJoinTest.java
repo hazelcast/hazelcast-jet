@@ -851,4 +851,72 @@ public class SqlJoinTest extends SqlTestSupport {
                 )
         );
     }
+
+    @Test
+    public void test_leftJoinWithNonEquiJoin() {
+        String leftName = randomName();
+        TestBatchSqlConnector.create(
+                sqlService,
+                leftName,
+                singletonList("v"),
+                singletonList(INT),
+                asList(new String[]{"0"}, new String[]{null}, new String[]{"2"}, new String[]{"3"})
+        );
+
+        String mapName = randomName();
+        instance().getMap(mapName).putAll(ImmutableMap.of(
+                1, "value-1",
+                2, "value-2",
+                3, "value-3"
+        ));
+
+        assertRowsAnyOrder(
+                "SELECT l.v, m.__key, m.this " +
+                        "FROM " + leftName + " l " +
+                        "LEFT JOIN " + mapName + " m ON m.__key>l.v",
+                asList(
+                        new Row(0, 1, "value-1"),
+                        new Row(0, 2, "value-2"),
+                        new Row(0, 3, "value-3"),
+                        new Row(null, null, null),
+                        new Row(2, 3, "value-3"),
+                        new Row(3, null, null)
+
+                )
+        );
+    }
+
+    @Test
+    public void test_leftJoinWithNonEquiJoin_additionalCondition() {
+        String leftName = randomName();
+        TestBatchSqlConnector.create(
+                sqlService,
+                leftName,
+                singletonList("v"),
+                singletonList(INT),
+                asList(new String[]{"0"}, new String[]{null}, new String[]{"2"}, new String[]{"3"})
+        );
+
+        String mapName = randomName();
+        instance().getMap(mapName).putAll(ImmutableMap.of(
+                1, "value-1",
+                2, "value-2",
+                3, "value-3"
+        ));
+
+        assertRowsAnyOrder(
+                "SELECT l.v, m.__key, m.this " +
+                        "FROM " + leftName + " l " +
+                        "LEFT JOIN " + mapName + " m ON m.__key>l.v AND m.this IS NOT NULL",
+                asList(
+                        new Row(0, 1, "value-1"),
+                        new Row(0, 2, "value-2"),
+                        new Row(0, 3, "value-3"),
+                        new Row(null, null, null),
+                        new Row(2, 3, "value-3"),
+                        new Row(3, null, null)
+
+                )
+        );
+    }
 }
