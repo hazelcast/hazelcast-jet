@@ -150,7 +150,8 @@ final class JoinByEquiJoinProcessorSupplier implements ProcessorSupplier, DataSe
             Set<Entry<Object, Object>> matchingRows = joinInfo.isInner()
                     ? map.entrySet(predicate, partitions.copy())
                     : map.entrySet(predicate);
-            List<Object[]> joined = join(left, matchingRows, rightRowProjector, joinInfo.nonEquiCondition());
+            List<Object[]> joined = join(left, matchingRows, rightRowProjector, joinInfo.nonEquiCondition(),
+                    joinInfo.isLeftOuter());
             return joined.isEmpty() && joinInfo.isLeftOuter()
                     ? singleton(extendArray(left, rightRowProjector.getColumnCount()))
                     : traverseIterable(joined);
@@ -161,7 +162,8 @@ final class JoinByEquiJoinProcessorSupplier implements ProcessorSupplier, DataSe
             Object[] left,
             Set<Entry<Object, Object>> entries,
             KvRowProjector rightRowProjector,
-            Expression<Boolean> condition
+            Expression<Boolean> condition,
+            boolean isLeftOuter
     ) {
         List<Object[]> rows = new ArrayList<>();
         for (Entry<Object, Object> entry : entries) {
@@ -174,6 +176,9 @@ final class JoinByEquiJoinProcessorSupplier implements ProcessorSupplier, DataSe
             if (joined != null) {
                 rows.add(joined);
             }
+        }
+        if (rows.isEmpty() && isLeftOuter) {
+            rows.add(extendArray(left, rightRowProjector.getColumnCount()));
         }
         return rows;
     }
