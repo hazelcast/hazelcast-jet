@@ -93,11 +93,10 @@ public class KafkaSqlConnector implements SqlConnector {
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
             @Nonnull String tableName,
+            @Nonnull String topicName,
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
-        String topicName = options.getOrDefault(OPTION_OBJECT_NAME, tableName);
-
         KvMetadata keyMetadata = metadataResolvers.resolveMetadata(true, resolvedFields, options, null);
         KvMetadata valueMetadata = metadataResolvers.resolveMetadata(false, resolvedFields, options, null);
         List<TableField> fields = concat(keyMetadata.getFields().stream(), valueMetadata.getFields().stream())

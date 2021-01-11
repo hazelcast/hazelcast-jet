@@ -83,7 +83,13 @@ public class MappingCatalog implements TableResolver {
 
             SqlConnector connector = connectorCache.forType(type);
             List<MappingField> resolvedFields = connector.resolveAndValidateFields(nodeEngine, options, mapping.fields());
-            return new Mapping(mapping.name(), type, new ArrayList<>(resolvedFields), new HashMap<>(options));
+            return new Mapping(
+                    mapping.name(),
+                    mapping.objectName(),
+                    type,
+                    new ArrayList<>(resolvedFields),
+                    new HashMap<>(options)
+            );
         } catch (Exception e) {
             throw QueryException.error(e.getMessage(), e);
         }
@@ -125,6 +131,13 @@ public class MappingCatalog implements TableResolver {
 
     private Table toTable(Mapping mapping) {
         SqlConnector connector = connectorCache.forType(mapping.type());
-        return connector.createTable(nodeEngine, SCHEMA_NAME_PUBLIC, mapping.name(), mapping.options(), mapping.fields());
+        return connector.createTable(
+                nodeEngine,
+                SCHEMA_NAME_PUBLIC,
+                mapping.name(),
+                mapping.objectName(),
+                mapping.options(),
+                mapping.fields()
+        );
     }
 }

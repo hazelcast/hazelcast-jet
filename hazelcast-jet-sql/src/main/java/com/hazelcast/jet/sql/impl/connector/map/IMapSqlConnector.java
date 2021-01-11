@@ -93,11 +93,10 @@ public class IMapSqlConnector implements SqlConnector {
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
             @Nonnull String tableName,
+            @Nonnull String mapName,
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
-        String mapName = options.getOrDefault(OPTION_OBJECT_NAME, tableName);
-
         InternalSerializationService ss = (InternalSerializationService) nodeEngine.getSerializationService();
 
         KvMetadata keyMetadata = metadataResolvers.resolveMetadata(true, resolvedFields, options, ss);

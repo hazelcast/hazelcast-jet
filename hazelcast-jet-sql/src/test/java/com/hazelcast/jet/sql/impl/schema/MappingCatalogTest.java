@@ -34,7 +34,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 public class MappingCatalogTest {
 
@@ -54,7 +54,7 @@ public class MappingCatalogTest {
 
     @Before
     public void before() {
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
 
         catalog = new MappingCatalog(nodeEngine, storage, connectorCache);
     }
@@ -73,7 +73,7 @@ public class MappingCatalogTest {
         assertThatThrownBy(() -> catalog.createMapping(mapping, true, true))
                 .isInstanceOf(QueryException.class)
                 .hasMessageContaining("expected test exception");
-        verifyZeroInteractions(storage);
+        verifyNoInteractions(storage);
     }
 
     @Test
@@ -153,6 +153,6 @@ public class MappingCatalogTest {
     }
 
     private static Mapping mapping() {
-        return new Mapping("name", "type", emptyList(), emptyMap());
+        return new Mapping("name", "external_name", "type", emptyList(), emptyMap());
     }
 }
