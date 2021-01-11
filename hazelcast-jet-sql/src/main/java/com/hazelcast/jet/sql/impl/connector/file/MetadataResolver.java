@@ -37,7 +37,6 @@ import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_IGNORE_FILE_NOT_FOUND;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_PATH;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_SHARED_FILE_SYSTEM;
-import static java.util.Collections.emptyList;
 import static java.util.Map.Entry;
 
 abstract class MetadataResolver<T> {
