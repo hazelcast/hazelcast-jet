@@ -177,9 +177,6 @@ final class JoinByEquiJoinProcessorSupplier implements ProcessorSupplier, DataSe
                 rows.add(joined);
             }
         }
-        if (rows.isEmpty() && isLeftOuter) {
-            rows.add(extendArray(left, rightRowProjector.getColumnCount()));
-        }
         return rows;
     }
 
