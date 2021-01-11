@@ -41,7 +41,6 @@ public class MappingStorage {
     private static final String CATALOG_MAP_NAME = "__sql.catalog";
 
     private static final int MAX_CHECK_ATTEMPTS = 3;
-    private static final long TIMEOUT_MILLIS = 250;
     private static final long SLEEP_MILLIS = 100;
 
     private final NodeEngine nodeEngine;
@@ -82,7 +81,6 @@ public class MappingStorage {
                         return operationService
                                 .createInvocationBuilder(ReplicatedMapService.SERVICE_NAME, operation, memberAddress)
                                 .setTryCount(1)
-                                .setCallTimeout(TIMEOUT_MILLIS)
                                 .invoke()
                                 .toCompletableFuture()
                                 .thenApply(result -> Objects.equals(mapping, result) ? memberAddress : null);
