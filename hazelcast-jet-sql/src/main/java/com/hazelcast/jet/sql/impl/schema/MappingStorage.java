@@ -105,10 +105,9 @@ public class MappingStorage {
     }
 
     private Collection<Address> getMemberAddresses() {
-        Address thisAddress = nodeEngine.getThisAddress();
         return nodeEngine.getClusterService().getMembers(MemberSelectors.DATA_MEMBER_SELECTOR).stream()
+                         .filter(member -> !member.localMember() && !member.isLiteMember())
                          .map(Member::getAddress)
-                         .filter(address -> !address.equals(thisAddress))
                          .collect(toSet());
     }
 
