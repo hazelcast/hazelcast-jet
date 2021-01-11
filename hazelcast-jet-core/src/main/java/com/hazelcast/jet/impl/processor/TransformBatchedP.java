@@ -21,8 +21,6 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Inbox;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -35,42 +33,25 @@ import java.util.function.Function;
  */
 public class TransformBatchedP<T, R> extends AbstractProcessor {
 
-    private final Function<? super List<T>, ? extends Traverser<? extends R>> mapper;
+    private final Function<? super Iterable<T>, ? extends Traverser<? extends R>> mapper;
 
-    private int pendingItems;
     private Traverser<? extends R> outputTraverser;
 
-    public TransformBatchedP(Function<? super List<T>, ? extends Traverser<? extends R>> mapper) {
+    public TransformBatchedP(Function<? super Iterable<T>, ? extends Traverser<? extends R>> mapper) {
         this.mapper = mapper;
     }
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
-        if (pendingItems == 0) {
-            List<T> batch = drain(inbox);
-            pendingItems = batch.size();
-            outputTraverser = mapper.apply(batch);
+        if (outputTraverser == null) {
+            @SuppressWarnings("unchecked")
+            Iterable<T> inbox1 = (Iterable<T>) inbox;
+            outputTraverser = mapper.apply(inbox1);
         }
 
         if (emitFromTraverser(outputTraverser)) {
-            clear(inbox);
-            pendingItems = 0;
+            inbox.clear();
             outputTraverser = null;
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<T> drain(Inbox inbox) {
-        List<T> batch = new ArrayList<>(inbox.size());
-        for (Object item : inbox) {
-            batch.add((T) item);
-        }
-        return batch;
-    }
-
-    private void clear(Inbox inbox) {
-        for (int i = 0; i < pendingItems; i++) {
-            inbox.poll();
         }
     }
 }

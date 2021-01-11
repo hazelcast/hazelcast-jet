@@ -16,13 +16,14 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.test.TestSupport;
 import org.junit.Test;
 
 import java.util.List;
 
-import static com.hazelcast.jet.Traversers.traverseStream;
+import static com.hazelcast.jet.Traversers.traverseIterable;
 import static java.util.Arrays.asList;
 
 public class TransformBatchedPTest extends JetTestSupport {
@@ -31,9 +32,10 @@ public class TransformBatchedPTest extends JetTestSupport {
     public void test_process() {
         TestSupport
                 .verifyProcessor(() -> new TransformBatchedP<>(
-                        (List<Integer> items) -> traverseStream(items.stream().map(i -> i * 2))
+                        (Iterable<Integer> items) -> traverseIterable(items)
+                                .flatMap(i -> Traversers.traverseItems(i * 2, i * 2 + 1))
                 ))
                 .input(asList(1, 2, 3, 4, 5))
-                .expectOutput(asList(2, 4, 6, 8, 10));
+                .expectOutput(asList(2, 3, 4, 5, 6, 7, 8, 9, 10, 11));
     }
 }

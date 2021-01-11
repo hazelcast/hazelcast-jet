@@ -90,7 +90,7 @@ final class JoinScanProcessorSupplier implements ProcessorSupplier, DataSerializ
         return processors;
     }
 
-    private static FunctionEx<List<Object[]>, Traverser<Object[]>> joinFn(
+    private static FunctionEx<Iterable<Object[]>, Traverser<Object[]>> joinFn(
             JetJoinInfo joinInfo,
             IMap<Object, Object> map,
             KvRowProjector.Supplier rightRowProjectorSupplier

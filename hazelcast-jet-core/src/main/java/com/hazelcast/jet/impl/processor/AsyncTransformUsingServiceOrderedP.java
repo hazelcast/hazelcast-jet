@@ -68,6 +68,11 @@ public class AsyncTransformUsingServiceOrderedP<C, S, T, IR, R> extends Abstract
 
     /**
      * Constructs a processor with the given mapping function.
+     *
+     * @param mapResultFn a function to map the intermediate result returned by
+     *                    the future. One could think it's the same as CompletableFuture.thenApply(),
+     *                    however, the {@code mapResultFn} is executed on the processor thread
+     *                    and not concurrently, therefore the function can be stateful.
      */
     public AsyncTransformUsingServiceOrderedP(
             @Nonnull ServiceFactory<C, S> serviceFactory,
