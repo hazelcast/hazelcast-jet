@@ -297,7 +297,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + "json_file (path => '/non/existing/path/')"
                 + ")"
         )).isInstanceOf(HazelcastSqlException.class)
-          .hasMessageContaining("The directory /non/existing/path does not exists");
+          .hasMessageContaining("The directory '/non/existing/path' does not exist");
     }
 
     @Test
