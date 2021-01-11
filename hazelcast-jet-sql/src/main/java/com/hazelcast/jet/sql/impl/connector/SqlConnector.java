@@ -194,8 +194,8 @@ public interface SqlConnector {
     Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
-            @Nonnull String tableName,
-            @Nonnull String objectName,
+            @Nonnull String mappingName,
+            @Nonnull String externalName,
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     );

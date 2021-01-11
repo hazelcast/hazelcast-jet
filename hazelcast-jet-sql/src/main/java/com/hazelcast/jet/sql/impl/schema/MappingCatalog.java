@@ -85,7 +85,7 @@ public class MappingCatalog implements TableResolver {
             List<MappingField> resolvedFields = connector.resolveAndValidateFields(nodeEngine, options, mapping.fields());
             return new Mapping(
                     mapping.name(),
-                    mapping.objectName(),
+                    mapping.externalName(),
                     type,
                     new ArrayList<>(resolvedFields),
                     new HashMap<>(options)
@@ -135,7 +135,7 @@ public class MappingCatalog implements TableResolver {
                 nodeEngine,
                 SCHEMA_NAME_PUBLIC,
                 mapping.name(),
-                mapping.objectName(),
+                mapping.externalName(),
                 mapping.options(),
                 mapping.fields()
         );

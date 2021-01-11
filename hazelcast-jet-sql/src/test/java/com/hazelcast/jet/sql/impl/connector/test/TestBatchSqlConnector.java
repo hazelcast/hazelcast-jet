@@ -149,8 +149,8 @@ public class TestBatchSqlConnector implements SqlConnector {
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
-            @Nonnull String tableName,
-            @Nonnull String objectName,
+            @Nonnull String mappingName,
+            @Nonnull String externalName,
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
@@ -187,7 +187,7 @@ public class TestBatchSqlConnector implements SqlConnector {
             rows.add(row);
         }
 
-        return new TestValuesTable(this, schemaName, tableName, fields, rows);
+        return new TestValuesTable(this, schemaName, mappingName, fields, rows);
     }
 
     @Override

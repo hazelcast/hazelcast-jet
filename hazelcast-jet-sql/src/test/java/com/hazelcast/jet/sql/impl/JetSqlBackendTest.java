@@ -88,7 +88,7 @@ public class JetSqlBackendTest {
 
         // then
         assertThat(plan.mapping().name()).isEqualTo("mapping_name");
-        assertThat(plan.mapping().objectName()).isEqualTo("external_mapping_name");
+        assertThat(plan.mapping().externalName()).isEqualTo("external_mapping_name");
         assertThat(plan.mapping().type()).isEqualTo("mapping_type");
         assertThat(plan.mapping().fields())
                 .isEqualTo(singletonList(new MappingField("column_name", INT, "external_column_name")));

@@ -92,8 +92,8 @@ public class KafkaSqlConnector implements SqlConnector {
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
-            @Nonnull String tableName,
-            @Nonnull String topicName,
+            @Nonnull String mappingName,
+            @Nonnull String externalName,
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
@@ -105,10 +105,10 @@ public class KafkaSqlConnector implements SqlConnector {
         return new KafkaTable(
                 this,
                 schemaName,
-                tableName,
+                mappingName,
                 fields,
                 new ConstantTableStatistics(0),
-                topicName,
+                externalName,
                 options,
                 keyMetadata.getQueryTargetDescriptor(),
                 keyMetadata.getUpsertTargetDescriptor(),

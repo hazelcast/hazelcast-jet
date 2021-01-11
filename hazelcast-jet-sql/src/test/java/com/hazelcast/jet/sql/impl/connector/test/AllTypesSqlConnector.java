@@ -123,12 +123,12 @@ public class AllTypesSqlConnector implements SqlConnector {
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
-            @Nonnull String tableName,
-            @Nonnull String objectName,
+            @Nonnull String mappingName,
+            @Nonnull String externalName,
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
-        return new AllTypesTable(this, schemaName, tableName);
+        return new AllTypesTable(this, schemaName, mappingName);
     }
 
     @Override

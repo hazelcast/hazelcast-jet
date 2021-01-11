@@ -32,7 +32,7 @@ import java.util.Objects;
 public class Mapping implements DataSerializable {
 
     private String name;
-    private String objectName;
+    private String externalName;
     private String type;
     private List<MappingField> mappingFields;
     private Map<String, String> options;
@@ -43,13 +43,13 @@ public class Mapping implements DataSerializable {
 
     public Mapping(
             String name,
-            String objectName,
+            String externalName,
             String type,
             List<MappingField> fields,
             Map<String, String> options
     ) {
         this.name = name;
-        this.objectName = objectName;
+        this.externalName = externalName;
         this.type = type;
         this.mappingFields = fields;
         this.options = options;
@@ -59,8 +59,8 @@ public class Mapping implements DataSerializable {
         return name;
     }
 
-    public String objectName() {
-        return objectName;
+    public String externalName() {
+        return externalName;
     }
 
     public String type() {
@@ -78,7 +78,7 @@ public class Mapping implements DataSerializable {
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeUTF(name);
-        out.writeUTF(objectName);
+        out.writeUTF(externalName);
         out.writeUTF(type);
         out.writeObject(mappingFields);
         out.writeObject(options);
@@ -87,7 +87,7 @@ public class Mapping implements DataSerializable {
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         name = in.readUTF();
-        objectName = in.readUTF();
+        externalName = in.readUTF();
         type = in.readUTF();
         mappingFields = in.readObject();
         options = in.readObject();
@@ -103,7 +103,7 @@ public class Mapping implements DataSerializable {
         }
         Mapping mapping = (Mapping) o;
         return Objects.equals(name, mapping.name) &&
-               Objects.equals(objectName, mapping.objectName) &&
+               Objects.equals(externalName, mapping.externalName) &&
                Objects.equals(type, mapping.type) &&
                Objects.equals(mappingFields, mapping.mappingFields) &&
                Objects.equals(options, mapping.options);
@@ -111,6 +111,6 @@ public class Mapping implements DataSerializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, objectName, type, mappingFields, options);
+        return Objects.hash(name, externalName, type, mappingFields, options);
     }
 }
