@@ -223,17 +223,6 @@ public class SqlCsvTest extends SqlTestSupport {
     }
 
     @Test
-    public void when_couldNotGetSample_then_fails() {
-        assertThatThrownBy(() -> sqlService.execute(
-                "SELECT *"
-                + " FROM TABLE ("
-                + "csv_file (path => '/non/existing/path/')"
-                + ")"
-        )).isInstanceOf(HazelcastSqlException.class)
-          .hasMessageContaining("The resolved field list is empty");
-    }
-
-    @Test
     public void when_conversionFails_then_queryFails() {
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " (string INT) "
@@ -263,9 +252,8 @@ public class SqlCsvTest extends SqlTestSupport {
     }
 
     @Test
-    public void when_fileDoesNotExist_thenThrowException() {
+    public void when_fileDoesNotExist_then_fails() {
         String name = randomName();
-
         assertThatThrownBy(() ->
                 sqlService.execute("CREATE MAPPING " + name
                         + " TYPE " + FileSqlConnector.TYPE_NAME + ' '
@@ -279,15 +267,15 @@ public class SqlCsvTest extends SqlTestSupport {
     }
 
     @Test
-    public void when_fileDoesNotExistAndIgnoreFileNotFound_thenReturnNoResults() {
+    public void when_fileDoesNotExistAndIgnoreFileNotFound_then_returnNoResults() {
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " (field INT) "
                 + " TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
                 + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
                 + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
-                + ", '" + FileSqlConnector.OPTION_IGNORE_FILE_NOT_FOUND + "'='" + "true" + '\''
                 + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "foo.csv" + '\''
+                + ", '" + FileSqlConnector.OPTION_IGNORE_FILE_NOT_FOUND + "'='" + "true" + '\''
                 + ")"
         );
 
@@ -297,14 +285,24 @@ public class SqlCsvTest extends SqlTestSupport {
     }
 
     @Test
-    public void when_fileDoesNotExist_thenTableFunctionThrowsException() {
+    public void when_directoryDoesNotExist_then_tableFunctionThrowsException() {
+        assertThatThrownBy(() -> sqlService.execute(
+                "SELECT *"
+                + " FROM TABLE ("
+                + "csv_file (path => '/non/existing/path/')"
+                + ")"
+        )).isInstanceOf(HazelcastSqlException.class)
+          .hasMessageContaining("The directory /non/existing/path does not exists");
+    }
+
+    @Test
+    public void when_fileDoesNotExist_then_tableFunctionThrowsException() {
         assertThatThrownBy(() -> sqlService.execute(
                 "SELECT * "
                         + " FROM TABLE ("
                         + "csv_file ("
                         + " path => '" + RESOURCES_PATH + "'"
                         + " , glob => 'foo.csv'"
-                        + " , options => MAP['key', 'value']"
                         + ")"
                         + ")")
         ).hasMessageContaining("matches no files");

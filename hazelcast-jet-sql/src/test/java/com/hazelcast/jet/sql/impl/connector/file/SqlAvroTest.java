@@ -34,6 +34,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_FORMAT;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SqlAvroTest extends SqlTestSupport {
@@ -227,17 +228,6 @@ public class SqlAvroTest extends SqlTestSupport {
     }
 
     @Test
-    public void when_couldNotGetSample_then_fails() {
-        assertThatThrownBy(() -> sqlService.execute(
-                "SELECT *"
-                + " FROM TABLE ("
-                + "AVRO_FILE ('/non/existing/path/')"
-                + ")"
-        )).isInstanceOf(HazelcastSqlException.class)
-          .hasMessageContaining("The resolved field list is empty");
-    }
-
-    @Test
     public void when_conversionFails_then_queryFails() {
         String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " (string INT) "
@@ -264,5 +254,62 @@ public class SqlAvroTest extends SqlTestSupport {
                 + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "foo.avro" + '\''
                 + ")"
         );
+    }
+
+    @Test
+    public void when_fileDoesNotExist_then_fails() {
+        String name = randomName();
+        assertThatThrownBy(() ->
+                sqlService.execute("CREATE MAPPING " + name
+                        + " TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                        + "OPTIONS ( "
+                        + '\'' + OPTION_FORMAT + "'='" + AVRO_FORMAT + '\''
+                        + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                        + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "foo.avro" + '\''
+                        + ")"
+                )
+        ).hasMessageContaining("matches no files");
+    }
+
+    @Test
+    public void when_fileDoesNotExistAndIgnoreFileNotFound_then_returnNoResults() {
+        String name = randomName();
+        sqlService.execute("CREATE MAPPING " + name + " (field INT) "
+                + " TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '\'' + OPTION_FORMAT + "'='" + AVRO_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "foo.avro" + '\''
+                + ", '" + FileSqlConnector.OPTION_IGNORE_FILE_NOT_FOUND + "'='" + "true" + '\''
+                + ")"
+        );
+
+        assertThat(sqlService.execute("SELECT * FROM " + name).iterator().hasNext())
+                .describedAs("no results from non existing file")
+                .isFalse();
+    }
+
+    @Test
+    public void when_directoryDoesNotExist_then_tableFunctionThrowsException() {
+        assertThatThrownBy(() -> sqlService.execute(
+                "SELECT *"
+                + " FROM TABLE ("
+                + "avro_file (path => '/non/existing/path/')"
+                + ")"
+        )).isInstanceOf(HazelcastSqlException.class)
+          .hasMessageContaining("The directory /non/existing/path does not exists");
+    }
+
+    @Test
+    public void when_fileDoesNotExist_then_tableFunctionThrowsException() {
+        assertThatThrownBy(() -> sqlService.execute(
+                "SELECT * "
+                + " FROM TABLE ("
+                + "avro_file ("
+                + " path => '" + RESOURCES_PATH + "'"
+                + " , glob => 'foo.avro'"
+                + ")"
+                + ")")
+        ).hasMessageContaining("matches no files");
     }
 }

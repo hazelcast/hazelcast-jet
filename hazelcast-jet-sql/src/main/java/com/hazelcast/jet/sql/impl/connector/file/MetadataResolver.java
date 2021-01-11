@@ -68,7 +68,7 @@ abstract class MetadataResolver<T> {
 
         try (FileTraverser<T> traverser = fileProcessorMetaSupplier.traverser()) {
             T sample = traverser.next();
-            return sample == null ? emptyList() : resolveFieldsFromSample(sample);
+            return resolveFieldsFromSample(sample);
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
