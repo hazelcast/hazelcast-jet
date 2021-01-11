@@ -26,6 +26,7 @@ import static com.hazelcast.jet.impl.JetFactoryIdHelper.JET_KINESIS_DS_FACTORY_I
 public class KinesisDataSerializerHook implements DataSerializerHook {
 
     public static final int KINESIS_SOURCE_P_SHARD_STATE = 0;
+    public static final int INITIAL_SHARD_ITERATORS = 1;
 
     public static final int FACTORY_ID = FactoryIdHelper.getFactoryId(JET_KINESIS_DS_FACTORY, JET_KINESIS_DS_FACTORY_ID);
 
@@ -46,6 +47,8 @@ public class KinesisDataSerializerHook implements DataSerializerHook {
             switch (typeId) {
                 case KINESIS_SOURCE_P_SHARD_STATE:
                     return new KinesisSourceP.ShardState();
+                case INITIAL_SHARD_ITERATORS:
+                    return new InitialShardIterators();
                 default:
                     throw new IllegalArgumentException("Unknown type id " + typeId);
             }

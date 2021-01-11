@@ -45,6 +45,8 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
     private final HashRange hashRange;
     @Nonnull
     private final RetryStrategy retryStrategy;
+    @Nonnull
+    private final InitialShardIterators initialShardIterators;
 
     private transient int memberCount;
     private transient ILogger logger;
@@ -55,13 +57,15 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
             @Nonnull String stream,
             @Nonnull EventTimePolicy<? super Map.Entry<String, byte[]>> eventTimePolicy,
             @Nonnull HashRange hashRange,
-            @Nonnull RetryStrategy retryStrategy
+            @Nonnull RetryStrategy retryStrategy,
+            @Nonnull InitialShardIterators initialShardIterators
     ) {
         this.awsConfig = awsConfig;
         this.stream = stream;
         this.eventTimePolicy = eventTimePolicy;
         this.hashRange = hashRange;
         this.retryStrategy = retryStrategy;
+        this.initialShardIterators = initialShardIterators;
     }
 
     @Override
@@ -97,7 +101,8 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
                                 rangePartitions[i],
                                 shardQueues[i],
                                 i == 0 ? rangeMonitor : null,
-                                retryStrategy
+                                retryStrategy,
+                                initialShardIterators
                         ))
                 .collect(toList());
     }

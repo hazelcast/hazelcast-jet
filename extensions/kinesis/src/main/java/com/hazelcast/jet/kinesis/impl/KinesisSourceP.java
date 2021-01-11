@@ -76,6 +76,8 @@ public class KinesisSourceP extends AbstractProcessor implements DynamicMetricsP
     private final List<ShardReader> shardReaders = new ArrayList<>();
     @Nonnull
     private final RetryStrategy retryStrategy;
+    @Nonnull
+    private final InitialShardIterators initialShardIterators;
 
     private int id;
     private ILogger logger;
@@ -93,7 +95,8 @@ public class KinesisSourceP extends AbstractProcessor implements DynamicMetricsP
             @Nonnull HashRange processorHashRange,
             @Nonnull ShardQueue shardQueue,
             @Nullable RangeMonitor monitor,
-            @Nonnull RetryStrategy retryStrategy
+            @Nonnull RetryStrategy retryStrategy,
+            @Nonnull InitialShardIterators initialShardIterators
             ) {
         this.kinesis = Objects.requireNonNull(kinesis, "kinesis");
         this.stream = Objects.requireNonNull(stream, "stream");
@@ -103,6 +106,7 @@ public class KinesisSourceP extends AbstractProcessor implements DynamicMetricsP
         this.shardQueue = shardQueue;
         this.monitor = monitor;
         this.retryStrategy = retryStrategy;
+        this.initialShardIterators = initialShardIterators;
     }
 
     @Override
@@ -249,7 +253,7 @@ public class KinesisSourceP extends AbstractProcessor implements DynamicMetricsP
     @Nonnull
     private ShardReader initShardReader(Shard shard, String lastSeenSeqNo) {
         logger.info("Shard " + shard.getShardId() + " of stream " + stream + " assigned to processor instance " + id);
-        return new ShardReader(kinesis, stream, shard, lastSeenSeqNo, retryStrategy, logger);
+        return new ShardReader(kinesis, stream, shard, lastSeenSeqNo, retryStrategy, initialShardIterators, logger);
     }
 
     @Override

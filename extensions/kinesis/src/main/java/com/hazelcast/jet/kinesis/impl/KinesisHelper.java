@@ -20,6 +20,7 @@ import com.amazonaws.services.kinesis.model.DescribeStreamSummaryRequest;
 import com.amazonaws.services.kinesis.model.DescribeStreamSummaryResult;
 import com.amazonaws.services.kinesis.model.GetRecordsRequest;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
+import com.amazonaws.services.kinesis.model.GetShardIteratorRequest;
 import com.amazonaws.services.kinesis.model.GetShardIteratorResult;
 import com.amazonaws.services.kinesis.model.ListShardsRequest;
 import com.amazonaws.services.kinesis.model.ListShardsResult;
@@ -95,14 +96,8 @@ public class KinesisHelper {
         return kinesis.listShardsAsync(request);
     }
 
-    public Future<GetShardIteratorResult> getShardIteratorAsync(Shard shard, String lastSeenSeqNo) {
-        String shardId = shard.getShardId();
-        if (lastSeenSeqNo == null) {
-            return kinesis.getShardIteratorAsync(stream, shardId, "AT_SEQUENCE_NUMBER",
-                    shard.getSequenceNumberRange().getStartingSequenceNumber());
-        } else {
-            return kinesis.getShardIteratorAsync(stream, shardId, "AFTER_SEQUENCE_NUMBER", lastSeenSeqNo);
-        }
+    public Future<GetShardIteratorResult> getShardIteratorAsync(GetShardIteratorRequest request) {
+        return kinesis.getShardIteratorAsync(request);
     }
 
     public Future<GetRecordsResult> getRecordsAsync(String shardIterator) {

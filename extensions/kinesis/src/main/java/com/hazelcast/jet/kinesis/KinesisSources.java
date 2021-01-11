@@ -16,6 +16,7 @@
 package com.hazelcast.jet.kinesis;
 
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
+import com.hazelcast.jet.kinesis.impl.InitialShardIterators;
 import com.hazelcast.jet.kinesis.impl.KinesisSourcePMetaSupplier;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
@@ -104,7 +105,7 @@ public final class KinesisSources {
      * delay in reading the data.
      *
      * @param stream name of the Kinesis stream being consumed by the
-     * source
+     *               source
      * @return fluent builder that can be used to set properties and
      * also to construct the source once configuration is done
      */
@@ -134,6 +135,8 @@ public final class KinesisSources {
         private final AwsConfig awsConfig = new AwsConfig();
         @Nonnull
         private RetryStrategy retryStrategy = DEFAULT_RETRY_STRATEGY;
+        @Nonnull
+        private InitialShardIterators initialShardIterators = new InitialShardIterators();
 
         private Builder(@Nonnull String stream) {
             this.stream = stream;
@@ -208,6 +211,55 @@ public final class KinesisSources {
         }
 
         /**
+         * Specifies how initial reads of the shards should be done (see
+         * <em>shardIteratorType</em> for available options). Initial
+         * read means the moment when a pipeline initiates reading a
+         * shard for the first time. If a pipeline's execution is being
+         * resumed based on a snapshot and there is a saved read offset
+         * for the shard then it is <em>NOT</em> considered an initial
+         * read.
+         * <p>
+         * Each call of this method registers one rule which applies to
+         * any number of shards, depending on the <em>shardIdRegExp</em>
+         * matching the shard's id or not. The syntax of regular
+         * expressions is as defined by {@code java.util.regex.Pattern}.
+         * The method can be called any number of times, the rules will
+         * be evaluated in the order they have been registered. Only the
+         * first rule that matches a shard will be applied for that
+         * shard.
+         * <p>
+         * Type of rules allowed, together with their meaning, are:
+         * <ul>
+         *     <li><b>AT_SEQUENCE_NUMBER</b>: start reading the shard
+         *      at the record with the specified sequence number</li>
+         *     <li><b>AFTER_SEQUENCE_NUMBER</b>: start reading the shard
+         *      right after the record with the specified sequence number</li>
+         *     <li><b>AT_TIMESTAMP</b>: start reading at the first record
+         *      with a timestamp equal to or greater than the provided one</li>
+         *     <li><b>TRIM_HORIZON</b>: start reading at the oldest
+         *      record in the shard, ie. read all available records</li>
+         *     <li><b>LATEST</b>: start reading just after the most
+         *      recent record in the shard, ie. read only records that will
+         *      be ingested later into the shard</li>
+         * </ul>
+         * <p>
+         * Depending on the rule specified the optional
+         * <em>parameter</em> must also be specified. For
+         * <b>AT_TIMESTAMP</b> it needs to be a timestamp in the Unix
+         * epoch date format, with millisecond precision. For
+         * <b>AT_SEQUENCE_NUMBER</b> and <b>AFTER_SEQUENCE_NUMBER</b> it
+         * must be a sequence number accepted by KDS. For other types it
+         * must be left {@code null}.
+         */
+        @Nonnull
+        public Builder withInitialShardIteratorRule(@Nonnull String shardIdRegExp,
+                                                    @Nonnull String shardIteratorType,
+                                                    @Nullable String parameter) {
+            initialShardIterators.add(shardIdRegExp, shardIteratorType, parameter);
+            return this;
+        } //todo: test and use in tutorial
+
+        /**
          * Constructs the source based on the options provided so far.
          */
         @Nonnull
@@ -215,10 +267,12 @@ public final class KinesisSources {
             String stream = this.stream;
             AwsConfig awsConfig = this.awsConfig;
             RetryStrategy retryStrategy = this.retryStrategy;
+            InitialShardIterators initialShardIterators = this.initialShardIterators;
             return Sources.streamFromProcessorWithWatermarks(
                     "Kinesis Source (" + stream + ")",
                     true,
-                    eventTimePolicy -> new KinesisSourcePMetaSupplier(awsConfig, stream, retryStrategy, eventTimePolicy));
+                    eventTimePolicy -> new KinesisSourcePMetaSupplier(awsConfig, stream, retryStrategy,
+                            initialShardIterators, eventTimePolicy));
         }
     }
 

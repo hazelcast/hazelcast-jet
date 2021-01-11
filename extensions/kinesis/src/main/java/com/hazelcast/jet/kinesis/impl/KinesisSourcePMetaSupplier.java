@@ -42,6 +42,8 @@ public class KinesisSourcePMetaSupplier implements ProcessorMetaSupplier {
     @Nonnull
     private final RetryStrategy retryStrategy;
     @Nonnull
+    private final InitialShardIterators initialShardIterators;
+    @Nonnull
     private final EventTimePolicy<? super Map.Entry<String, byte[]>> eventTimePolicy;
 
     private transient Map<Address, HashRange> assignedHashRanges;
@@ -50,11 +52,13 @@ public class KinesisSourcePMetaSupplier implements ProcessorMetaSupplier {
             @Nonnull AwsConfig awsConfig,
             @Nonnull String stream,
             @Nonnull RetryStrategy retryStrategy,
+            @Nonnull InitialShardIterators initialShardIterators,
             @Nonnull EventTimePolicy<? super Map.Entry<String, byte[]>> eventTimePolicy
     ) {
         this.awsConfig = awsConfig;
         this.stream = stream;
         this.retryStrategy = retryStrategy;
+        this.initialShardIterators = initialShardIterators;
         this.eventTimePolicy = eventTimePolicy;
     }
 
@@ -73,7 +77,8 @@ public class KinesisSourcePMetaSupplier implements ProcessorMetaSupplier {
     public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
         return address -> {
             HashRange assignedRange = assignedHashRanges.get(address);
-            return new KinesisSourcePSupplier(awsConfig, stream, eventTimePolicy, assignedRange, retryStrategy);
+            return new KinesisSourcePSupplier(awsConfig, stream, eventTimePolicy,
+                    assignedRange, retryStrategy, initialShardIterators);
         };
     }
 

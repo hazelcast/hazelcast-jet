@@ -18,10 +18,12 @@ package com.hazelcast.jet.kinesis.impl;
 import com.amazonaws.SdkClientException;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
+import com.amazonaws.services.kinesis.model.GetShardIteratorRequest;
 import com.amazonaws.services.kinesis.model.GetShardIteratorResult;
 import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.Shard;
+import com.amazonaws.services.kinesis.model.ShardIteratorType;
 import com.hazelcast.internal.metrics.DynamicMetricsProvider;
 import com.hazelcast.internal.metrics.MetricDescriptor;
 import com.hazelcast.internal.metrics.MetricsCollectionContext;
@@ -62,15 +64,17 @@ class ShardReader extends AbstractShardWorker implements DynamicMetricsProvider 
     @Probe(name = KinesisSources.MILLIS_BEHIND_LATEST_METRIC)
     private final Counter millisBehindLatestMetric = SwCounter.newSwCounter(-1);
 
+    private final RetryTracker getShardIteratorRetryTracker;
+    private final RetryTracker readRecordRetryTracker;
+    private final InitialShardIterators initialShardIterators;
+
     private State state = State.NO_SHARD_ITERATOR;
     private String shardIterator;
 
     private Future<GetShardIteratorResult> shardIteratorResult;
-    private final RetryTracker getShardIteratorRetryTracker;
     private long nextGetShardIteratorTime = System.nanoTime();
 
     private Future<GetRecordsResult> recordsResult;
-    private final RetryTracker readRecordRetryTracker;
     private long nextGetRecordsTime = System.nanoTime();
 
     private List<Record> data = Collections.emptyList();
@@ -82,6 +86,7 @@ class ShardReader extends AbstractShardWorker implements DynamicMetricsProvider 
             Shard shard,
             String lastSeenSeqNo,
             RetryStrategy retryStrategy,
+            InitialShardIterators initialShardIterators,
             ILogger logger
     ) {
         super(kinesis, stream, logger);
@@ -89,6 +94,7 @@ class ShardReader extends AbstractShardWorker implements DynamicMetricsProvider 
         this.lastSeenSeqNo = lastSeenSeqNo;
         this.readRecordRetryTracker = new RetryTracker(retryStrategy);
         this.getShardIteratorRetryTracker = new RetryTracker(retryStrategy);
+        this.initialShardIterators = initialShardIterators;
     }
 
     public Result probe(long currentTime) {
@@ -123,9 +129,24 @@ class ShardReader extends AbstractShardWorker implements DynamicMetricsProvider 
         if (currentTime < nextGetShardIteratorTime) {
             return false;
         }
-        shardIteratorResult = helper.getShardIteratorAsync(shard, lastSeenSeqNo);
+        GetShardIteratorRequest request = getShardIteratorRequest();
+        shardIteratorResult = helper.getShardIteratorAsync(request);
         nextGetShardIteratorTime = currentTime;
         return true;
+    }
+
+    @Nonnull
+    private GetShardIteratorRequest getShardIteratorRequest() {
+        if (lastSeenSeqNo == null) {
+            return initialShardIterators.request(stream, shard);
+        } else {
+            GetShardIteratorRequest request = new GetShardIteratorRequest();
+            request.setStreamName(stream);
+            request.setShardId(shard.getShardId());
+            request.setShardIteratorType(ShardIteratorType.AFTER_SEQUENCE_NUMBER);
+            request.setStartingSequenceNumber(lastSeenSeqNo);
+            return request;
+        }
     }
 
     private Result handleWaitingForShardIterator() {
