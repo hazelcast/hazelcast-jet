@@ -254,13 +254,13 @@ public interface SqlConnector {
     }
 
     /**
-     * Creates a sub-DAG to read the given {@code table} as a part of a
-     * nested-loop join. The returned vertex will receive items from the left
-     * side of the join as {@code Object[]}. For each record it must read the
-     * matching records from the {@code table}, according to the {@code
-     * joinInfo} and emit joined records, again as {@code Object[]}. The length
-     * of the output array is {@code inputRecordLength + projection.size()}.
-     * See {@link ExpressionUtil#join} for a utility to create output records.
+     * Creates a vertex to read the given {@code table} as a part of a
+     * nested-loop join. The vertex will receive items from the left side of
+     * the join as {@code Object[]}. For each record it must read the matching
+     * records from the {@code table}, according to the {@code joinInfo} and
+     * emit joined records, again as {@code Object[]}. The length of the output
+     * array is {@code inputRecordLength + projection.size()}. See {@link
+     * ExpressionUtil#join} for a utility to create output records.
      * <p>
      * The given {@code predicate} and {@code projection} apply only to the
      * records of the {@code table} (i.e. of the right-side of the join, before
@@ -276,6 +276,8 @@ public interface SqlConnector {
      *
      * then the projection will be <code>{1}</code> and the predicate will be
      * <code>{2}=10</code>.
+     * <p>
+     * The predicates in the {@code joinInfo} apply to the joined record.
      * <p>
      * The implementation should do these steps for each received row:
      * <ul>

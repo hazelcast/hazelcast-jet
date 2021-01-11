@@ -30,7 +30,7 @@ import java.util.Arrays;
  * An analyzed join condition.
  * <p>
  * Contains:<ul>
- * <li>{@code inner}: true if it's an inner join
+ * <li>{@code joinType}: type of join
  * <li>{@code leftEquiJoinIndices}: indices of the fields from the left side of
  * a join which are equi-join keys
  * <li>{@code rightEquiJoinIndices}: indices of the fields from the right side
@@ -71,26 +71,49 @@ public class JetJoinInfo implements DataSerializable {
         this.condition = condition;
     }
 
+    /**
+     * Returns true if the join type is an INNER join.
+     */
     public boolean isInner() {
         return joinType == JoinRelType.INNER;
     }
 
+    /**
+     * Returns true if the join type is a LEFT OUTER join.
+     */
     public boolean isLeftOuter() {
         return joinType == JoinRelType.LEFT;
     }
 
+    /**
+     * The indices of the fields from the left side of a join which are
+     * equi-join keys.
+     */
     public int[] leftEquiJoinIndices() {
         return leftEquiJoinIndices;
     }
 
+    /**
+     * The indices of the fields from the right side of a join which are
+     * equi-join keys. The indices refer to fields of right table before
+     * applying projection or before joining.
+     */
     public int[] rightEquiJoinIndices() {
         return rightEquiJoinIndices;
     }
 
+    /**
+     * Remaining join filters that are not equi-joins. Column references in
+     * this condition apply to the joined row.
+     */
     public Expression<Boolean> nonEquiCondition() {
         return nonEquiCondition;
     }
 
+    /**
+     * All join filters. Column references in this condition apply to the
+     * joined row.
+     */
     public Expression<Boolean> condition() {
         return condition;
     }
