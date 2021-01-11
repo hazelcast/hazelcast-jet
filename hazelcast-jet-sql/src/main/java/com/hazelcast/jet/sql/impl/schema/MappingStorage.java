@@ -20,6 +20,7 @@ import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Member;
 import com.hazelcast.cluster.memberselector.MemberSelectors;
 import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.replicatedmap.impl.ReplicatedMapService;
 import com.hazelcast.replicatedmap.impl.operation.GetOperation;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -40,13 +41,15 @@ public class MappingStorage {
     private static final String CATALOG_MAP_NAME = "__sql.catalog";
 
     private static final int MAX_CHECK_ATTEMPTS = 3;
-    private static final long TIMEOUT_MILLIS = 100;
+    private static final long TIMEOUT_MILLIS = 250;
     private static final long SLEEP_MILLIS = 100;
 
     private final NodeEngine nodeEngine;
+    private final ILogger logger;
 
     public MappingStorage(NodeEngine nodeEngine) {
         this.nodeEngine = nodeEngine;
+        this.logger = nodeEngine.getLogger(getClass());
     }
 
     void put(String name, Mapping mapping) {
@@ -63,7 +66,7 @@ public class MappingStorage {
     /**
      * Temporary measure to ensure schema is propagated to all the members.
      */
-    @SuppressWarnings({"EmptyCatchBlock", "BusyWait"})
+    @SuppressWarnings("BusyWait")
     private void awaitMappingOnAllMembers(String name, Mapping mapping) {
         Data keyData = nodeEngine.getSerializationService().toData(name);
         int keyPartitionId = nodeEngine.getPartitionService().getPartitionId(keyData);
@@ -88,12 +91,14 @@ public class MappingStorage {
                 try {
                     memberAddresses.remove(future.join());
                 } catch (Exception e) {
+                    logger.warning("Error occurred while trying to fetch mapping: " + e.getMessage(), e);
                 }
             }
             if (!memberAddresses.isEmpty()) {
                 try {
                     Thread.sleep(SLEEP_MILLIS);
                 } catch (InterruptedException e) {
+                    break;
                 }
             }
         }
