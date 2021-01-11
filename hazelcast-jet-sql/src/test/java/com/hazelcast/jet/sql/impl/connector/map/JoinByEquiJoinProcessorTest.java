@@ -16,224 +16,151 @@
 
 package com.hazelcast.jet.sql.impl.connector.map;
 
-import com.google.common.collect.ImmutableSet;
-import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.internal.util.collection.PartitionIdSet;
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.Outbox;
-import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.Processor.Context;
-import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.core.test.TestInbox;
-import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.test.TestSupport;
+import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
-import com.hazelcast.map.impl.proxy.MapProxyImpl;
-import com.hazelcast.query.Predicate;
+import com.hazelcast.map.IMap;
 import com.hazelcast.sql.impl.expression.ColumnExpression;
 import com.hazelcast.sql.impl.expression.ConstantExpression;
 import com.hazelcast.sql.impl.expression.Expression;
-import com.hazelcast.sql.impl.expression.predicate.ComparisonMode;
-import com.hazelcast.sql.impl.expression.predicate.ComparisonPredicate;
+import com.hazelcast.sql.impl.extract.GenericQueryTargetDescriptor;
 import com.hazelcast.sql.impl.extract.QueryPath;
+import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
 
-import static com.hazelcast.jet.Util.entry;
+import java.util.List;
+
+import static com.hazelcast.jet.TestContextSupport.adaptSupplier;
 import static com.hazelcast.sql.impl.type.QueryDataType.BOOLEAN;
-import static com.hazelcast.sql.impl.type.QueryDataType.INT;
+import static com.hazelcast.sql.impl.type.QueryDataType.VARCHAR;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.apache.calcite.rel.core.JoinRelType.INNER;
 import static org.apache.calcite.rel.core.JoinRelType.LEFT;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-@RunWith(MockitoJUnitRunner.class)
-public class JoinByEquiJoinProcessorTest {
+public class JoinByEquiJoinProcessorTest extends SqlTestSupport {
 
-    @Mock
-    private MapProxyImpl<Object, Object> map;
+    private static final String MAP_NAME = "map";
 
-    @Mock
-    private KvRowProjector.Supplier rightRowProjectorSupplier;
+    @SuppressWarnings("unchecked")
+    private static final Expression<Boolean> TRUE_PREDICATE =
+            (Expression<Boolean>) ConstantExpression.create(true, BOOLEAN);
+    private static final Expression<?> PROJECTION = ColumnExpression.create(1, VARCHAR);
+    @SuppressWarnings("unchecked")
+    private static final Expression<Boolean> FALSE_PREDICATE =
+            (Expression<Boolean>) ConstantExpression.create(false, BOOLEAN);
 
-    @Mock
-    private KvRowProjector rightProjector;
+    private IMap<Object, Object> map;
 
-    @Mock
-    private ProcSupplierCtx supplierContext;
-
-    @Mock
-    private Context processorContext;
-
-    @Mock
-    private JetInstance jetInstance;
-
-    @Mock
-    private Outbox outbox;
-
-    @Mock
-    private InternalSerializationService serializationService;
+    @BeforeClass
+    public static void beforeClass() {
+        initialize(2, null);
+    }
 
     @Before
-    public void setUp() {
-        given(rightRowProjectorSupplier.paths()).willReturn(new QueryPath[]{QueryPath.KEY_PATH});
-        given(rightRowProjectorSupplier.get(any(), any())).willReturn(rightProjector);
-        given(rightProjector.getColumnCount()).willReturn(2);
-        given(supplierContext.serializationService()).willReturn(serializationService);
-        given(supplierContext.jetInstance()).willReturn(jetInstance);
-        given(jetInstance.getMap(anyString())).willReturn(map);
-        given(outbox.offer(anyInt(), any())).willReturn(true);
+    public void before() {
+        map = instance().getMap(MAP_NAME);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    public void when_filteredOutByProjector_inner_then_absent() throws Exception {
-        // given
-        Processor processor = processor(INNER, (Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
-
-        given(map.entrySet(any(Predicate.class), any(PartitionIdSet.class)))
-                .willReturn(ImmutableSet.of(entry(1, "value-1"), entry(2, "value-2")));
-        given(rightProjector.project(entry(1, "value-1"))).willReturn(null);
-        given(rightProjector.project(entry(2, "value-2"))).willReturn(new Object[]{2, "value-2"});
-
-        // when
-        processor.process(0, new TestInbox(asList(new Object[]{1}, new Object[]{2})));
-        processor.complete();
-
-        // then
-        verify(outbox).offer(-1, new Object[]{1, 2, "value-2"});
-        verify(outbox).offer(-1, new Object[]{2, 2, "value-2"});
-        verifyNoMoreInteractions(outbox);
+    public void test_innerJoin() {
+        map.put(1, "value");
+        runTest(INNER, TRUE_PREDICATE, PROJECTION, TRUE_PREDICATE,
+                singletonList(new Object[]{1}),
+                singletonList(new Object[]{1, "value"}));
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    public void when_projectedByProjector_inner_then_modified() throws Exception {
-        // given
-        Processor processor = processor(INNER, (Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
-
-        given(map.entrySet(any(Predicate.class), any(PartitionIdSet.class)))
-                .willReturn(ImmutableSet.of(entry(1, "value-1")));
-        given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{2, "modified"});
-
-        // when
-        processor.process(0, new TestInbox(singletonList(new Object[]{1})));
-        processor.complete();
-
-        // then
-        verify(outbox).offer(-1, new Object[]{1, 2, "modified"});
-        verifyNoMoreInteractions(outbox);
+    public void when_innerJoinFilteredOutByProjector_then_absent() {
+        map.put(1, "value");
+        runTest(INNER, FALSE_PREDICATE, PROJECTION, TRUE_PREDICATE,
+                singletonList(new Object[]{1}),
+                emptyList());
     }
 
     @Test
-    public void when_filteredOutByCondition_inner_then_absent() throws Exception {
-        // given
-        Processor processor = processor(
-                INNER,
-                ComparisonPredicate.create(
-                        ColumnExpression.create(0, INT),
-                        ColumnExpression.create(1, INT),
-                        ComparisonMode.EQUALS
-                ));
-
-        given(map.entrySet(any(Predicate.class), any(PartitionIdSet.class)))
-                .willReturn(ImmutableSet.of(entry(1, "value-1"), entry(2, "value-2")));
-        given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{1, "value-1"});
-        given(rightProjector.project(entry(2, "value-2"))).willReturn(new Object[]{2, "value-2"});
-
-        // when
-        processor.process(0, new TestInbox(asList(new Object[]{0}, new Object[]{1})));
-        processor.complete();
-
-        // then
-        verify(outbox).offer(-1, new Object[]{1, 1, "value-1"});
-        verifyNoMoreInteractions(outbox);
+    public void when_innerJoinProjectedByProjector_then_modified() {
+        map.put(1, "value");
+        runTest(INNER, TRUE_PREDICATE, ConstantExpression.create("modified", VARCHAR), TRUE_PREDICATE,
+                singletonList(new Object[]{1}),
+                singletonList(new Object[]{1, "modified"}));
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    public void when_filteredOutByProjector_outer_then_nulls() throws Exception {
-        // given
-        Processor processor = processor(LEFT, (Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
-
-        given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1")));
-        given(rightProjector.project(entry(1, "value-1"))).willReturn(null);
-
-        // when
-        processor.process(0, new TestInbox(asList(new Object[]{1}, new Object[]{2})));
-        processor.complete();
-
-        // then
-        verify(outbox).offer(-1, new Object[]{1, null, null});
-        verify(outbox).offer(-1, new Object[]{2, null, null});
-        verifyNoMoreInteractions(outbox);
+    public void when_innerJoinFilteredOutByCondition_then_absent() {
+        map.put(1, "value");
+        runTest(INNER, TRUE_PREDICATE, PROJECTION, FALSE_PREDICATE,
+                singletonList(new Object[]{1}),
+                emptyList());
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    public void when_projectedByProjector_outer_then_modified() throws Exception {
-        // given
-        Processor processor = processor(LEFT, (Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
-
-        given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1")));
-        given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{2, "modified"});
-
-        // when
-        processor.process(0, new TestInbox(singletonList(new Object[]{1})));
-        processor.complete();
-
-        // then
-        verify(outbox).offer(-1, new Object[]{1, 2, "modified"});
-        verifyNoMoreInteractions(outbox);
+    public void test_outerJoin() {
+        map.put(1, "value");
+        runTest(LEFT, TRUE_PREDICATE, PROJECTION, TRUE_PREDICATE,
+                asList(new Object[]{1}, new Object[]{2}),
+                asList(new Object[]{1, "value"}, new Object[]{2, null}));
     }
 
     @Test
-    public void when_filteredOutByCondition_outer_then_nulls() throws Exception {
-        // given
-        Processor processor = processor(
-                LEFT,
-                ComparisonPredicate.create(
-                        ColumnExpression.create(0, INT),
-                        ColumnExpression.create(1, INT),
-                        ComparisonMode.EQUALS
-                ));
-
-        given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(2, "value-2")));
-        given(rightProjector.project(entry(2, "value-2"))).willReturn(new Object[]{2, "value-2"});
-
-        // when
-        processor.process(0, new TestInbox(asList(new Object[]{0}, new Object[]{1})));
-        processor.complete();
-
-        // then
-        verify(outbox).offer(-1, new Object[]{0, null, null});
-        verify(outbox).offer(-1, new Object[]{1, null, null});
-        verifyNoMoreInteractions(outbox);
+    public void when_outerJoinFilteredOutByProjector_then_absent() {
+        map.put(1, "value");
+        runTest(LEFT, FALSE_PREDICATE, PROJECTION, TRUE_PREDICATE,
+                asList(new Object[]{1}, new Object[]{2}),
+                asList(new Object[]{1, null}, new Object[]{2, null}));
     }
 
-    private Processor processor(JoinRelType joinType, Expression<Boolean> nonEquiCondition) throws Exception {
-        ProcessorSupplier supplier = new JoinByEquiJoinProcessorSupplier(
-                new JetJoinInfo(joinType, new int[]{0}, new int[]{0}, nonEquiCondition, null),
-                "map",
-                1,
-                singletonList(0),
-                rightRowProjectorSupplier
+    @Test
+    public void when_outerJoinProjectedByProjector_then_modified() {
+        map.put(1, "value");
+        runTest(LEFT, TRUE_PREDICATE, ConstantExpression.create("modified", VARCHAR), TRUE_PREDICATE,
+                asList(new Object[]{1}, new Object[]{2}),
+                asList(new Object[]{1, "modified"}, new Object[]{2, null}));
+    }
+
+    @Test
+    public void when_outerJoinFilteredOutByCondition_then_absent() {
+        map.put(1, "value");
+        runTest(LEFT, TRUE_PREDICATE, PROJECTION, FALSE_PREDICATE,
+                asList(new Object[]{1}, new Object[]{2}),
+                asList(new Object[]{1, null}, new Object[]{2, null}));
+    }
+
+    private void runTest(
+            JoinRelType joinType,
+            Expression<Boolean> rowProjectorCondition,
+            Expression<?> rowProjectorProjection,
+            Expression<Boolean> nonEquiCondition,
+            List<Object[]> input,
+            List<Object[]> output
+    ) {
+        KvRowProjector.Supplier projectorSupplier = KvRowProjector.supplier(
+                new QueryPath[]{QueryPath.KEY_PATH, QueryPath.VALUE_PATH},
+                new QueryDataType[]{QueryDataType.INT, VARCHAR},
+                GenericQueryTargetDescriptor.DEFAULT,
+                GenericQueryTargetDescriptor.DEFAULT,
+                rowProjectorCondition,
+                singletonList(rowProjectorProjection)
         );
-        supplier.init(supplierContext);
 
-        Processor processor = supplier.get(1).iterator().next();
-        processor.init(outbox, processorContext);
+        ProcessorMetaSupplier processor = JoinByEquiJoinProcessorSupplier.supplier(
+                new JetJoinInfo(joinType, new int[]{0}, new int[]{0}, nonEquiCondition, null),
+                MAP_NAME,
+                projectorSupplier
+        );
 
-        return processor;
+        TestSupport
+                .verifyProcessor(adaptSupplier(processor))
+                .input(input)
+                .jetInstance(instance())
+                .outputChecker(SqlTestSupport::compareRowLists)
+                .disableProgressAssertion()
+                .expectOutput(output);
     }
 }

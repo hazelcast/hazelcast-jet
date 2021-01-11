@@ -109,9 +109,9 @@ final class JoinByEquiJoinProcessorSupplier implements ProcessorSupplier, DataSe
     public Collection<? extends Processor> get(int count) {
         List<Processor> processors = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            PartitionIdSet partitions = this.partitions != null
-                    ? new PartitionIdSet(partitionCount, this.partitions)
-                    : null;
+            PartitionIdSet partitions = this.partitions == null
+                    ? null
+                    : new PartitionIdSet(partitionCount, this.partitions);
             QueryPath[] rightPaths = rightRowProjectorSupplier.paths();
             KvRowProjector rightProjector = rightRowProjectorSupplier.get(serializationService, extractors);
             Processor processor =
@@ -150,8 +150,7 @@ final class JoinByEquiJoinProcessorSupplier implements ProcessorSupplier, DataSe
             Set<Entry<Object, Object>> matchingRows = joinInfo.isInner()
                     ? map.entrySet(predicate, partitions.copy())
                     : map.entrySet(predicate);
-            List<Object[]> joined = join(left, matchingRows, rightRowProjector, joinInfo.nonEquiCondition(),
-                    joinInfo.isLeftOuter());
+            List<Object[]> joined = join(left, matchingRows, rightRowProjector, joinInfo.nonEquiCondition());
             return joined.isEmpty() && joinInfo.isLeftOuter()
                     ? singleton(extendArray(left, rightRowProjector.getColumnCount()))
                     : traverseIterable(joined);
@@ -162,8 +161,7 @@ final class JoinByEquiJoinProcessorSupplier implements ProcessorSupplier, DataSe
             Object[] left,
             Set<Entry<Object, Object>> entries,
             KvRowProjector rightRowProjector,
-            Expression<Boolean> condition,
-            boolean isLeftOuter
+            Expression<Boolean> condition
     ) {
         List<Object[]> rows = new ArrayList<>();
         for (Entry<Object, Object> entry : entries) {
