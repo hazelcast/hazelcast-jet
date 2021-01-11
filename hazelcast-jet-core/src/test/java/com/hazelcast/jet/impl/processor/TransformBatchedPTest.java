@@ -21,8 +21,6 @@ import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.test.TestSupport;
 import org.junit.Test;
 
-import java.util.List;
-
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static java.util.Arrays.asList;
 

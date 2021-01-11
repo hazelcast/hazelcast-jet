@@ -42,11 +42,10 @@ public class TransformBatchedP<T, R> extends AbstractProcessor {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void process(int ordinal, @Nonnull Inbox inbox) {
         if (outputTraverser == null) {
-            @SuppressWarnings("unchecked")
-            Iterable<T> inbox1 = (Iterable<T>) inbox;
-            outputTraverser = mapper.apply(inbox1);
+            outputTraverser = mapper.apply((Iterable<T>) inbox);
         }
 
         if (emitFromTraverser(outputTraverser)) {
