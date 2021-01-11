@@ -72,6 +72,11 @@ interface JetPlan extends SqlPlan {
         boolean ifNotExists() {
             return ifNotExists;
         }
+
+        @Override
+        public boolean producesRows() {
+            return false;
+        }
     }
 
     class DropMappingPlan implements JetPlan {
@@ -104,6 +109,11 @@ interface JetPlan extends SqlPlan {
 
         boolean ifExists() {
             return ifExists;
+        }
+
+        @Override
+        public boolean producesRows() {
+            return false;
         }
     }
 
@@ -153,6 +163,11 @@ interface JetPlan extends SqlPlan {
         public SelectOrSinkPlan getExecutionPlan() {
             return dmlPlan;
         }
+
+        @Override
+        public boolean producesRows() {
+            return false;
+        }
     }
 
     class AlterJobPlan implements JetPlan {
@@ -181,6 +196,11 @@ interface JetPlan extends SqlPlan {
 
         public AlterJobOperation getOperation() {
             return operation;
+        }
+
+        @Override
+        public boolean producesRows() {
+            return false;
         }
     }
 
@@ -217,6 +237,11 @@ interface JetPlan extends SqlPlan {
         public String getWithSnapshotName() {
             return withSnapshotName;
         }
+
+        @Override
+        public boolean producesRows() {
+            return false;
+        }
     }
 
     class CreateSnapshotPlan implements JetPlan {
@@ -246,6 +271,11 @@ interface JetPlan extends SqlPlan {
         public String getJobName() {
             return jobName;
         }
+
+        @Override
+        public boolean producesRows() {
+            return false;
+        }
     }
 
     class DropSnapshotPlan implements JetPlan {
@@ -274,6 +304,11 @@ interface JetPlan extends SqlPlan {
 
         public boolean isIfExists() {
             return ifExists;
+        }
+
+        @Override
+        public boolean producesRows() {
+            return false;
         }
     }
 
@@ -335,6 +370,11 @@ interface JetPlan extends SqlPlan {
         SqlRowMetadata getRowMetadata() {
             return rowMetadata;
         }
+
+        @Override
+        public boolean producesRows() {
+            return !isInsert;
+        }
     }
 
     class ShowStatementPlan implements JetPlan {
@@ -358,6 +398,11 @@ interface JetPlan extends SqlPlan {
 
         @Override
         public void checkPermissions(SqlSecurityContext context) {
+        }
+
+        @Override
+        public boolean producesRows() {
+            return true;
         }
     }
 }

@@ -31,7 +31,6 @@ public class HazelcastCollectionTableOperator extends HazelcastSpecialOperator {
                 200,
                 true,
                 ReturnTypes.ARG0,
-                null,
                 null);
     }
 
