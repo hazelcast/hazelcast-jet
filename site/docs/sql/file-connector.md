@@ -11,7 +11,7 @@ directly to Hadoop client. For local files they are simply ignored. To
 find out more about additional options consult [file source documentation](
 ../api/sources-sinks#supported-storage-systems).
 
-## Location options
+## Location Options
 
 `path` is an absolute path to the directory containing your data. These
 are the supported schemes:
@@ -55,7 +55,7 @@ will be avoided.
 
 The default value is `false`.
 
-## Serialization options
+## Serialization Options
 
 `format` defines the serialization used to read the files. We assume all
 records in files have the same format. These are the supported `format`
