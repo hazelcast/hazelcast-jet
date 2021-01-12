@@ -21,18 +21,22 @@ import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadata;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataJavaResolver;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvProcessors;
+import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
 import com.hazelcast.jet.sql.impl.inject.UpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.map.impl.MapContainer;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.map.impl.MapServiceContext;
 import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.extract.QueryPath;
+import com.hazelcast.sql.impl.extract.QueryTargetDescriptor;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -41,6 +45,7 @@ import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -87,12 +92,11 @@ public class IMapSqlConnector implements SqlConnector {
     public final Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
-            @Nonnull String tableName,
+            @Nonnull String mappingName,
+            @Nonnull String externalName,
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
-        String mapName = options.getOrDefault(OPTION_OBJECT_NAME, tableName);
-
         InternalSerializationService ss = (InternalSerializationService) nodeEngine.getSerializationService();
 
         KvMetadata keyMetadata = metadataResolvers.resolveMetadata(true, resolvedFields, options, ss);
@@ -102,15 +106,15 @@ public class IMapSqlConnector implements SqlConnector {
 
         MapService service = nodeEngine.getService(MapService.SERVICE_NAME);
         MapServiceContext context = service.getMapServiceContext();
-        MapContainer container = context.getMapContainer(mapName);
+        MapContainer container = context.getMapContainer(externalName);
 
-        long estimatedRowCount = estimatePartitionedMapRowCount(nodeEngine, context, mapName);
+        long estimatedRowCount = estimatePartitionedMapRowCount(nodeEngine, context, externalName);
         boolean hd = container != null && container.getMapConfig().getInMemoryFormat() == InMemoryFormat.NATIVE;
 
         return new PartitionedMapTable(
                 schemaName,
-                tableName,
-                mapName,
+                mappingName,
+                externalName,
                 fields,
                 new ConstantTableStatistics(estimatedRowCount),
                 keyMetadata.getQueryTargetDescriptor(),
@@ -120,6 +124,34 @@ public class IMapSqlConnector implements SqlConnector {
                 Collections.emptyList(),
                 hd
         );
+    }
+
+    @Override
+    public boolean supportsNestedLoopReader() {
+        return true;
+    }
+
+    @Nonnull @Override
+    public VertexWithInputConfig nestedLoopReader(
+            @Nonnull DAG dag,
+            @Nonnull Table table0,
+            @Nullable Expression<Boolean> predicate,
+            @Nonnull List<Expression<?>> projections,
+            @Nonnull JetJoinInfo joinInfo
+    ) {
+        PartitionedMapTable table = (PartitionedMapTable) table0;
+
+        String name = table.getMapName();
+        List<TableField> fields = table.getFields();
+        QueryPath[] paths = fields.stream().map(field -> ((MapTableField) field).getPath()).toArray(QueryPath[]::new);
+        QueryDataType[] types = fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
+        QueryTargetDescriptor keyDescriptor = table.getKeyDescriptor();
+        QueryTargetDescriptor valueDescriptor = table.getValueDescriptor();
+
+        KvRowProjector.Supplier rightRowProjectorSupplier =
+                KvRowProjector.supplier(paths, types, keyDescriptor, valueDescriptor, predicate, projections);
+
+        return IMapJoiner.join(dag, name, toString(table), joinInfo, rightRowProjectorSupplier);
     }
 
     @Override
@@ -143,7 +175,7 @@ public class IMapSqlConnector implements SqlConnector {
         QueryPath[] paths = fields.stream().map(field -> ((MapTableField) field).getPath()).toArray(QueryPath[]::new);
         QueryDataType[] types = fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
 
-        Vertex vStart = dag.newVertex(
+        Vertex vStart = dag.newUniqueVertex(
                 "Project(" + toString(table) + ")",
                 KvProcessors.entryProjector(
                         paths,
@@ -153,7 +185,7 @@ public class IMapSqlConnector implements SqlConnector {
                 )
         );
 
-        Vertex vEnd = dag.newVertex(
+        Vertex vEnd = dag.newUniqueVertex(
                 toString(table),
                 SinkProcessors.writeMapP(table.getMapName())
         );

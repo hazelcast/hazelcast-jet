@@ -73,14 +73,15 @@ public class FailingTestSqlConnector implements SqlConnector {
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
-            @Nonnull String tableName,
+            @Nonnull String mappingName,
+            @Nonnull String externalName,
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
         return new JetTable(
                 this,
                 toList(resolvedFields, ef -> new TableField(ef.name(), ef.type(), false)),
-                schemaName, tableName, new ConstantTableStatistics(0)
+                schemaName, mappingName, new ConstantTableStatistics(0)
         );
     }
 
@@ -96,7 +97,10 @@ public class FailingTestSqlConnector implements SqlConnector {
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection
     ) {
-        return dag.newVertex("FailingSource[" + table.getSchemaName() + "." + table.getSqlName() + ']', FailingP::new);
+        return dag.newUniqueVertex(
+                "FailingSource[" + table.getSchemaName() + "." + table.getSqlName() + ']',
+                FailingP::new
+        );
     }
 
     private static final class FailingP extends AbstractProcessor {

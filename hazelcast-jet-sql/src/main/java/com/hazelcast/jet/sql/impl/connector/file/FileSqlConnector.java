@@ -39,6 +39,7 @@ public class FileSqlConnector implements SqlConnector {
     public static final String OPTION_PATH = "path";
     public static final String OPTION_GLOB = "glob";
     public static final String OPTION_SHARED_FILE_SYSTEM = "sharedFileSystem";
+    public static final String OPTION_IGNORE_FILE_NOT_FOUND = "ignoreFileNotFound";
     public static final String OPTION_OPTIONS = "options";
 
     static final FileSqlConnector INSTANCE = new FileSqlConnector();
@@ -83,11 +84,12 @@ public class FileSqlConnector implements SqlConnector {
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
-            @Nonnull String name,
+            @Nonnull String mappingName,
+            @Nonnull String externalName,
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
-        return createTable(schemaName, name, options, resolvedFields);
+        return createTable(schemaName, mappingName, options, resolvedFields);
     }
 
     @Nonnull
@@ -124,9 +126,9 @@ public class FileSqlConnector implements SqlConnector {
     ) {
         FileTable table = (FileTable) table0;
 
-        Vertex vStart = dag.newVertex(table.toString(), table.processorMetaSupplier());
+        Vertex vStart = dag.newUniqueVertex(table.toString(), table.processorMetaSupplier());
 
-        Vertex vEnd = dag.newVertex(
+        Vertex vEnd = dag.newUniqueVertex(
                 "Project(" + table.toString() + ")",
                 SqlProcessors.rowProjector(
                         table.paths(),

@@ -22,8 +22,8 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
+import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -107,8 +107,7 @@ public class AllTypesSqlConnector implements SqlConnector {
         return false;
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public List<MappingField> resolveAndValidateFields(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
@@ -120,16 +119,16 @@ public class AllTypesSqlConnector implements SqlConnector {
         return FIELD_LIST;
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
-            @Nonnull String tableName,
+            @Nonnull String mappingName,
+            @Nonnull String externalName,
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
-        return new AllTypesTable(this, schemaName, tableName);
+        return new AllTypesTable(this, schemaName, mappingName);
     }
 
     @Override
@@ -137,8 +136,7 @@ public class AllTypesSqlConnector implements SqlConnector {
         return true;
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull Table table,
@@ -148,7 +146,7 @@ public class AllTypesSqlConnector implements SqlConnector {
         Object[] row = ExpressionUtil.evaluate(predicate, projection, VALUES);
         BatchSource<Object[]> source = TestSources.items(singletonList(row));
         ProcessorMetaSupplier pms = ((BatchSourceTransform<Object[]>) source).metaSupplier;
-        return dag.newVertex(table.toString(), pms);
+        return dag.newUniqueVertex(table.toString(), pms);
     }
 
     public static class AllTypesTable extends JetTable {
