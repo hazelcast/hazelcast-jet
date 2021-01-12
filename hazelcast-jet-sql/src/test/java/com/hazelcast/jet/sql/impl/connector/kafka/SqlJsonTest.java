@@ -226,7 +226,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 sqlService.execute("CREATE MAPPING " + randomName() + ' '
                                    + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                                    + "OPTIONS ('valueFormat'='json')"))
-                .hasMessage("Column list is required for Json format");
+                .hasMessage("Column list is required for JSON format");
     }
 
     @Test
@@ -253,7 +253,7 @@ public class SqlJsonTest extends SqlTestSupport {
                         + ", 'auto.offset.reset'='earliest'"
                         + ")"))
                 .isInstanceOf(HazelcastSqlException.class)
-                .hasMessage("Cannot use the '" + field + "' field with Json serialization");
+                .hasMessage("Cannot use the '" + field + "' field with JSON serialization");
     }
 
     @Test

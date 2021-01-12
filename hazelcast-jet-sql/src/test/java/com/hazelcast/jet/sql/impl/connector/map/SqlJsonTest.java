@@ -216,7 +216,7 @@ public class SqlJsonTest extends SqlTestSupport {
                         + ")"
                 ))
                 .isInstanceOf(HazelcastSqlException.class)
-                .hasMessage("Cannot use the '" + field + "' field with Json serialization");
+                .hasMessage("Cannot use the '" + field + "' field with JSON serialization");
     }
 
     @Test
