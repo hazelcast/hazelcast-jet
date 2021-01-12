@@ -109,8 +109,8 @@ OPTIONS (
     <span class="hljs-string">'keyFormat'</span> = <span class="hljs-string">'java'</span>,
     <span class="hljs-string">'keyJavaClass'</span> = <span class="hljs-string">'java.lang.String'</span>,
     <span class="hljs-string">'valueFormat'</span> = <span class="hljs-string">'avro'</span>,
-    <span class="hljs-string">'bootstrap.servers'</span> = <span class="hljs-string">'10.0.1.120'</span>,
-    <span class="hljs-string">'schema.registry.url'</span> = <span class="hljs-string">'http://10.0.1.120:58819/'</span>
+    <span class="hljs-string">'bootstrap.servers'</span> = <span class="hljs-string">'127.0.0.1:9092'</span>,
+    <span class="hljs-string">'schema.registry.url'</span> = <span class="hljs-string">'http://127.0.0.1:8081/'</span>
     <span class="hljs-string">'key.serializer'</span> = <span class="hljs-string">'org.apache.kafka.common.serialization.LongSerializer'</span>,
     <span class="hljs-string">'key.deserializer'</span> = <span class="hljs-string">'org.apache.kafka.common.serialization.LongDeserializer'</span>,
     <span class="hljs-string">'value.serializer'</span> = <span class="hljs-string">'io.confluent.kafka.serializers.KafkaAvroSerializer'</span>,
@@ -130,13 +130,14 @@ to quote identifiers: this way the <code>.</code> is interpreted literally.</p>
 Jet can't automatically determine the column list, you must explicitly
 specify it:</p>
 <pre><code class="hljs css language-sql"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">MAPPING</span> my_topic(
-    __key <span class="hljs-built_in">BIGINT</span>,
+    <span class="hljs-keyword">id</span> <span class="hljs-built_in">BIGINT</span> <span class="hljs-keyword">EXTERNAL</span> <span class="hljs-keyword">NAME</span> <span class="hljs-string">"__key.id"</span>,
     ticker <span class="hljs-built_in">VARCHAR</span>,
     amount <span class="hljs-built_in">INT</span>)
 <span class="hljs-keyword">TYPE</span> Kafka
 OPTIONS (
     <span class="hljs-string">'keyFormat'</span> = <span class="hljs-string">'json'</span>,
-    <span class="hljs-string">'valueFormat'</span> = <span class="hljs-string">'json'</span>)
+    <span class="hljs-string">'valueFormat'</span> = <span class="hljs-string">'json'</span>,
+    <span class="hljs-string">'bootstrap.servers'</span> = <span class="hljs-string">'127.0.0.1:9092'</span>)
 </code></pre>
 <p>JSON's type system doesn't match SQL's exactly. For example, JSON
 numbers have unlimited precision, but such numbers are typically not
@@ -160,7 +161,8 @@ OPTIONS (
     <span class="hljs-string">'keyFormat'</span> = <span class="hljs-string">'java'</span>,
     <span class="hljs-string">'keyJavaClass'</span> = <span class="hljs-string">'java.lang.Long'</span>,
     <span class="hljs-string">'valueFormat'</span> = <span class="hljs-string">'java'</span>,
-    <span class="hljs-string">'valueJavaClass'</span> = <span class="hljs-string">'com.example.Person'</span>)
+    <span class="hljs-string">'valueJavaClass'</span> = <span class="hljs-string">'com.example.Person'</span>,
+    <span class="hljs-string">'bootstrap.servers'</span> = <span class="hljs-string">'127.0.0.1:9092'</span>)
 </code></pre>
 <p>If the Java class corresponds to one of the basic data types (numbers,
 dates, strings), that type will directly be used for the key or value
