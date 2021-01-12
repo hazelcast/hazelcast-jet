@@ -132,21 +132,6 @@ the class using reflection and use its properties as column names. It
 recognizes public fields and JavaBeans-style getters. If some property
 has a non-primitive type, it will be mapped under the `OBJECT` type.
 
-## External Mapping Name
-
-Sometimes, you would like to use an alias for a topic. If you
-do, you might need to specify the external name for the mapping.
-
-```sql
-CREATE MAPPING my_topic EXTERNAL NAME topic_name
-TYPE Kafka
-OPTIONS (
-    'keyFormat' = 'java',
-    'keyJavaClass' = 'java.lang.Long',
-    'valueFormat' = 'java',
-    'valueJavaClass' = 'com.example.Person')
-```
-
 ## External Column Name
 
 You rarely need to specify the columns in DDL. If you do, you might need
