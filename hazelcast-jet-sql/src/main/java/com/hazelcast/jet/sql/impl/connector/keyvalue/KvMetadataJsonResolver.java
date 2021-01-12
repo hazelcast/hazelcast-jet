@@ -65,7 +65,7 @@ public final class KvMetadataJsonResolver implements KvMetadataResolver {
         for (Entry<QueryPath, MappingField> entry : userFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             if (path.getPath() == null) {
-                throw QueryException.error("Cannot use the '" + path + "' field with Json serialization");
+                throw QueryException.error("Cannot use the '" + path + "' field with JSON serialization");
             }
             MappingField field = entry.getValue();
 
