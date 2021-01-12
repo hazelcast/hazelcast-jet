@@ -71,7 +71,6 @@ public class MappingCatalogTest {
         // when
         // then
         assertThatThrownBy(() -> catalog.createMapping(mapping, true, true))
-                .isInstanceOf(QueryException.class)
                 .hasMessageContaining("expected test exception");
         verifyNoInteractions(storage);
     }
