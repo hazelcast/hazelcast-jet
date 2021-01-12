@@ -33,7 +33,7 @@ The default value is `*`, matching all files.
 
 ### Ignore File Not Found
 
-When you create a mapping without a schema, the location specified by the
+When you create a mapping without a column list, the location specified by the
 `path` option is expected to contain at least one file matching the
 `glob`, otherwise an exception is thrown. This is to avoid hard to catch
 mistakes, such as typos. If you simply want to return zero results set
