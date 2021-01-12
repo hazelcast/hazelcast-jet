@@ -81,7 +81,7 @@ specify it:
 
 ```sql
 CREATE MAPPING my_topic(
-    __key BIGINT EXTERNAL NAME "id",
+    id BIGINT EXTERNAL NAME "__key.id",
     ticker VARCHAR,
     amount INT)
 TYPE Kafka
