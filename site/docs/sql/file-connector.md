@@ -38,7 +38,7 @@ When you create a mapping without a column list, the location specified by the
 `glob`, otherwise an exception is thrown. This is to avoid hard to catch
 mistakes, such as typos. If you simply want to return zero results, set
 the `ignoreFileNotFound` option to `true`. Note that in this case you
-must specify the schema.
+must specify the column list.
 
 This option is not valid for [file table functions](#file-table-functions),
 because they always need at least one record to derive the schema from.
