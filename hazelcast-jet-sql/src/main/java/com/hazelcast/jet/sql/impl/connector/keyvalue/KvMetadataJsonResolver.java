@@ -56,7 +56,7 @@ public final class KvMetadataJsonResolver implements KvMetadataResolver {
             InternalSerializationService serializationService
     ) {
         if (userFields.isEmpty()) {
-            throw QueryException.error("Column list is required for Json format");
+            throw QueryException.error("Column list is required for JSON format");
         }
 
         Map<QueryPath, MappingField> userFieldsByPath = extractFields(userFields, isKey);
