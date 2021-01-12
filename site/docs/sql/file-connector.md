@@ -41,7 +41,7 @@ the `ignoreFileNotFound` option to `true`. Note that in this case you
 must specify the column list.
 
 This option is not valid for [file table functions](#file-table-functions),
-because they always need at least one record to derive the schema from.
+because they always need at least one record to derive the column list from.
 
 The default value is `false`.
 
