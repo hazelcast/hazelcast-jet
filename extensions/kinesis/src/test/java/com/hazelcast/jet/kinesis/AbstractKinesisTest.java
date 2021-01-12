@@ -36,6 +36,7 @@ import com.hazelcast.map.IMap;
 import org.junit.After;
 import org.junit.Before;
 
+import javax.annotation.Nonnull;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -95,9 +96,9 @@ class AbstractKinesisTest extends JetTestSupport {
         return cluster[0];
     }
 
-    protected Pipeline getPipeline() {
+    protected Pipeline getPipeline(StreamSource<Map.Entry<String, byte[]>> source) {
         Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(kinesisSource())
+        pipeline.readFrom(source)
                 .withNativeTimestamps(0)
                 .rebalance(Map.Entry::getKey)
                 .map(e -> entry(e.getKey(), Collections.singletonList(new String(e.getValue()))))
@@ -110,12 +111,12 @@ class AbstractKinesisTest extends JetTestSupport {
         return pipeline;
     }
 
+    protected Map<String, List<String>> expectedMessages(int fromInclusive, int toExclusive) {
+        return toMap(messages(fromInclusive, toExclusive));
+    }
+
     protected Map<String, List<String>> sendMessages() {
-        List<Map.Entry<String, String>> msgEntryList = IntStream.range(0, MESSAGES)
-                .boxed()
-                .map(i -> entry(Integer.toString(i % KEYS), i))
-                .map(e -> entry(e.getKey(), String.format("%s: msg %09d", e.getKey(), e.getValue())))
-                .collect(toList());
+        List<Map.Entry<String, String>> msgEntryList = messages(0, MESSAGES);
 
         BatchSource<Map.Entry<String, byte[]>> source = TestSources.items(msgEntryList.stream()
                 .map(e1 -> entry(e1.getKey(), e1.getValue().getBytes()))
@@ -131,9 +132,20 @@ class AbstractKinesisTest extends JetTestSupport {
         return toMap(msgEntryList);
     }
 
+    @Nonnull
+    protected List<Map.Entry<String, String>> messages(int fromInclusive, int toExclusive) {
+        return IntStream.range(fromInclusive, toExclusive)
+                .boxed()
+                .map(i -> entry(Integer.toString(i % KEYS), i))
+                .map(e -> entry(e.getKey(), String.format("%s: msg %09d", e.getKey(), e.getValue())))
+                .collect(toList());
+    }
+
     protected void assertMessages(Map<String, List<String>> expected, boolean checkOrder, boolean deduplicate) {
         assertTrueEventually(() -> {
-            assertEquals(getKeySetsDifferDescription(expected, results), expected.keySet(), results.keySet());
+            assertEquals("Key sets differ!",
+                    expected.keySet().stream().map(Integer::parseInt).collect(Collectors.toCollection(TreeSet::new)),
+                    results.keySet().stream().map(Integer::parseInt).collect(Collectors.toCollection(TreeSet::new)));
 
             for (Map.Entry<String, List<String>> entry : expected.entrySet()) {
                 String key = entry.getKey();
@@ -153,12 +165,11 @@ class AbstractKinesisTest extends JetTestSupport {
         });
     }
 
-    protected StreamSource<Map.Entry<String, byte[]>> kinesisSource() {
+    protected KinesisSources.Builder kinesisSource() {
         return KinesisSources.kinesis(STREAM)
                 .withEndpoint(awsConfig.getEndpoint())
                 .withRegion(awsConfig.getRegion())
-                .withCredentials(awsConfig.getAccessKey(), awsConfig.getSecretKey())
-                .build();
+                .withCredentials(awsConfig.getAccessKey(), awsConfig.getSecretKey());
     }
 
     protected Sink<Map.Entry<String, byte[]>> kinesisSink() {
@@ -210,13 +221,6 @@ class AbstractKinesisTest extends JetTestSupport {
             }
         }
         throw new IllegalStateException("There must be an adjacent shard");
-    }
-
-    private static String getKeySetsDifferDescription(Map<String, List<String>> expected,
-                                                       Map<String, List<String>> actual) {
-        return "Key sets differ!" +
-                "\n\texpected: " + new TreeSet<>(expected.keySet()) +
-                "\n\t  actual: " + new TreeSet<>(actual.keySet());
     }
 
     private static String getMessagesDifferDescription(String key, List<String> expected, List<String> actual) {

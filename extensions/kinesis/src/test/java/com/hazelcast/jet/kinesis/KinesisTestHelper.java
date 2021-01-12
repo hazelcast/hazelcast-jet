@@ -24,6 +24,9 @@ import com.amazonaws.services.kinesis.model.InvalidArgumentException;
 import com.amazonaws.services.kinesis.model.LimitExceededException;
 import com.amazonaws.services.kinesis.model.ListShardsRequest;
 import com.amazonaws.services.kinesis.model.ListShardsResult;
+import com.amazonaws.services.kinesis.model.PutRecordsRequest;
+import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
+import com.amazonaws.services.kinesis.model.PutRecordsResult;
 import com.amazonaws.services.kinesis.model.ResourceInUseException;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
 import com.amazonaws.services.kinesis.model.Shard;
@@ -37,9 +40,12 @@ import com.hazelcast.jet.retry.RetryStrategies;
 import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.logging.ILogger;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -128,6 +134,24 @@ class KinesisTestHelper {
         return callSafely(this::listOpenShards, "open shard listing").stream()
                 .filter(filter)
                 .collect(Collectors.toList());
+    }
+
+    public PutRecordsResult putRecords(List<Map.Entry<String, String>> messages) {
+        PutRecordsRequest request = new PutRecordsRequest();
+        request.setStreamName(stream);
+        request.setRecords(messages.stream()
+                .map(entry -> {
+                    PutRecordsRequestEntry putEntry = new PutRecordsRequestEntry();
+                    putEntry.setPartitionKey(entry.getKey());
+                    putEntry.setData(ByteBuffer.wrap(entry.getValue().getBytes(StandardCharsets.UTF_8)));
+                    return putEntry;
+                })
+                .collect(Collectors.toList()));
+        return callSafely(() -> putRecords(request), "put records");
+    }
+
+    private PutRecordsResult putRecords(PutRecordsRequest request) {
+        return kinesis.putRecords(request);
     }
 
     private List<String> listStreams() {

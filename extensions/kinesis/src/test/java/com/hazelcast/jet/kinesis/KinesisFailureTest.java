@@ -111,7 +111,7 @@ public class KinesisFailureTest extends AbstractKinesisTest {
         System.err.println("Cutting network connection ...");
         PROXY.setConnectionCut(true);
 
-        jet().newJob(getPipeline());
+        jet().newJob(getPipeline(kinesisSource().build()));
         Map<String, List<String>> expectedMessages = sendMessages();
 
         SECONDS.sleep(5);
@@ -127,7 +127,7 @@ public class KinesisFailureTest extends AbstractKinesisTest {
     public void networkOutageWhileRunning() throws Exception {
         HELPER.createStream(10);
 
-        jet().newJob(getPipeline());
+        jet().newJob(getPipeline(kinesisSource().build()));
         Map<String, List<String>> expectedMessages = sendMessages();
 
         //wait for some data to start coming out of the pipeline

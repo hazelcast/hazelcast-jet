@@ -17,15 +17,18 @@ package com.hazelcast.jet.kinesis;
 
 import com.amazonaws.SDKGlobalConfiguration;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
+import com.amazonaws.services.kinesis.model.PutRecordsResult;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
+import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.JobProxy;
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.pipeline.test.AssertionCompletedException;
 import com.hazelcast.jet.test.SerialTest;
@@ -35,6 +38,7 @@ import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -48,6 +52,11 @@ import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
+import static com.amazonaws.services.kinesis.model.ShardIteratorType.AFTER_SEQUENCE_NUMBER;
+import static com.amazonaws.services.kinesis.model.ShardIteratorType.AT_SEQUENCE_NUMBER;
+import static com.amazonaws.services.kinesis.model.ShardIteratorType.AT_TIMESTAMP;
+import static com.amazonaws.services.kinesis.model.ShardIteratorType.LATEST;
+import static com.amazonaws.services.kinesis.model.ShardIteratorType.TRIM_HORIZON;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.pipeline.test.Assertions.assertCollectedEventually;
@@ -102,7 +111,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
 
         try {
             Pipeline pipeline = Pipeline.create();
-            pipeline.readFrom(kinesisSource())
+            pipeline.readFrom(kinesisSource().build())
                     .withNativeTimestamps(0)
                     .window(WindowDefinition.sliding(500, 100))
                     .aggregate(counting())
@@ -140,7 +149,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
     private void staticStream(int shards) {
         HELPER.createStream(shards);
 
-        jet().newJob(getPipeline());
+        jet().newJob(getPipeline(kinesisSource().build()));
 
         Map<String, List<String>> expectedMessages = sendMessages();
         assertMessages(expectedMessages, true, false);
@@ -159,7 +168,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         HELPER.waitForStreamToActivate();
         assertOpenShards(1, shard1, shard2);
 
-        jet().newJob(getPipeline());
+        jet().newJob(getPipeline(kinesisSource().build()));
 
         Map<String, List<String>> expectedMessages = sendMessages();
         assertMessages(expectedMessages, true, false);
@@ -181,7 +190,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
     private void dynamicStream_mergesDuringData(int shards, int merges) {
         HELPER.createStream(shards);
 
-        jet().newJob(getPipeline());
+        jet().newJob(getPipeline(kinesisSource().build()));
 
         Map<String, List<String>> expectedMessages = sendMessages();
 
@@ -215,7 +224,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         HELPER.waitForStreamToActivate();
         assertOpenShards(2, shard);
 
-        jet().newJob(getPipeline());
+        jet().newJob(getPipeline(kinesisSource().build()));
 
         Map<String, List<String>> expectedMessages = sendMessages();
         assertMessages(expectedMessages, true, false);
@@ -236,7 +245,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
     private void dynamicStream_splitsDuringData(int shards, int splits) {
         HELPER.createStream(shards);
 
-        jet().newJob(getPipeline());
+        jet().newJob(getPipeline(kinesisSource().build()));
 
         Map<String, List<String>> expectedMessages = sendMessages();
 
@@ -275,7 +284,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         JobConfig jobConfig = new JobConfig()
                 .setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE)
                 .setSnapshotIntervalMillis(SECONDS.toMillis(1));
-        Job job = jet().newJob(getPipeline(), jobConfig);
+        Job job = jet().newJob(getPipeline(kinesisSource().build()), jobConfig);
 
         Map<String, List<String>> expectedMessages = sendMessages();
 
@@ -305,7 +314,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         JobConfig jobConfig = new JobConfig()
                 .setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE)
                 .setSnapshotIntervalMillis(SECONDS.toMillis(1));
-        Job job = jet().newJob(getPipeline(), jobConfig);
+        Job job = jet().newJob(getPipeline(kinesisSource().build()), jobConfig);
 
         Map<String, List<String>> expectedMessages = sendMessages();
 
@@ -329,6 +338,153 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         ((JobProxy) job).restart(graceful);
 
         assertMessages(expectedMessages, false, !graceful);
+    }
+
+    @Test
+    @Ignore
+    //
+    // Kinesis seems to mess up the timestamps internally somehow, don't know the exact reason...
+    //
+    // The error we get is: The timestampInMillis parameter cannot be greater than the currentTimestampInMillis.
+    // timestampInMillis: 1610448760259000, currentTimestampInMillis: 1610448760774
+    // (Service: AmazonKinesis; Status Code: 400; Error Code: InvalidArgumentException
+    //
+    // We seem to be sending the right request, not sure what causes the problem.
+    //
+    // Happens with latest AWS SDK too.
+    //
+    public void initialRead_timestamp() {
+        HELPER.createStream(1);
+
+        //send out some records, make sure they are in the shard
+        HELPER.putRecords(messages(0, 100));
+        Job initialJob = jet().newJob(getPipeline(kinesisSource().build()));
+        assertMessages(expectedMessages(0, 100), true, false);
+        initialJob.cancel();
+        results.clear();
+
+        //mark the time and send out more records
+        long timestamp = System.currentTimeMillis();
+        HELPER.putRecords(messages(100, 200));
+
+        //start a job reading only records after the timestamp
+        StreamSource<Map.Entry<String, byte[]>> source = kinesisSource()
+                .withInitialShardIteratorRule(".*", AT_TIMESTAMP.name(), Long.toString(timestamp))
+                .build();
+        Job job = jet().newJob(getPipeline(source));
+        assertJobStatusEventually(job, JobStatus.RUNNING);
+
+        //check job has read only records from after the marked time
+        assertMessages(expectedMessages(100, 200), true, false);
+    }
+
+    @Test
+    public void initialRead_latest() throws Exception {
+        HELPER.createStream(1);
+
+        //send out some records, make sure they are in the shard
+        HELPER.putRecords(messages(0, 100));
+        Job initialJob = jet().newJob(getPipeline(kinesisSource().build()));
+        assertMessages(expectedMessages(0, 100), true, false);
+        initialJob.cancel();
+        results.clear();
+
+        //start a new job reading only latest records
+        StreamSource<Map.Entry<String, byte[]>> source = kinesisSource()
+                .withInitialShardIteratorRule(".*", LATEST.name(), null)
+                .build();
+        Job job = jet().newJob(getPipeline(source));
+        assertJobStatusEventually(job, JobStatus.RUNNING);
+
+        //send some more messages and check that the job only reads those
+        HELPER.putRecords(messages(100, 200));
+        assertMessages(expectedMessages(100, 200), true, false);
+    }
+
+    @Test
+    public void initialRead_oldest() {
+        HELPER.createStream(1);
+
+        //send out some records, make sure they are in the shard
+        HELPER.putRecords(messages(0, 100));
+        Job initialJob = jet().newJob(getPipeline(kinesisSource().build()));
+        assertMessages(expectedMessages(0, 100), true, false);
+        initialJob.cancel();
+        results.clear();
+
+        //start a new job which reads all records
+        StreamSource<Map.Entry<String, byte[]>> source = kinesisSource()
+                .withInitialShardIteratorRule(".*", TRIM_HORIZON.name(), null)
+                .build();
+        Job job = jet().newJob(getPipeline(source));
+        assertJobStatusEventually(job, JobStatus.RUNNING);
+
+        //send some more messages and check that the job reads both old and new records
+        HELPER.putRecords(messages(100, 200));
+        assertMessages(expectedMessages(0, 200), true, false);
+    }
+
+    @Test
+    public void initialRead_default() {
+        HELPER.createStream(1);
+
+        //send out some records, make sure they are in the shard
+        HELPER.putRecords(messages(0, 100));
+        Job initialJob = jet().newJob(getPipeline(kinesisSource().build()));
+        assertMessages(expectedMessages(0, 100), true, false);
+        initialJob.cancel();
+        results.clear();
+
+        //start a new job which reads records in its default way
+        StreamSource<Map.Entry<String, byte[]>> source = kinesisSource().build();
+        Job job = jet().newJob(getPipeline(source));
+        assertJobStatusEventually(job, JobStatus.RUNNING);
+
+        //send some more messages and check that the job reads both old and new records
+        HELPER.putRecords(messages(100, 200));
+        assertMessages(expectedMessages(0, 200), true, false);
+    }
+
+    @Test
+    public void initialRead_atSequenceNumber() {
+        HELPER.createStream(1);
+
+        //send out some records, make sure they are in the shard
+        PutRecordsResult putRecordsResult = HELPER.putRecords(messages(0, 100));
+        Job initialJob = jet().newJob(getPipeline(kinesisSource().build()));
+        assertMessages(expectedMessages(0, 100), true, false);
+        initialJob.cancel();
+        results.clear();
+
+        String sequenceNumber = putRecordsResult.getRecords().get(50).getSequenceNumber();
+
+        //start a new job which reads records from the sequence nomber (inclusive)
+        StreamSource<Map.Entry<String, byte[]>> source = kinesisSource()
+                .withInitialShardIteratorRule(".*", AT_SEQUENCE_NUMBER.name(), sequenceNumber)
+                .build();
+        jet().newJob(getPipeline(source));
+        assertMessages(expectedMessages(50, 100), true, false);
+    }
+
+    @Test
+    public void initialRead_afterSequenceNumber() {
+        HELPER.createStream(1);
+
+        //send out some records, make sure they are in the shard
+        PutRecordsResult putRecordsResult = HELPER.putRecords(messages(0, 100));
+        Job initialJob = jet().newJob(getPipeline(kinesisSource().build()));
+        assertMessages(expectedMessages(0, 100), true, false);
+        initialJob.cancel();
+        results.clear();
+
+        String sequenceNumber = putRecordsResult.getRecords().get(50).getSequenceNumber();
+
+        //start a new job which reads records from the sequence nomber (inclusive)
+        StreamSource<Map.Entry<String, byte[]>> source = kinesisSource()
+                .withInitialShardIteratorRule(".*", AFTER_SEQUENCE_NUMBER.name(), sequenceNumber)
+                .build();
+        jet().newJob(getPipeline(source));
+        assertMessages(expectedMessages(51, 100), true, false);
     }
 
     private void assertOpenShards(int count, Shard... excludedShards) {
