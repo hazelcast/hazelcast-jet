@@ -7,9 +7,9 @@ The File connector supports reading from both local and remote files.
 
 To work with files you must specify location and serialization.
 Any options not recognized by Jet are passed, in case of remote files,
-directly to Hadoop client. For local files they are simply ignored.
-
-You can find detailed information for the options below.
+directly to Hadoop client. For local files they are simply ignored. To
+find out more about additional options consult [file source documentation](
+../api/sources-sinks#supported-storage-systems).
 
 ## Location options
 
@@ -29,23 +29,23 @@ above is considered local (i.e. files residing on Jet members), e.g.
 `/path/to/directory/`.
 
 `glob` is a pattern to filter the files in the specified directory.
-The default value is '*', matching all files.
+The default value is `*`, matching all files.
 
-## Ignore File Not Found
+### Ignore File Not Found
 
-When you create a mapping without a schema, or when you execute a
-`SELECT` query, the location specified by the `path` option is expected
-to contain at least one file matching the `glob`, otherwise an exception
-is thrown. This is to avoid hard to catch mistakes, such as typos. If
-you simply want to return zero results set the `ignoreFileNotFound`
-option to true. Note that in this case you must specify the schema.
+When you create a mapping without a schema, the location specified by the
+`path` option is expected to contain at least one file matching the
+`glob`, otherwise an exception is thrown. This is to avoid hard to catch
+mistakes, such as typos. If you simply want to return zero results set
+the `ignoreFileNotFound` option to `true`. Note that in this case you
+must specify the schema.
 
-This option is not valid for file table functions (see below), because
-they always need at least one record to derive the schema from.
+This option is not valid for [file table functions](#file-table-functions),
+because they always need at least one record to derive the schema from.
 
 The default value is `false`.
 
-## Shared File System option
+### Shared File System option
 
 In case the `path` points to a location which is shared between the
 members, e.g. network mounted filesystem, you should set the
