@@ -66,6 +66,7 @@ import java.util.stream.Collectors;
 import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
 import static com.hazelcast.jet.core.JobStatus.STARTING;
 import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetJetConfig;
+import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static com.hazelcast.spi.properties.ClusterProperty.LOGGING_TYPE;
 
@@ -181,9 +182,11 @@ public final class JetBootstrap {
                 // won't be a problem here. Because they cannot revert
                 // back to startup statuses.
                 if (job.getName() != null) {
-                    System.out.println("Job '" + job.getName() + "' is " + job.getStatus().name() + ".");
+                    System.out.println("Job '" + job.getName() + "' submitted at "
+                            + toLocalDateTime(job.getSubmissionTime()) + ".");
                 } else {
-                    System.out.println("Job " + job.getIdString() + " is " + job.getStatus().name() + ".");
+                    System.out.println("Job '" + job.getIdString() + "' submitted at "
+                            + toLocalDateTime(job.getSubmissionTime()) + ".");
                 }
             }
             if (remainingCount == 1) {
