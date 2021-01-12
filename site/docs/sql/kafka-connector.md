@@ -10,7 +10,7 @@ Apache Kafka is schema-less, however SQL assumes a schema. We assume all
 messages in a topic are of the same type (with some exceptions). Kafka
 also supports several serialization options, see below.
 
-## Serialization options
+## Serialization Options
 
 To work with Kafka, you must specify the `keyFormat` and `valueFormat`
 options. Currently, even if you create a table mapping explicitly, we
@@ -73,7 +73,7 @@ option names containing the `.` must be enclosed in double quotes
 because the `.` is a reserved character in SQL, double quotes are used
 to quote identifiers: this way the `.` is interpreted literally.
 
-### JSON serialization
+### JSON Serialization
 
 You don't have to provide any options for the JSON format, but since
 Jet can't automatically determine the column list, you must explicitly
@@ -132,10 +132,25 @@ the class using reflection and use its properties as column names. It
 recognizes public fields and JavaBeans-style getters. If some property
 has a non-primitive type, it will be mapped under the `OBJECT` type.
 
-## External Name
+## External Mapping Name
+
+Sometimes, you would like to use an alias for a topic. If you
+do, you might need to specify the external name for the mapping.
+
+```sql
+CREATE MAPPING my_topic EXTERNAL NAME topic_name
+TYPE Kafka
+OPTIONS (
+    'keyFormat' = 'java',
+    'keyJavaClass' = 'java.lang.Long',
+    'valueFormat' = 'java',
+    'valueJavaClass' = 'com.example.Person')
+```
+
+## External Column Name
 
 You rarely need to specify the columns in DDL. If you do, you might need
-to specify the external name.
+to specify the external name for the column.
 
 The entries in a map naturally have _key_ and _value_ elements. Because
 of this, the format of the external name must be either `__key.<name>`

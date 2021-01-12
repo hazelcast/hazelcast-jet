@@ -45,8 +45,10 @@ TYPE type_identifier
   queries
 
 - `external_mapping_name`: an optional SQL identifier that identifies
-  the object in the external system. By default, it's equal to the
-  mapping name.
+  the object in the external system. For example, for Kafka connector
+  it's the topic name, for IMap connector the map name. By default,
+  it's equal to the mapping name. Moreover, some connectors might choose
+  to ignore it (i.e. file connector).
 
 - `column_name`, `column_type`: the name and type of the column. For the
   list of supported types see the Hazelcast IMDG Reference Manual.
@@ -97,8 +99,8 @@ the string value is a JSON object like this:
 
 ```json
 {
-    ticker: "CERP",
-    amountNormalized: 3000
+    "ticker": "CERP",
+    "amountNormalized": 3000
 }
 ```
 

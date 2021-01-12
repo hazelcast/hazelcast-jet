@@ -21,7 +21,7 @@ arbitrary record to derive the schema and serialization type. You need
 to have at least one record on each cluster member for this to work. If
 you can't ensure this, create the mapping explicitly.
 
-## Serialization options
+## Serialization Options
 
 The `keyFormat` and `valueFormat` options are mandatory. Currently, if
 you create the mapping explicitly, we can't resolve these from a sample.
@@ -34,7 +34,7 @@ Possible values for `keyFormat` and `valueFormat`:
 
 The key and value formats can be different.
 
-### `Portable` serialization
+### `Portable` Serialization
 
 For this format, you need to specify additional options:
 
@@ -69,7 +69,7 @@ OPTIONS (
 
 For more information on `Portable` see Hazelcast IMDG Reference Manual.
 
-### JSON serialization
+### JSON Serialization
 
 You don't have to provide any options for the JSON format, but since
 Jet can't automatically determine the column list, you must explicitly
@@ -128,10 +128,25 @@ the class using reflection and use its properties as column names. It
 recognizes public fields and JavaBeans-style getters. If some property
 has a non-primitive type, it will be mapped under the `OBJECT` type.
 
-## External Name
+## External Mapping Name
+
+Sometimes, you would like to use an alias for an IMap. If you
+do, you might need to specify the external name for the mapping.
+
+```sql
+CREATE MAPPING my_map EXTERNAL NAME map_name
+TYPE IMap
+OPTIONS (
+    'keyFormat' = 'java',
+    'keyJavaClass' = 'java.lang.Long',
+    'valueFormat' = 'java',
+    'valueJavaClass' = 'com.example.Person')
+```
+
+## External Column Name
 
 You rarely need to specify the columns in DDL. If you do, you might need
-to specify the external name.
+to specify the external name for the column.
 
 The entries in a map naturally have _key_ and _value_ elements. Because
 of this, the format of the external name must be either `__key.<name>`
