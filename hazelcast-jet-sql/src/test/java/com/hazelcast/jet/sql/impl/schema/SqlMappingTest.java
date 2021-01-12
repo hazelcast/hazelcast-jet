@@ -147,7 +147,7 @@ public class SqlMappingTest extends SqlTestSupport {
         // the two mappings must be equal, except for their name & objectName
         Mapping firstMapping = iterator.next();
         while (iterator.hasNext()) {
-            assertThat(iterator.next()).isEqualToIgnoringGivenFields(firstMapping, "name", "objectName");
+            assertThat(iterator.next()).isEqualToIgnoringGivenFields(firstMapping, "name", "externalName");
         }
     }
 
