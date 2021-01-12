@@ -200,7 +200,8 @@ public final class KvMetadataJavaResolver implements KvMetadataResolver {
 
     private KvMetadata resolveObjectMetadata(
             boolean isKey,
-            List<MappingField> resolvedFields, Map<QueryPath, MappingField> externalFieldsByPath,
+            List<MappingField> resolvedFields,
+            Map<QueryPath, MappingField> externalFieldsByPath,
             Class<?> clazz
     ) {
         Map<String, Class<?>> typesByNames = FieldsUtil.resolveClass(clazz);

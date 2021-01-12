@@ -165,7 +165,7 @@ public class KvMetadataResolvers {
             @Nonnull List<MappingField> resolvedFields,
             @Nonnull List<TableField> tableFields
     ) {
-        // Add the default `__key` or `this` field as hidden, if  present neither in the external
+        // Add the default `__key` or `this` field as hidden, if present neither in the external
         // names, nor in the field names
         String fieldName = isKey ? KEY : VALUE;
         if (resolvedFields.stream().noneMatch(f -> f.externalName().equals(fieldName) || f.name().equals(fieldName))) {
