@@ -361,6 +361,27 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         test_multipleFieldsForPrimitive("this");
     }
 
+    @Test
+    public void test_valueFieldMappedUnderTopLevelKeyName() {
+        String name = createRandomTopic();
+        sqlService.execute("CREATE MAPPING " + name + "(\n" +
+                "__key BIGINT EXTERNAL NAME id,\n" +
+                "field BIGINT\n" +
+                ")\n" +
+                "TYPE kafka\n" +
+                "OPTIONS (\n" +
+                "   'keyFormat'='java',\n" +
+                "   'keyJavaClass'='java.lang.Integer',\n" +
+                "   'valueFormat'='json',\n" +
+                "   'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + "',\n" +
+                "   'auto.offset.reset'='earliest')");
+
+        kafkaTestSupport.produce(name, 1, "{\"id\":123,\"field\":456}");
+
+        assertRowsEventuallyInAnyOrder("select __key, field from " + name,
+                singletonList(new Row(123L, 456L)));
+    }
+
     private void test_multipleFieldsForPrimitive(String fieldName) {
         String mapName = randomName();
         assertThatThrownBy(

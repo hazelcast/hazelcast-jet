@@ -326,6 +326,30 @@ public class SqlPojoTest extends SqlTestSupport {
         );
     }
 
+    @Test
+    public void test_valueFieldMappedUnderTopLevelKeyName() {
+        String name = createRandomTopic();
+        sqlService.execute("CREATE MAPPING " + name + "(\n" +
+                "__key INT EXTERNAL NAME id,\n" +
+                "name VARCHAR\n" +
+                ")\n" +
+                "TYPE kafka\n" +
+                "OPTIONS (\n" +
+                "   'keyFormat'='java',\n" +
+                "   'keyJavaClass'='java.lang.String',\n" +
+                "   'valueFormat'='java',\n" +
+                "   'valueJavaClass'='" + Person.class.getName() + "',\n" +
+                "   'value.serializer'='" + PersonSerializer.class.getCanonicalName() + "',\n" +
+                "   'value.deserializer'='" + PersonDeserializer.class.getCanonicalName() + "',\n" +
+                "   'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + "',\n" +
+                "   'auto.offset.reset'='earliest')");
+
+        sqlService.execute("INSERT INTO " + name + " VALUES(123, 'foo')");
+
+        assertRowsEventuallyInAnyOrder("select __key, name from " + name,
+                singletonList(new Row(123, "foo")));
+    }
+
     private static String createRandomTopic() {
         String topicName = "t_" + randomString().replace('-', '_');
         kafkaTestSupport.createTopic(topicName, INITIAL_PARTITION_COUNT);

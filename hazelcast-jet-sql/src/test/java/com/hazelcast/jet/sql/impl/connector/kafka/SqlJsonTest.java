@@ -337,6 +337,26 @@ public class SqlJsonTest extends SqlTestSupport {
         );
     }
 
+    @Test
+    public void test_valueFieldMappedUnderTopLevelKeyName() {
+        String name = createRandomTopic();
+        sqlService.execute("CREATE MAPPING " + name + "(\n" +
+                "__key BIGINT EXTERNAL NAME id,\n" +
+                "field BIGINT\n" +
+                ")\n" +
+                "TYPE kafka\n" +
+                "OPTIONS (\n" +
+                "   'keyFormat'='json',\n" +
+                "   'valueFormat'='json',\n" +
+                "   'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + "',\n" +
+                "   'auto.offset.reset'='earliest')");
+
+        kafkaTestSupport.produce(name, "{}", "{\"id\":123,\"field\":456}");
+
+        assertRowsEventuallyInAnyOrder("select __key, field from " + name,
+                singletonList(new Row(123L, 456L)));
+    }
+
     private static String createRandomTopic() {
         String topicName = "t_" + randomString().replace('-', '_');
         kafkaTestSupport.createTopic(topicName, INITIAL_PARTITION_COUNT);
