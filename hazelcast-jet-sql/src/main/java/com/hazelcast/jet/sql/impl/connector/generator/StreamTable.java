@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector.generator;
 
 import com.hazelcast.jet.pipeline.SourceBuilder;
-import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
+import com.hazelcast.jet.pipeline.SourceBuilder.SourceBuffer;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
@@ -53,7 +53,7 @@ class StreamTable extends JetTable {
 
     StreamSource<Object[]> items(Expression<Boolean> predicate, List<Expression<?>> projections) {
         int rate = this.rate;
-        return SourceBuilder.timestampedStream("stream", ctx -> new StreamGenerator(rate, predicate, projections))
+        return SourceBuilder.stream("stream", ctx -> new StreamGenerator(rate, predicate, projections))
                             .fillBufferFn(StreamGenerator::fillBuffer)
                             .build();
     }
@@ -77,7 +77,7 @@ class StreamTable extends JetTable {
             this.projections = projections;
         }
 
-        private void fillBuffer(TimestampedSourceBuffer<Object[]> buffer) {
+        private void fillBuffer(SourceBuffer<Object[]> buffer) {
             long now = System.nanoTime();
             long emitValuesUpTo = (now - startTime) * rate / NANOS_PER_SECOND;
             for (int i = 0; i < MAX_BATCH_SIZE && sequence < emitValuesUpTo; i++) {
