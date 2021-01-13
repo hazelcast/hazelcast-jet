@@ -43,7 +43,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -86,10 +85,8 @@ public class KinesisSinkP<T> implements Processor {
     private final AmazonKinesisAsync kinesis;
     @Nonnull
     private final String stream;
-    @Nullable
-    private final ShardCountMonitor monitor;
     @Nonnull
-    private final AtomicInteger shardCountProvider;
+    private final ShardCountMonitor monitor;
     @Nonnull
     private final Buffer<T> buffer;
 
@@ -114,14 +111,12 @@ public class KinesisSinkP<T> implements Processor {
             @Nonnull String stream,
             @Nonnull FunctionEx<T, String> keyFn,
             @Nonnull FunctionEx<T, byte[]> valueFn,
-            @Nullable ShardCountMonitor monitor,
-            @Nonnull AtomicInteger shardCountProvider,
+            @Nonnull ShardCountMonitor monitor,
             @Nonnull RetryStrategy retryStrategy
             ) {
         this.kinesis = kinesis;
         this.stream = stream;
         this.monitor = monitor;
-        this.shardCountProvider = shardCountProvider;
         this.buffer = new Buffer<>(keyFn, valueFn);
         this.batchSizeMetric = SwCounter.newSwCounter(buffer.getCapacity());
         this.sendRetryTracker = new RetryTracker(retryStrategy);
@@ -146,9 +141,7 @@ public class KinesisSinkP<T> implements Processor {
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
-        if (monitor != null) {
-            monitor.run();
-        }
+        monitor.run();
 
         updateThroughputLimitations();
 
@@ -183,7 +176,7 @@ public class KinesisSinkP<T> implements Processor {
     }
 
     private void updateThroughputLimitations() {
-        int newShardCount = shardCountProvider.get();
+        int newShardCount = monitor.shardCount();
         if (newShardCount > 0 && shardCount != newShardCount) {
             buffer.setCapacity(throughputController.computeBatchSize(newShardCount, sinkCount));
             batchSizeMetric.set(buffer.getCapacity());

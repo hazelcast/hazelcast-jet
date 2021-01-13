@@ -42,14 +42,13 @@ public class ShardCountMonitor extends AbstractShardWorker {
     private static final double RATIO_OF_DESCRIBE_STREAM_RATE_UTILIZED = 0.1;
 
     private final AtomicInteger shardCount;
-    private final RandomizedRateTracker descriteStreamRateTracker;
+    private final RandomizedRateTracker describeStreamRateTracker;
     private final RetryTracker describeStreamRetryTracker;
 
     private Future<DescribeStreamSummaryResult> describeStreamResult;
     private long nextDescribeStreamTime;
 
     public ShardCountMonitor(
-            AtomicInteger shardCount,
             int totalInstances,
             AmazonKinesisAsync kinesis,
             String stream,
@@ -57,11 +56,19 @@ public class ShardCountMonitor extends AbstractShardWorker {
             ILogger logger
     ) {
         super(kinesis, stream, logger);
-        this.shardCount = shardCount;
+        this.shardCount = new AtomicInteger();
         this.describeStreamRetryTracker = new RetryTracker(retryStrategy);
-        this.descriteStreamRateTracker = initRandomizedTracker(totalInstances);
+        this.describeStreamRateTracker = initRandomizedTracker(totalInstances);
         this.nextDescribeStreamTime = System.nanoTime();
     }
+
+    private ShardCountMonitor(AtomicInteger shardCount) {
+        super(null, null, null);
+        this.shardCount = shardCount;
+        describeStreamRateTracker = null;
+        describeStreamRetryTracker = null;
+    }
+
 
     public void run() {
         if (describeStreamResult == null) {
@@ -71,13 +78,21 @@ public class ShardCountMonitor extends AbstractShardWorker {
         }
     }
 
+    public ShardCountMonitor noop() {
+        return new NoopShardCountMonitor(shardCount);
+    }
+
+    public int shardCount() {
+        return shardCount.get();
+    }
+
     private void initDescribeStream() {
         long currentTime = System.nanoTime();
         if (currentTime < nextDescribeStreamTime) {
             return;
         }
         describeStreamResult = helper.describeStreamSummaryAsync();
-        nextDescribeStreamTime = currentTime + descriteStreamRateTracker.next();
+        nextDescribeStreamTime = currentTime + describeStreamRateTracker.next();
     }
 
     private void checkForStreamDescription() {
@@ -124,6 +139,17 @@ public class ShardCountMonitor extends AbstractShardWorker {
         // even while we are issuing them from multiple processors in parallel
         return new RandomizedRateTracker(SECONDS.toNanos(1) * totalInstances,
                 (int) (DESCRIBE_STREAM_OPERATIONS_ALLOWED_PER_SECOND * RATIO_OF_DESCRIBE_STREAM_RATE_UTILIZED));
+    }
+
+    private static final class NoopShardCountMonitor extends ShardCountMonitor {
+
+        private NoopShardCountMonitor(AtomicInteger shardCount) {
+            super(shardCount);
+        }
+
+        @Override
+        public void run() {
+        }
     }
 
 }

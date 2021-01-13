@@ -25,7 +25,6 @@ import com.hazelcast.logging.ILogger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
@@ -73,10 +72,7 @@ public class KinesisSinkPSupplier<T> implements ProcessorSupplier {
     @Nonnull
     @Override
     public Collection<? extends Processor> get(int count) {
-        AtomicInteger shardCount = new AtomicInteger();
-
         ShardCountMonitor shardCountMonitor = new ShardCountMonitor(
-                shardCount,
                 memberCount,
                 client,
                 stream,
@@ -90,8 +86,7 @@ public class KinesisSinkPSupplier<T> implements ProcessorSupplier {
                         stream,
                         keyFn,
                         valueFn,
-                        i == 0 ? shardCountMonitor : null,
-                        shardCount,
+                        i == 0 ? shardCountMonitor : shardCountMonitor.noop(),
                         retryStrategy
                 ))
                 .collect(toList());
