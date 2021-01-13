@@ -291,7 +291,7 @@ public class SqlAvroTest extends SqlTestSupport {
 
     @Test
     public void when_directoryDoesNotExist_then_tableFunctionThrowsException() {
-        String path = getHadoopNonExistingPath();
+        String path = hadoopNonExistingPath();
         assertThatThrownBy(() -> sqlService.execute(
                 "SELECT *"
                 + " FROM TABLE ("

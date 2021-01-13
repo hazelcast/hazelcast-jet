@@ -174,10 +174,10 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
         return true;
     }
 
-    public static String getHadoopNonExistingPath() {
+    public static String hadoopNonExistingPath() {
         return System.getProperty("os.name").toLowerCase().contains("windows")
                 ? "c:\\non\\existing\\path"
-                : "/non/existing/path/";
+                : "/non/existing/path";
     }
 
     /**
