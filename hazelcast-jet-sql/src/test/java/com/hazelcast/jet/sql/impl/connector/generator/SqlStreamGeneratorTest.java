@@ -17,13 +17,17 @@
 package com.hazelcast.jet.sql.impl.connector.generator;
 
 import com.hazelcast.jet.sql.SqlTestSupport;
+import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.concurrent.Future;
+
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class SqlStreamGeneratorTest extends SqlTestSupport {
 
@@ -62,10 +66,11 @@ public class SqlStreamGeneratorTest extends SqlTestSupport {
 
     @Test
     public void test_generateEmptyStream() {
-        assertRowsEventuallyInAnyOrder(
-                "SELECT * FROM TABLE(GENERATE_STREAM(0))",
-                emptyList()
-        );
+        SqlResult result = sqlService.execute("SELECT * FROM TABLE(GENERATE_STREAM(0))");
+        Future<Boolean> future = spawn(() -> result.iterator().hasNext());
+        assertTrueAllTheTime(() -> assertFalse(future.isDone()), 2);
+        result.close();
+        assertTrueEventually(() -> assertTrue(future.isDone()));
     }
 
     @Test
