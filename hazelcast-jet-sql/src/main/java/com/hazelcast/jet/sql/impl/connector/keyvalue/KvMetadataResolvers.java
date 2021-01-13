@@ -154,7 +154,7 @@ public class KvMetadataResolvers {
         if (formatValue == null) {
             return options;
         }
-        String classValue = null;
+        String classValue;
         switch (formatValue) {
             case "varchar":
             case "character varying":
@@ -213,6 +213,9 @@ public class KvMetadataResolvers {
             case "timestamp with time zone":
                 classValue = OffsetDateTime.class.getName();
                 break;
+
+            default:
+                classValue = null;
         }
 
         String classProperty = isKey ? OPTION_KEY_CLASS : OPTION_VALUE_CLASS;
