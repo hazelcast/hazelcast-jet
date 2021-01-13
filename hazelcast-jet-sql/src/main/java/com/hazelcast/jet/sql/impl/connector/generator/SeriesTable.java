@@ -59,21 +59,19 @@ class SeriesTable extends JetTable {
         return TestSources.items(new SeriesGenerator(start, stop, step, predicate, projections));
     }
 
-    int numberOfItems() {
+    long numberOfItems() {
         return numberOfItems(start, stop, step);
     }
 
-    private static int numberOfItems(int start, int stop, int step) {
+    private static long numberOfItems(int start, int stop, int step) {
         if (step == 0) {
             throw QueryException.error("step cannot equal zero");
         }
 
-        if (start < stop) {
-            return step < 0 ? 0 : (stop - start) / step + 1;
-        } else if (start > stop) {
-            return step > 0 ? 0 : (start - stop) / (-step) + 1;
+        if (start <= stop) {
+            return step < 0 ? 0 : ((long) stop - start) / step + 1;
         } else {
-            return 1;
+            return step > 0 ? 0 : ((long) start - stop) / (-step) + 1;
         }
     }
 
