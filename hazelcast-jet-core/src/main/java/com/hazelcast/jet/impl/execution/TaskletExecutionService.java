@@ -63,7 +63,7 @@ import static com.hazelcast.jet.core.JetProperties.JET_IDLE_NONCOOPERATIVE_MIN_M
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
-import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.lang.Thread.currentThread;
 import static java.util.Collections.emptyList;
@@ -259,7 +259,7 @@ public class TaskletExecutionService {
             max = min;
         }
 
-        logFine(logger, "Creating idler with %s=%dµs,%s=%dµs", minName, min, maxName, max);
+        logFinest(logger, "Creating idler with %s=%dµs,%s=%dµs", minName, min, maxName, max);
         return new BackoffIdleStrategy(0, 0,
             minProp.getTimeUnit().toNanos(min), maxProp.getTimeUnit().toNanos(max)
         );
@@ -323,7 +323,7 @@ public class TaskletExecutionService {
         // prevent lambda allocation on each iteration
         private final Consumer<TaskletTracker> runTasklet = this::runTasklet;
 
-        private boolean fineLogEnabled;
+        private boolean finestLogEnabled;
         private Thread myThread;
         private MetricsImpl.Container userMetricsContextContainer;
 
@@ -340,7 +340,7 @@ public class TaskletExecutionService {
             long idleCount = 0;
 
             while (!isShutdown) {
-                fineLogEnabled = logger.isFineEnabled();
+                finestLogEnabled = logger.isFinestEnabled();
                 progressTracker.reset();
                 // garbage-free iteration -- relies on implementation in COWArrayList that doesn't use an Iterator
                 trackers.forEach(runTasklet);
@@ -357,7 +357,7 @@ public class TaskletExecutionService {
 
         private void runTasklet(TaskletTracker t) {
             long start = 0;
-            if (fineLogEnabled) {
+            if (finestLogEnabled) {
                 start = System.nanoTime();
             }
             try {
@@ -378,17 +378,17 @@ public class TaskletExecutionService {
                 dismissTasklet(t);
             }
 
-            if (fineLogEnabled) {
+            if (finestLogEnabled) {
                 long elapsedMs = NANOSECONDS.toMillis((System.nanoTime() - start));
                 if (elapsedMs > COOPERATIVE_LOGGING_THRESHOLD) {
-                    logger.fine("Cooperative tasklet call of '" + t.tasklet + "' took more than "
+                    logger.finest("Cooperative tasklet call of '" + t.tasklet + "' took more than "
                             + COOPERATIVE_LOGGING_THRESHOLD + " ms: " + elapsedMs + "ms");
                 }
             }
         }
 
         private void dismissTasklet(TaskletTracker t) {
-            logFine(logger, "Tasklet %s is done", t.tasklet);
+            logFinest(logger, "Tasklet %s is done", t.tasklet);
             t.executionTracker.taskletDone();
             trackers.remove(t);
         }
