@@ -29,6 +29,7 @@ import com.hazelcast.sql.impl.schema.TableField;
 
 import java.util.List;
 
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 class StreamTable extends JetTable {
@@ -61,7 +62,8 @@ class StreamTable extends JetTable {
     private static final class StreamGenerator {
 
         private static final int MAX_BATCH_SIZE = 1024;
-        private static final long NANOS_PER_SECOND = SECONDS.toNanos(1);
+        private static final long NANOS_PER_MICRO = MICROSECONDS.toNanos(1);
+        private static final long MICROS_PER_SECOND = SECONDS.toMicros(1);
 
         private final long startTime;
         private final int rate;
@@ -79,7 +81,7 @@ class StreamTable extends JetTable {
 
         private void fillBuffer(SourceBuffer<Object[]> buffer) {
             long now = System.nanoTime();
-            long emitValuesUpTo = (now - startTime) * rate / NANOS_PER_SECOND;
+            long emitValuesUpTo = (now - startTime) / NANOS_PER_MICRO * rate / MICROS_PER_SECOND;
             for (int i = 0; i < MAX_BATCH_SIZE && sequence < emitValuesUpTo; i++) {
                 Object[] row = ExpressionUtil.evaluate(predicate, projections, new Object[]{sequence});
                 if (row != null) {
