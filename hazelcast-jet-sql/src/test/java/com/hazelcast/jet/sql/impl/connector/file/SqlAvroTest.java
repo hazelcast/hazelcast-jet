@@ -295,7 +295,7 @@ public class SqlAvroTest extends SqlTestSupport {
         assertThatThrownBy(() -> sqlService.execute(
                 "SELECT *"
                 + " FROM TABLE ("
-                        + "avro_file (path => '" + path + "')"
+                + "avro_file (path => '" + path + "')"
                 + ")"
         )).isInstanceOf(HazelcastSqlException.class)
           .hasMessageContaining("The directory '" + path + "' does not exist");
