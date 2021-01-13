@@ -19,7 +19,6 @@ package com.hazelcast.jet.sql.impl.connector.generator;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
 import com.hazelcast.jet.pipeline.StreamSource;
-import com.hazelcast.jet.pipeline.test.GeneratorFunction;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
@@ -29,7 +28,8 @@ import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.TableField;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 class StreamTable extends JetTable {
 
@@ -53,42 +53,39 @@ class StreamTable extends JetTable {
 
     StreamSource<Object[]> items(Expression<Boolean> predicate, List<Expression<?>> projections) {
         int rate = this.rate;
-        GeneratorFunction<Object[]> generator =
-                (timestamp, sequence) -> ExpressionUtil.evaluate(predicate, projections, new Object[]{sequence});
-        return SourceBuilder.timestampedStream("itemStream", ctx -> new ItemStreamSource(rate, generator))
-                            .fillBufferFn(ItemStreamSource::fillBuffer)
+        return SourceBuilder.timestampedStream("stream", ctx -> new StreamGenerator(rate, predicate, projections))
+                            .fillBufferFn(StreamGenerator::fillBuffer)
                             .build();
     }
 
-    private static final class ItemStreamSource {
+    private static final class StreamGenerator {
 
         private static final int MAX_BATCH_SIZE = 1024;
+        private static final long NANOS_PER_SECOND = SECONDS.toNanos(1);
 
-        private final GeneratorFunction<Object[]> generator;
-        private final long periodNanos;
+        private final long startTime;
+        private final int rate;
+        private final Expression<Boolean> predicate;
+        private final List<Expression<?>> projections;
 
-        private long emitSchedule;
         private long sequence;
 
-        private ItemStreamSource(int itemsPerSecond, GeneratorFunction<Object[]> generator) {
-            this.periodNanos = TimeUnit.SECONDS.toNanos(1) / itemsPerSecond;
-            this.generator = generator;
+        private StreamGenerator(int rate, Expression<Boolean> predicate, List<Expression<?>> projections) {
+            this.startTime = System.nanoTime();
+            this.rate = rate;
+            this.predicate = predicate;
+            this.projections = projections;
         }
 
-        void fillBuffer(TimestampedSourceBuffer<Object[]> buffer) throws Exception {
-            long nowNs = System.nanoTime();
-            if (emitSchedule == 0) {
-                emitSchedule = nowNs;
-            }
-            // round ts down to nearest period
-            long tsNanos = TimeUnit.MILLISECONDS.toNanos(System.currentTimeMillis());
-            long ts = TimeUnit.NANOSECONDS.toMillis(tsNanos - (tsNanos % periodNanos));
-            for (int i = 0; i < MAX_BATCH_SIZE && nowNs >= emitSchedule; i++) {
-                Object[] item = generator.generate(ts, sequence++);
+        private void fillBuffer(TimestampedSourceBuffer<Object[]> buffer) {
+            long now = System.nanoTime();
+            long emitValuesUpTo = (now - startTime) * rate / NANOS_PER_SECOND;
+            for (int i = 0; i < MAX_BATCH_SIZE && sequence < emitValuesUpTo; i++) {
+                Object[] item = ExpressionUtil.evaluate(predicate, projections, new Object[]{sequence});
                 if (item != null) {
-                    buffer.add(item, ts);
+                    buffer.add(item);
                 }
-                emitSchedule += periodNanos;
+                sequence++;
             }
         }
     }
