@@ -18,6 +18,7 @@ package com.hazelcast.jet.sql;
 
 import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
+import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
@@ -35,6 +36,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BiPredicate;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
@@ -70,26 +72,6 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
      * @param expectedRows Expected rows
      */
     public static void assertRowsEventuallyInAnyOrder(String sql, Collection<Row> expectedRows) {
-        List<Row> actualRows = awaitRows(sql, expectedRows.size());
-        assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
-    }
-
-    /**
-     * Execute a query and wait for the results to contain all the {@code
-     * expectedRows} using a recursive field by field comparison. If
-     * there are more rows in the result, they are ignored.
-     * Suitable for streaming queries that don't terminate.
-     *
-     * @param sql          The query
-     * @param expectedRows Expected rows
-     */
-    public static void assertComparingFieldByFieldRowsEventuallyInAnyOrder(String sql, Collection<Row> expectedRows) {
-        List<Row> actualRows = awaitRows(sql, expectedRows.size());
-        assertThat(actualRows).usingRecursiveFieldByFieldElementComparator()
-                              .containsExactlyInAnyOrderElementsOf(expectedRows);
-    }
-
-    public static List<Row> awaitRows(String sql, int numberOfRows) {
         SqlService sqlService = instance().getSql();
         CompletableFuture<Void> future = new CompletableFuture<>();
         Deque<Row> rows = new ArrayDeque<>();
@@ -97,7 +79,7 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
         Thread thread = new Thread(() -> {
             try (SqlResult result = sqlService.execute(sql)) {
                 Iterator<SqlRow> iterator = result.iterator();
-                for (int i = 0; i < numberOfRows && iterator.hasNext(); i++) {
+                for (int i = 0; i < expectedRows.size() && iterator.hasNext(); i++) {
                     rows.add(new Row(iterator.next()));
                 }
                 future.complete(null);
@@ -120,7 +102,8 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
             throw sneakyThrow(e);
         }
 
-        return new ArrayList<>(rows);
+        List<Row> actualRows = new ArrayList<>(rows);
+        assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
     }
 
     /**
@@ -131,27 +114,24 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
      * @param expectedRows Expected rows
      */
     public static void assertRowsAnyOrder(String sql, Collection<Row> expectedRows) {
-        assertThat(fetchRows(sql)).containsExactlyInAnyOrderElementsOf(expectedRows);
+        SqlService sqlService = instance().getSql();
+        List<Row> actualRows = new ArrayList<>();
+        sqlService.execute(sql).iterator().forEachRemaining(r -> actualRows.add(new Row(r)));
+        assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
     }
 
     /**
-     * Execute a query and wait until it completes. Assert using a recursive
-     * field by field comparison that the returned rows contain the expected
-     * rows, in any order.
+     * Execute a query and wait until it completes. Assert that the returned
+     * rows contain the expected rows, in the given order.
      *
      * @param sql          The query
      * @param expectedRows Expected rows
      */
-    public static void assertComparingFieldByFieldRowsAnyOrder(String sql, Collection<Row> expectedRows) {
-        assertThat(fetchRows(sql)).usingRecursiveFieldByFieldElementComparator()
-                                  .containsExactlyInAnyOrderElementsOf(expectedRows);
-    }
-
-    private static List<Row> fetchRows(String sql) {
+    public static void assertRowsOrdered(String sql, List<Row> expectedRows) {
         SqlService sqlService = instance().getSql();
-        List<Row> rows = new ArrayList<>();
-        sqlService.execute(sql).iterator().forEachRemaining(row -> rows.add(new Row(row)));
-        return rows;
+        List<Row> actualRows = new ArrayList<>();
+        sqlService.execute(sql).iterator().forEachRemaining(r -> actualRows.add(new Row(r)));
+        assertThat(actualRows).containsExactlyElementsOf(expectedRows);
     }
 
     /**
@@ -172,6 +152,26 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
         // Prefix the UUID with some letters and remove dashes so that it doesn't start with
         // a number and is a valid SQL identifier without quoting.
         return "o_" + UuidUtil.newUnsecureUuidString().replace('-', '_');
+    }
+
+    /**
+     * Compares two lists. The lists are expected to contain elements of type
+     * Object[]. Useful for {@link TestSupport#outputChecker(BiPredicate)}.
+     */
+    public static boolean compareRowLists(List<?> expected, List<?> actual) {
+        if (expected.size() != actual.size()) {
+            return false;
+        }
+
+        for (int i = 0; i < expected.size(); i++) {
+            Object[] expectedItem = (Object[]) expected.get(i);
+            Object[] actualItem = (Object[]) actual.get(i);
+            if (!Arrays.equals(expectedItem, actualItem)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

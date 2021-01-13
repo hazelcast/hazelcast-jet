@@ -149,7 +149,8 @@ public class TestBatchSqlConnector implements SqlConnector {
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
-            @Nonnull String tableName,
+            @Nonnull String mappingName,
+            @Nonnull String externalName,
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
@@ -186,7 +187,7 @@ public class TestBatchSqlConnector implements SqlConnector {
             rows.add(row);
         }
 
-        return new TestValuesTable(this, schemaName, tableName, fields, rows);
+        return new TestValuesTable(this, schemaName, mappingName, fields, rows);
     }
 
     @Override
@@ -208,7 +209,7 @@ public class TestBatchSqlConnector implements SqlConnector {
                 .collect(toList());
         BatchSource<Object[]> source = TestSources.itemsDistributed(items);
         ProcessorMetaSupplier pms = ((BatchSourceTransform<Object[]>) source).metaSupplier;
-        return dag.newVertex(table.toString(), pms);
+        return dag.newUniqueVertex(table.toString(), pms);
     }
 
     public static class TestValuesTable extends JetTable {

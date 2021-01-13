@@ -51,12 +51,13 @@ BatchSource<String> source = FileSources.files("/path/to/my/directory")
                                         .build();
 ```
 
-The `path` parameter takes an absolute path. It must point to a
-directory. The directory is not read recursively. The files in the
-directory can be filtered by specifying a glob parameter - a pattern
-with wildcard characters (`*`, `?`). For example, if a folder contains
-log files, named using `YYYY-MM-DD.log` pattern, you can read all the
-files from January 2020 by setting the following parameters:
+The `path` parameter takes an absolute path. It must point to a single
+directory, it must not contain any wildcard characters. The directory is
+not read recursively. The files in the directory can be filtered by
+specifying a glob parameter - a pattern with wildcard characters (`*`,
+`?`). For example, if a folder contains log files, named using
+`YYYY-MM-DD.log` pattern, you can read all the files from January 2020
+by setting the following parameters:
 
 ```java
 BatchSource<String> source = FileSources.files("/var/log/")
@@ -294,6 +295,14 @@ compile 'com.hazelcast.jet:hazelcast-jet-hadoop-all:{jet-version}'
 The basic authentication mechanisms are covered here. For additional
 ways to authenticate see the linked documentation for the services.
 
+Due to performance, the authentication is cached. This may cause issues
+when submitting multiple jobs with different credentials, or even the
+same jobs with new credentials, e.g. after credentials rotation.
+
+You can turn off authentication caching by setting
+`fs.<prefix>.impl.disable.cache` option to `true`. For the list of
+prefixes see the table above.
+
 #### Amazon S3
 
 Provide your AWS access key id and secret key with required access via
@@ -311,8 +320,10 @@ and
 Provide a location of the keyfile via
 `google.cloud.auth.service.account.json.keyfile` source option, using
 `FileSourceBuilder#option` method on the source builder. Note that
-the file must be available on the node where you submit the job and on
-the cluster members.
+the file must be available on all the cluster members.
+
+For additional ways to authenticate see
+[Google Cloud Hadoop connector](https://github.com/GoogleCloudDataproc/hadoop-connectors/blob/master/gcs/CONFIGURATION.md#authentication).
 
 #### Windows Azure Blob Storage
 
@@ -830,7 +841,7 @@ compile 'com.hazelcast.jet:hazelcast-jet-kafka:{jet-version}'
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-#### Fault-tolerance
+#### Fault Tolerance
 
 One of the most important features of using Kafka as a source is that
 it's possible to replay data - which enables fault-tolerance. If the job
@@ -848,7 +859,7 @@ committing using `enable.auto.commit` and configuring
 [Kafka documentation](https://kafka.apache.org/22/documentation.html)
 for the descriptions of these properties.
 
-#### Transactional guarantees
+#### Transactional Guarantees
 
 As a sink, it provides exactly-once guarantees at the cost of using
 Kafka transactions: Jet commits the produced records after each snapshot
@@ -960,7 +971,7 @@ p.readFrom(Sources
  .writeTo(Sinks.logger());
 ```
 
-#### Source fault tolerance
+#### Source Fault Tolerance
 
 The source connector is fault-tolerant with the exactly-once guarantee
 (except for the non-durable topic consumer). Fault tolerance is achieved
@@ -1394,7 +1405,7 @@ want to avoid duplicate writes to the database, then a suitable
 _insert-or-update_ statement should be used instead of `INSERT`, such as
 `MERGE` or `REPLACE` or `INSERT .. ON CONFLICT ..`.
 
-#### Fault tolerance
+#### Fault Tolerance
 
 The JDBC sink supports the exactly-once guarantee. It uses two-phase XA
 transactions, the DML statements are committed consistently with the

@@ -149,15 +149,11 @@
                             <artifactId>picocli</artifactId>
                             <version>${picocli.version}</version>
                         </dependency>
+
                         <dependency>
                             <groupId>io.github.classgraph</groupId>
                             <artifactId>classgraph</artifactId>
                             <version>${classgraph.version}</version>
-                        </dependency>
-                        <dependency>
-                            <groupId>com.fasterxml.jackson.jr</groupId>
-                            <artifactId>jackson-jr-stree</artifactId>
-                            <version>${jackson.jr.version}</version>
                         </dependency>
                         <dependency>
                             <groupId>com.fasterxml.jackson.jr</groupId>
@@ -337,15 +333,19 @@
             <optional>true</optional>
         </dependency>
         <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline-terminal</artifactId>
+            <version>${jline.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline-reader</artifactId>
+            <version>${jline.version}</version>
+        </dependency>
+        <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
             <version>${classgraph.version}</version>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.jr</groupId>
-            <artifactId>jackson-jr-stree</artifactId>
-            <version>${jackson.jr.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>

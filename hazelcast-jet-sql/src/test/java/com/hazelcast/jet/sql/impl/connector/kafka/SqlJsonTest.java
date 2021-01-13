@@ -16,9 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector.kafka;
 
-import com.fasterxml.jackson.jr.stree.JrsNumber;
-import com.fasterxml.jackson.jr.stree.JrsObject;
-import com.fasterxml.jackson.jr.stree.JrsString;
+import com.google.common.collect.ImmutableMap;
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
 import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
@@ -46,7 +44,6 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FOR
 import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static java.util.Collections.singletonMap;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SqlJsonTest extends SqlTestSupport {
@@ -224,6 +221,15 @@ public class SqlJsonTest extends SqlTestSupport {
     }
 
     @Test
+    public void when_createMappingNoColumns_then_fail() {
+        assertThatThrownBy(() ->
+                sqlService.execute("CREATE MAPPING " + randomName() + ' '
+                                   + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
+                                   + "OPTIONS ('valueFormat'='json')"))
+                .hasMessage("Column list is required for JSON format");
+    }
+
+    @Test
     public void when_explicitTopLevelField_then_fail_key() {
         when_explicitTopLevelField_then_fail("__key", "this");
     }
@@ -233,7 +239,7 @@ public class SqlJsonTest extends SqlTestSupport {
         when_explicitTopLevelField_then_fail("this", "__key");
     }
 
-    public void when_explicitTopLevelField_then_fail(String field, String otherField) {
+    private void when_explicitTopLevelField_then_fail(String field, String otherField) {
         String name = randomName();
         assertThatThrownBy(() ->
                 sqlService.execute("CREATE MAPPING " + name + " ("
@@ -243,9 +249,60 @@ public class SqlJsonTest extends SqlTestSupport {
                         + "OPTIONS ("
                         + '\'' + OPTION_KEY_FORMAT + "'='" + JSON_FORMAT + '\''
                         + ", '" + OPTION_VALUE_FORMAT + "'='" + JSON_FORMAT + '\''
+                        + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                        + ", 'auto.offset.reset'='earliest'"
                         + ")"))
                 .isInstanceOf(HazelcastSqlException.class)
-                .hasMessage("Invalid external name: " + field);
+                .hasMessage("Cannot use the '" + field + "' field with JSON serialization");
+    }
+
+    @Test
+    public void test_valueFieldMappedUnderTopLevelKeyName() {
+        String name = createRandomTopic();
+        sqlService.execute("CREATE MAPPING " + name + "(\n"
+                + "__key BIGINT EXTERNAL NAME id\n"
+                + ", field BIGINT\n"
+                + ')' + "TYPE " + KafkaSqlConnector.TYPE_NAME + " \n"
+                + "OPTIONS (\n"
+                + '\'' + OPTION_KEY_FORMAT + "'='" + JSON_FORMAT + "'\n"
+                + ", '" + OPTION_VALUE_FORMAT + "'='" + JSON_FORMAT + "'\n"
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + "'\n"
+                + ", 'auto.offset.reset'='earliest'"
+                + ")"
+        );
+
+        kafkaTestSupport.produce(name, "{}", "{\"id\":123,\"field\":456}");
+
+        assertRowsEventuallyInAnyOrder(
+                "select __key, field from " + name,
+                singletonList(new Row(123L, 456L))
+        );
+    }
+
+    @Test
+    public void test_writingToTopLevel() {
+        String mapName = randomName();
+        sqlService.execute("CREATE MAPPING " + mapName + "("
+                + "id INT EXTERNAL NAME \"__key.id\""
+                + ", name VARCHAR"
+                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ("
+                + '\'' + OPTION_KEY_FORMAT + "'='" + JSON_FORMAT + '\''
+                + ", '" + OPTION_VALUE_FORMAT + "'='" + JSON_FORMAT + '\''
+                + ", 'bootstrap.servers'='" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", 'auto.offset.reset'='earliest'"
+                + ")"
+        );
+
+        assertThatThrownBy(() ->
+                sqlService.execute("INSERT INTO " + mapName + "(__key, name) VALUES('{\"id\":1}', null)"))
+                .isInstanceOf(HazelcastSqlException.class)
+                .hasMessageContaining("Writing to top-level fields of type OBJECT not supported");
+
+        assertThatThrownBy(() ->
+                sqlService.execute("INSERT INTO " + mapName + "(id, this) VALUES(1, '{\"name\":\"foo\"}')"))
+                .isInstanceOf(HazelcastSqlException.class)
+                .hasMessageContaining("Writing to top-level fields of type OBJECT not supported");
     }
 
     @Test
@@ -264,11 +321,11 @@ public class SqlJsonTest extends SqlTestSupport {
         );
         sqlService.execute("INSERT INTO " + name + " VALUES (1, 'Alice')");
 
-        assertComparingFieldByFieldRowsEventuallyInAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT __key, this FROM " + name,
                 singletonList(new Row(
-                        new JrsObject(singletonMap("id", new JrsNumber(1))),
-                        new JrsObject(singletonMap("name", new JrsString("Alice")))
+                        ImmutableMap.of("id", 1),
+                        ImmutableMap.of("name", "Alice")
                 ))
         );
     }

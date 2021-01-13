@@ -92,12 +92,11 @@ public class KafkaSqlConnector implements SqlConnector {
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
-            @Nonnull String tableName,
+            @Nonnull String mappingName,
+            @Nonnull String externalName,
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
-        String topicName = options.getOrDefault(OPTION_OBJECT_NAME, tableName);
-
         KvMetadata keyMetadata = metadataResolvers.resolveMetadata(true, resolvedFields, options, null);
         KvMetadata valueMetadata = metadataResolvers.resolveMetadata(false, resolvedFields, options, null);
         List<TableField> fields = concat(keyMetadata.getFields().stream(), valueMetadata.getFields().stream())
@@ -106,10 +105,10 @@ public class KafkaSqlConnector implements SqlConnector {
         return new KafkaTable(
                 this,
                 schemaName,
-                tableName,
+                mappingName,
                 fields,
                 new ConstantTableStatistics(0),
-                topicName,
+                externalName,
                 options,
                 keyMetadata.getQueryTargetDescriptor(),
                 keyMetadata.getUpsertTargetDescriptor(),
@@ -132,7 +131,7 @@ public class KafkaSqlConnector implements SqlConnector {
     ) {
         KafkaTable table = (KafkaTable) table0;
 
-        Vertex vStart = dag.newVertex(
+        Vertex vStart = dag.newUniqueVertex(
                 table.toString(),
                 KafkaProcessors.streamKafkaP(
                         table.kafkaConsumerProperties(),
@@ -142,7 +141,7 @@ public class KafkaSqlConnector implements SqlConnector {
                 )
         );
 
-        Vertex vEnd = dag.newVertex(
+        Vertex vEnd = dag.newUniqueVertex(
                 "Project(" + table.toString() + ")",
                 KvProcessors.rowProjector(
                         table.paths(),
@@ -175,7 +174,7 @@ public class KafkaSqlConnector implements SqlConnector {
     ) {
         KafkaTable table = (KafkaTable) table0;
 
-        Vertex vStart = dag.newVertex(
+        Vertex vStart = dag.newUniqueVertex(
                 "Project(" + table.toString() + ")",
                 KvProcessors.entryProjector(
                         table.paths(),
@@ -185,7 +184,7 @@ public class KafkaSqlConnector implements SqlConnector {
                 )
         );
 
-        Vertex vEnd = dag.newVertex(
+        Vertex vEnd = dag.newUniqueVertex(
                 table.toString(),
                 KafkaProcessors.<Entry<Object, Object>, Object, Object>writeKafkaP(
                         table.kafkaProducerProperties(),

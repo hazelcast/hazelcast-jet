@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.jet.sql.SqlTestSupport;
+import com.hazelcast.sql.HazelcastSqlException;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -32,6 +33,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.CSV_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_FORMAT;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SqlCsvTest extends SqlTestSupport {
@@ -247,6 +249,63 @@ public class SqlCsvTest extends SqlTestSupport {
                 + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "foo.csv" + '\''
                 + ")"
         );
+    }
+
+    @Test
+    public void when_fileDoesNotExist_then_fails() {
+        String name = randomName();
+        assertThatThrownBy(() ->
+                sqlService.execute("CREATE MAPPING " + name
+                        + " TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                        + "OPTIONS ( "
+                        + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
+                        + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                        + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "foo.csv" + '\''
+                        + ")"
+                )
+        ).hasMessageContaining("matches no files");
+    }
+
+    @Test
+    public void when_fileDoesNotExistAndIgnoreFileNotFound_then_returnNoResults() {
+        String name = randomName();
+        sqlService.execute("CREATE MAPPING " + name + " (field INT) "
+                + " TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '\'' + OPTION_FORMAT + "'='" + CSV_FORMAT + '\''
+                + ", '" + FileSqlConnector.OPTION_PATH + "'='" + RESOURCES_PATH + '\''
+                + ", '" + FileSqlConnector.OPTION_GLOB + "'='" + "foo.csv" + '\''
+                + ", '" + FileSqlConnector.OPTION_IGNORE_FILE_NOT_FOUND + "'='" + "true" + '\''
+                + ")"
+        );
+
+        assertThat(sqlService.execute("SELECT * FROM " + name).iterator().hasNext())
+                .describedAs("no results from non existing file")
+                .isFalse();
+    }
+
+    @Test
+    public void when_directoryDoesNotExist_then_tableFunctionThrowsException() {
+        assertThatThrownBy(() -> sqlService.execute(
+                "SELECT *"
+                + " FROM TABLE ("
+                + "csv_file (path => '/non/existing/path/')"
+                + ")"
+        )).isInstanceOf(HazelcastSqlException.class)
+          .hasMessageContaining("The directory '/non/existing/path' does not exist");
+    }
+
+    @Test
+    public void when_fileDoesNotExist_then_tableFunctionThrowsException() {
+        assertThatThrownBy(() -> sqlService.execute(
+                "SELECT * "
+                        + " FROM TABLE ("
+                        + "csv_file ("
+                        + " path => '" + RESOURCES_PATH + "'"
+                        + " , glob => 'foo.csv'"
+                        + ")"
+                        + ")")
+        ).hasMessageContaining("matches no files");
     }
 
     @Test

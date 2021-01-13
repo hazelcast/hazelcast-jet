@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.sql.impl.QueryUtils.CATALOG;
 import static java.util.Arrays.asList;
@@ -76,22 +77,29 @@ public class MappingCatalog implements TableResolver {
     }
 
     private Mapping resolveMapping(Mapping mapping) {
-        try {
-            String type = mapping.type();
-            Map<String, String> options = mapping.options();
+        String type = mapping.type();
+        Map<String, String> options = mapping.options();
 
-            SqlConnector connector = connectorCache.forType(type);
-            List<MappingField> resolvedFields = connector.resolveAndValidateFields(nodeEngine, options, mapping.fields());
-            return new Mapping(mapping.name(), type, new ArrayList<>(resolvedFields), new HashMap<>(options));
-        } catch (Exception e) {
-            throw QueryException.error(e.getMessage(), e);
-        }
+        SqlConnector connector = connectorCache.forType(type);
+        List<MappingField> resolvedFields = connector.resolveAndValidateFields(nodeEngine, options, mapping.fields());
+        return new Mapping(
+                mapping.name(),
+                mapping.externalName(),
+                type,
+                new ArrayList<>(resolvedFields),
+                new HashMap<>(options)
+        );
     }
 
     public void removeMapping(String name, boolean ifExists) {
         if (!storage.remove(name) && !ifExists) {
             throw QueryException.error("Mapping does not exist: " + name);
         }
+    }
+
+    @Nonnull
+    public List<String> getMappingNames() {
+        return storage.values().stream().map(Mapping::name).collect(Collectors.toList());
     }
 
     @Nonnull
@@ -119,6 +127,13 @@ public class MappingCatalog implements TableResolver {
 
     private Table toTable(Mapping mapping) {
         SqlConnector connector = connectorCache.forType(mapping.type());
-        return connector.createTable(nodeEngine, SCHEMA_NAME_PUBLIC, mapping.name(), mapping.options(), mapping.fields());
+        return connector.createTable(
+                nodeEngine,
+                SCHEMA_NAME_PUBLIC,
+                mapping.name(),
+                mapping.externalName(),
+                mapping.options(),
+                mapping.fields()
+        );
     }
 }
