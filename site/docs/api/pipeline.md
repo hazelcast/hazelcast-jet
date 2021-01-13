@@ -87,39 +87,40 @@ member machines.
 
 #### Preserving Event Order
 
-As mentioned above, Jet models the data processing job as a pipeline
-model. A pipeline consists of stages and each stage except sink and
-source accepts the events from previous stages, processes these events,
-and then passes the transformed events to the next downstream stage. Jet
+As mentioned above, Jet models the data processing job as a pipeline.
+The pipeline consists of stages and each stage (except 
+sources) accepts the events from upstream stages, processes the events,
+and passes the transformed events to the downstream stage. Jet
 creates multiple tasklets (also called coroutine) for each stage to
-process each stage in a parallel manner, and the processed data is
-transferred between tasklets of separate stages. Keeping the order of
-processed events in a pipeline depends on how the event transfer between
-the stages takes place.
+parallelize the processing. Data is
+transferred among tasklets of subsequent stages using various
+routing strategies. Ordering of events depends on the selected
+strategy.
 
-By default, Jet adopts a round-robin manner in data transfer between
-stages to shape the data traffic as well as possible. This means that an
-event that comes out of any processing tasklet of a stage can go to any
-tasklet of the downstream stage. Since we do not apply any restriction
-to data flow with this data transfer method, we get the best performance
-with it. However, it is not possible to keep the event order with this
-round-robin data transfer manner.
+The default strategy is round-robin. This means that an
+event emited by the upstream tasklet can be routed
+to any tasklet of consecutive downstream stage.
+This strategy helps with shaping the data traffic by evenly distributing
+the data flow among processors. We get the best performance with it. 
+However, it is not possible to preserve the event ordering with this
+round-robin data transfer strategy. Events can be processed in
+order that doesn't match the source.
 
 If the pipeline is stateless or has no order-dependent stateful logic,
 the change of the event order will not affect the processing outcome.
-Maintaining the order in such pipelines does not matter. But when a
-pipeline contains a stage with order-dependent stateful logic, its
- outcome will be
-affected by the change of event order. Also, external services that a
-pipeline interacts with can be stateful and their state can also be
-order dependent. When a pipeline has a stateful element, it
-should be checked if it is order-dependent.
+Maintaining the order in such pipelines does not matter so
+the default routing strategy works well.
 
-`Pipeline` has a property named `preserveOrder` and enabling this
-property instructs Jet to keep the order of events with the same
-partitioning key by avoiding the usage of round-robin edges and a unique
-data transfer path from source to sink is determined in the pipeline for
-each partition.
+Outcome of pipelines with order-dependent stateful logic depends
+on event ordering. An example is a pattern recognition or complex
+event processing pipelines. Also, external services that a
+pipeline interacts with can be stateful and their state can also be
+order dependent. 
+
+For those cases, `Pipeline` has a `preserveOrder`property. Enabling
+this property instructs Jet to keep the order of events with the
+same partitioning key. Each partition will follow an unique
+data transfer path from source to sink.
 
 You can enable this property as follows:
 
@@ -128,8 +129,7 @@ Pipeline p = Pipeline.create();
 p.setPreserveOrder(true);
 ```
 
-Enabling this property puts a restriction on the data flow in the
-pipeline, and this results in loss of performance to protect the order.
+Enabling this property negatively impacts the job performance.
 
 > Note that: Changing the partition keys in the different stages of the
 pipeline may cause out-of-order.
