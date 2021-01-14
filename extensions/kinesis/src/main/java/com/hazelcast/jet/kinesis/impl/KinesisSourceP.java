@@ -141,15 +141,14 @@ public class KinesisSourceP extends AbstractProcessor implements DynamicMetricsP
     }
 
     private void checkForNewShards() {
-        shardQueue.poll();
-        String shardId = shardQueue.getExpired();
-        if (shardId == null) {
-            Shard shard = shardQueue.getAdded();
-            if (shard != null) {
-                addShardReader(shard);
-            }
-        } else {
+        String shardId = shardQueue.pollExpired();
+        if (shardId != null) {
             shardStates.remove(shardId);
+            return;
+        }
+        Shard shard = shardQueue.pollAdded();
+        if (shard != null) {
+            addShardReader(shard);
         }
     }
 

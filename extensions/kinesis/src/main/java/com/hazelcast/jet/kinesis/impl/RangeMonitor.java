@@ -126,7 +126,7 @@ public class RangeMonitor extends AbstractShardWorker {
             for (Map.Entry<Shard, Integer> e : newShards.entrySet()) {
                 Shard shard = e.getKey();
                 int owner = e.getValue();
-                shardQueues[owner].added(shard);
+                shardQueues[owner].addAdded(shard);
             }
         }
     }
@@ -137,7 +137,7 @@ public class RangeMonitor extends AbstractShardWorker {
             String shardId = e.getKey();
             int owner = e.getValue();
             logger.info("Expired shard detected: " + shardId);
-            shardQueues[owner].expired(shardId);
+            shardQueues[owner].addExpired(shardId);
         }
     }
 

@@ -17,6 +17,7 @@ package com.hazelcast.jet.kinesis.impl;
 
 import com.amazonaws.services.kinesis.model.Shard;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -25,30 +26,37 @@ public class ShardQueue {
 
     private final Queue<Object> queue = new LinkedBlockingQueue<>();
 
-    private Object lastPolledValue;
-
-    public void added(Shard shard) {
+    public void addAdded(@Nonnull Shard shard) {
         queue.offer(shard);
     }
 
-    public void expired(String shardId) {
+    public void addExpired(@Nonnull String shardId) {
         queue.offer(shardId);
     }
 
-    public void poll() {
-        lastPolledValue = queue.poll();
-    }
-
-    public Shard getAdded() {
+    /**
+     * Polls the queue and return an added shard, if the next item is an added
+     * shard. Returns null if the next item is an expired shard or if there's
+     * no next item.
+     */
+    @Nullable
+    public Shard pollAdded() {
         return get(Shard.class);
     }
 
-    public String getExpired() {
+    /**
+     * Polls the queue and return an expired shard, if the next item is an
+     * expired shard. Returns null if the next item is an added shard or if
+     * there's no next item.
+     */
+    @Nullable
+    public String pollExpired() {
         return get(String.class);
     }
 
     @Nullable
     private <T> T get(Class<T> clazz) {
-        return clazz.isInstance(lastPolledValue) ? (T) lastPolledValue : null;
+        // the queue is read only by a single thread
+        return clazz.isInstance(queue.peek()) ? clazz.cast(queue.poll()) : null;
     }
 }
