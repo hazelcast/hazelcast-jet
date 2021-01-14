@@ -91,7 +91,7 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>distro-assembly-lite</id>
+                        <id>distro-assembly-slim</id>
                         <phase>package</phase>
                         <goals>
                             <goal>single</goal>
@@ -100,7 +100,7 @@
                             <finalName>hazelcast-jet-${project.version}</finalName>
                             <appendAssemblyId>true</appendAssemblyId>
                             <descriptors>
-                                <descriptor>src/assembly-descriptor-lite.xml</descriptor>
+                                <descriptor>src/assembly-descriptor-slim.xml</descriptor>
                             </descriptors>
                             <tarLongFileMode>posix</tarLongFileMode>
                         </configuration>
