@@ -348,6 +348,8 @@ public class KinesisSinkP<T> implements Processor {
         }
 
         public void retainFailedEntries(List<PutRecordsResultEntry> results) {
+            assert results.size() == entryCount;
+
             int startIndex = 0;
             for (int index = 0; index < results.size(); index++) {
                 if (results.get(index).getErrorCode() != null) {
@@ -380,7 +382,7 @@ public class KinesisSinkP<T> implements Processor {
 
         public List<PutRecordsRequestEntry> content() {
             return Arrays.stream(entries)
-                    .limit(Math.min(entryCount, capacity))
+                    .limit(entryCount)
                     .map(e -> e.putRecordsRequestEntry)
                     .collect(Collectors.toList());
         }

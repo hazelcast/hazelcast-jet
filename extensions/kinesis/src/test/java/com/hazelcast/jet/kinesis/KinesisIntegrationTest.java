@@ -396,6 +396,9 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         Job job = jet().newJob(getPipeline(source));
         assertJobStatusEventually(job, JobStatus.RUNNING);
 
+        // need to be sure that reading the shard has commenced ...
+        SECONDS.sleep(3);
+
         //send some more messages and check that the job only reads those
         HELPER.putRecords(messages(100, 200));
         assertMessages(expectedMessages(100, 200), true, false);
