@@ -38,8 +38,6 @@ import com.hazelcast.logging.ILogger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -75,11 +73,6 @@ public class KinesisSinkP<T> implements Processor {
      * including partition keys is 5M.
      */
     private static final int MAX_REQUEST_SIZE_IN_BYTES = 5 * 1024 * 1024;
-
-    /**
-     * Kinesis always uses UTF-8 to encode strings.
-     */
-    private static final Charset KINESIS_STRING_ENCODING = StandardCharsets.UTF_8;
 
     @Nonnull
     private final AmazonKinesisAsync kinesis;
@@ -130,7 +123,7 @@ public class KinesisSinkP<T> implements Processor {
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         logger = context.logger();
-        sinkCount = context.memberCount() * context.localParallelism();
+        sinkCount = context.totalParallelism();
         helper = new KinesisHelper(kinesis, stream);
     }
 
@@ -287,14 +280,9 @@ public class KinesisSinkP<T> implements Processor {
 
         List<PutRecordsResultEntry> resultEntries = result.getRecords();
         if (result.getFailedRecordCount() > 0) {
-            for (int i = resultEntries.size() - 1; i >= 0; i--) {
-                PutRecordsResultEntry resultEntry = resultEntries.get(i);
-                if (resultEntry.getErrorCode() == null) {
-                    buffer.remove(i);
-                }
-            }
+            buffer.retainFailedEntries(resultEntries);
         } else {
-            buffer.remove(0, resultEntries.size());
+            buffer.clear();
         }
     }
 
@@ -359,39 +347,22 @@ public class KinesisSinkP<T> implements Processor {
             }
         }
 
-        public void remove(int index) {
-            if (index < 0 || index >= entryCount) {
-                throw new IllegalArgumentException("Index needs to be between 0 and " + entryCount);
-            }
-
-            totalEntrySize -= entries[index].encodedSize;
-            entryCount--;
-            if (index < entryCount) {
-                BufferEntry tmp = entries[index];
-                System.arraycopy(entries, index + 1, entries, index, entryCount - index);
-                entries[entryCount] = tmp;
+        public void retainFailedEntries(List<PutRecordsResultEntry> results) {
+            int startIndex = 0;
+            for (int index = 0; index < results.size(); index++) {
+                if (results.get(index).getErrorCode() != null) {
+                    swap(startIndex++, index);
+                } else {
+                    totalEntrySize -= entries[index].encodedSize;
+                    entryCount--;
+                }
             }
         }
 
-        public void remove(int index, int count) {
-            if (count == 0) {
-                return;
-            }
-            if (count < 0) {
-                throw new IllegalArgumentException("Count has to be non-negative");
-            }
-
-            if (index < 0 || index >= entryCount) {
-                throw new IllegalArgumentException("Index needs to be in [0, " + entryCount + ")");
-            }
-
-            if (index == 0 && count == entryCount) {
-                clear();
-            } else {
-                for (int i = 0; i < count; i++) {
-                    remove(index);
-                }
-            }
+        private void swap(int a, int b) {
+            BufferEntry temp = entries[a];
+            entries[a] = entries[b];
+            entries[b] = temp;
         }
 
         void clear() {
@@ -415,7 +386,10 @@ public class KinesisSinkP<T> implements Processor {
         }
 
         private int getKeyLength(String key) {
-            return key.getBytes(KINESIS_STRING_ENCODING).length;
+            // just an estimation; for exact length we would need to figure out
+            // how many bytes UTF-8 encoding would produce; estimation is good
+            // enough, Kinesis will reject what we miss anyways
+            return key.length();
         }
 
         private static BufferEntry[] initEntries() {
