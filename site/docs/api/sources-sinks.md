@@ -107,7 +107,7 @@ BatchSource<String> source = FileSources.files("/path/to/my/directory")
 #### Avro
 
 Avro format allows to read data from _Avro Object Container File_
-format. To use the Avro format you additionaly need the
+format. To use the Avro format you additionally need the
 `hazelcast-jet-avro` module, located in the distribution in the `opt`
 folder, or available as a dependency:
 
@@ -391,7 +391,7 @@ environment variable:
 export LD_LIBRARY_PATH=<path to hadoop>/lib/native:$LD_LIBRARY_PATH
 ```
 
-To verify that the Hadoop native libraries were successuly configured,
+To verify that the Hadoop native libraries were successfully configured,
 you should no longer see the message above and if you enable logging
 for `org.apache.hadoop` you should see the following log message:
 
@@ -825,7 +825,6 @@ dependency to your application:
 <!--Gradle-->
 
 ```groovy
-
 compile 'com.hazelcast.jet:hazelcast-jet-kafka:{jet-version}'
 ```
 
@@ -923,8 +922,8 @@ responsible for reading a subset of the partition keys.
 When used as a sink, in order to be able to write out any type of data
 items, the requirements are: KDS stream name, key function (specifies
 how to compute the partition key from an input item), and the value
-function (specifies how to compute the data blob from an input item;
-practically serialization).
+function (specifies how to compute the data blob from an input item -
+the serialization).
 
 ```java
 FunctionEx<Log, String> keyFn = l -> l.service();
@@ -945,7 +944,6 @@ and add the following dependency to your application:
 <!--Gradle-->
 
 ```groovy
-
 compile 'com.hazelcast.jet:hazelcast-jet-kinesis:{jet-version}'
 ```
 
@@ -963,14 +961,13 @@ compile 'com.hazelcast.jet:hazelcast-jet-kinesis:{jet-version}'
 
 #### Fault-tolerance
 
-Amazon Kinesis persists its data and makes it possible to replay it (on
-a per shard basis). This enables fault-tolerance. If a job has a
+Amazon Kinesis persists the data and it's possible to replay it (on a
+per-shard basis). This enables fault tolerance. If a job has a
 processing guarantee configured, then Jet will periodically save the
-current shard offsets internally and then replay from the saved offsets
-when the job is restarted. If no processing guarantee is enabled, the
-source will start reading from the oldest available data, determined by
-the KDS retention period (defaults to 24 hours, can be as long as 365
-days).
+current shard offsets and then replay from the saved offsets when the
+job is restarted. If no processing guarantee is enabled, the source will
+start reading from the oldest available data, determined by the KDS
+retention period (defaults to 24 hours, can be as long as 365 days).
 
 While the source is suitable for both at-least-once and exactly-once
 pipelines, the only processing guarantee the sink can support is
@@ -983,9 +980,9 @@ in the documentation).
 #### Ordering
 
 As stated before, Kinesis preserves the order of records with the same
-partition keys (or, more generally, the order of records belonging to
-the same shard). However, neither the source nor the sink can fully
-uphold this guarantee.
+partition key (or, more generally, the order of records belonging to the
+same shard). However, neither the source nor the sink can fully uphold
+this guarantee.
 
 The problem scenario for the source is resharding. Resharding is the
 process of adjusting the number of shards of a stream to adapt to data
@@ -998,22 +995,23 @@ to make sure that it finishes reading all the data from the old shard
 before starting to read data from the new one. Jet would also need to
 ensure that the new shard's data can't possibly overtake the old ones
 data inside the Jet pipeline. Currently, Jet does not have a mechanism
-to ensure this for such a distributed source. Best to time resharding
-to when there are lulls in the data flow.
+to ensure this for such a distributed source. It's best to schedule
+resharding when there are lulls in the data flow.
 
 The problem scenario for the sink is the ingestion data rate of a shard
 being tripped. A KDS shard has an ingestion rate of 1MiB per second. If
 you try to write more into it, then some records will be rejected. This
 rejection breaks the ordering because the sinks write data in batches,
-and the shards don't just reject entire batches but random items from
+and the shards don't just reject entire batches, but random items from
 them. What's rejected can (and is) retried, but the batch's original
 ordering can't be preserved. The sink can't entirely avoid all
 rejections because it's distributed, multiple instances of it write into
 the same shard, and coordinating an aggregated rate among them is not
-something currently possible in Jet. Truth be told, though, Kinesis also
-only preserves the order of successfully ingested records, not the order
-in which ingestion was attempted. Having enough shards and properly
-spreading out partition keys should prevent the problem from happening.
+something currently possible in Jet and there can be also others sending
+to the same stream. Truth be told, though, Kinesis also only preserves
+the order of successfully ingested records, not the order in which
+ingestion was attempted. Having enough shards and properly spreading out
+partition keys should prevent the problem from happening.
 
 ### JMS
 

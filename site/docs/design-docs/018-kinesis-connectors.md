@@ -126,10 +126,10 @@ source instance, the assignment being deterministic.
 Record keys, or partition keys as Kinesis calls them, are Unicode
 strings, with a maximum length limit of 256 characters. The stream uses
 the MD5 hash function to map these strings to 128-bit integer values.
-The universe of these values is thus the [0 .. 2^128) range. Each
-Kinesis shard has a continuous chunk of this range assigned to it,
-called the shard's hash range. The stream assigns a record to a shard if
-the record's partition key hashes into the shard's range.
+The range of these values is thus [0 .. 2^128). Each Kinesis shard has a
+continuous chunk of this range assigned to it, called the shard's hash
+range. The stream assigns a record to a shard if the record's partition
+key hashes into the shard's range.
 
 In the Jet Kinesis source, we use similar logic for assigning shards to
 source instances. Each of our sources gets a part of the hash range
@@ -140,11 +140,11 @@ non-ambiguous.
 
 ### Discovery
 
-Reading records from shards assigned to them is only part of the
+Reading records from shards assigned to them is only a part of the
 responsibility of sources. Sources also need a way to discover currently
 active shards in the stream to take responsibility for them. Moreover,
 this discovery process can't just happen once, on start-up, because
-streams are dynamic, shards can be closed, and new shards can pop-up at
+shards are dynamic, shards can be closed, and new shards can pop up at
 any time. For details, see the [resharding section](#resharding).
 
 Continuously monitoring the set of active shards in the stream is the
@@ -201,12 +201,12 @@ different instance of the source than their parents (for example, in a
 split), possibly located in an entirely different Jet cluster member.
 
 Moreover, it's not enough to finish reading from the parent before
-reading from the children. Even if that were achieved, data from parents
+reading from the children. Even if that was achieved, data from parents
 might overtake data from children further down the Jet pipeline, simply
 because it's a parallel flow. A Kinesis source would need to make sure
 that it has read all data from the parents and that data has fully
 passed through the Jet pipeline before starting to read from the
-children. Only then could it provide the same ordering as KDS while
+children. Only then it could provide the same ordering as KDS while
 resharding.
 
 This is currently not possible in Jet. Hopefully, future versions will
@@ -218,7 +218,7 @@ resharding activities, if possible, to utilize lulls in the data flow.
 
 The Kinesis Jet source supports pipelines with both at-least-once and
 exactly-once processing guarantees. It achieves this by saving KDS
-offsets into its snapshots and starting data read from saved offsets
+offsets into its snapshots and starting the reading from saved offsets
 when restarted.
 
 The offsets are saved on a per-shard basis, and on restart, each source
@@ -228,7 +228,7 @@ restart.
 
 ### Watermarks
 
-The Kinesis source can provide native watermarks because the [record
+The Kinesis source can provide native timestamps because the [record
 data
 structure](https://docs.aws.amazon.com/kinesis/latest/APIReference/API_Record.html)
 has a field that can be turned towards this purpose
@@ -251,8 +251,8 @@ contains a field called `MillisBehindLatest` defined as following:
 > is. A value of zero indicates that record processing caught up, and
 > there are no new records to process at this moment.
 
-This value can be useful for monitoring, so the sources can publish it
-as a per processor instance metric.
+This value can be useful for monitoring, so the sources publish it as a
+per-processor metric.
 
 ### Code Example
 
@@ -280,10 +280,10 @@ If `credentials` aren't specified, then the [Default Credential Provider
 Chain](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html#credentials-default)
 will be followed.
 
-If `retry strategy` is not specified, then a default of our definition
-will be used (retry indefinitely, with exponential backoff limited to a
-maximum of 3 seconds). A source's retry strategy applies to failures of
-reading records from or listing shards of a stream.
+If `retry strategy` is not specified, then a default will be used
+(defined by us - retry indefinitely, with exponential backoff limited to
+a maximum of 3 seconds). A source's retry strategy applies to failures
+of reading records from or listing shards of a stream.
 
 The actual source created will be of type
 `StreamSource<Map.Entry<String, byte[]>>`, so basically a stream of
@@ -319,8 +319,8 @@ While most of these limitations are simple to enforce, the shard
 ingestion rate is not. Different partition keys get assigned to a shard
 based on a hashing function, so partition keys going into the same shard
 can be written by different sink instances. Currently, Jet has no
-capability for computing and coordinating such a per shard rate among
-all it's distributed sink instances.
+capability for computing and coordinating such a per-shard rate among
+all its distributed sink instances.
 
 The sink takes a different approach to comply with this limitation. It
 allows for the rate to be tripped (i.e., it doesn't attempt to prevent
@@ -331,7 +331,7 @@ rare event and not a continuous storm.
 The source achieves this flow control in two ways:
 
 * by decreasing the send batch size; the default is the maximum of 500,
-  which it will reduce, if necessary, as low as 10 records/batch
+  which it will reduce, if necessary, to as low as 10 records/batch
 * by adding a delay between two subsequent send actions (which can be as
   little as 100ms, a reasonable value in case of Kinesis and as much as
   10 seconds, which is a lot, but would occur only in an unreasonably
@@ -359,11 +359,11 @@ latency.
 As we've seen in the [flow control](#flow-control) section, one element
 used to control the throughput is batch size. Under normal conditions,
 the sink uses the default/maximum batch size of 500. When flow control
-kicks a new batch size is picked as a function of the number of open
+kicks in, a new batch size is picked as a function of the number of open
 shards in the stream.
 
-For this to happen, the sinks need to have relatively up-to-date
-information about the count of open shards. The sink achieves this by
+For this to happen, the sinks need to have a relatively up-to-date
+information about the number of open shards. The sink achieves this by
 using a mechanism very similar to the [discovery process employed by the
 source](#discovery). The only real difference is that the sinks use the
 [DescribeStreamSummary](https://docs.aws.amazon.com/kinesis/latest/APIReference/API_DescribeStreamSummary.html)
@@ -380,9 +380,9 @@ on occasion.
 
 This fact originates in the way how KDS handles shard ingestion rate
 violations. When KDS receives a batch to be ingested, it processes each
-item in it one-by-one, and if some fail, it doesn't stop processing the
+item in it one by one, and if some fail, it doesn't stop processing the
 batch. The result is that some items from a batch get rejected, some get
-ingested, but in a random manner. The sink does resend the un-ingested
+ingested, but in a random manner. The sink does resend the non-ingested
 item, they won't get lost, but there is nothing it can do to preserve
 the initial ordering.
 
@@ -396,8 +396,8 @@ partition keys are spread out adequately over all shards.
 Since there is no transaction support in Kinesis, the sink can't support
 exactly-once delivery. It can, however, support at-least-once
 processing. It does that by ensuring it flushes all data it has taken
-ownership of (taken from the `Inbox` is the more accurate, developer
-speak) out to Kinesis, before saving its snapshots.
+ownership of (taken from the `Inbox` is the more accurate "dev-speak")
+out to Kinesis, before saving its snapshots.
 
 A further reason why exactly-once support is not possible is the API
 used to implement the sink, the AWS SDK itself. It has internal retry
@@ -407,7 +407,7 @@ documentation](https://docs.aws.amazon.com/streams/latest/dev/kinesis-record-pro
 
 ### Metrics
 
-Two metrics that should be useful to populate on a per sink basis are
+Two metrics that should be useful to populate on a per-sink basis are
 parameters related to [flow control](#flow-control):
 
 * batch size
