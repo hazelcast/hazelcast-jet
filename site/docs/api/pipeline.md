@@ -88,39 +88,36 @@ member machines.
 #### Preserving Event Order
 
 As mentioned above, Jet models the data processing job as a pipeline.
-The pipeline consists of stages and each stage (except 
-sources) accepts the events from upstream stages, processes the events,
-and passes the transformed events to the downstream stage. Jet
-creates multiple tasklets (also called coroutine) for each stage to
-parallelize the processing. Data is
-transferred among tasklets of subsequent stages using various
-routing strategies. Ordering of events depends on the selected
-strategy.
+The pipeline consists of stages and each stage (except sources) accepts
+the events from upstream stages, processes the events, and passes the
+transformed events to the downstream stage. Jet creates multiple
+tasklets (also called coroutine) for each stage to parallelize the
+processing. Data is transferred among tasklets of subsequent stages
+using various routing strategies. Ordering of events depends on the
+selected strategy.
 
-The default strategy is round-robin. This means that an
-event emited by the upstream tasklet can be routed
-to any tasklet of consecutive downstream stage.
-This strategy helps with shaping the data traffic by evenly distributing
-the data flow among processors. We get the best performance with it. 
-However, it is not possible to preserve the event ordering with this
-round-robin data transfer strategy. Events can be processed in
-order that doesn't match the source.
+The default strategy is round-robin. This means that an event emited by
+the upstream tasklet can be routed to any tasklet of consecutive
+downstream stage. This strategy helps with shaping the data traffic by
+evenly distributing the data flow among processors. We get the best
+performance with it. However, it is not possible to preserve the event
+ordering with this round-robin data transfer strategy. Events can be
+processed in order that doesn't match the source.
 
 If the pipeline is stateless or has no order-dependent stateful logic,
 the change of the event order will not affect the processing outcome.
-Maintaining the order in such pipelines does not matter so
-the default routing strategy works well.
+Maintaining the order in such pipelines does not matter so the default
+routing strategy works well.
 
-Outcome of pipelines with order-dependent stateful logic depends
-on event ordering. An example is a pattern recognition or complex
-event processing pipelines. Also, external services that a
-pipeline interacts with can be stateful and their state can also be
-order dependent. 
+Outcome of pipelines with order-dependent stateful logic depends on
+event ordering. An example is a pattern recognition or complex event
+processing pipelines. Also, external services that a pipeline interacts
+with can be stateful and their state can also be order dependent.
 
-For those cases, `Pipeline` has a `preserveOrder`property. Enabling
-this property instructs Jet to keep the order of events with the
-same partitioning key. Each partition will follow an unique
-data transfer path from source to sink.
+For those cases, `Pipeline` has a `preserveOrder`property. Enabling this
+property instructs Jet to keep the order of events with the same
+partitioning key. Each partition will follow an unique data transfer
+path from source to sink.
 
 You can enable this property as follows:
 
@@ -129,7 +126,17 @@ Pipeline p = Pipeline.create();
 p.setPreserveOrder(true);
 ```
 
-Enabling this property negatively impacts the job performance.
+Enabling this property negatively impacts job performance. Creating a
+unique path from the source to the sink for each partition applies a
+restriction to the data flow and the most important effect of this
+restriction is the inability to increase tasklet parallelism while
+advancing the stages (except the stages that create a new partitions).
+Since this applies from the source, we can say that the source
+parallelism determines the parallelism on all pipeline stages. For
+example, if the pipeline has a single partitioned source, then every
+stage is affected by this low parallelism of the source. If the source
+is partitioned, there is not much decrease in performance since the job
+starts with high parallelism in source.
 
 > Note that: Changing the partition keys in the different stages of the
 pipeline may cause out-of-order.
