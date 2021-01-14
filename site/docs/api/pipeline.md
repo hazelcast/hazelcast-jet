@@ -126,17 +126,13 @@ Pipeline p = Pipeline.create();
 p.setPreserveOrder(true);
 ```
 
-Enabling this property negatively impacts job performance. Creating a
-unique path from the source to the sink for each partition applies a
-restriction to the data flow and the most important effect of this
-restriction is the inability to increase tasklet parallelism while
-advancing the stages (except the stages that create a new partitions).
-Since this applies from the source, we can say that the source
-parallelism determines the parallelism on all pipeline stages. For
-example, if the pipeline has a single partitioned source, then every
-stage is affected by this low parallelism of the source. If the source
-is partitioned, there is not much decrease in performance since the job
-starts with high parallelism in source.
+Enabling this feature may negatively affect performance. In order to
+prevent reordering, Jet must isolate the parallel data paths coming out
+of the source. For example, if you have a non-partitioned source that
+Jet accesses with a single processor, the entire pipeline may have a
+parallelism of 1. Jet is still allowed to increase the parallelism at
+the point where you introduce a new groupingKey or explicitly rebalance
+the data flow.
 
 > Note that: Changing the partition keys in the different stages of the
 pipeline may cause out-of-order.
