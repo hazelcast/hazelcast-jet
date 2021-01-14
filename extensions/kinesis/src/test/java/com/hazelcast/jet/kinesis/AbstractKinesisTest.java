@@ -116,7 +116,11 @@ class AbstractKinesisTest extends JetTestSupport {
     }
 
     protected Map<String, List<String>> sendMessages() {
-        List<Map.Entry<String, String>> msgEntryList = messages(0, MESSAGES);
+        return sendMessages(MESSAGES);
+    }
+
+    protected Map<String, List<String>> sendMessages(int count) {
+        List<Map.Entry<String, String>> msgEntryList = messages(0, count);
 
         BatchSource<Map.Entry<String, byte[]>> source = TestSources.items(msgEntryList.stream()
                 .map(e1 -> entry(e1.getKey(), e1.getValue().getBytes()))

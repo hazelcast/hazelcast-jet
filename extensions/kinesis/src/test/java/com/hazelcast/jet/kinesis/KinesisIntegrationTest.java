@@ -341,6 +341,18 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
     }
 
     @Test
+    @Category(SerialTest.class)
+    public void jobsStartedBeforeStreamExists() {
+        Map<String, List<String>> expectedMessages = sendMessages(100);
+        Job job = jet().newJob(getPipeline(kinesisSource().build()));
+        assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job.getStatus()));
+
+        HELPER.createStream(1);
+
+        assertMessages(expectedMessages, true, false);
+    }
+
+    @Test
     @Ignore
     //
     // Kinesis seems to mess up the timestamps internally somehow, don't know the exact reason...
