@@ -183,10 +183,12 @@ public final class JetBootstrap {
                 // back to startup statuses.
                 if (job.getName() != null) {
                     System.out.println("Job '" + job.getName() + "' submitted at "
-                            + toLocalDateTime(job.getSubmissionTime()) + ".");
+                            + toLocalDateTime(job.getSubmissionTime()) + " changed status to "
+                            + job.getStatus() + " at " + toLocalDateTime(System.currentTimeMillis()) + ".");
                 } else {
                     System.out.println("Job '" + job.getIdString() + "' submitted at "
-                            + toLocalDateTime(job.getSubmissionTime()) + ".");
+                            + toLocalDateTime(job.getSubmissionTime())  + " changed status to "
+                            + job.getStatus() + " at " + toLocalDateTime(System.currentTimeMillis()) + ".");
                 }
             }
             if (remainingCount == 1) {
