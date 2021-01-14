@@ -87,37 +87,23 @@ member machines.
 
 #### Preserving Event Order
 
-As mentioned above, Jet models the data processing job as a pipeline.
-The pipeline consists of stages and each stage (except sources) accepts
-the events from upstream stages, processes the events, and passes the
-transformed events to the downstream stage. Jet creates multiple
-tasklets (also called coroutine) for each stage to parallelize the
-processing. Data is transferred among tasklets of subsequent stages
-using various routing strategies. Ordering of events depends on the
-selected strategy.
-
-The default strategy is round-robin. This means that an event emited by
-the upstream tasklet can be routed to any tasklet of consecutive
-downstream stage. This strategy helps with shaping the data traffic by
-evenly distributing the data flow among processors. We get the best
-performance with it. However, it is not possible to preserve the event
-ordering with this round-robin data transfer strategy. Events can be
-processed in order that doesn't match the source.
+Since Jet's default event routing policy prefers to process items as
+fast as possible, the order of events may sometimes be changed.
 
 If the pipeline is stateless or has no order-dependent stateful logic,
 the change of the event order will not affect the processing outcome.
 Maintaining the order in such pipelines does not matter so the default
 routing strategy works well.
 
-Outcome of pipelines with order-dependent stateful logic depends on
-event ordering. An example is a pattern recognition or complex event
-processing pipelines. Also, external services that a pipeline interacts
-with can be stateful and their state can also be order dependent.
+Otherwise, the outcome of pipelines with order-dependent stateful logic
+depends on event ordering. An example is pattern recognition or
+complex event processing pipelines. Also, external services that a
+pipeline interacts with can be stateful, and their state can also be
+order dependent.
 
-For those cases, `Pipeline` has a `preserveOrder`property. Enabling this
-property instructs Jet to keep the order of events with the same
-partitioning key. Each partition will follow an unique data transfer
-path from source to sink.
+For those cases, `Pipeline` has a property named `preserveOrder` and
+enabling this property instructs Jet to keep the order of events with
+the same partitioning key by avoiding the usage of round-robin edges.
 
 You can enable this property as follows:
 
@@ -126,16 +112,11 @@ Pipeline p = Pipeline.create();
 p.setPreserveOrder(true);
 ```
 
-Enabling this feature may negatively affect performance. In order to
-prevent reordering, Jet must isolate the parallel data paths coming out
-of the source. For example, if you have a non-partitioned source that
-Jet accesses with a single processor, the entire pipeline may have a
-parallelism of 1. Jet is still allowed to increase the parallelism at
-the point where you introduce a new groupingKey or explicitly rebalance
-the data flow.
-
 > Note that: Changing the partition keys in the different stages of the
 pipeline may cause out-of-order.
+
+For more details, see the [Pipeline Execution Model
+section](/docs/architecture/distributed-computing#introduction)
 
 #### Prefer Assigning Timestamps at the Source
 

@@ -3,6 +3,37 @@ title: Pipeline Execution Model
 description: How Jet runs the data pipeline.
 ---
 
+## Introduction
+
+Jet models the data processing job as a pipeline. The pipeline consists
+of stages and each stage (except sources) accepts the events from
+upstream stages, processes the events, and passes the transformed events
+to the downstream stage. Jet creates multiple tasklets (also called
+coroutine) for each stage to parallelize the processing. Data is
+transferred among tasklets of subsequent stages using various routing
+strategies. Ordering of events depends on the selected strategy.
+
+The default strategy is round-robin. This means that an event emitted by
+the upstream tasklet can be routed to any tasklet of consecutive
+downstream stage. This strategy helps with shaping the data traffic by
+evenly distributing the data flow among processors. We get the best
+performance with it. However, it is not possible to preserve the event
+ordering with this round-robin data transfer strategy. Events can be
+processed in order that doesn't match the source.
+
+After enabling the `preserveOrder` property of the pipeline, Jet
+prevents the events reordering to happen. To prevent reordering, Jet
+isolates the parallel data paths coming out of the source and it applies
+a restriction to the data flow. The most important effect of this
+restriction is the inability to increase tasklet parallelism while
+advancing the stages. Since this applies from the source, we can say
+that the source parallelism affects the parallelism of all pipeline
+stages. For example, if you have a non-partitioned source that Jet
+accesses with a single processor, the entire pipeline may have a
+parallelism of 1. Jet is still allowed to increase the parallelism at
+the point where you introduce a new groupingKey or explicitly rebalance
+the data flow.
+
 ## Core DAG Planner
 
 In the [Concepts: DAG](/docs/concepts/dag) section we used this pipeline
@@ -45,11 +76,11 @@ There are two main types of edges:
 There are more details on partitioned edges in the [Concepts
 section](/docs/concepts/dag#group-and-aggregate-transform-needs-data-partitioning).
 
-This planning step happens on the client side, so what you actually
-submit for execution to the cluster is not the Jet pipeline, but the
-Core DAG. You also have the option to build the Core DAG directly, using
-its API, but it mostly offers you a lot of ways to make mistakes with
-little opportunity to improve on the automatic process.
+This planning step happens on the server-side after you submit the
+pipeline for execution to the cluster. You also have the option to build
+the Core DAG directly, using its API, but it mostly offers you a lot of
+ways to make mistakes with little opportunity to improve on the
+automatic process.
 
 When the job is starting inside Jet, it will print the DAG definition in
 the DOT format, which you can visualize on a site like
