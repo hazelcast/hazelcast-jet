@@ -39,10 +39,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.util.Util.createFieldProjection;
+import static java.util.function.Function.identity;
 
 public class CsvInputFormat extends FileInputFormat<NullWritable, Object> {
 
@@ -56,7 +56,7 @@ public class CsvInputFormat extends FileInputFormat<NullWritable, Object> {
 
             private Object current;
             private MappingIterator<Object> iterator;
-            private Function<Object, Object> projection = r -> r;
+            private Function<Object, Object> projection = identity();
 
             @SuppressWarnings({"unchecked", "rawtypes"})
             @Override
@@ -70,23 +70,25 @@ public class CsvInputFormat extends FileInputFormat<NullWritable, Object> {
                 Path file = fileSplit.getPath();
                 FileSystem fs = file.getFileSystem(conf);
                 FSDataInputStream in = fs.open(file);
+
                 if (formatClazz == String[].class) {
                     ObjectReader reader = new CsvMapper().enable(Feature.WRAP_AS_ARRAY)
                                                          .readerFor(String[].class)
                                                          .with(CsvSchema.emptySchema().withSkipFirstDataRow(false));
+
                     iterator = reader.readValues((InputStream) in);
                     if (!iterator.hasNext()) {
                         throw new JetException("Header row missing in " + split);
                     }
                     String[] header = (String[]) iterator.next();
-                    List<String> fieldList = new ArrayList<>();
+                    List<String> fieldNames = new ArrayList<>();
                     String field;
                     for (int i = 0; (field = configuration.get(CSV_INPUT_FORMAT_FIELD_LIST_PREFIX + i)) != null; i++) {
-                        fieldList.add(field);
+                        fieldNames.add(field);
                     }
-                    projection = (Function) createFieldProjection(header, fieldList);
+                    projection = (Function) createFieldProjection(header, fieldNames);
                 } else {
-                    iterator = new CsvMapper().readerFor(formatClazz != null ? formatClazz : Map.class)
+                    iterator = new CsvMapper().readerFor(formatClazz)
                                               .withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                                               .with(CsvSchema.emptySchema().withHeader())
                                               .readValues((InputStream) in);

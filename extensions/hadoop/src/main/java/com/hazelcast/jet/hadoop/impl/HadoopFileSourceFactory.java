@@ -221,12 +221,8 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
             CsvFileFormat<T> csvFileFormat = (CsvFileFormat<T>) format;
             job.setInputFormatClass(CsvInputFormat.class);
             job.getConfiguration().setBoolean(COPY_ON_READ, Boolean.FALSE);
-
-            Class<?> clazz = csvFileFormat.clazz();
-            if (clazz != null) {
-                job.getConfiguration().set(CSV_INPUT_FORMAT_BEAN_CLASS, clazz.getName());
-            }
-            List<String> fieldList = csvFileFormat.stringArrayFieldList();
+            job.getConfiguration().set(CSV_INPUT_FORMAT_BEAN_CLASS, csvFileFormat.clazz().getName());
+            List<String> fieldList = csvFileFormat.fieldNames();
             if (fieldList != null) {
                 for (int i = 0; i < fieldList.size(); i++) {
                     job.getConfiguration().set(CSV_INPUT_FORMAT_FIELD_LIST_PREFIX + i, fieldList.get(i));

@@ -17,7 +17,6 @@
 package com.hazelcast.jet.hadoop.file;
 
 import com.fasterxml.jackson.dataformat.csv.CsvMappingException;
-import com.google.common.collect.ImmutableMap;
 import com.hazelcast.jet.hadoop.file.model.User;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
@@ -25,22 +24,46 @@ import com.hazelcast.jet.pipeline.file.FileSources;
 import org.junit.Test;
 
 import java.io.CharConversionException;
-import java.util.Map;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.util.Lists.newArrayList;
 
 public class CsvFileFormatTest extends BaseFileFormatTest {
 
     @Test
     public void shouldReadCsvFile() {
-        FileSourceBuilder<Map<String, String>> source = FileSources.files(currentDir + "/src/test/resources")
-                                                                   .glob("file.csv")
-                                                                   .format(FileFormat.csv());
+        FileSourceBuilder<String[]> source = FileSources.files(currentDir + "/src/test/resources")
+                                                        .glob("file.csv")
+                                                        .format(FileFormat.csv(asList("name", "favoriteNumber")));
 
         assertItemsInSource(source,
-                ImmutableMap.of("name", "Frantisek", "favoriteNumber", "7"),
-                ImmutableMap.of("name", "Ali", "favoriteNumber", "42")
+                new String[]{"Frantisek", "7"},
+                new String[]{"Ali", "42"}
+        );
+    }
+
+    @Test
+    public void shouldRemapFields() {
+        FileSourceBuilder<String[]> source = FileSources.files(currentDir + "/src/test/resources")
+                                                        .glob("file.csv")
+                                                        .format(FileFormat.csv(asList("favoriteNumber", "name")));
+
+        assertItemsInSource(source,
+                new String[]{"7", "Frantisek"},
+                new String[]{"42", "Ali"}
+        );
+    }
+
+    @Test
+    public void shouldRemapSubsetOfFields() {
+        FileSourceBuilder<String[]> source = FileSources.files(currentDir + "/src/test/resources")
+                                                        .glob("file.csv")
+                                                        .format(FileFormat.csv(singletonList("name")));
+
+        assertItemsInSource(source,
+                new String[]{"Frantisek"},
+                new String[]{"Ali"}
         );
     }
 
@@ -105,35 +128,5 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
                                                     .format(FileFormat.csv(User.class));
 
         assertJobFailed(source, CsvMappingException.class, "Too many entries");
-    }
-
-    @Test
-    public void shouldRemapFields() {
-        FileFormat<String[]> format = FileFormat.csv(String[].class)
-                                                .withStringArrayFieldList(newArrayList("favoriteNumber", "name"));
-
-        FileSourceBuilder<String[]> source = FileSources.files(currentDir + "/src/test/resources")
-                                                        .glob("file.csv")
-                                                        .format(format);
-
-        assertItemsInSource(source,
-                new String[]{"7", "Frantisek"},
-                new String[]{"42", "Ali"}
-        );
-    }
-
-    @Test
-    public void shouldRemapSubsetOfFields() {
-        FileFormat<String[]> format = FileFormat.csv(String[].class)
-                                                .withStringArrayFieldList(newArrayList("name"));
-
-        FileSourceBuilder<String[]> source = FileSources.files(currentDir + "/src/test/resources")
-                                                        .glob("file.csv")
-                                                        .format(format);
-
-        assertItemsInSource(source,
-                new String[]{"Frantisek"},
-                new String[]{"Ali"}
-        );
     }
 }
