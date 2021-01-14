@@ -33,7 +33,7 @@
     </parent>
 
     <properties>
-        <aws.kinesis.sdk.version>1.11.934</aws.kinesis.sdk.version>
+        <aws.bundle.sdk.version>1.11.934</aws.bundle.sdk.version>
         <testcontainers.version>1.15.1</testcontainers.version>
         <log4j2.slf4j.binding.version>2.13.2</log4j2.slf4j.binding.version>
     </properties>
@@ -76,8 +76,8 @@
     <dependencies>
         <dependency>
             <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-kinesis</artifactId>
-            <version>${aws.kinesis.sdk.version}</version>
+            <artifactId>aws-java-sdk-bundle</artifactId>
+            <version>${aws.bundle.sdk.version}</version>
         </dependency>
 
         <dependency>
