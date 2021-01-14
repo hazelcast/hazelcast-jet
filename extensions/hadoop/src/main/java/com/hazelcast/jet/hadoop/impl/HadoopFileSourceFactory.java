@@ -111,30 +111,30 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
         }
 
         return readHadoopP(configuration -> {
-        try {
-            configuration.setBoolean(FileInputFormat.INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, true);
-            configuration.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, false);
+            try {
+                configuration.setBoolean(FileInputFormat.INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, true);
+                configuration.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, false);
                 configuration.setBoolean(HadoopSources.SHARED_LOCAL_FS, fsc.isSharedFileSystem());
                 configuration.setBoolean(HadoopSources.IGNORE_FILE_NOT_FOUND, fsc.isIgnoreFileNotFound());
-            for (Entry<String, String> option : fsc.getOptions().entrySet()) {
-                configuration.set(option.getKey(), option.getValue());
-            }
+                for (Entry<String, String> option : fsc.getOptions().entrySet()) {
+                    configuration.set(option.getKey(), option.getValue());
+                }
 
                 // Some methods we use to configure actually take a Job
                 Job job = Job.getInstance(configuration);
                 Path inputPath = getInputPath(fsc, configuration);
-            FileInputFormat.addInputPath(job, inputPath);
+                FileInputFormat.addInputPath(job, inputPath);
 
-            configurer.configure(job, fileFormat);
+                configurer.configure(job, fileFormat);
 
                 // The job creates a copy of the configuration, so we need to copy the new setting to the original
                 // configuration instance
                 for (Entry<String, String> entry : job.getConfiguration()) {
                     configuration.set(entry.getKey(), entry.getValue());
                 }
-        } catch (IOException e) {
-            throw new JetException("Could not create a source", e);
-        }
+            } catch (IOException e) {
+                throw new JetException("Could not create a source", e);
+            }
         }, configurer.projectionFn());
     }
 

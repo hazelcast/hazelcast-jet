@@ -510,9 +510,9 @@ public final class Util {
      * its subdirectories. It calls {@link #editPermissions} with every file.
      *
      * @param basePath the directory where to edit the file permissions
-     * @param editFn the permission-editing function, described above
+     * @param editFn   the permission-editing function, described above
      * @return the list of all relative path names of files for which editing
-     *         permissions failed
+     * permissions failed
      * @throws IOException if the directory's contents cannot be traversed
      */
     public static List<String> editPermissionsRecursively(

@@ -48,13 +48,13 @@ import static java.util.Objects.requireNonNull;
 public class FileSourceBuilder<T> {
 
     private static final List<String> HADOOP_PREFIXES = Collections.unmodifiableList(asList(
-                "s3a://",   // Amazon S3
-                "hdfs://",  // HDFS
-                "wasbs://", // Azure Cloud Storage
-                "adl://",   // Azure Data Lake Gen 1
-                "abfs://",   // Azure Data Lake Gen 2
-                "gs://"     // Google Cloud Storage
-        ));
+            "s3a://",   // Amazon S3
+            "hdfs://",  // HDFS
+            "wasbs://", // Azure Cloud Storage
+            "adl://",   // Azure Data Lake Gen 1
+            "abfs://",   // Azure Data Lake Gen 2
+            "gs://"     // Google Cloud Storage
+    ));
 
     private final Map<String, String> options = new HashMap<>();
 
