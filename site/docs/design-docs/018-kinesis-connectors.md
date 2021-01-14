@@ -120,9 +120,8 @@ guarantees](../architecture/fault-tolerance.md#processing-guarantee-is-a-shared-
 
 Being a distributed source, it has multiple instances running in each
 Jet cluster member. Each instance is responsible for reading from zero,
-one or more KDS [shards](#shard). The assignment of shards to individual
-source instances is based on partitioning the space of Kinesis [record
-keys](#partition-key).
+one or more KDS [shards](#shard). Each shard will be read by exactly one
+source instance, the assignment being deterministic.
 
 Record keys, or partition keys as Kinesis calls them, are Unicode
 strings, with a maximum length limit of 256 characters. The stream uses

@@ -80,12 +80,29 @@ public class RangeMonitor extends AbstractShardWorker {
         if (listShardsResult == null) {
             initShardListing(currentTimeMs);
         } else {
-            checkForNewShards(currentTimeMs);
-        }
-    }
+            if (listShardsResult.isDone()) {
+                ListShardsResult result;
+                try {
+                    result = helper.readResult(listShardsResult);
+                } catch (SdkClientException e) {
+                    dealWithListShardsFailure(e);
+                    return;
+                } catch (Throwable t) {
+                    throw rethrow(t);
+                } finally {
+                    listShardsResult = null;
+                }
 
-    public void addKnownShard(String shardId, BigInteger startingHashKey) {
-        shardTracker.addUndetected(shardId, startingHashKey, System.currentTimeMillis());
+                listShardRetryTracker.reset();
+
+                checkForNewShards(currentTimeMs, result);
+
+                nextToken = result.getNextToken();
+                if (nextToken == null) {
+                    checkForExpiredShards(currentTimeMs);
+                }
+            }
+        }
     }
 
     private void initShardListing(long currentTimeMs) {
@@ -96,49 +113,36 @@ public class RangeMonitor extends AbstractShardWorker {
         nextListShardsTimeMs = currentTimeMs + listShardsRateTracker.next();
     }
 
-    private void checkForNewShards(long currentTimeMs) {
-        if (listShardsResult.isDone()) {
-            ListShardsResult result;
-            try {
-                result = helper.readResult(listShardsResult);
-            } catch (SdkClientException e) {
-                dealWithListShardsFailure(e);
-                return;
-            } catch (Throwable t) {
-                throw rethrow(t);
-            } finally {
-                listShardsResult = null;
-            }
+    private void checkForNewShards(long currentTimeMs, ListShardsResult result) {
+        Set<Shard> shards = result.getShards().stream()
+                .filter(shard -> shardBelongsToRange(shard, memberHashRange))
+                .collect(Collectors.toSet());
+        Map<Shard, Integer> newShards = shardTracker.markDetections(shards, currentTimeMs);
 
-            listShardRetryTracker.reset();
+        if (!newShards.isEmpty()) {
+            logger.info("New shards detected: " +
+                    newShards.keySet().stream().map(Shard::getShardId).collect(joining(", ")));
 
-            Set<Shard> shards = result.getShards().stream()
-                    .filter(shard -> shardBelongsToRange(shard, memberHashRange))
-                    .collect(Collectors.toSet());
-            Map<Shard, Integer> newShards = shardTracker.markDetections(shards, currentTimeMs);
-
-            if (!newShards.isEmpty()) {
-                logger.info("New shards detected: " +
-                        newShards.keySet().stream().map(Shard::getShardId).collect(joining(", ")));
-
-                for (Map.Entry<Shard, Integer> e : newShards.entrySet()) {
-                    Shard shard = e.getKey();
-                    int owner = e.getValue();
-                    shardQueues[owner].added(shard);
-                }
-            }
-
-            nextToken = result.getNextToken();
-            if (nextToken == null) {
-                Map<String, Integer> expiredShards = shardTracker.removeExpiredShards(currentTimeMs);
-                for (Map.Entry<String, Integer> e : expiredShards.entrySet()) {
-                    String shardId = e.getKey();
-                    int owner = e.getValue();
-                    logger.info("Expired shard detected: " + shardId);
-                    shardQueues[owner].expired(shardId);
-                }
+            for (Map.Entry<Shard, Integer> e : newShards.entrySet()) {
+                Shard shard = e.getKey();
+                int owner = e.getValue();
+                shardQueues[owner].added(shard);
             }
         }
+    }
+
+    private void checkForExpiredShards(long currentTimeMs) {
+        Map<String, Integer> expiredShards = shardTracker.removeExpiredShards(currentTimeMs);
+        for (Map.Entry<String, Integer> e : expiredShards.entrySet()) {
+            String shardId = e.getKey();
+            int owner = e.getValue();
+            logger.info("Expired shard detected: " + shardId);
+            shardQueues[owner].expired(shardId);
+        }
+    }
+
+    public void addKnownShard(String shardId, BigInteger startingHashKey) {
+        shardTracker.addUndetected(shardId, startingHashKey, System.currentTimeMillis());
     }
 
     private void dealWithListShardsFailure(@Nonnull Exception failure) {
