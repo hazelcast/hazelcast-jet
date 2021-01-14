@@ -36,7 +36,7 @@ import static com.hazelcast.jet.core.ProcessorMetaSupplier.forceTotalParallelism
 public final class RootResultConsumerSink implements Processor {
 
     private final String queryId;
-    private JetQueryResultProducer rootResultConsumer;
+    private JetQueryResultProducer queryResultProducer;
 
     private RootResultConsumerSink(String queryId) {
         this.queryId = queryId;
@@ -46,24 +46,24 @@ public final class RootResultConsumerSink implements Processor {
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         HazelcastInstanceImpl hzInst = (HazelcastInstanceImpl) context.jetInstance().getHazelcastInstance();
         JetSqlCoreBackendImpl jetSqlCoreBackend = hzInst.node.nodeEngine.getService(JetSqlCoreBackend.SERVICE_NAME);
-        rootResultConsumer = jetSqlCoreBackend.getResultConsumerRegistry().remove(queryId);
-        assert rootResultConsumer != null;
+        queryResultProducer = jetSqlCoreBackend.getResultConsumerRegistry().remove(queryId);
+        assert queryResultProducer != null;
     }
 
     @Override
     public boolean tryProcess() {
-        rootResultConsumer.check();
+        queryResultProducer.check();
         return true;
     }
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
-        rootResultConsumer.consume(inbox);
+        queryResultProducer.consume(inbox);
     }
 
     @Override
     public boolean complete() {
-        rootResultConsumer.done();
+        queryResultProducer.done();
         return true;
     }
 
