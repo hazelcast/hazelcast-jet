@@ -34,6 +34,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertEquals;
 
 public class SqlMappingTest extends SqlTestSupport {
 
@@ -140,7 +141,7 @@ public class SqlMappingTest extends SqlTestSupport {
         }
 
         MappingStorage mappingStorage = new MappingStorage(getNodeEngineImpl(instance()));
-        assertThat(mappingStorage.values().size()).isEqualTo(aliases.length);
+        assertEquals(aliases.length, mappingStorage.values().size());
         Iterator<Mapping> iterator = mappingStorage.values().iterator();
 
         // the two mappings must be equal, except for their name & objectName

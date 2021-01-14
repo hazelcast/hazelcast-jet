@@ -60,6 +60,8 @@ import static java.util.Spliterators.spliteratorUnknownSize;
 import static java.util.stream.StreamSupport.stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 public class SqlPortableTest extends SqlTestSupport {
 
@@ -457,10 +459,10 @@ public class SqlPortableTest extends SqlTestSupport {
 
         Iterator<SqlRow> resultIter = sqlService.execute("SELECT __key, this, name FROM " + mapName).iterator();
         SqlRow row = resultIter.next();
-        assertThat((int) row.getObject(0)).isEqualTo(1);
+        assertEquals(1, (int) row.getObject(0));
         assertInstanceOf(PortableGenericRecord.class, row.getObject(1));
-        assertThat((String) row.getObject(2)).isEqualTo("foo");
-        assertThat(resultIter).isExhausted();
+        assertEquals("foo", row.getObject(2));
+        assertFalse(resultIter.hasNext());
     }
 
     @Test
@@ -483,7 +485,7 @@ public class SqlPortableTest extends SqlTestSupport {
 
         Iterator<SqlRow> rowIterator = sqlService.execute("SELECT __key, this FROM " + name).iterator();
         SqlRow row = rowIterator.next();
-        assertThat(rowIterator).isExhausted();
+        assertFalse(rowIterator.hasNext());
 
         assertThat(row.<Object>getObject(0)).isEqualToComparingFieldByField(
                 new PortableGenericRecordBuilder(personIdClassDefinition)

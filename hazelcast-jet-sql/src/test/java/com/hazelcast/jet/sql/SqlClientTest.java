@@ -53,11 +53,12 @@ public class SqlClientTest extends SqlTestSupport {
 
         TestBatchSqlConnector.create(sqlService, "t", itemCount);
 
+        SqlResult result = sqlService.execute("SELECT v FROM t");
         BitSet seenValues = new BitSet(itemCount);
-        for (SqlRow row : sqlService.execute("SELECT v FROM t")) {
-            Integer value = row.getObject(0);
-            assertFalse("value already seen: " + value, seenValues.get(value));
-            seenValues.set(value);
+        for (SqlRow r : result) {
+            Integer v = r.getObject(0);
+            assertFalse("value already seen: " + v, seenValues.get(v));
+            seenValues.set(v);
         }
         assertEquals(itemCount, seenValues.cardinality());
     }

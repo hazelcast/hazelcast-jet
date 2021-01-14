@@ -54,11 +54,9 @@ public class JetSqlCoreBackendImpl implements JetSqlCoreBackend, ManagedService 
         MappingCatalog mappingCatalog = new MappingCatalog(nodeEngine, mappingStorage, connectorCache);
 
         this.resultConsumerRegistry = new ConcurrentHashMap<>();
+        JetPlanExecutor planExecutor = new JetPlanExecutor(mappingCatalog, jetInstance, resultConsumerRegistry);
         this.catalog = mappingCatalog;
-        this.sqlBackend = new JetSqlBackend(
-                nodeEngine,
-                new JetPlanExecutor(mappingCatalog, jetInstance, resultConsumerRegistry)
-        );
+        this.sqlBackend = new JetSqlBackend(nodeEngine, planExecutor);
     }
 
     @Override

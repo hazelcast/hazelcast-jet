@@ -35,14 +35,14 @@ import java.util.concurrent.TimeUnit;
 class JetSqlResultImpl extends AbstractSqlResult {
 
     private final QueryId queryId;
-    private final QueryResultProducer queryResultProducer;
+    private final QueryResultProducer rootResultConsumer;
     private final SqlRowMetadata rowMetadata;
 
     private ResultIterator<SqlRow> iterator;
 
-    JetSqlResultImpl(QueryId queryId, QueryResultProducer queryResultProducer, SqlRowMetadata rowMetadata) {
+    JetSqlResultImpl(QueryId queryId, QueryResultProducer rootResultConsumer, SqlRowMetadata rowMetadata) {
         this.queryId = queryId;
-        this.queryResultProducer = queryResultProducer;
+        this.rootResultConsumer = rootResultConsumer;
         this.rowMetadata = rowMetadata;
     }
 
@@ -59,7 +59,7 @@ class JetSqlResultImpl extends AbstractSqlResult {
     @Nonnull @Override
     public ResultIterator<SqlRow> iterator() {
         if (iterator == null) {
-            iterator = new RowToSqlRowIterator(queryResultProducer.iterator());
+            iterator = new RowToSqlRowIterator(rootResultConsumer.iterator());
 
             return iterator;
         } else {
@@ -77,7 +77,7 @@ class JetSqlResultImpl extends AbstractSqlResult {
         if (exception == null) {
             exception = QueryException.cancelledByUser();
         }
-        queryResultProducer.onError(exception);
+        rootResultConsumer.onError(exception);
     }
 
     private final class RowToSqlRowIterator implements ResultIterator<SqlRow> {
