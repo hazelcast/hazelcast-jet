@@ -14,18 +14,17 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.test;
+package com.hazelcast.jet.sql.impl.connector.generator;
 
-import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
+import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
-import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
-import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.expression.Expression;
-import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -35,17 +34,18 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
-import static com.hazelcast.jet.impl.util.Util.toList;
 import static java.util.Collections.singletonList;
 
-/**
- * A SQL source that fails immediately.
- */
-public class FailingTestSqlConnector implements SqlConnector {
+class SeriesSqlConnector implements SqlConnector {
 
-    public static final String TYPE_NAME = "FailingSource";
+    static final String OPTION_START = "start";
+    static final String OPTION_STOP = "stop";
+    static final String OPTION_STEP = "step";
 
-    private static final List<MappingField> FIELD_LIST = singletonList(new MappingField("v", QueryDataType.BIGINT));
+    static final SeriesSqlConnector INSTANCE = new SeriesSqlConnector();
+
+    private static final String TYPE_NAME = "Series";
+    private static final List<TableField> FIELDS = singletonList(new TableField("v", QueryDataType.INT, false));
 
     @Override
     public String typeName() {
@@ -54,35 +54,36 @@ public class FailingTestSqlConnector implements SqlConnector {
 
     @Override
     public boolean isStream() {
-        return true;
+        return false;
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public List<MappingField> resolveAndValidateFields(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> userFields
     ) {
-        if (userFields.size() > 0) {
-            throw QueryException.error("Don't specify external fields, they are fixed");
-        }
-        return FIELD_LIST;
+        throw new UnsupportedOperationException("Resolving fields not supported for " + typeName());
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
-            @Nonnull String mappingName,
+            @Nonnull String name,
             @Nonnull String externalName,
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
-        return new JetTable(
-                this,
-                toList(resolvedFields, ef -> new TableField(ef.name(), ef.type(), false)),
-                schemaName, mappingName, new ConstantTableStatistics(0)
-        );
+        throw new UnsupportedOperationException("Creating table not supported for " + typeName());
+    }
+
+    @Nonnull
+    @SuppressWarnings("SameParameterValue")
+    static SeriesTable createTable(String schemaName, String name, int start, int stop, int step) {
+        return new SeriesTable(INSTANCE, FIELDS, schemaName, name, start, stop, step);
     }
 
     @Override
@@ -90,23 +91,18 @@ public class FailingTestSqlConnector implements SqlConnector {
         return true;
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
-            @Nonnull Table table,
+            @Nonnull Table table0,
             @Nullable Expression<Boolean> predicate,
-            @Nonnull List<Expression<?>> projection
+            @Nonnull List<Expression<?>> projections
     ) {
-        return dag.newUniqueVertex(
-                "FailingSource[" + table.getSchemaName() + "." + table.getSqlName() + ']',
-                FailingP::new
-        );
-    }
+        SeriesTable table = (SeriesTable) table0;
 
-    private static final class FailingP extends AbstractProcessor {
-        @Override
-        public boolean complete() {
-            throw new RuntimeException("mock failure");
-        }
+        BatchSource<Object[]> source = table.items(predicate, projections);
+        ProcessorMetaSupplier pms = ((BatchSourceTransform<Object[]>) source).metaSupplier;
+        return dag.newUniqueVertex(table.toString(), pms);
     }
 }

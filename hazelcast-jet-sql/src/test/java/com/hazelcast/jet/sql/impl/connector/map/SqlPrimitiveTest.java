@@ -25,12 +25,16 @@ import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_OBJECT_NAME;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
 import static java.util.Arrays.asList;
@@ -152,10 +156,10 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         String mapName = randomName();
         String tableName = randomName();
 
-        sqlService.execute("CREATE MAPPING " + tableName + " TYPE " + IMapSqlConnector.TYPE_NAME + ' '
+        sqlService.execute("CREATE MAPPING " + tableName + " EXTERNAL NAME " + mapName + ' '
+                + "TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '\'' + OPTION_OBJECT_NAME + "'='" + mapName + '\''
-                + ", '" + OPTION_KEY_FORMAT + "'='" + JAVA_FORMAT + '\''
+                + '\'' + OPTION_KEY_FORMAT + "'='" + JAVA_FORMAT + '\''
                 + ", '" + OPTION_KEY_CLASS + "'='" + String.class.getName() + '\''
                 + ", '" + OPTION_VALUE_FORMAT + "'='" + JAVA_FORMAT + '\''
                 + ", '" + OPTION_VALUE_CLASS + "'='" + String.class.getName() + '\''
@@ -266,5 +270,88 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                         + ")"))
                 .hasMessage(
                         "The field '" + fieldName + "' is of type INTEGER, you can't map '" + fieldName + ".field' too");
+    }
+
+    @Test
+    public void test_simplePrimitiveTypeSyntax_varchar() {
+        test_simplePrimitiveTypeSyntax("varchar", "foo");
+        test_simplePrimitiveTypeSyntax("character varying", "foo");
+        test_simplePrimitiveTypeSyntax("char varying", "foo");
+    }
+
+    @Test
+    public void test_simplePrimitiveTypeSyntax_boolean() {
+        test_simplePrimitiveTypeSyntax("boolean", true);
+    }
+
+    @Test
+    public void test_simplePrimitiveTypeSyntax_tinyint() {
+        test_simplePrimitiveTypeSyntax("tinyint", (byte) 42);
+    }
+
+    @Test
+    public void test_simplePrimitiveTypeSyntax_smallint() {
+        test_simplePrimitiveTypeSyntax("smallint", (short) 42);
+    }
+
+    @Test
+    public void test_simplePrimitiveTypeSyntax_int() {
+        test_simplePrimitiveTypeSyntax("int", 42);
+        test_simplePrimitiveTypeSyntax("integer", 42);
+    }
+
+    @Test
+    public void test_simplePrimitiveTypeSyntax_bigint() {
+        test_simplePrimitiveTypeSyntax("bigint", 42L);
+    }
+
+    @Test
+    public void test_simplePrimitiveTypeSyntax_decimal() {
+        test_simplePrimitiveTypeSyntax("decimal", BigDecimal.valueOf(42));
+        test_simplePrimitiveTypeSyntax("dec", BigDecimal.valueOf(42));
+        test_simplePrimitiveTypeSyntax("numeric", BigDecimal.valueOf(42));
+    }
+
+    @Test
+    public void test_simplePrimitiveTypeSyntax_real() {
+        test_simplePrimitiveTypeSyntax("real", 42f);
+    }
+
+    @Test
+    public void test_simplePrimitiveTypeSyntax_double() {
+        test_simplePrimitiveTypeSyntax("double", 42d);
+        test_simplePrimitiveTypeSyntax("double precision", 42d);
+    }
+
+    @Test
+    public void test_simplePrimitiveTypeSyntax_time() {
+        test_simplePrimitiveTypeSyntax("time", LocalTime.of(10, 42));
+    }
+
+    @Test
+    public void test_simplePrimitiveTypeSyntax_date() {
+        test_simplePrimitiveTypeSyntax("date", LocalDate.of(1942, 4, 2));
+    }
+
+    @Test
+    public void test_simplePrimitiveTypeSyntax_timestamp() {
+        test_simplePrimitiveTypeSyntax("timestamp", LocalDateTime.of(1942, 4, 2, 10, 42));
+    }
+
+    @Test
+    public void test_simplePrimitiveTypeSyntax_timestampWithTz() {
+        test_simplePrimitiveTypeSyntax("timestamp with time zone",
+                OffsetDateTime.of(1042, 4, 2, 10, 42, 0, 0, ZoneOffset.ofHours(4)));
+    }
+
+    private void test_simplePrimitiveTypeSyntax(String format, Object testValue) {
+        String mapName = randomName();
+        sqlService.execute("CREATE MAPPING " + mapName + " TYPE IMap " +
+                "OPTIONS ('keyFormat'='" + format + "'," +
+                "'valueFormat'='" + format + "')");
+
+        instance().getMap(mapName).put(testValue, testValue);
+
+        assertRowsAnyOrder("SELECT * FROM " + mapName, singletonList(new Row(testValue, testValue)));
     }
 }

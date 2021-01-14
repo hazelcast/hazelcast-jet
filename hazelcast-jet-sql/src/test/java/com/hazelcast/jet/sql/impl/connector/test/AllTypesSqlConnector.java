@@ -24,6 +24,7 @@ import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
+import com.hazelcast.jet.sql.impl.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
@@ -126,11 +127,12 @@ public class AllTypesSqlConnector implements SqlConnector {
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
-            @Nonnull String tableName,
+            @Nonnull String mappingName,
+            @Nonnull String externalName,
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
-        return new AllTypesTable(this, schemaName, tableName);
+        return new AllTypesTable(this, schemaName, mappingName);
     }
 
     @Override
