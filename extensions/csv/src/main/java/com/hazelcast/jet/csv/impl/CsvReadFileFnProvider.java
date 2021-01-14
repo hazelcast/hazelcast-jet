@@ -33,7 +33,6 @@ import javax.annotation.Nonnull;
 import java.io.FileInputStream;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Spliterators;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -42,6 +41,7 @@ import java.util.stream.StreamSupport;
 import static com.hazelcast.jet.impl.util.Util.createFieldProjection;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.Spliterator.ORDERED;
+import static java.util.function.Function.identity;
 
 /**
  * {@link ReadFileFnProvider} for CSV files, reading the given path and
@@ -62,23 +62,25 @@ public class CsvReadFileFnProvider implements ReadFileFnProvider {
 
         return path -> {
             FileInputStream fis = new FileInputStream(path.toFile());
+
             MappingIterator<T> iterator;
-            Function<T, T> projection = r -> r;
+            Function<T, T> projection = identity();
             if (formatClazz == String[].class) {
                 ObjectReader reader = new CsvMapper().enable(Feature.WRAP_AS_ARRAY)
                                                      .readerFor(String[].class)
                                                      .with(CsvSchema.emptySchema().withSkipFirstDataRow(false));
+
                 iterator = reader.readValues(fis);
                 if (!iterator.hasNext()) {
                     throw new JetException("Header row missing in " + path);
                 }
                 String[] header = (String[]) iterator.next();
-                List<String> fieldList = csvFileFormat.stringArrayFieldList();
-                if (fieldList != null) {
-                    projection = (Function<T, T>) createFieldProjection(header, fieldList);
+                List<String> fieldNames = csvFileFormat.fieldNames();
+                if (fieldNames != null) {
+                    projection = (Function<T, T>) createFieldProjection(header, fieldNames);
                 }
             } else {
-                iterator = new CsvMapper().readerFor(formatClazz != null ? formatClazz : Map.class)
+                iterator = new CsvMapper().readerFor(formatClazz)
                                           .withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                                           .with(CsvSchema.emptySchema().withHeader())
                                           .readValues(fis);

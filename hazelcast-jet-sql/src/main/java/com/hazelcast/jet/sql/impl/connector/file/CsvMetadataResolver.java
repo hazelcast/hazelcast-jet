@@ -29,7 +29,7 @@ final class CsvMetadataResolver extends MetadataResolver<Map<String, String>> {
 
     static final CsvMetadataResolver INSTANCE = new CsvMetadataResolver();
 
-    private static final FileFormat<Map<String, String>> SAMPLE_FORMAT = FileFormat.csv();
+    private static final FileFormat<?> SAMPLE_FORMAT = FileFormat.csv(Map.class);
 
     @Override
     protected FileFormat<?> sampleFormat() {
@@ -43,19 +43,18 @@ final class CsvMetadataResolver extends MetadataResolver<Map<String, String>> {
 
     @Override
     protected Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
-        List<String> fieldMap = createFieldList(resolvedFields);
-        FileFormat<String[]> format = FileFormat.csv(String[].class)
-                                                .withStringArrayFieldList(createFieldList(resolvedFields));
+        List<String> fieldNames = createFieldList(resolvedFields);
+        FileFormat<String[]> format = FileFormat.csv(createFieldList(resolvedFields));
         return new Metadata(
                 toFields(resolvedFields),
                 toProcessorMetaSupplier(options, format),
-                () -> new CsvQueryTarget(fieldMap));
+                () -> new CsvQueryTarget(fieldNames));
     }
 
     @Nonnull
     private static List<String> createFieldList(List<MappingField> resolvedFields) {
         return resolvedFields.stream()
-                      .map(f -> f.externalName() != null ? f.externalName() : f.name())
+                      .map(field -> field.externalName() != null ? field.externalName() : field.name())
                       .distinct()
                       .collect(Collectors.toList());
     }
