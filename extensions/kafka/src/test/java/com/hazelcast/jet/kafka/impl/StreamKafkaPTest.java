@@ -47,6 +47,7 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -374,6 +375,8 @@ public class StreamKafkaPTest extends SimpleTestInClusterSupport {
     }
 
     @Test
+    @Ignore("Failing periodically, needs more investigation to fix. " +
+            "More Context here: https://github.com/hazelcast/hazelcast-jet/issues/2810")
     public void when_partitionAddedWhileJobDown_then_consumedFromBeginning() throws Exception {
         IList<Entry<Integer, String>> sinkList = instance().getList("sinkList");
         Pipeline p = Pipeline.create();
