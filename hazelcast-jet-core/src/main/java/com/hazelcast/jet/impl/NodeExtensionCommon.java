@@ -23,6 +23,7 @@ import com.hazelcast.internal.nio.Packet;
 import com.hazelcast.jet.impl.operation.PrepareForPassiveClusterOperation;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngineImpl;
+import com.hazelcast.sql.impl.JetSqlCoreBackend;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -80,6 +81,7 @@ class NodeExtensionCommon {
 
     void printNodeInfo(ILogger log, String addToProductName) {
         log.info(versionAndAddressMessage(addToProductName));
+        log.info(imdgVersionMessage());
         log.info(clusterNameMessage());
         log.fine(serializationVersionMessage());
         log.info('\n' + JET_LOGO);
@@ -97,6 +99,15 @@ class NodeExtensionCommon {
                 " (" + build + ") starting at " + node.getThisAddress();
     }
 
+    private String imdgVersionMessage() {
+        String build = node.getBuildInfo().getBuild();
+        String revision = node.getBuildInfo().getRevision();
+        if (!revision.isEmpty()) {
+            build += " - " + revision;
+        }
+        return "Based on Hazelcast IMDG version: " + node.getVersion() + " (" + build + ")";
+    }
+
     private String serializationVersionMessage() {
         return "Configured Hazelcast Serialization version: " + node.getBuildInfo().getSerializationVersion();
     }
@@ -107,7 +118,13 @@ class NodeExtensionCommon {
 
     Map<String, Object> createExtensionServices() {
         Map<String, Object> extensionServices = new HashMap<>();
+
         extensionServices.put(JetService.SERVICE_NAME, jetService);
+
+        if (jetService.getSqlCoreBackend() != null) {
+            extensionServices.put(JetSqlCoreBackend.SERVICE_NAME, jetService.getSqlCoreBackend());
+        }
+
         return extensionServices;
     }
 }

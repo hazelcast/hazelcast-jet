@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.util;
 
+import com.hazelcast.cluster.Address;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.EdgeConfig;
@@ -40,24 +41,36 @@ import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.idToString;
@@ -66,6 +79,8 @@ import static com.hazelcast.jet.core.processor.SinkProcessors.writeMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.lang.Math.abs;
+import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
+import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
@@ -311,6 +326,16 @@ public final class Util {
     }
 
     /**
+     * Creates a copy of the {@code array} with length increased by {@code
+     * extendBy}. The added elements will contain {@code null}s. If {@code
+     * extendBy == 0}, no copy is created.
+     */
+    public static Object[] extendArray(Object[] array, int extendBy) {
+        assert extendBy > -1;
+        return extendBy == 0 ? array : Arrays.copyOf(array, array.length + extendBy);
+    }
+
+    /**
      * Returns a future which is already completed with the supplied exception.
      */
     // replace with CompletableFuture.failedFuture(e) once we depend on java9+
@@ -434,10 +459,6 @@ public final class Util {
         return name + '-' + index;
     }
 
-    public static String sanitizeLoggerNamePart(String name) {
-        return name.replace('.', '_');
-    }
-
     public static void doWithClassLoader(ClassLoader cl, RunnableEx action) {
         Thread currentThread = Thread.currentThread();
         ClassLoader previousCl = currentThread.getContextClassLoader();
@@ -461,7 +482,167 @@ public final class Util {
      * using the given {@code mapFn}.
      */
     @Nonnull
-    public static <T, R> List<R> toList(@Nonnull Collection<T> coll, Function<? super T, ? extends R> mapFn) {
+    public static <T, R> List<R> toList(@Nonnull Collection<T> coll, @Nonnull Function<? super T, ? extends R> mapFn) {
         return coll.stream().map(mapFn).collect(Collectors.toList());
+    }
+
+    /**
+     * Edits the permissions on the file denoted by {@code path} by calling
+     * {@code editFn} with the set of that file's current permissions. {@code
+     * editFn} should modify that set to the desired permission set, and this
+     * method will propagate them to the file. If {@code editFn} returns {@code
+     * false}, the file will be left untouched. Returning {@code false} is an
+     * optimization feature because it avoids the expensive filesystem
+     * operation; if you always return {@code true}, this method will still
+     * behave correctly.
+     */
+    public static void editPermissions(
+            @Nonnull Path path, @Nonnull Predicate<? super Set<PosixFilePermission>> editFn
+    ) throws IOException {
+        Set<PosixFilePermission> perms = Files.getPosixFilePermissions(path, NOFOLLOW_LINKS);
+        if (editFn.test(perms)) {
+            Files.setPosixFilePermissions(path, perms);
+        }
+    }
+
+    /**
+     * Edits the permissions on all the files in the {@code basePath} and
+     * its subdirectories. It calls {@link #editPermissions} with every file.
+     *
+     * @param basePath the directory where to edit the file permissions
+     * @param editFn   the permission-editing function, described above
+     * @return the list of all relative path names of files for which editing
+     * permissions failed
+     * @throws IOException if the directory's contents cannot be traversed
+     */
+    public static List<String> editPermissionsRecursively(
+            @Nonnull Path basePath,
+            @Nonnull Predicate<? super Set<PosixFilePermission>> editFn
+    ) throws IOException {
+        List<String> filesNotMarked = new ArrayList<>();
+        try (Stream<Path> walk = Files.walk(basePath)) {
+            walk.forEach(path -> {
+                try {
+                    editPermissions(path, editFn);
+                } catch (Exception e) {
+                    filesNotMarked.add(basePath.relativize(path).toString());
+                }
+            });
+        }
+        return filesNotMarked;
+    }
+
+    /**
+     * Formats a duration given im milliseconds to the form of:
+     * <ul>
+     *     <li>{@code HH:MM:SS.sss}, if <24 hours
+     *     <li>{@code Nd HH:MM:SS.sss} otherwise
+     * </ul>
+     */
+    @Nonnull
+    @SuppressWarnings("checkstyle:MagicNumber") // number of hours per day isn't magic :)
+    public static String formatJobDuration(long durationMs) {
+        if (durationMs == Long.MIN_VALUE) {
+            return "" + Long.MIN_VALUE;
+        }
+        String sign = "";
+        if (durationMs < 0) {
+            sign = "-";
+            durationMs = -durationMs;
+        }
+        long millis = durationMs % 1000;
+        durationMs /= 1000;
+        long seconds = durationMs % 60;
+        durationMs /= 60;
+        long minutes = durationMs % 60;
+        durationMs /= 60;
+        long hours = durationMs % 24;
+        durationMs /= 24;
+        String textUpToHours = String.format("%02d:%02d:%02d.%03d", hours, minutes, seconds, millis);
+        return sign + (durationMs > 0 ? durationMs + "d " : "") + textUpToHours;
+    }
+
+    /**
+     * Assigns given partitions to given {@code members}.
+     * Set of partitions belonging to non-members are assigned to
+     * {@code members} in a round robin fashion.
+     */
+    public static Map<Address, List<Integer>> assignPartitions(
+            Collection<Address> members0,
+            Map<Address, List<Integer>> partitionsByOwner
+    ) {
+        assert !members0.isEmpty();
+
+        LinkedHashSet<Address> members = new LinkedHashSet<>(members0);
+
+        Iterator<Address> iterator = members.iterator();
+
+        Map<Address, List<Integer>> partitionsByMember = new HashMap<>();
+        for (Entry<Address, List<Integer>> entry : partitionsByOwner.entrySet()) {
+            Address partitionOwner = entry.getKey();
+            List<Integer> partitions = entry.getValue();
+
+            Address target;
+            if (members.contains(partitionOwner)) {
+                target = partitionOwner;
+            } else {
+                if (!iterator.hasNext()) {
+                    iterator = members.iterator();
+                }
+                target = iterator.next();
+            }
+
+            partitionsByMember.merge(target, new ArrayList<>(partitions), (existing, incoming) -> {
+                existing.addAll(incoming);
+                return existing;
+            });
+        }
+        return partitionsByMember;
+    }
+
+    /**
+     * Given a list of input field names and a list of output field names
+     * creates a projection to map between these.
+     * <p>
+     * For example, if input names are {@code [surname, name, address]} and
+     * output names are {@code [name, surname, age]}, then the function,
+     * applied to {@code [Smith, John, New York]} will return {@code [John,
+     * Smith, (null)]}. That is, it will map the fields from the input order to
+     * output order. The output field named {@code age} is missing in input, so
+     * the value for it is {@code null} for any input.
+     *
+     * @param inputFields the input headers
+     * @param outputFields the output headers
+     * @return the indices to map input to output
+     */
+    @Nonnull
+    public static Function<String[], String[]> createFieldProjection(
+            @Nonnull String[] inputFields,
+            @Nonnull List<String> outputFields
+    ) {
+        if (outputFields.equals(asList(inputFields))) {
+            // shortcut - the mapping is an identity
+            return i -> i;
+        }
+        int[] simpleFieldMap = new int[outputFields.size()];
+        Arrays.fill(simpleFieldMap, -1);
+        for (int i = 0; i < inputFields.length; i++) {
+            int index = outputFields.indexOf(inputFields[i]);
+            // if the inputFields is present in the file and we didn't encounter it yet, store its index
+            if (index >= 0 && simpleFieldMap[index] == -1) {
+                simpleFieldMap[index] = i;
+            }
+        }
+
+        return row0 -> {
+            String[] inputRow = row0;
+            String[] projectedRow = new String[simpleFieldMap.length];
+            for (int i = 0; i < simpleFieldMap.length; i++) {
+                if (simpleFieldMap[i] >= 0) {
+                    projectedRow[i] = inputRow[simpleFieldMap[i]];
+                }
+            }
+            return projectedRow;
+        };
     }
 }

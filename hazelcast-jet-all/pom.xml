@@ -74,10 +74,16 @@
                             <include>com.hazelcast.jet:*</include>
                             <include>com.hazelcast:*</include>
                             <include>info.picocli:picocli</include>
+                            <include>org.jline:jline-terminal</include>
+                            <include>org.jline:jline-reader</include>
+                            <include>org.jline:jline-terminal-jansi</include>
+                            <include>org.fusesource.jansi:jansi</include>
                             <include>io.github.classgraph:classgraph</include>
                             <include>com.fasterxml.jackson.jr:jackson-jr-objects</include>
                             <include>com.fasterxml.jackson.jr:jackson-jr-annotation-support</include>
                             <include>com.fasterxml.jackson.core:jackson-core</include>
+                            <include>com.fasterxml.jackson.core:jackson-databind</include>
+                            <include>com.fasterxml.jackson.dataformat:jackson-dataformat-csv</include>
                         </includes>
                     </artifactSet>
                     <filters>
@@ -95,6 +101,14 @@
                             <shadedPattern>com.hazelcast.jet.picocli</shadedPattern>
                         </relocation>
                         <relocation>
+                            <pattern>jline-terminal</pattern>
+                            <shadedPattern>com.hazelcast.jet.jline-terminal</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>jline-reader</pattern>
+                            <shadedPattern>com.hazelcast.jet.jline-reader</shadedPattern>
+                        </relocation>
+                        <relocation>
                             <pattern>io.github.classgraph</pattern>
                             <shadedPattern>com.hazelcast.jet.io.github.classgraph</shadedPattern>
                         </relocation>
@@ -109,6 +123,14 @@
                         <relocation>
                             <pattern>com.fasterxml.jackson.core</pattern>
                             <shadedPattern>com.hazelcast.com.fasterxml.jackson.core</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.fasterxml.jackson.databind</pattern>
+                            <shadedPattern>com.hazelcast.com.fasterxml.jackson.databind</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.fasterxml.jackson.dataformat</pattern>
+                            <shadedPattern>com.hazelcast.com.fasterxml.jackson.dataformat</shadedPattern>
                         </relocation>
                     </relocations>
                     <transformers>
@@ -142,6 +164,27 @@
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
             <version>${picocli.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline-terminal</artifactId>
+            <version>${jline.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline-reader</artifactId>
+            <version>${jline.version}</version>
+        </dependency>
+        <!-- for windows -->
+        <dependency>
+            <groupId>org.fusesource.jansi</groupId>
+            <artifactId>jansi</artifactId>
+            <version>1.18</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline-terminal-jansi</artifactId>
+            <version>${jline.version}</version>
         </dependency>
 
         <!-- These dependencies are otherwise optional, but we include them in the
@@ -203,6 +246,15 @@
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
             <version>${jsr250.api.version}</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- optional IMDG dependencies: required for javadoc generation, optional at runtime -->
+        <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>affinity</artifactId>
+            <version>${affinity.version}</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>

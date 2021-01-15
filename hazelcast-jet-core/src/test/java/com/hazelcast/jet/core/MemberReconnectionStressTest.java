@@ -54,7 +54,7 @@ public class MemberReconnectionStressTest extends JetTestSupport {
     public void test() {
         /*
         The test will start 2 thread:
-        - one will submit short batch jobs, serially, joining the previous job
+        - one will submit short batch jobs, serially, after joining the previous job
         - the other will keep dropping the member-to-member connection.
 
         The small jobs will often fail due to the reconnection, we check
@@ -72,7 +72,7 @@ public class MemberReconnectionStressTest extends JetTestSupport {
         JetInstance inst1 = Jet.newJetInstance(config);
         JetInstance inst2 = Jet.newJetInstance(config);
 
-        logger.info("Starting ");
+        logger.info("Instances started");
 
         new Thread(() -> {
             while (!terminated.get()) {
@@ -100,7 +100,7 @@ public class MemberReconnectionStressTest extends JetTestSupport {
                     logger.info("job completed");
                     jobCount.incrementAndGet();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    logger.info("Job failed, ignoring it", e);
                 }
             }
         }).start();

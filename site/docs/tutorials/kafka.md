@@ -1,5 +1,5 @@
 ---
-title: Process Events from Apache Kafka
+title: Connect to Apache Kafka
 description: How to use Jet for processing data streaming from Apache Kafka.
 ---
 
@@ -26,7 +26,7 @@ wget https://github.com/hazelcast/hazelcast-jet/releases/download/v{jet-version}
 tar zxvf hazelcast-jet-{jet-version}.tar.gz && cd hazelcast-jet-{jet-version}
 ```
 
-If you already have Jet and you skipped the above steps, make sure to
+If you already have Jet, and you skipped the above steps, make sure to
 follow from here on.
 
 2. Activate the Apache Kafka Connector plugin:
@@ -71,8 +71,8 @@ version '1.0-SNAPSHOT'
 repositories.mavenCentral()
 
 dependencies {
-    compile 'com.hazelcast.jet:hazelcast-jet:{jet-version}'
-    compile 'com.hazelcast.jet:hazelcast-jet-kafka:{jet-version}'
+    implementation 'com.hazelcast.jet:hazelcast-jet:{jet-version}'
+    implementation 'com.hazelcast.jet:hazelcast-jet-kafka:{jet-version}'
 }
 
 jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
@@ -227,9 +227,9 @@ public class JetJob {
 }
 ```
 
-You may run this code from your IDE and it will work, but it will create
-its own Jet instance. To run it on the Jet instance you already started,
-use the command line like this:
+You may run this code from your IDE, and it will work, but it will
+create its own Jet instance. To run it on the Jet instance you already
+started, use the command line like this:
 
 <!--DOCUSAURUS_CODE_TABS-->
 

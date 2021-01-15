@@ -20,11 +20,15 @@ Copyright (c) 2008-2020 Hazelcast, Inc. All rights reserved.
 This product includes the following libraries with the following licenses:
 
 Apache License, Version 2.0
+  AWS SDK for Java - Core:1.11.934
+  AWS Java SDK for Amazon Kinesis:1.11.934
+  JMES Path Query library:1.11.934
   HPPC Collections:0.7.1
   Jackson-annotations:2.11.2
   Jackson-core:2.11.2
-  jackson-databind:2.10.0
-  Jackson dataformat: CBOR:2.8.11
+  jackson-databind:2.11.2
+  Jackson dataformat: CBOR:2.11.2
+  Jackson-dataformat-CSV:2.11.2
   Jackson dataformat: Smile:2.8.11
   Jackson-dataformat-YAML:2.8.11
   Jackson datatype: JSR310:2.10.0
@@ -38,9 +42,10 @@ Apache License, Version 2.0
   Gson:2.8.6
   error-prone annotations:2.3.4
   Guava InternalFutureFailureAccess and InternalFutures:1.0.1
-  Guava: Google Core Libraries for Java:28.1-android
+  Guava: Google Core Libraries for Java:29.0-jre
   Guava ListenableFuture only:9999.0-empty-to-avoid-conflict-with-guava
   J2ObjC Annotations:1.3
+  project ':json-path':2.4.0
   T-Digest:3.2
   Netty Reactive Streams Implementation:2.0.3
   Netty Reactive Streams HTTP support:2.0.3
@@ -73,6 +78,9 @@ Apache License, Version 2.0
   jmx_prometheus_javaagent:0.13.0
   Joda-Time:2.10.1
   Apache Avro:1.8.2
+  Calcite Core:1.23.0
+  Calcite Linq4j:1.23.0
+  Apache Calcite Avatica:1.16.0
   Apache Commons Compress:1.8.1
   Apache HttpAsyncClient:4.1.4
   Apache HttpClient:4.5.7
@@ -114,6 +122,7 @@ Apache License, Version 2.0
   lang-mustache:7.0.0
   parent-join:7.0.0
   rank-eval:7.0.0
+  jansi:1.18
   LZ4 and xxHash:1.5.0
   SnakeYAML Engine:1.0
   snappy-java:1.1.1.3
@@ -133,6 +142,7 @@ Apache License, Version 2.0
   AWS Java SDK :: SDK Core:2.8.3
   AWS Java SDK :: Utilities:2.8.3
   AWS Event Stream:1.0.1
+  software.amazon.ion:ion-java:1.0.2
 BSD 2-Clause License
   zstd-jni:1.3.8-1
   PostgreSQL JDBC Driver:42.2.14
@@ -140,18 +150,21 @@ BSD 3-Clause License
   Protocol Buffers [Core]:3.13.0
   ParaNamer Core:2.7
   ANTLR 4 Runtime:4.7.2
+  commons-compiler:3.0.11
+  janino:3.0.11
+  JLine Reader:3.16.0
+  JLine Terminal:3.16.0
+  JLine JANSI Terminal:3.16.0
 CC0
   reactive-streams:1.0.2
 EPL 2.0
   javax.ws.rs-api:2.1.1
-GNU General Public License, version 2 (GPL2), with the classpath exception
-  Checker Qual:2.5.5
 GPL2 w/ CPE
   javax.ws.rs-api:2.1.1
 MIT License
   ClassGraph:4.8.66
   JOpt Simple:5.0.2
-  Checker Qual:2.5.5
+  Checker Qual:2.11.1
   Animal Sniffer Annotations:1.18
   SLF4J API Module:1.7.25
 Public Domain

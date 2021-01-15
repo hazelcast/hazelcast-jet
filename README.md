@@ -3,15 +3,29 @@
 <img src="images/hazelcast-jet.png" width="150" style="margin-bottom: 14px">
 </p>
 <p>
-<a href="https://slack.hazelcast.com"><img src="https://hz-community-slack.herokuapp.com/badge.svg" alt="Join the community on Slack"></a>
-<a href="https://lgtm.com/projects/g/hazelcast/hazelcast-jet/context:java"><img src="https://img.shields.io/lgtm/grade/java/g/hazelcast/hazelcast.svg?logo=lgtm&amp;logoWidth=18" alt="Code Quality: Java"></a>
-<a href="https://img.shields.io/docker/pulls/hazelcast/hazelcast-jet"><img src="https://img.shields.io/docker/pulls/hazelcast/hazelcast-jet" alt="Docker pulls"></a>
-<a href="https://img.shields.io/github/downloads/hazelcast/hazelcast-jet/total"><img src="https://img.shields.io/github/downloads/hazelcast/hazelcast-jet/total" alt="Downloads"></a>
-<a href="https://img.shields.io/github/contributors/hazelcast/hazelcast-jet"><img src="https://img.shields.io/github/contributors/hazelcast/hazelcast-jet" alt="Contributors"></a>
+<a href="https://slack.hazelcast.com"><img
+src="https://hz-community-slack.herokuapp.com/badge.svg" alt="Join the
+community on Slack"></a>
+<a
+href="https://lgtm.com/projects/g/hazelcast/hazelcast-jet/context:java"><img
+src="https://img.shields.io/lgtm/grade/java/g/hazelcast/hazelcast.svg?logo=lgtm&amp;logoWidth=18"
+alt="Code Quality: Java"></a>
+<a
+href="https://img.shields.io/docker/pulls/hazelcast/hazelcast-jet"><img
+src="https://img.shields.io/docker/pulls/hazelcast/hazelcast-jet"
+alt="Docker pulls"></a>
+<a
+href="https://img.shields.io/github/downloads/hazelcast/hazelcast-jet/total"><img
+src="https://img.shields.io/github/downloads/hazelcast/hazelcast-jet/total"
+alt="Downloads"></a>
+<a
+href="https://img.shields.io/github/contributors/hazelcast/hazelcast-jet"><img
+src="https://img.shields.io/github/contributors/hazelcast/hazelcast-jet"
+alt="Contributors"></a>
 </p>
 </div>
 
-# What is Jet?
+# What is Jet
 
 [Jet](https://jet-start.sh/) is an open-source, in-memory, distributed
 batch and stream processing engine. You can use it to process large
@@ -92,7 +106,7 @@ and sinks](https://jet-start.sh/docs/api/sources-sinks), including:
 * MongoDB
 * Twitter
 
-## When should you use Jet?
+## When Should You Use Jet
 
 Jet is a good fit when you need to process large amounts of data in a
 distributed fashion. You can use it to build a variety of
@@ -154,7 +168,7 @@ to treat disordered events as if they were arriving in order.
 
 <img src="images/watermarks.svg">
 
-## How Do I Get Started?
+## How Do I Get Started
 
 Follow the [Get Started](https://jet-start.sh/docs/get-started/intro)
 guide to start using Jet.
@@ -210,7 +224,7 @@ You are also encouraged to join the [hazelcast-jet mailing
 list](http://groups.google.com/group/hazelcast-jet) if you are
 interested in community discussions
 
-## How Can I Contribute?
+## How Can I Contribute
 
 Thanks for your interest in contributing! The easiest way is to just
 send a pull request. Have a look at the issues marked as [good first
@@ -253,6 +267,30 @@ Maven snippet:
 </dependencies>
 ```
 
+## Trigger Phrases in the Pull Request Conversation
+
+When you create a pull request (PR), it must pass a build-and-test
+procedure. Maintainers will be notified about your PR, and they can
+trigger the build using special comments. These are the phrases you may
+see used in the comments on your PR:
+
+* `verify` - run the default PR builder, equivalent to `mvn clean
+  install`
+* `run-nightly-tests` - use the settings for the nightly build (`mvn
+  clean install -Pnightly`). This includes slower tests in the run,
+  which we don't normally run on every PR
+* `run-windows` - run the tests on a Windows machine (HighFive is not
+  supported here)
+* `run-cdc-debezium-tests` - run all tests in the
+  `extensions/cdc-debezium` module
+* `run-cdc-mysql-tests` - run all tests in the `extensions/cdc-mysql`
+  module
+* `run-cdc-postgres-tests` - run all tests in the
+  `extensions/cdc-postgres` module
+
+Where not indicated, the builds run on a Linux machine with Oracle JDK
+8.
+
 ## License
 
 Source code in this repository is covered by one of two licenses:
@@ -265,6 +303,11 @@ The default license throughout the repository is Apache License 2.0
 unless the
 header specifies another license. Please see the [Licensing
 section](https://jet-start.sh/license) for more information.
+
+## Credits
+
+We owe (the good parts of) our CLI tool's user experience to
+[picocli](https://picocli.info/).
 
 ## Copyright
 

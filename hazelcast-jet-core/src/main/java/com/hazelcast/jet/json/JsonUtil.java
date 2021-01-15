@@ -78,7 +78,7 @@ public final class JsonUtil {
     }
 
     /**
-     * Converts a JSON string to a object of given type.
+     * Converts a JSON string to an object of the given type.
      */
     @Nullable
     public static <T> T beanFrom(@Nonnull String jsonString, @Nonnull Class<T> type) throws IOException {
@@ -89,8 +89,8 @@ public final class JsonUtil {
      * Converts a JSON string to a {@link Map}.
      */
     @Nullable
-    public static Map<String, Object> mapFrom(@Nonnull String jsonString) throws IOException {
-        return JSON_JR.mapFrom(jsonString);
+    public static Map<String, Object> mapFrom(@Nonnull Object object) throws IOException {
+        return JSON_JR.mapFrom(object);
     }
 
     /**
@@ -114,7 +114,7 @@ public final class JsonUtil {
      * according to the content of the string:
      * <ul>
      *     <li>content is a JSON object, returns a {@link Map}. See
-     *     {@link #mapFrom(String)}.</li>
+     *     {@link #mapFrom(Object)}.</li>
      *     <li>content is a JSON array, returns a {@link List}. See
      *     {@link #listFrom(String)}.</li>
      *     <li>content is a String, null or primitive, returns String, null or

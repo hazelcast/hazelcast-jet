@@ -15,10 +15,11 @@
  */
 package com.hazelcast.jet.python;
 
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -31,18 +32,15 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
-import java.util.stream.Stream;
 
 import static com.hazelcast.jet.impl.util.IOUtil.copyStream;
+import static com.hazelcast.jet.impl.util.IOUtil.readFully;
+import static com.hazelcast.jet.impl.util.Util.editPermissionsRecursively;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.nio.file.attribute.PosixFilePermission.GROUP_WRITE;
 import static java.nio.file.attribute.PosixFilePermission.OTHERS_WRITE;
 import static java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE;
@@ -78,10 +76,11 @@ class PythonServiceContext {
 
     PythonServiceContext(ProcessorSupplier.Context context, PythonServiceConfig cfg) {
         logger = context.jetInstance().getHazelcastInstance().getLoggingService()
-                        .getLogger(getClass().getPackage().getName());
+                .getLogger(getClass().getPackage().getName());
+        checkIfPythonIsAvailable();
         try {
             long start = System.nanoTime();
-            runtimeBaseDir = runtimeBaseDir(context, cfg);
+            runtimeBaseDir = recreateRuntimeBaseDir(context, cfg);
             setupBaseDir(cfg);
             synchronized (INIT_LOCK) {
                 // synchronized: the script will run pip which is not concurrency-safe
@@ -93,7 +92,7 @@ class PythonServiceContext {
                 initProcess.waitFor();
                 if (initProcess.exitValue() != 0) {
                     try {
-                        destroy();
+                        performCleanup();
                     } catch (Exception e) {
                         logger.warning("Cleanup failed with exception", e);
                     }
@@ -111,36 +110,55 @@ class PythonServiceContext {
         }
     }
 
-    Path runtimeBaseDir(ProcessorSupplier.Context context, PythonServiceConfig cfg) {
-        File baseDir = cfg.baseDir();
-        if (baseDir != null) {
-            return context.attachedDirectory(baseDir.toString()).toPath();
-        }
-        File handlerFile = cfg.handlerFile();
-        if (handlerFile != null) {
-            return context.attachedFile(handlerFile.toString()).toPath().getParent();
-        }
-        throw new IllegalArgumentException("Either base directory or handler file should be configured");
-    }
-
-    void destroy() {
-        File runtimeBaseDirF = runtimeBaseDir.toFile();
+    private void checkIfPythonIsAvailable() {
         try {
-            makeFilesWritable(runtimeBaseDir);
-            Path cleanupScriptPath = runtimeBaseDir.resolve(USER_CLEANUP_SHELL_SCRIPT);
-            if (Files.exists(cleanupScriptPath)) {
-                Process cleanupProcess = new ProcessBuilder("/bin/sh", "-c", "./" + CLEANUP_SHELL_SCRIPT)
-                        .directory(runtimeBaseDirF)
-                        .redirectErrorStream(true)
-                        .start();
-                logStdOut(logger, cleanupProcess, "python-cleanup-" + cleanupProcess);
-                cleanupProcess.waitFor();
-                if (cleanupProcess.exitValue() != 0) {
-                    logger.warning("Cleanup script finished with non-zero exit code: " + cleanupProcess.exitValue());
+            Process process = new ProcessBuilder("python3", "--version").redirectErrorStream(true).start();
+            process.waitFor();
+            try (InputStream inputStream = process.getInputStream()) {
+                String output = new String(readFully(inputStream), UTF_8);
+                if (process.exitValue() != 0) {
+                    logger.severe("python3 version check returned non-zero exit value, output: " + output);
+                    throw new IllegalStateException("python3 is not available");
+                }
+                if (!output.startsWith("Python 3")) {
+                    logger.severe("python3 version check returned unknown version, output: " + output);
+                    throw new IllegalStateException("python3 is not available");
                 }
             }
         } catch (Exception e) {
-            throw new JetException("PythonService cleanup failed: " + e, e);
+            throw new IllegalStateException("python3 is not available", e);
+        }
+    }
+
+    private void makeFilesReadOnly(@Nonnull Path basePath) throws IOException {
+        List<String> filesNotMarked = editPermissionsRecursively(
+                basePath, perms -> perms.removeAll(WRITE_PERMISSIONS));
+        if (!filesNotMarked.isEmpty()) {
+            logger.info("Couldn't 'chmod -w' these files: " + filesNotMarked);
+        }
+    }
+
+    private static void makeExecutable(@Nonnull Path path) throws IOException {
+        Util.editPermissions(path, perms -> perms.add(OWNER_EXECUTE));
+    }
+
+    Path recreateRuntimeBaseDir(ProcessorSupplier.Context context, PythonServiceConfig cfg) {
+        File baseDir = cfg.baseDir();
+        if (baseDir != null) {
+            return context.recreateAttachedDirectory(baseDir.toString()).toPath();
+        }
+        File handlerFile = cfg.handlerFile();
+        if (handlerFile != null) {
+            return context.recreateAttachedFile(handlerFile.toString()).toPath().getParent();
+        }
+        throw new IllegalArgumentException("PythonServiceConfig has neither baseDir nor handlerFile set");
+    }
+
+    void destroy() {
+        try {
+            performCleanup();
+        } finally {
+            IOUtil.delete(runtimeBaseDir);
         }
     }
 
@@ -184,6 +202,29 @@ class PythonServiceContext {
         }
     }
 
+    private void performCleanup() {
+        try {
+            List<String> filesNotMarked = editPermissionsRecursively(runtimeBaseDir, perms -> perms.add(OWNER_WRITE));
+            if (!filesNotMarked.isEmpty()) {
+                logger.info("Couldn't 'chmod u+w' these files: " + filesNotMarked);
+            }
+            Path cleanupScriptPath = runtimeBaseDir.resolve(USER_CLEANUP_SHELL_SCRIPT);
+            if (Files.exists(cleanupScriptPath)) {
+                Process cleanupProcess = new ProcessBuilder("/bin/sh", "-c", "./" + CLEANUP_SHELL_SCRIPT)
+                        .directory(runtimeBaseDir.toFile())
+                        .redirectErrorStream(true)
+                        .start();
+                logStdOut(logger, cleanupProcess, "python-cleanup-" + cleanupProcess);
+                cleanupProcess.waitFor();
+                if (cleanupProcess.exitValue() != 0) {
+                    logger.warning("Cleanup script finished with non-zero exit code: " + cleanupProcess.exitValue());
+                }
+            }
+        } catch (Exception e) {
+            throw new JetException("PythonService cleanup failed: " + e, e);
+        }
+    }
+
     static Thread logStdOut(ILogger logger, Process process, String taskName) {
         Thread thread = new Thread(() -> {
             try (BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream(), UTF_8))) {
@@ -217,54 +258,6 @@ class PythonServiceContext {
                     out.println(jetToPython + name + "='" + value + '\'');
                 }
             }
-        }
-    }
-
-    private static void makeExecutable(@Nonnull Path path) throws IOException {
-        editPermissions(path, perms -> perms.add(OWNER_EXECUTE));
-    }
-
-    private void makeFilesReadOnly(@Nonnull Path basePath) throws IOException {
-        editPermissionsRecursively(basePath, "-w", perms -> perms.removeAll(WRITE_PERMISSIONS));
-    }
-
-    private void makeFilesWritable(@Nonnull Path basePath) throws IOException {
-        editPermissionsRecursively(basePath, "u+w", perms -> perms.add(OWNER_WRITE));
-    }
-
-    /**
-     * Return value of {@code editFn} tells whether it actually changed the
-     * supplied permission set. If it returns {@code false}, the file's
-     * permissions won't be changed.
-     */
-    private static void editPermissions(
-            @Nonnull Path path, @Nonnull Predicate<? super Set<PosixFilePermission>> editFn
-    ) throws IOException {
-        Set<PosixFilePermission> perms = Files.getPosixFilePermissions(path, NOFOLLOW_LINKS);
-        if (editFn.test(perms)) {
-            Files.setPosixFilePermissions(path, perms);
-        }
-    }
-
-    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
-            justification = "https://github.com/spotbugs/spotbugs/issues/756")
-    private void editPermissionsRecursively(
-            @Nonnull Path basePath,
-            @Nonnull String chmodOp,
-            @Nonnull Predicate<? super Set<PosixFilePermission>> editFn
-    ) throws IOException {
-        List<String> filesNotMarked = new ArrayList<>();
-        try (Stream<Path> walk = Files.walk(basePath)) {
-            walk.forEach(path -> {
-                try {
-                    editPermissions(path, editFn);
-                } catch (Exception e) {
-                    filesNotMarked.add(basePath.relativize(path).toString());
-                }
-            });
-        }
-        if (!filesNotMarked.isEmpty()) {
-            logger.info("Couldn't 'chmod " + chmodOp + "' these files: " + filesNotMarked);
         }
     }
 }

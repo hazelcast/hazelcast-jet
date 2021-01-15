@@ -348,14 +348,9 @@ public class Edge implements IdentifiedDataSerializable {
     /**
      * Activates the {@link RoutingPolicy#ISOLATED ISOLATED} routing policy
      * which establishes isolated paths from upstream to downstream processors.
-     * Each downstream processor is assigned exactly one upstream processor and
-     * each upstream processor is assigned a disjoint subset of downstream
-     * processors. This allows the selective application of backpressure to
-     * just one source processor that feeds a given downstream processor.
      * <p>
-     * These restrictions imply that the downstream's local parallelism
-     * cannot be less than upstream's. Since all traffic will be local, this
-     * policy is not allowed on a distributed edge.
+     * Since all traffic will be local, this policy is not allowed on a
+     * distributed edge.
      */
     @Nonnull
     public Edge isolated() {
@@ -379,6 +374,17 @@ public class Edge implements IdentifiedDataSerializable {
      */
     public Edge ordered(@Nonnull ComparatorEx<?> comparator) {
         this.comparator = comparator;
+        return this;
+    }
+
+    /**
+     * Activates the {@link RoutingPolicy#FANOUT FANOUT} routing policy.
+     *
+     * @since 4.4
+     */
+    @Nonnull
+    public Edge fanout() {
+        routingPolicy = RoutingPolicy.FANOUT;
         return this;
     }
 
@@ -554,6 +560,9 @@ public class Edge implements IdentifiedDataSerializable {
             case BROADCAST:
                 b.append(".broadcast()");
                 break;
+            case FANOUT:
+                b.append(".fanout()");
+                break;
             default:
         }
         if (DISTRIBUTE_TO_ALL.equals(distributedTo)) {
@@ -649,31 +658,55 @@ public class Edge implements IdentifiedDataSerializable {
      */
     public enum RoutingPolicy implements Serializable {
         /**
-         * For each item a single destination processor is chosen from the
-         * candidate set, with no restriction on the choice.
+         * This policy chooses for each item a single destination processor
+         * from the candidate set, with no restriction on the choice.
          */
         UNICAST,
         /**
-         * Like {@link #UNICAST}, but guarantees that any given downstream
-         * processor receives data from exactly one upstream processor. This is
-         * needed in some DAG setups to apply selective backpressure to individual
-         * upstream source processors.
+         * This policy sets up isolated parallel data paths between two vertices,
+         * as much as it can given the level of mismatch between the local
+         * parallelism (LP) of the upstream vs. the downstream vertices.
+         * Specifically:
+         * <ul><li>
+         *     If LP_upstream <= LP_downstream, every downstream processor receives
+         *     data from only one upstream processor
+         * </li><li>
+         *     If LP_upstream >= LP_downstream, every upstream processor sends data to
+         *     only one downstream processor
+         * </li></ul>
+         * If LP_upstream = LP_downstream, both of the above are true and there are
+         * isolated pairs of upstream and downstream processors.
          * <p>
-         * The downstream's local parallelism must not be less than the upstream's.
          * This policy is only available on a local edge.
          */
         ISOLATED,
         /**
-         * Each item is sent to the one processor responsible for the item's
-         * partition ID. On a distributed edge the processor is unique across the
-         * cluster; on a non-distributed edge the processor is unique only within a
-         * member.
+         * This policy sends every item to the one processor responsible for the
+         * item's partition ID. On a distributed edge, this processor is unique
+         * across the cluster; on a non-distributed edge, the processor is unique
+         * only within a member.
          */
         PARTITIONED,
         /**
-         * Each item is sent to all candidate processors.
+         * This policy sends each item to all candidate processors.
          */
-        BROADCAST
+        BROADCAST,
+        /**
+         * This policy sends an item to all members, but only to one processor on
+         * each member. It's a combination of {@link #BROADCAST} and {@link
+         * #UNICAST}: an item is first <em>broadcast</em> to all members, and then,
+         * on each member, it is <em>unicast</em> to one processor.
+         * <p>
+         * If the destination local parallelism is 1, the behavior is equal to
+         * {@link #BROADCAST}. If the member count in the cluster is 1, the
+         * behavior is equal to {@link #UNICAST}.
+         * <p>
+         * To work as expected, the edge must be also {@link #distributed()}.
+         * Otherwise it will work just like {@link #UNICAST}.
+         *
+         * @since 4.4
+         */
+        FANOUT
     }
 
     private static class Single implements Partitioner<Object> {

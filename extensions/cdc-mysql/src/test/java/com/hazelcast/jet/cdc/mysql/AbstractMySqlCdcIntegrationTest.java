@@ -17,7 +17,10 @@
 package com.hazelcast.jet.cdc.mysql;
 
 import com.hazelcast.jet.cdc.AbstractCdcIntegrationTest;
+import com.hazelcast.jet.retry.RetryStrategies;
 import com.hazelcast.jet.test.IgnoreInJenkinsOnWindows;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.experimental.categories.Category;
 import org.testcontainers.containers.MySQLContainer;
@@ -39,13 +42,20 @@ public abstract class AbstractMySqlCdcIntegrationTest extends AbstractCdcIntegra
                     .withPassword("mysqlpw")
     );
 
+    @Before
+    public void ignoreOnJdk15() throws SQLException {
+        Assume.assumeFalse("https://github.com/hazelcast/hazelcast-jet/issues/2623",
+                System.getProperty("java.version").startsWith("15"));
+    }
+
     protected MySqlCdcSources.Builder sourceBuilder(String name) {
         return MySqlCdcSources.mysql(name)
                 .setDatabaseAddress(mysql.getContainerIpAddress())
                 .setDatabasePort(mysql.getMappedPort(MYSQL_PORT))
                 .setDatabaseUser("debezium")
                 .setDatabasePassword("dbz")
-                .setClusterName("dbserver1");
+                .setClusterName("dbserver1")
+                .setReconnectBehavior(RetryStrategies.indefinitely(1000));
     }
 
     protected void createDb(String database) throws SQLException {

@@ -26,6 +26,7 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Observable;
+import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
@@ -107,7 +108,9 @@ public final class Sinks {
      *
      * @param sinkName user-friendly sink name
      * @param metaSupplier the processor meta-supplier
-     * @param partitionKeyFn key extractor function for partitioning edges to sink
+     * @param partitionKeyFn key extractor function for partitioning edges to
+     *     sink. It must be stateless and {@linkplain Processor#isCooperative()
+     *     cooperative}.
      */
     @Nonnull
     public static <T> Sink<T> fromProcessor(
@@ -167,6 +170,9 @@ public final class Sinks {
      * items will not change the state in the target map.
      * <p>
      * The default local parallelism for this sink is 1.
+     * <p>
+     * The given functions must be stateless and {@linkplain
+     * Processor#isCooperative() cooperative}.
      *
      * @since 4.2
      */
@@ -196,6 +202,9 @@ public final class Sinks {
      * items will not change the state in the target map.
      * <p>
      * The default local parallelism for this sink is 1.
+     * <p>
+     * The given functions must be stateless and {@linkplain
+     * Processor#isCooperative() cooperative}.
      *
      * @since 4.2
      */
@@ -237,6 +246,9 @@ public final class Sinks {
      * items will not change the state in the target map.
      * <p>
      * The default local parallelism for this sink is 1.
+     * <p>
+     * The given functions must be stateless and {@linkplain
+     * Processor#isCooperative() cooperative}.
      *
      * @since 4.2
      */
@@ -284,6 +296,9 @@ public final class Sinks {
      * if you need locking.
      * <p>
      * The default local parallelism for this sink is 1.
+     * <p>
+     * The given functions must be stateless and {@linkplain
+     * Processor#isCooperative() cooperative}.
      *
      * @param mapName   name of the map
      * @param toKeyFn   function that extracts the key from the input item
@@ -341,6 +356,9 @@ public final class Sinks {
      * if you need locking.
      * <p>
      * The default local parallelism for this sink is 1.
+     * <p>
+     * The given functions must be stateless and {@linkplain
+     * Processor#isCooperative() cooperative}.
      *
      * @param map       the map to drain to
      * @param toKeyFn   function that extracts the key from the input item
@@ -447,6 +465,9 @@ public final class Sinks {
      * Use {@link #mapWithEntryProcessor} if you need locking.
      * <p>
      * The default local parallelism for this sink is 1.
+     * <p>
+     * The given functions must be stateless and {@linkplain
+     * Processor#isCooperative() cooperative}.
      *
      * @param mapName  name of the map
      * @param toKeyFn  function that extracts the key from the input item
@@ -498,6 +519,9 @@ public final class Sinks {
      * locking.
      * <p>
      * The default local parallelism for this sink is 1.
+     * <p>
+     * The given functions must be stateless and {@linkplain
+     * Processor#isCooperative() cooperative}.
      *
      * @param map      map to drain to
      * @param toKeyFn  function that extracts the key from the input item
@@ -618,6 +642,9 @@ public final class Sinks {
      * the EntryProcessor will wait until it acquires the lock.
      * <p>
      * The default local parallelism for this sink is 1.
+     * <p>
+     * The given functions must be stateless and {@linkplain
+     * Processor#isCooperative() cooperative}.
      *
      * @param maxParallelAsyncOps  maximum number of simultaneous entry
      *                             processors affecting the map
@@ -675,6 +702,9 @@ public final class Sinks {
      * the EntryProcessor will wait until it acquires the lock.
      * <p>
      * The default local parallelism for this sink is 1.
+     * <p>
+     * The given functions must be stateless and {@linkplain
+     * Processor#isCooperative() cooperative}.
      *
      * @param map                map to drain to
      * @param toKeyFn            function that extracts the key from the input item
@@ -853,7 +883,7 @@ public final class Sinks {
      */
     @Nonnull
     public static <T> Sink<T> remoteReliableTopic(@Nonnull String reliableTopicName, @Nonnull ClientConfig clientConfig) {
-        String clientXml = asXmlString(clientConfig); //conversion needed for serializibility
+        String clientXml = asXmlString(clientConfig); //conversion needed for serializability
         return SinkBuilder.<ITopic<T>>sinkBuilder("reliableTopicSink(" + reliableTopicName + "))",
                 ctx -> newHazelcastClient(asClientConfig(clientXml)).getReliableTopic(reliableTopicName))
                 .<T>receiveFn(ITopic::publish)
@@ -872,6 +902,12 @@ public final class Sinks {
      * guarantee.
      * <p>
      * The default local parallelism for this sink is 1.
+     *
+     * @param host the host to connect to
+     * @param port the target port
+     * @param toStringFn a function to convert received items to string. It
+     *     must be stateless and {@linkplain Processor#isCooperative() cooperative}.
+     * @param charset charset used to convert the string to bytes
      */
     @Nonnull
     public static <T> Sink<T> socket(
@@ -913,26 +949,34 @@ public final class Sinks {
      * <p>
      * The sink writes the items it receives to files. Each processor will
      * write to its own files whose names contain the processor's global index
-     * (an integer unique to each processor of the vertex), but a single
+     * (an integer unique to each processor of the vertex), but the same
      * directory is used for all files, on all cluster members. That directory
-     * can be a shared in a network - the global processor index is different
-     * on each member and the members won't overwrite each other's files.
+     * can be a shared in a network - each processor creates globally unique
+     * file names.
      *
      * <h3>Fault tolerance</h3>
+     *
      * If the job is running in <i>exactly-once</i> mode, Jet writes the items
      * to temporary files (ending with a {@value
      * FileSinkBuilder#TEMP_FILE_SUFFIX} suffix). When Jet commits a snapshot,
      * it atomically renames the file to remove this suffix. Thanks to the
      * two-phase commit of the snapshot the sink provides exactly-once
-     * guarantee. Because Jet starts a new file each time it snapshots the
-     * state, the sink will likely produce many more small files, depending on
-     * the snapshot interval.
+     * guarantee.
      * <p>
+     * Because Jet starts a new file each time it snapshots the state, the sink
+     * will produce many more small files, depending on the snapshot interval.
      * If you want to avoid the temporary files or the high number of files but
      * need to have exactly-once for other processors in the job, call {@link
      * FileSinkBuilder#exactlyOnce(boolean) exactlyOnce(false)} on the returned
      * builder. This will give you <i>at-least-once</i> guarantee for the
      * source and unchanged guarantee for other processors.
+     * <p>
+     * For the fault-tolerance to work, the target file system must be a
+     * network file system. If you lose a member with its files, you'll
+     * obviously lose data. Even if that member rejoins later with the lost
+     * files, the job might have processed more transactions on the remaining
+     * members and will not commit the temporary files on the resurrected
+     * member.
      *
      * <h3>File name structure</h3>
      * <pre>{@code
@@ -1014,7 +1058,9 @@ public final class Sinks {
      * <p>
      * The default local parallelism for this sink is 1.
      *
-     * @param toStringFn a function that returns a string representation of a stream item
+     * @param toStringFn a function that returns a string representation of a
+     *     stream item. It must be stateless and {@linkplain
+     *     Processor#isCooperative() cooperative}.
      * @param <T> stream item type
      */
     @Nonnull
@@ -1046,7 +1092,8 @@ public final class Sinks {
      * item.toString()} into a {@link javax.jms.TextMessage}.
      *
      * @param queueName the name of the queue
-     * @param factorySupplier supplier to obtain JMS connection factory
+     * @param factorySupplier supplier to obtain JMS connection factory. It
+     *     must be stateless.
      */
     @Nonnull
     public static <T> Sink<T> jmsQueue(
@@ -1102,7 +1149,7 @@ public final class Sinks {
      *
      * @param factorySupplier supplier to obtain JMS connection factory. For
      *      exactly-once the factory must implement {@link
-     *      javax.jms.XAConnectionFactory}
+     *      javax.jms.XAConnectionFactory}. It must be stateless.
      * @param <T> type of the items the sink accepts
      */
     @Nonnull
@@ -1123,7 +1170,7 @@ public final class Sinks {
      * @param topicName the name of the queue
      * @param factorySupplier supplier to obtain JMS connection factory. For
      *      exactly-once the factory must implement {@link
-     *      javax.jms.XAConnectionFactory}
+     *      javax.jms.XAConnectionFactory}. It must be stateless.
      */
     @Nonnull
     public static <T> Sink<T> jmsTopic(
@@ -1174,6 +1221,8 @@ public final class Sinks {
      * <p>
      * The default local parallelism for this processor is 1.
      *
+     * @param factorySupplier supplier to obtain JMS connection factory. It
+     *     must be stateless.
      * @param <T> type of the items the sink accepts
      */
     @Nonnull
@@ -1242,7 +1291,7 @@ public final class Sinks {
      *
      * <pre>{@code
      * stage.writeTo(Sinks.<Entry<Integer, String>>jdbcBuilder()
-     *     .updateQuery("INSET INTO table (key, value) VALUES(?, ?)")
+     *     .updateQuery("INSERT INTO table (key, value) VALUES(?, ?)")
      *     .bindFn((stmt, item) -> {
      *         stmt.setInt(1, item.getKey());
      *         stmt.setString(2, item.getValue());
@@ -1285,12 +1334,12 @@ public final class Sinks {
      * <p>
      * <b>Test the XA support of your database</b>
      * <p>
-     *  The JDBC is an API, some brokers don't implement the XA transactions
-     *  correctly. We run our stress tests with PostgreSQL. The most common
-     *  flaw is that a prepared transaction is rolled back if the client
-     *  disconnects. To check your database, you can run the code in <a
-     *  href="https://github.com/hazelcast/hazelcast-jet-contrib/xa-test">
-     *  https://github.com/hazelcast/hazelcast-jet-contrib/xa-test</a>
+     * The JDBC is an API, some brokers don't implement the XA transactions
+     * correctly. We run our stress tests with PostgreSQL. The most common flaw
+     * is that a prepared transaction is rolled back if the client disconnects.
+     * To check your database, you can run the code in <a
+     * href="https://github.com/hazelcast/hazelcast-jet-contrib/xa-test">
+     * https://github.com/hazelcast/hazelcast-jet-contrib/xa-test</a>
      * <p>
      * <b>Notes</b>
      * <p>

@@ -6,7 +6,408 @@ description: Birds-eye view of all pre-defined sources available in Jet.
 Hazelcast Jet comes out of the box with many different sources and sinks
 that you can work with, that are also referred to as _connectors_.
 
+## Unified File Connector API
+
+> This section describes the Unified File Connector API introduced in
+> Hazelcast Jet 4.4.
+>
+> As of version 4.4, the API provides source capability only.
+> For sinks, see the [Files](#files) section.
+
+The Unified File Connector API provides a simple way to read files,
+unified across different sources of the data. Using API this you can
+read files from the local filesystem, HDFS and cloud storage systems
+such as Amazon S3, Google Cloud Storage or Azure Blob Storage. At the
+same time the connector supports various formats of the data - text
+files, CSV, Json, Avro, etc., regardless of the source.
+
+### The Source
+
+Hazelcast Jet supports the following sources:
+
+* Local Filesystem (both shared and local to the member)
+* Hadoop Distributed File System (HDFS)
+* Amazon S3
+* Google Cloud Storage
+* Azure Cloud Storage
+* Azure Data Lake (both generation 1 and generation 2)
+
+These are the officially supported sources. However, you can read from
+any Hadoop compatible file system.
+
+Support for reading from the local filesystem is included in the base
+distribution of Hazelcast Jet. You don't need any additional
+dependencies. To access Hadoop or any of the cloud based stores use the
+separately downloadable module. See the details in the
+[Supported Storage Systems](#supported-storage-systems) section.
+
+The main entrypoint to the file connector is `FileSources.files`, which
+takes a `path` as a String parameter and returns a `FileSourceBuilder`.
+The following shows the simplest use of the file source, which reads a
+text file line by line:
+
+```java
+BatchSource<String> source = FileSources.files("/path/to/my/directory")
+                                        .build();
+```
+
+The `path` parameter takes an absolute path. It must point to a single
+directory, it must not contain any wildcard characters. The directory is
+not read recursively. The files in the directory can be filtered by
+specifying a glob parameter - a pattern with wildcard characters (`*`,
+`?`). For example, if a folder contains log files, named using
+`YYYY-MM-DD.log` pattern, you can read all the files from January 2020
+by setting the following parameters:
+
+```java
+BatchSource<String> source = FileSources.files("/var/log/")
+                                        .glob("2020-01-*.log")
+                                        .build();
+```
+
+You can also use Hadoop based connector module to read files from a
+local filesystem. This might be beneficial when you need to parallelize
+reading from a single large file, or read only subset of columns when
+using Parquet format. You need to provide Hadoop module
+(`hazelcast-jet-hadoop`) on classpath and create the source in the
+following way:
+
+```java
+BatchSource<String> source = FileSources.files("/data")
+                                        .glob("wikipedia.txt")
+                                        .useHadoopForLocalFiles(true)
+                                        .build();
+```
+
+You can provide additional options to Hadoop via `option(String,
+String)` method. E.g. to read all files in a directory recursively:
+
+```java
+BatchSource<String> source = FileSources.files("/data")
+                                        .glob("wikipedia.txt")
+                                        .useHadoopForLocalFiles(true)
+                                        .option("mapreduce.input.fileinputformat.input.dir.recursive", "true")
+                                        .build();
+```
+
+### The Format
+
+The `FileSourceBuilder` defaults to UTF-8 encoded text with the file
+read line by line. You can specify the file format using
+`format(FileFormat)` method.  See the available formats in
+`FileFormat.*` interface.  E.g., create the source in the following way
+to read the whole file as a single String using `FileFormat.text()`:
+
+```java
+BatchSource<String> source = FileSources.files("/path/to/my/directory")
+                                        .format(FileFormat.text())
+                                        .build();
+```
+
+#### Avro
+
+Avro format allows to read data from _Avro Object Container File_
+format. To use the Avro format you additionally need the
+`hazelcast-jet-avro` module, located in the distribution in the `opt`
+folder, or available as a dependency:
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```groovy
+compile 'com.hazelcast.jet:hazelcast-jet-avro:{jet-version}'
+```
+
+<!--Maven-->
+
+```xml
+<dependency>
+  <groupId>com.hazelcast.jet</groupId>
+  <artifactId>hazelcast-jet-avro</artifactId>
+  <version>{jet-version}</version>
+</dependency>
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+Suppose you have a class `User`, generated from the Avro schema, you can
+read the data from an Avro file in the following way, notice that we
+don't need to provide the User class to the builder, but we need to
+satisfy the Java type system:
+
+```java
+BatchSource<User> source = FileSources.files("/data")
+                                      .glob("users.avro")
+                                      .format(FileFormat.<User>avro())
+                                      .build();
+```
+
+This will use Avro's `SpecificDatumReader` under the hood.
+
+If you don't have a class generated from the Avro schema, but the
+structure of your class matches the data you can use Java reflection to
+read the data:
+
+```java
+BatchSource<User> source = FileSources.files("/data")
+                                      .glob("users.avro")
+                                      .format(FileFormat.avro(User.class))
+                                      .build();
+```
+
+This will use Avro's `ReflectDatumReader` under the hood.
+
+#### CSV
+
+The CSV files with a header are supported. The header columns must match
+the class fields you want to deserialize into, columns not matching any
+fields are ignored, fields not having corresponding columns have null
+values.
+
+Create the file source in the following way to read from file
+`users.csv` and deserialize into a `User` class.
+
+```java
+BatchSource<User> source = FileSources.files("/data")
+                                      .glob("users.csv")
+                                      .format(FileFormat.csv(User.class))
+                                      .build();
+```
+
+#### JSON
+
+[JSON Lines](https://jsonlines.org/) files are supported. The JSON
+fields must match the class fields you want to deserialize into.
+
+Create the file source in the following way to read from file
+`users.jsonl` and deserialize into a `User` class.
+
+```java
+BatchSource<User> source = FileSources.files("/data")
+                                      .glob("users.jsonl")
+                                      .format(FileFormat.json(User.class))
+                                      .build();
+```
+
+#### Text
+
+Create the file source in the following way to read file as text, whole
+file is read as a single String:
+
+```java
+BatchSource<String> source = FileSources.files("/data")
+                                        .glob("file.txt")
+                                        .format(FileFormat.text())
+                                        .build();
+```
+
+When reading from local filesystem you can specify the character
+encoding. This is not supported when using the Hadoop based modules. If provided
+the option will be ignored.
+
+```java
+BatchSource<String> source = FileSources.files("/data")
+                                        .glob("file.txt")
+                                        .format(FileFormat.text(Charset.forName("Cp1250")));
+```
+
+You can read file line by line in the following way, this is the default
+and you can omit the `.format(FileFormat.lines())` part.
+
+```java
+BatchSource<String> source = FileSources.files("/data")
+                                        .glob("file.txt")
+                                        .format(FileFormat.lines())
+                                        .build();
+```
+
+#### Parquet
+
+Apache Parquet is a columnar storage format. It describes how the data
+is stored on disk. It doesn't specify how the data is supposed to be
+deserialized, and it uses other libraries to achieve that. Namely we
+Apache Avro for deserialization.
+
+Parquet has a dependency on Hadoop, so it can be used only with one of
+the Hadoop based modules. You can still read parquet file from local
+filesystem with the `.useHadoopForLocalFiles(true)` flag.
+
+Create the file source in the following way to read data from a parquet
+file:
+
+```java
+BatchSource<String> source = FileSources.files("/data")
+                                        .glob("users.parquet")
+                                        .format(FileFormat.<SpecificUser>parquet())
+                                        .build();
+```
+
+#### Raw Binary
+
+You can read binary files (e.g. images) in the following way:
+
+```java
+BatchSource<byte[]> source = FileSources.files("/data")
+                                        .glob("file.txt")
+                                        .format(FileFormat.bytes())
+                                        .build();
+```
+
+### Supported Storage Systems
+
+|Storage System|Module|Example path|
+|:------------|:------------------|:--------------|
+|HDFS|`hazelcast-jet-hadoop-all`|`hdfs://path/to/a/directory`|
+|Amazon S3|`hazelcast-jet-files-s3`|`s3a://example-bucket/path/in/the/bucket`|
+|Google Cloud Storage|`hazelcast-jet-files-gcs`|`gs://example-bucket/path/in/the/bucket`|
+|Windows Azure Blob Storage|`hazelcast-jet-files-azure`|`wasbs://example-container@examplestorageaccount.blob.core.windows.net/path/in/the/container`|
+|Azure Data Lake Generation 1|`hazelcast-jet-files-azure`|`adl://exampledatalake.azuredatalakestore.net/path/in/the/container`|
+|Azure Data Lake Generation 2|`hazelcast-jet-files-azure`|`abfs://example-container@exampledatalakeaccount.dfs.core.windows.net/path/in/the/container`|
+
+You can obtain the artifacts in the _Additional Modules_ section on the
+[download page](/download) or download from Maven Central repository,
+for example:
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```groovy
+compile 'com.hazelcast.jet:hazelcast-jet-hadoop-all:{jet-version}'
+```
+
+<!--Maven-->
+
+```xml
+<dependency>
+  <groupId>com.hazelcast.jet</groupId>
+  <artifactId>hazelcast-jet-hadoop-all</artifactId>
+  <version>{jet-version}</version>
+  <classifier>jar-with-dependencies</classifier>
+</dependency>
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Authentication
+
+The basic authentication mechanisms are covered here. For additional
+ways to authenticate see the linked documentation for the services.
+
+Due to performance, the authentication is cached. This may cause issues
+when submitting multiple jobs with different credentials, or even the
+same jobs with new credentials, e.g. after credentials rotation.
+
+You can turn off authentication caching by setting
+`fs.<prefix>.impl.disable.cache` option to `true`. For the list of
+prefixes see the table above.
+
+#### Amazon S3
+
+Provide your AWS access key id and secret key with required access via
+`fs.s3a.access.key` and `fs.s3a.secret.key` options, using
+`FileSourceBuilder#option` method on the source builder.
+
+For additional ways to authenticate see the
+[Hadoop-AWS documentation](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/index.html#Authenticating_with_S3)
+and
+[Amazon S3 documentation](https://docs.aws.amazon.com/sdk-for-java/v2/developer-guide/credentials.html)
+.
+
+#### Google Cloud Storage
+
+Provide a location of the keyfile via
+`google.cloud.auth.service.account.json.keyfile` source option, using
+`FileSourceBuilder#option` method on the source builder. Note that
+the file must be available on all the cluster members.
+
+For additional ways to authenticate see
+[Google Cloud Hadoop connector](https://github.com/GoogleCloudDataproc/hadoop-connectors/blob/master/gcs/CONFIGURATION.md#authentication).
+
+#### Windows Azure Blob Storage
+
+Provide an account key via
+`fs.azure.account.key.<your account name>.blob.core.windows.net` source
+option, using `FileSourceBuilder#option` method on the source
+builder.
+
+For additional ways to authenticate see
+[Hadoop Azure Blob Storage](https://hadoop.apache.org/docs/stable/hadoop-azure/index.html)
+support.
+
+#### Azure Data Lake Generation 1
+
+Provide the following properties using `FileSourceBuilder#option`
+method on the source builder:
+
+```text
+fs.adl.oauth2.access.token.provider.type
+fs.adl.oauth2.refresh.url
+fs.adl.oauth2.client.id
+fs.adl.oauth2.credential
+```
+
+For additional ways to authenticate see
+[Hadoop Azure Data Lake Support](https://hadoop.apache.org/docs/stable/hadoop-azure-datalake/index.html)
+
+#### Azure Data Lake Generation 2
+
+For additional ways to authenticate see
+[Hadoop Azure Data Lake Storage Gen2](https://hadoop.apache.org/docs/stable/hadoop-azure/abfs.html)
+
+### Hadoop with Custom Classpath
+
+Alternatively to using one of the modules with all the dependencies
+included, you may use `hazelcast-jet-hadoop` module and configure the
+classpath manually.
+
+Enable the module by moving the jar
+`opt/hazelcast-jet-hadoop-{jet-version}.jar` to `lib/` directory and
+configure the classpath in the following way, using the
+`hadoop classpath` command:
+
+```bash
+export CLASSPATH=$($HADOOP_HOME/bin/hadoop classpath)
+```
+
+Note that you must do these actions on both the node submitting the job
+and all Jet cluster members.
+
+### Hadoop Native Libraries
+
+The underlying Hadoop infrastructure can make a use of native libraries
+for compression/decompression and CRC checksums. When the native
+libraries are not configured you will see the following message in logs:
+
+```text
+[o.a.h.u.NativeCodeLoader]: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+```
+
+Configure the native libraries by adding the location to LD_LIBRARY_PATH
+environment variable:
+
+```bash
+export LD_LIBRARY_PATH=<path to hadoop>/lib/native:$LD_LIBRARY_PATH
+```
+
+To verify that the Hadoop native libraries were successfully configured,
+you should no longer see the message above and if you enable logging
+for `org.apache.hadoop` you should see the following log message:
+
+```text
+[o.a.h.u.NativeCodeLoader]: Loaded the native-hadoop library
+```
+
+For more detail please see the [Hadoop
+Native Libraries Guide](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/NativeLibraries.html)
+.
+
 ## Files
+
+> This section describes our older API for file access. This API is
+> still maintained, but all new development goes into the [Unified
+> File Connector API](#unified-file-connector-api)
 
 File sources generally involve reading a set of (as in "multiple") files
 from either a local/network disk or a distributed file system such as
@@ -28,7 +429,7 @@ p.readFrom(Sources.files("/home/data/web-logs"))
  .writeTo(Sinks.logger());
 ```
 
-#### JSON Files
+#### JSON Files
 
 For JSON files, the source expects the content of the files as
 [streaming JSON](https://en.wikipedia.org/wiki/JSON_streaming) content,
@@ -86,7 +487,7 @@ p.readFrom(Sources.filesBuilder(sourceDir).glob("*.csv").build(path ->
 ).writeTo(Sinks.logger());
 ```
 
-#### Data Locality for Files
+#### Data Locality for Files
 
 For a local file system, the sources expect to see on each node just the
 files that node should read. You can achieve the effect of a distributed
@@ -95,7 +496,7 @@ For shared file system, the sources can split the work so that each node
 will read a part of the files by configuring the option
 `FilesBuilder.sharedFileSystem()`.
 
-#### File Sink
+#### File Sink
 
 The file sink, like the source works with text and creates a line of
 output for each record. When the rolling option is used it will roll the
@@ -129,7 +530,7 @@ output files on all members and combine their contents.
 The sink also supports exactly-once processing and can work
 transactionally.
 
-#### File Watcher
+#### File Watcher
 
 File watcher is a streaming file source, where only the new files or
 appended lines are emitted. If the files are modified in more complex
@@ -151,7 +552,7 @@ p.readFrom(Sources.jsonWatcher("/home/data", Person.class))
  .writeTo(Sinks.logger());
 ```
 
-### Apache Avro
+### Apache Avro
 
 [Apache Avro](https://avro.apache.org/) is a binary data storage format
 which is schema based. The connectors are similar to the local file
@@ -298,7 +699,7 @@ To obtain the hadoop classpath, use the `hadoop classpath` command and
 append the output to the `CLASSPATH` environment variable before
 starting Jet.
 
-### Amazon S3
+### Amazon S3
 
 The Amazon S3 connectors are text-based connectors that can read and
 write files to Amazon S3 storage.
@@ -424,7 +825,6 @@ dependency to your application:
 <!--Gradle-->
 
 ```groovy
-
 compile 'com.hazelcast.jet:hazelcast-jet-kafka:{jet-version}'
 ```
 
@@ -440,7 +840,7 @@ compile 'com.hazelcast.jet:hazelcast-jet-kafka:{jet-version}'
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-#### Fault-tolerance
+#### Fault Tolerance
 
 One of the most important features of using Kafka as a source is that
 it's possible to replay data - which enables fault-tolerance. If the job
@@ -458,7 +858,7 @@ committing using `enable.auto.commit` and configuring
 [Kafka documentation](https://kafka.apache.org/22/documentation.html)
 for the descriptions of these properties.
 
-#### Transactional guarantees
+#### Transactional Guarantees
 
 As a sink, it provides exactly-once guarantees at the cost of using
 Kafka transactions: Jet commits the produced records after each snapshot
@@ -493,7 +893,128 @@ The Kafka sink and source are based on version 2.2.0, this means Kafka
 connector will work with any client and broker having version equal to
 or greater than 1.0.0.
 
-### JMS
+### Amazon Kinesis
+
+[Amazon Kinesis Data
+Streams](https://aws.amazon.com/kinesis/data-streams/) (KDS) is a
+massively scalable and durable real-time data streaming service. All
+data items passing through it, called _records_, are assigned a
+_partition key_. As the name suggests, partition keys group related
+records together. Records with the same partition key are also ordered.
+Partition keys are grouped into _shards_, the base throughput unit of
+KDS. The input and output rates of shards is limited. Streams can be
+resharded at any time.
+
+To read from Kinesis, the only requirement is to provide a KDS stream
+name. (Kinesis does not handle deserialization itself, it only provides
+serialized binary data.)
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(KinesisSources.kinesis(STREAM).build())
+  .withNativeTimestamps(0)
+  .writeTo(Sinks.logger());
+```
+
+The shards are distributed across the Jet cluster, so that each node is
+responsible for reading a subset of the partition keys.
+
+When used as a sink, in order to be able to write out any type of data
+items, the requirements are: KDS stream name, key function (specifies
+how to compute the partition key from an input item), and the value
+function (specifies how to compute the data blob from an input item -
+the serialization).
+
+```java
+FunctionEx<Log, String> keyFn = l -> l.service();
+FunctionEx<Log, byte[]> valueFn = l -> l.message().getBytes();
+Sink<Log> sink = KinesisSinks.kinesis("stream", keyFn, valueFn).build();
+
+p.readFrom(Sources.files("home/logs")) //read lines of text from log files
+ .map(line -> LogParser.parse(line))   //parse lines into Log data objects
+ .writeTo(sink);                       //write Log objects out to Kinesis
+```
+
+To use the Kinesis connectors, you need to copy the
+`hazelcast-jet-kinesis` module from the `opt` folder to the `lib` folder
+and add the following dependency to your application:
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```groovy
+compile 'com.hazelcast.jet:hazelcast-jet-kinesis:{jet-version}'
+```
+
+<!--Maven-->
+
+```xml
+<dependency>
+  <groupId>com.hazelcast.jet</groupId>
+  <artifactId>hazelcast-jet-kinesis</artifactId>
+  <version>{jet-version}</version>
+</dependency>
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Fault-tolerance
+
+Amazon Kinesis persists the data and it's possible to replay it (on a
+per-shard basis). This enables fault tolerance. If a job has a
+processing guarantee configured, then Jet will periodically save the
+current shard offsets and then replay from the saved offsets when the
+job is restarted. If no processing guarantee is enabled, the source will
+start reading from the oldest available data, determined by the KDS
+retention period (defaults to 24 hours, can be as long as 365 days).
+
+While the source is suitable for both at-least-once and exactly-once
+pipelines, the only processing guarantee the sink can support is
+at-least-once. This is caused by the lack of transaction support in
+Kinesis (can't write data into it with transactional guarantees) and the
+AWS SDK occasionally causing data duplication on its own (see [Producer
+Retries](https://docs.aws.amazon.com/streams/latest/dev/kinesis-record-processor-duplicates.html#kinesis-record-processor-duplicates-producer)
+in the documentation).
+
+#### Ordering
+
+As stated before, Kinesis preserves the order of records with the same
+partition key (or, more generally, the order of records belonging to the
+same shard). However, neither the source nor the sink can fully uphold
+this guarantee.
+
+The problem scenario for the source is resharding. Resharding is the
+process of adjusting the number of shards of a stream to adapt to data
+flow rate changes. It is done voluntarily and explicitly by the stream's
+owner, and it does not interrupt the flow of data through the stream.
+During resharding, some (old) shards get closed, and new ones are
+created - some partition keys transition from an old shard to a new one.
+To keep the ordering for such a partition key in transit, Jet would need
+to make sure that it finishes reading all the data from the old shard
+before starting to read data from the new one. Jet would also need to
+ensure that the new shard's data can't possibly overtake the old ones
+data inside the Jet pipeline. Currently, Jet does not have a mechanism
+to ensure this for such a distributed source. It's best to schedule
+resharding when there are lulls in the data flow. Watermarks might also
+manifest unexpected behaviour, if data is flowing during resharding.
+
+The problem scenario for the sink is the ingestion data rate of a shard
+being tripped. A KDS shard has an ingestion rate of 1MiB per second. If
+you try to write more into it, then some records will be rejected. This
+rejection breaks the ordering because the sinks write data in batches,
+and the shards don't just reject entire batches, but random items from
+them. What's rejected can (and is) retried, but the batch's original
+ordering can't be preserved. The sink can't entirely avoid all
+rejections because it's distributed, multiple instances of it write into
+the same shard, and coordinating an aggregated rate among them is not
+something currently possible in Jet and there can be also others sending
+to the same stream. Truth be told, though, Kinesis also only preserves
+the order of successfully ingested records, not the order in which
+ingestion was attempted. Having enough shards and properly spreading out
+partition keys should prevent the problem from happening.
+
+### JMS
 
 JMS (Java Message Service) is a standard API for communicating with
 various message brokers using the queue or publish-subscribe patterns.
@@ -516,7 +1037,7 @@ node or submit them with the job. The Jet JMS connector is a part of the
 `hazelcast-jet` module, so requires no other dependencies than the
 client jar.
 
-#### JMS Source Connector
+#### JMS Source Connector
 
 A very simple pipeline which consumes messages from a given ActiveMQ
 queue and then logs them is given below:
@@ -570,7 +1091,7 @@ p.readFrom(Sources
  .writeTo(Sinks.logger());
 ```
 
-#### Source fault tolerance
+#### Source Fault Tolerance
 
 The source connector is fault-tolerant with the exactly-once guarantee
 (except for the non-durable topic consumer). Fault tolerance is achieved
@@ -599,7 +1120,7 @@ in the exactly-once mode, but message IDs are not saved to the snapshot.
 If you have no processing guarantee enabled, the processor will consume
 the messages in the `DUPS_OK_ACKNOWLEDGE` mode.
 
-#### JMS Sink Connector
+#### JMS Sink Connector
 
 The JMS sink uses the supplied function to create a `Message` object for
 each input item. The following code snippets show writing to a JMS queue
@@ -621,7 +1142,7 @@ p.readFrom(Sources.list("inputList"))
  );
 ```
 
-#### Fault Tolerance
+#### Fault Tolerance
 
 The JMS sink supports the exactly-once guarantee. It uses two-phase XA
 transactions, messages are committed consistent with the last state
@@ -663,7 +1184,7 @@ tests](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/xa-test)
 to get more information. This only applies to JMS sink, the source
 doesn't use XA transactions.
 
-#### Connection Handling
+#### Connection Handling
 
 The JMS source and sink open one connection to the JMS server for each
 member and each vertex. Then each parallel worker of the source creates
@@ -674,12 +1195,12 @@ connector to fail. Most of the clients offer a configuration parameter
 to enable auto-reconnection, refer to the specific client documentation
 for details.
 
-### Apache Pulsar
+### Apache Pulsar
 
 >This connector is currently under incubation. For more
 >information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/pulsar).
 
-## In-memory Data Structures
+## In-memory Data Structures
 
 Jet comes out of the box with some [in-memory distributed data
 structures](data-structures) which can be used as a data source or a
@@ -704,7 +1225,7 @@ p.readFrom(Sources.map(userCache));
  .writeTo(Sinks.logger()));
 ```
 
-#### Event Journal
+#### Event Journal
 
 The map can also be used as a streaming data source by utilizing its so
 called _event journal_. The journal for a map is by default not enabled,
@@ -749,10 +1270,10 @@ For a full example, please see the [Stream Changes From IMap tutorial.](../how-t
 
 #### Map Sink
 
-By default, map sink expects items of type `Entry<Key, Value>` and will
-simply replace the previous entries, if any. However there's variants of
-this that allow you to do atomic updates to existing entries in the map
-by making use `EntryProcessor` objects.
+By default, the map sink expects items of type `Entry<Key, Value>` and
+will simply replace the previous entries, if any. However, there are
+variants of the map sink that allow you to do atomic updates to existing
+entries in the map by making use of `EntryProcessor` objects.
 
 The updating sinks come in three variants:
 
@@ -811,7 +1332,12 @@ static class IncrementEntryProcessor implements EntryProcessor<String, Integer, 
 }
 ```
 
-#### Predicates and Projections
+> The variants above can be used to remove existing map entries by
+setting their values to `null`. To put it another way, if these map sink
+variants set the entry’s value to null, the entry will be removed
+from the map.
+
+#### Predicates and Projections
 
 If your use case calls for some filtering and/or transformation of the
 data you retrieve, you can optimize the pipeline by providing a
@@ -829,7 +1355,7 @@ p.readFrom(Sources.map(personCache,
 );
 ```
 
-### ICache
+### ICache
 
 ICache is mostly equivalent to IMap, the main difference being that it's
 compliant with the JCache standard API. As a sink, since `ICache`
@@ -858,7 +1384,7 @@ p.readFrom(Sources.list(inputList))
 List isn't suitable to use as a streaming sink because items are always
 appended and eventually the member will run out of memory.
 
-### Reliable Topic
+### Reliable Topic
 
 Reliable Topic provides a simple pub/sub messaging API which can be
 used as a data sink within Jet.
@@ -876,7 +1402,7 @@ p.readFrom(TestSources.itemStream(100))
 A simple example is supplied above. For a more advanced version, also
 see [Observables](#observable)
 
-### Same vs. Different Cluster
+### Same vs. Different Cluster
 
 It's possible to use the data structures that are part of the same Jet
 cluster, and share the same memory and computation resources with
@@ -899,14 +1425,34 @@ p.readFrom(Sources.remoteMap("inputMap", cfg));
 ...
 ```
 
-## Databases
+#### Compatibility
+
+When reading or writing to remote sources, Jet internally creates a
+client. This client uses the embedded IMDG version to connect to the
+remote cluster. Starting with Hazelcast 3.6, Hazelcast server & client
+versions are backward and forward compatible within the same major
+version.
+
+|Jet Version|Embedded IMDG Version|CompatibleVersions|
+|:-----|:------------------|:-----------|
+|Jet 3.0    |Hazelcast 3.12     |Hazelcast 3.y.z|
+|Jet 3.1    |Hazelcast 3.12.1   |Hazelcast 3.6+|
+|Jet 3.2    |Hazelcast 3.12.3   |Hazelcast 3.6+|
+|Jet 3.2.1  |Hazelcast 3.12.5   |Hazelcast 3.6+|
+|Jet 3.2.2  |Hazelcast 3.12.6   |Hazelcast 3.6+|
+|Jet 4.0    |Hazelcast 4.0      |Hazelcast 4.y.z|
+|Jet 4.1.1  |Hazelcast 4.0.1    |Hazelcast 4.y.z|
+|Jet 4.2    |Hazelcast 4.0.1    |Hazelcast 4.y.z|
+|Jet 4.3    |Hazelcast 4.0.3    |Hazelcast 4.y.z|
+
+## Databases
 
 Jet supports a wide variety of relational and NoSQL databases as a data
 source or sink. While most traditional databases are batch oriented,
 there's emerging techniques that allow to bridge the gap to streaming
 which we will explore.
 
-### JDBC
+### JDBC
 
 JDBC is a well-established database API supported by every major
 relational (and many non-relational) database implementations including
@@ -952,7 +1498,7 @@ The JDBC source only works in batching mode, meaning the query is only
 executed once, for streaming changes from the database you can follow the
 [Change Data Capture tutorial](../tutorials/cdc.md).
 
-#### JDBC Data Sink
+#### JDBC Data Sink
 
 Jet is also able to output the results of a job to a database using the
 JDBC driver by using an update query.
@@ -979,7 +1525,7 @@ want to avoid duplicate writes to the database, then a suitable
 _insert-or-update_ statement should be used instead of `INSERT`, such as
 `MERGE` or `REPLACE` or `INSERT .. ON CONFLICT ..`.
 
-#### Fault tolerance
+#### Fault Tolerance
 
 The JDBC sink supports the exactly-once guarantee. It uses two-phase XA
 transactions, the DML statements are committed consistently with the
@@ -1067,7 +1613,7 @@ the [CDC Deployment Guide](../operations/cdc.md).
 
 #### CDC Connectors
 
-As of Jet version 4.2 we have following types of CDC sources:
+As of Jet version {jet-version} we have following types of CDC sources:
 
 * [DebeziumCdcSources](/javadoc/{jet-version}/com/hazelcast/jet/cdc/DebeziumCdcSources.html):
   generic source for all databases supported by Debezium
@@ -1087,12 +1633,12 @@ periodically saves the database write ahead log offset for which it had
 dispatched events and in case of a failure/restart it will replay all
 events since the last successfully saved offset.
 
-Unfortunately however there are no guaranties that the last saved offset
+Unfortunately, however, there is no guarantee that the last saved offset
 is still in the database changelog. Such logs are always finite and
-depending on the DB configuration can be relatively short, so if the
-CDC source has to replay data for a long period of inactivity, then
-there can be loss. With careful management though we can say that
-at-least once guaranties can practially be provided.
+depending on the DB configuration can be relatively short, so if the CDC
+source has to replay data for a long period of inactivity, then there
+can be a data loss. With careful management though we can say that
+at-least once guarantee can practically be provided.
 
 #### CDC Sinks
 
@@ -1330,7 +1876,7 @@ For details see Elasticsearch documentation section on
 >This connector is currently under incubation. For more
 >information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/influxdb).
 
-### Redis
+### Redis
 
 >This connector is currently under incubation. For more
 >information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/redis).
@@ -1443,7 +1989,7 @@ the client:
 `Observable` can also implement `onError` and `onComplete` methods to
 get notified of job completion and errors.
 
-#### Futures
+#### Futures
 
 `Observable` also support a conversion to a future to collect the
 results.
@@ -1474,7 +2020,7 @@ try {
 }
 ```
 
-#### Cleanup
+#### Cleanup
 
 As `Observable`s are backed by `Ringbuffer`s stored in the cluster which
 should be cleaned up by the client, once they are no longer necessary
@@ -1483,7 +2029,7 @@ memory used by it will be not be recovered by the cluster. It's possible
 to get a list of all observables using the
 `JetInstance.getObservables()` method.
 
-### Socket
+### Socket
 
 The socket sources and sinks opens a TCP socket to the supplied address
 and either read from or write to the socket. The sockets are text-based
@@ -1530,9 +2076,9 @@ so this source is mostly aimed for simple IPC or testing.
 >This connector is currently under incubation. For more
 >information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/twitter).
 
-## Summary
+## Summary
 
-### Sources
+### Sources
 
 Below is a summary of various sources and where to find them. Some
 sources are batch and some are stream oriented. The processing guarantee
@@ -1548,8 +2094,9 @@ restarted in face of an intermittent failure.
 |`ElasticSources.elastic`|`hazelcast-jet-elasticsearch-7 (elasticsearch-7)`|batch|N/A|
 |`HadoopSources.inputFormat`|`hazelcast-jet-hadoop (hadoop)`|batch|N/A|
 |`KafkaSources.kafka`|`hazelcast-jet-kafka (kafka)`|stream|exactly-once|
-|`MySqlCdcSources.mysql`|`hazelcast-jet-cdc-mysql (cdc-mysql)`|stream|at-least-once|
-|`PostgresCdcSources.postgres`|`hazelcast-jet-cdc-postgres (cdc-postgres)`|stream|at-least-once|
+|`KinesisSources.kinesis`|`hazelcast-jet-kinesis (kinesis)`|stream|exactly-once|
+|`MySqlCdcSources.mysql`|`hazelcast-jet-cdc-mysql (cdc-mysql)`|stream|exactly-once|
+|`PostgresCdcSources.postgres`|`hazelcast-jet-cdc-postgres (cdc-postgres)`|stream|exactly-once|
 |`PulsarSources.pulsarConsumer`|`hazelcast-jet-contrib-pulsar`|stream|N/A|
 |`PulsarSources.pulsarReader`|`hazelcast-jet-contrib-pulsar`|stream|exactly-once|
 |`S3Sources.s3`|`hazelcast-jet-s3 (s3)`|batch|N/A|
@@ -1587,6 +2134,7 @@ processing even with at-least-once sinks.
 |`ElasticSinks.elastic`|`hazelcast-jet-elasticsearch-7 (elasticsearch-7)`|yes|at-least-once|
 |`HadoopSinks.outputFormat`|`hazelcast-jet-hadoop (hadoop)`|no|N/A|
 |`KafkaSinks.kafka`|`hazelcast-jet-kafka (kafka)`|yes|exactly-once|
+|`KinesisSinks.kinesis`|`hazelcast-jet-kinesis (kinesis)`|yes|at-least-once|
 |`PulsarSources.pulsarSink`|`hazelcast-jet-contrib-pulsar`|yes|at-least-once|
 |`S3Sinks.s3`|`hazelcast-jet-s3 (s3)`|no|N/A|
 |`Sinks.cache`|`hazelcast-jet`|yes|at-least-once|
@@ -1600,7 +2148,7 @@ processing even with at-least-once sinks.
 |`Sinks.reliableTopic`|`hazelcast-jet`|yes|at-least-once|
 |`Sinks.socket`|`hazelcast-jet`|yes|at-least-once|
 
-## Custom Sources and Sinks
+## Custom Sources and Sinks
 
 If Jet doesn’t natively support the data source/sink you need, you can
 build a connector for it yourself by using the
@@ -1608,7 +2156,7 @@ build a connector for it yourself by using the
 and
 [SinkBuilder](/javadoc/{jet-version}/com/hazelcast/jet/pipeline/SinkBuilder.html).
 
-### SourceBuilder
+### SourceBuilder
 
 To make a custom source connector you need two basic ingredients:
 

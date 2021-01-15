@@ -26,6 +26,7 @@ import com.hazelcast.internal.metrics.MetricDescriptor;
 import com.hazelcast.internal.metrics.MetricsRegistry;
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.internal.partition.impl.InternalPartitionServiceImpl;
+import com.hazelcast.internal.partition.impl.PartitionServiceState;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.util.counters.Counter;
 import com.hazelcast.internal.util.counters.MwCounter;
@@ -47,6 +48,7 @@ import com.hazelcast.jet.impl.observer.ObservableImpl;
 import com.hazelcast.jet.impl.observer.WrappedThrowable;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.pipeline.PipelineImpl;
+import com.hazelcast.jet.impl.pipeline.PipelineImpl.Context;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.ringbuffer.OverflowPolicy;
@@ -207,7 +209,14 @@ public class JobCoordinationService {
                 DAG dag;
                 Data serializedDag;
                 if (jobDefinition instanceof PipelineImpl) {
-                    dag = ((PipelineImpl) jobDefinition).toDag();
+                    int coopThreadCount = getJetInstance(nodeEngine).getConfig()
+                                                                    .getInstanceConfig()
+                                                                    .getCooperativeThreadCount();
+                    dag = ((PipelineImpl) jobDefinition).toDag(new Context() {
+                        @Override public int defaultLocalParallelism() {
+                            return coopThreadCount;
+                        }
+                    });
                     serializedDag = nodeEngine().getSerializationService().toData(dag);
                 } else {
                     dag = (DAG) jobDefinition;
@@ -422,8 +431,12 @@ public class JobCoordinationService {
     public CompletableFuture<JobStatus> getJobStatus(long jobId) {
         return callWithJob(jobId,
                 mc -> {
+                    // When the job finishes running, we write NOT_RUNNING to jobStatus first and then
+                    // write null to requestedTerminationMode (see MasterJobContext.finalizeJob()). We
+                    // have to read them in the opposite order.
+                    TerminationMode terminationMode = mc.jobContext().requestedTerminationMode();
                     JobStatus jobStatus = mc.jobStatus();
-                    return jobStatus == RUNNING && mc.jobContext().requestedTerminationMode() != null
+                    return jobStatus == RUNNING && terminationMode != null
                             ? COMPLETING
                             : jobStatus;
                 },
@@ -589,8 +602,10 @@ public class JobCoordinationService {
                     membersShuttingDown.keySet());
             return false;
         }
-        if (!getInternalPartitionService().isMemberStateSafe()) {
-            logger.fine("Not starting jobs because master is not in safe state.");
+        PartitionServiceState state =
+                getInternalPartitionService().getPartitionReplicaStateChecker().getPartitionServiceState();
+        if (state != PartitionServiceState.SAFE) {
+            logger.fine("Not starting jobs because partition replication is not in safe state, but in " + state);
             return false;
         }
         if (!getInternalPartitionService().getPartitionStateManager().isInitialized()) {
@@ -712,14 +727,14 @@ public class JobCoordinationService {
      * Completes the job which is coordinated with the given master context object.
      */
     @CheckReturnValue
-    CompletableFuture<Void> completeJob(MasterContext masterContext, Throwable error) {
+    CompletableFuture<Void> completeJob(MasterContext masterContext, Throwable error, long completionTime) {
         return submitToCoordinatorThread(() -> {
             // the order of operations is important.
             List<RawJobMetrics> jobMetrics =
                     masterContext.jobConfig().isStoreMetricsAfterJobCompletion()
                             ? masterContext.jobContext().jobMetrics()
                             : null;
-            jobRepository.completeJob(masterContext, jobMetrics, error);
+            jobRepository.completeJob(masterContext, jobMetrics, error, completionTime);
             if (masterContexts.remove(masterContext.jobId(), masterContext)) {
                 completeObservables(masterContext.jobRecord().getOwnedObservables(), error);
                 logger.fine(masterContext.jobIdString() + " is completed");
