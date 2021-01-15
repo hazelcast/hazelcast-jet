@@ -186,24 +186,8 @@ public class KinesisSinkP<T> implements Processor {
     }
 
     private void bufferFromInbox(@Nonnull Inbox inbox) {
-        if (buffer.isFull()) {
-            return;
-        }
-
-        while (true) {
-            T t = (T) inbox.peek();
-            if (t == null) {
-                //no more items in inbox
-                return;
-            }
-
-            boolean canBeBuffered = buffer.add(t);
-            if (canBeBuffered) {
-                inbox.remove();
-            } else {
-                //no more room in buffer
-                return;
-            }
+        for (T t; (t = (T) inbox.peek()) != null && buffer.add(t); ) {
+            inbox.remove();
         }
     }
 
