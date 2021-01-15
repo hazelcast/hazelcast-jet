@@ -78,6 +78,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
     private static AwsConfig AWS_CONFIG;
     private static AmazonKinesisAsync KINESIS;
     private static KinesisTestHelper HELPER;
+    private static boolean useRealKinesis;
 
     public KinesisIntegrationTest() {
         super(AWS_CONFIG, KINESIS, HELPER);
@@ -85,14 +86,26 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
 
     @BeforeClass
     public static void beforeClass() {
+        // To run with real kinesis AWS credentials need be available
+        // to be loaded by DefaultAWSCredentialsProviderChain.
+        // Keep in mind the real Kinesis is paid service and once you
+        // run it you should ensure that cleanup happened correctly.
+        useRealKinesis = Boolean.parseBoolean(System.getProperty("run.with.real.kinesis", "false"));
+
         System.setProperty(SDKGlobalConfiguration.AWS_CBOR_DISABLE_SYSTEM_PROPERTY, "true");
         // with the jackson versions we use (2.11.x) Localstack doesn't without disabling CBOR
         // https://github.com/localstack/localstack/issues/3208
 
-        AWS_CONFIG = new AwsConfig()
-                .withEndpoint("http://" + LOCALSTACK.getHost() + ":" + LOCALSTACK.getMappedPort(4566))
-                .withRegion(LOCALSTACK.getRegion())
-                .withCredentials(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey());
+        if (useRealKinesis) {
+            AWS_CONFIG = new AwsConfig()
+                    .withEndpoint("https://kinesis.us-east-1.amazonaws.com")
+                    .withRegion("us-east-1");
+        } else {
+            AWS_CONFIG = new AwsConfig()
+                    .withEndpoint("http://" + LOCALSTACK.getHost() + ":" + LOCALSTACK.getMappedPort(4566))
+                    .withRegion(LOCALSTACK.getRegion())
+                    .withCredentials(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey());
+        }
         KINESIS = AWS_CONFIG.buildClient();
         HELPER = new KinesisTestHelper(KINESIS, STREAM, Logger.getLogger(KinesisIntegrationTest.class));
     }
@@ -511,6 +524,16 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
             }
         });
 
+    }
+
+    @Override
+    protected void assertMessages(Map<String, List<String>> expected, boolean checkOrder, boolean deduplicate) {
+        if (checkOrder && useRealKinesis) {
+            logger.info("Order cannot be checked on real Kinesis due to send/read limits. Assert will run without "
+                    + "checking order.");
+            checkOrder = false;
+        }
+        super.assertMessages(expected, checkOrder, deduplicate);
     }
 
 }
