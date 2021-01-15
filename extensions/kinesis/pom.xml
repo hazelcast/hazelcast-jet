@@ -104,6 +104,12 @@
             <version>${aws.bundle.sdk.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-cbor</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
         <!-- TEST -->
         <dependency>
             <groupId>org.testcontainers</groupId>
