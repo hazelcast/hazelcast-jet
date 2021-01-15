@@ -996,7 +996,8 @@ before starting to read data from the new one. Jet would also need to
 ensure that the new shard's data can't possibly overtake the old ones
 data inside the Jet pipeline. Currently, Jet does not have a mechanism
 to ensure this for such a distributed source. It's best to schedule
-resharding when there are lulls in the data flow.
+resharding when there are lulls in the data flow. Watermarks might also
+manifest unexpected behaviour, if data is flowing during resharding.
 
 The problem scenario for the sink is the ingestion data rate of a shard
 being tripped. A KDS shard has an ingestion rate of 1MiB per second. If

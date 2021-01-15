@@ -253,7 +253,7 @@ public class JetJob {
 
     Pipeline p = Pipeline.create();
     p.readFrom(source)
-     .withNativeTimestamps(0)
+     .withNativeTimestamps(3_000) //allow for some lateness in KDS timestamps
      .window(sliding(1_000, 500))
      .aggregate(counting())
      .writeTo(Sinks.logger(wr -> String.format(

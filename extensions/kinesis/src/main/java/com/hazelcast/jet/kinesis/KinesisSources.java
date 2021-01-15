@@ -98,6 +98,21 @@ public final class KinesisSources {
      * data flow rate through the stream. When resharding happens, the
      * source cannot preserve the order among the last items of a shard
      * being destroyed and the first items of new shards being created.
+     * Watermarks might also experience unexpected behaviour during resharding.
+     * Best to do resharding when the data flow is stopped, if possible.
+     * <p>
+     * <strong>NOTE</strong>. In Kinesis terms, this source is a "shared
+     * throughput consumer." This means that all the limitations on data
+     * read, imposed by Kinesis (at most 5 read transaction per second,
+     * at most 2MiB of data per second) apply not on a per-source basis
+     * but for all sources at once. If you start only one pipeline with
+     * a source for a Kinesis stream, then the source implementation
+     * will assure that no limit is tripped. But if you run multiple
+     * pipelines with <strong>sources for the same Kinesis
+     * stream</strong>, these sources cannot coordinate the limits among
+     * themselves. It will still work, but you will see occasional
+     * warning messages in the logs about rates and limitations being
+     * tripped.
      * <p>
      * The source provides a metric called
      * {@value MILLIS_BEHIND_LATEST_METRIC}, which specifies, for each
