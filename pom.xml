@@ -126,7 +126,7 @@
         <picocli.version>3.9.0</picocli.version>
         <jline.version>3.16.0</jline.version>
         <classgraph.version>4.8.66</classgraph.version>
-        <jackson.jr.version>2.11.2</jackson.jr.version>
+        <jackson.version>2.11.2</jackson.version>
         <snakeyaml.engine.version>1.0</snakeyaml.engine.version>
         <affinity.version>3.2.3</affinity.version>
         <aws.sdk.version>1.11.934</aws.sdk.version>
@@ -217,7 +217,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
-                <version>${jackson.jr.version}</version>
+                <version>${jackson.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>

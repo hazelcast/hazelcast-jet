@@ -173,17 +173,17 @@
                         <dependency>
                             <groupId>com.fasterxml.jackson.jr</groupId>
                             <artifactId>jackson-jr-objects</artifactId>
-                            <version>${jackson.jr.version}</version>
+                            <version>${jackson.version}</version>
                         </dependency>
                         <dependency>
                             <groupId>com.fasterxml.jackson.jr</groupId>
                             <artifactId>jackson-jr-annotation-support</artifactId>
-                            <version>${jackson.jr.version}</version>
+                            <version>${jackson.version}</version>
                         </dependency>
                         <dependency>
                             <groupId>com.fasterxml.jackson.core</groupId>
                             <artifactId>jackson-core</artifactId>
-                            <version>${jackson.jr.version}</version>
+                            <version>${jackson.version}</version>
                         </dependency>
                         <dependency>
                             <groupId>org.apache.hadoop</groupId>
@@ -359,6 +359,12 @@
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-kinesis</artifactId>
+            <version>${project.version}</version>
+            <classifier>jar-with-dependencies</classifier>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-protobuf</artifactId>
             <version>${project.version}</version>
             <classifier>jar-with-dependencies</classifier>
@@ -424,20 +430,20 @@
         <dependency>
             <groupId>com.fasterxml.jackson.jr</groupId>
             <artifactId>jackson-jr-objects</artifactId>
-            <version>${jackson.jr.version}</version>
+            <version>${jackson.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.jr</groupId>
             <artifactId>jackson-jr-annotation-support</artifactId>
-            <version>${jackson.jr.version}</version>
+            <version>${jackson.version}</version>
             <optional>true</optional>
         </dependency>
         <!-- shaded in hazelcast.jar, still needs to be mentioned -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>${jackson.jr.version}</version>
+            <version>${jackson.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>

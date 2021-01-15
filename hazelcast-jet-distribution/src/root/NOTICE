@@ -21,6 +21,9 @@ This product includes the following libraries with the following licenses:
 
 Apache License, Version 2.0
   AWS SDK for Java - Bundle:1.11.934
+  AWS SDK for Java - Core:1.11.934
+  AWS Java SDK for Amazon Kinesis:1.11.934
+  JMES Path Query library:1.11.934
   HPPC Collections:0.7.1
   Jackson-annotations:2.11.2
   Jackson-core:2.11.2
@@ -246,6 +249,7 @@ Apache License, Version 2.0
   AWS Java SDK :: SDK Core:2.8.3
   AWS Java SDK :: Utilities:2.8.3
   AWS Event Stream:1.0.1
+  software.amazon.ion:ion-java:1.0.2
 BSD 2-Clause License
   zstd-jni:1.4.5-12
   dnsjava:2.1.7
