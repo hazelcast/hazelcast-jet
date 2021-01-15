@@ -28,6 +28,7 @@ import com.hazelcast.sql.impl.schema.TableField;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.toList;
@@ -61,7 +62,7 @@ abstract class MetadataResolver<T> {
     @SuppressWarnings("unchecked")
     private List<MappingField> resolveFieldsFromSample(Map<String, ?> options) {
         FileProcessorMetaSupplier<T> fileProcessorMetaSupplier =
-                (FileProcessorMetaSupplier<T>) toProcessorMetaSupplier(options, sampleFormat());
+                (FileProcessorMetaSupplier<T>) toProcessorMetaSupplierProvider(options, sampleFormat()).get();
 
         try (FileTraverser<T> traverser = fileProcessorMetaSupplier.traverser()) {
             T sample = traverser.next();
@@ -88,7 +89,9 @@ abstract class MetadataResolver<T> {
     }
 
     @SuppressWarnings("unchecked")
-    protected ProcessorMetaSupplier toProcessorMetaSupplier(Map<String, ?> options, FileFormat<?> format) {
+    protected Supplier<ProcessorMetaSupplier> toProcessorMetaSupplierProvider(
+            Map<String, ?> options, FileFormat<?> format
+    ) {
         FileSourceBuilder<?> builder = FileSources.files((String) options.get(OPTION_PATH)).format(format);
 
         String glob = (String) options.get(OPTION_GLOB);
@@ -124,7 +127,7 @@ abstract class MetadataResolver<T> {
                 throw new IllegalArgumentException("Unexpected option type: " + value.getClass());
             }
         }
-        return builder.buildMetaSupplier();
+        return builder::buildMetaSupplier;
     }
 
     protected abstract FileFormat<?> sampleFormat();
