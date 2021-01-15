@@ -1,6 +1,6 @@
 ---
-title: 018 - Kinesis Connectors
-description: Sources and sinks for Amazon Kinesis Data Streams
+title: 018 - Kinesis Connector
+description: Source and Sink for Amazon Kinesis Data Streams
 ---
 
 *Since*: 4.4
