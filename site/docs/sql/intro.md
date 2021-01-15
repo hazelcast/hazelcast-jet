@@ -49,7 +49,7 @@ sql〉
 You are now ready to type some SQL. Try this:
 
 ```sql
-sql〉 SELECT * from TABLE(generate_series(1,5));
+sql〉 SELECT * FROM TABLE(generate_series(1,5));
 +------------+
 |           v|
 +------------+
@@ -195,7 +195,7 @@ TYPE File
 OPTIONS ('format'='csv',
     'path'='/path/to/hazelcast-jet-4.4', 'glob'='trades.csv');
 OK
-sql〉 select * from csv_trades;
+sql〉 SELECT * FROM csv_trades;
 +----+--------------------+
 |  id|name                |
 +----+--------------------+
@@ -411,7 +411,7 @@ Submit a query:
 
 ```java
 JetInstance jet = Jet.newJetInstance();
-String query = "select * from TABLE(generate_series(1,5))";
+String query = "SELECT * FROM TABLE(generate_series(1,5))";
 try (SqlResult result = jet.getSql().execute(query)) {
     for (SqlRow row : result) {
         System.out.println("" + row.getObject(0));
