@@ -25,14 +25,31 @@ cd hazelcast-jet-4.4
 bin/jet-start
 ```
 
-You are now ready to write some Jet SQL. Start another terminal window
-and try this:
+Wait for this message in the output:
 
-```sql
+```text
+2021-01-15 13:39:33,156 [ INFO] [main] [c.h.c.LifecycleService]:
+    [10.212.134.152]:5701 is STARTED
+```
+
+The prompt doesn't return, which allows you to easily stop Jet. We'll
+instruct you to restart Jet in a few places, so simply come to this
+window, type `Ctrl+C` to stop Jet and type `jet-start` to start it
+again.
+
+Now start another terminal window and enter the SQL shell:
+
+```text
 $ bin/jet sql
 Connected to Hazelcast Jet 4.4 at [192.168.5.13]:5701 (+0 more)
 Type 'help' for instructions
-sql> select * from TABLE(generate_series(1,5));
+sql〉
+```
+
+You are now ready to type some SQL. Try this:
+
+```sql
+sql〉SELECT * from TABLE(generate_series(1,5));
 +------------+
 |           v|
 +------------+
@@ -43,21 +60,21 @@ sql> select * from TABLE(generate_series(1,5));
 |           5|
 +------------+
 5 row(s) selected
-sql> select sum(v) from TABLE(generate_series(1,5));
+sql〉SELECT sum(v) FROM TABLE(generate_series(1,5));
 +--------------------+
 |              EXPR$0|
 +--------------------+
 |                  15|
 +--------------------+
 1 row(s) selected
-sql>
+sql〉
 ```
 
 Here are two more examples with streaming SQL. Streaming queries never
-complete, so use `Ctrl-C` to cancel them after a while:
+complete, so use `Ctrl+C` to cancel them after a while:
 
 ```sql
-sql> SELECT * FROM TABLE(generate_stream(10));
+sql〉SELECT * FROM TABLE(generate_stream(10));
 +--------------------+
 |                   v|
 +--------------------+
@@ -69,7 +86,7 @@ sql> SELECT * FROM TABLE(generate_stream(10));
 |                   5|
 ^C
 Query cancelled.
-sql> SELECT * FROM TABLE(generate_stream(100)) WHERE v / 10 * 10 = v;
+sql〉SELECT * FROM TABLE(generate_stream(100)) WHERE v / 10 * 10 = v;
 +--------------------+
 |                   v|
 +--------------------+
@@ -81,8 +98,12 @@ sql> SELECT * FROM TABLE(generate_stream(100)) WHERE v / 10 * 10 = v;
 |                  50|
 ^C
 Query cancelled.
-sql>
+sql〉
 ```
+
+`generate_stream()` creates a streaming data source that never
+completes. It emits `bigint`'s starting from zero at the rate you
+indicate with the argument (in events per second).
 
 ## Features in this Beta
 
@@ -114,7 +135,7 @@ This is how you can create a mapping to a Kafka topic `trades` with
 JSON messages:
 
 ```sql
-sql> CREATE EXTERNAL MAPPING trades (
+sql〉CREATE EXTERNAL MAPPING trades (
     ticker VARCHAR,
     price DECIMAL,
     amount BIGINT)
@@ -124,14 +145,14 @@ OPTIONS (
     'bootstrap.servers' = '127.0.0.1:9092'
 );
 OK
-sql> SHOW MAPPINGS;
+sql〉SHOW MAPPINGS;
 +--------------------+
 |name                |
 +--------------------+
 |tradeMap            |
 +--------------------+
 1 row(s) selected
-sql>
+sql〉
 ```
 
 The [DDL](ddl) section has more details.
@@ -161,15 +182,12 @@ id,name
 Now you can write the SQL:
 
 ```sql
-$ bin/jet sql
-Connected to Hazelcast Jet 4.4 at [192.168.5.13]:5701 (+0 more)
-Type 'help' for instructions
-sql> CREATE MAPPING csv_trades (id TINYINT, name VARCHAR)
+sql〉CREATE MAPPING csv_trades (id TINYINT, name VARCHAR)
 TYPE File
 OPTIONS ('format'='csv',
     'path'='/path/to/hazelcast-jet-4.4', 'glob'='trades.csv');
 OK
-sql> select * from csv_trades;
+sql〉select * from csv_trades;
 +----+--------------------+
 |  id|name                |
 +----+--------------------+
@@ -178,7 +196,7 @@ sql> select * from csv_trades;
 |   3|Mary                |
 +----+--------------------+
 2 row(s) selected
-sql>
+sql〉
 ```
 
 See the [File Connector](file-connector) page for more details.
@@ -231,7 +249,7 @@ Let's create a streaming query that filters and transforms the trade
 events it gets from Kafka:
 
 ```sql
-sql> CREATE MAPPING trades (
+sql〉CREATE MAPPING trades (
     id BIGINT,
     ticker VARCHAR,
     price DECIMAL,
@@ -242,9 +260,9 @@ OPTIONS (
     'bootstrap.servers' = '127.0.0.1:9092'
 );
 OK
-sql> SELECT ticker, ROUND(price * 100) AS price_cents, amount
-FROM trades
-WHERE price * amount > 100;
+sql〉SELECT ticker, ROUND(price * 100) AS price_cents, amount
+  FROM trades
+  WHERE price * amount > 100;
 +------------+----------------------+-------------------+
 |ticker      |           price_cents|             amount|
 +------------+----------------------+-------------------+
@@ -256,10 +274,7 @@ interrupt it with `Ctrl+C`, but leave it running for now.
 Now start another terminal window and push some messages to Kafka:
 
 ```sql
-$ jet sql
-Connected to Hazelcast Jet 4.4 at [192.168.5.13]:5701 (+0 more)
-Type 'help' for instructions
-sql> INSERT INTO trades VALUES
+sql〉INSERT INTO trades VALUES
   (1, 'ABCD', 5.5, 10),
   (2, 'EFGH', 14, 20);
 OK
@@ -287,7 +302,7 @@ This creates a map named `tradeMap` with a Java `Long` as the key
 and the JSON trade event as the value, and then stores an entry in it:
 
 ```sql
-sql> CREATE MAPPING tradeMap (
+sql〉CREATE MAPPING tradeMap (
     id BIGINT EXTERNAL NAME "__key",
     ticker VARCHAR,
     price DECIMAL,
@@ -297,16 +312,16 @@ OPTIONS (
     'keyFormat'='bigint',
     'valueFormat'='json');
 OK
-sql> SINK INTO tradeMap VALUES (1, 'hazl', 10, 1);
+sql〉SINK INTO tradeMap VALUES (1, 'hazl', 10, 1);
 OK
-sql> SELECT * FROM tradeMap;
+sql〉SELECT * FROM tradeMap;
 +----+----------+--------+--------+
 |  id|ticker    |   price|  amount|
 +----+----------+--------+--------+
 |   1|hazl      |10.0000…|       1|
 +----+----------+--------+--------+
 1 row(s) selected
-sql>
+sql〉
 ```
 
 ## Create a Standalone Streaming Query
@@ -315,12 +330,12 @@ Now we can connect the solutions above and tell Jet to syphon the data
 from the Kafka topic into the IMap:
 
 ```sql
-sql> CREATE JOB ingest_trades AS
-SINK INTO tradeMap(id, ticker, price, amount)
-SELECT id, ticker, price, amount
-FROM trades;
+sql〉CREATE JOB ingest_trades AS
+  SINK INTO tradeMap(id, ticker, price, amount)
+  SELECT id, ticker, price, amount
+  FROM trades;
 OK
-sql> SHOW JOBS;
+sql〉SHOW JOBS;
 +--------------------+
 |name                |
 +--------------------+
@@ -338,11 +353,11 @@ Let's try it out by publishing some events to the Kafka topic and
 checking if they landed in the IMap:
 
 ```sql
-sql> INSERT INTO trades VALUES
+sql〉INSERT INTO trades VALUES
   (1, 'ABCD', 5.5, 10),
   (2, 'EFGH', 14, 20);
 OK
-sql> SELECT * FROM tradeMap;
+sql〉SELECT * FROM tradeMap;
 +---------------+--------------------+----------+--------------------+
 |             id|ticker              |     price|              amount|
 +---------------+--------------------+----------+--------------------+
@@ -350,13 +365,13 @@ sql> SELECT * FROM tradeMap;
 |              1|ABCD                |5.5000000…|                  10|
 +---------------+--------------------+----------+--------------------+
 2 row(s) selected
-sql>
+sql〉
 ```
 
 To cancel the job, use:
 
 ```sql
-DROP JOB ingest_trades
+sql〉DROP JOB ingest_trades;
 ```
 
 ## Use Jet SQL Embedded Inside Your App
@@ -391,9 +406,19 @@ JetInstance jet = Jet.newJetInstance();
 String query = "select * from TABLE(generate_series(1,5))";
 try (SqlResult result = jet.getSql().execute(query)) {
     for (SqlRow row : result) {
-        System.out.println(row);
+        System.out.println("" + row.getObject(0));
     }
 }
+```
+
+This code should print
+
+```txt
+1
+2
+3
+4
+5
 ```
 
 ## IMDG SQL and Jet SQL

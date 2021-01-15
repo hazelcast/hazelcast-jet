@@ -60,19 +60,17 @@ IMap is `latest_trades`:
 CREATE MAPPING latest_trades
 TYPE IMap
 OPTIONS (
-    'keyFormat' = 'java',
-    'keyJavaClass' = 'java.lang.String',
+    'keyFormat' = 'varchar',
     'valueFormat' = 'java',
     'valueJavaClass' = 'com.example.Trade'
 )
 ```
 
-Note that we omitted the column list in this query. It will be
-determined automatically according to the OPTIONS. Since we use `String`
-as the key class, the default column name for the key will be used:
-`__key`. The properties of the `Trade` class will be used. So the
-mapping will behave as if the following columns were specified in the
-previous statement:
+We didn't provide an explicit column list, so Jet determines it
+automatically from the provided OPTIONS. Our key is a simple `varchar`
+with no internal structure, so we get the default name for the key
+column: `__key`. Value is an object whose fields become columns of the
+mapping. So we get this structure:
 
 ```sql
 (
