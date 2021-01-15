@@ -14,6 +14,13 @@ formats will probably change in future releases._
 
 ## Quick Start
 
+You can either download our tarball and start Jet from it, or use our
+Docker image.
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Tarball-->
+
 Prerequisite is Java.
 
 Download and start Jet by pasting this into your terminal:
@@ -25,28 +32,48 @@ cd hazelcast-jet-4.4
 bin/jet-start
 ```
 
-Wait for this message in the output:
+<!--Docker-->
 
 ```text
-2021-01-15 13:39:33,156 [ INFO] [main] [c.h.c.LifecycleService]:
-    [10.212.134.152]:5701 is STARTED
+docker run -v $(pwd):/csv-dir hazelcast/hazelcast-jet
 ```
 
-The prompt doesn't return, which allows you to easily stop Jet. We'll
-instruct you to restart Jet in a few places, so simply come to this
-window, type `Ctrl+C` to stop Jet and type `jet-start` to start it
-again.
+This maps the current directory to `/csv-dir` inside the container, be
+in the same directory when you create the file in the CSV example below.
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+----
+
+Wait for a message like this in the output:
+
+```text
+2021-01-15 17:50:18,645 [ INFO] [main] [c.h.c.LifecycleService]:
+    [172.17.0.2]:5701 is STARTED
+```
+
+The prompt doesn't return, which allows you to easily stop or restart
+Jet.
 
 Now start another terminal window and enter the SQL shell:
 
+<!--DOCUSAURUS_CODE_TABS-->
+<!--Tarball-->
 ```text
 $ bin/jet sql
-Connected to Hazelcast Jet 4.4 at [192.168.5.13]:5701 (+0 more)
+Connected to Hazelcast Jet 4.4 at [192.168.0.1]:5701 (+0 more)
 Type 'help' for instructions
 sql〉
 ```
+<!--Docker-->
+```text
+$ docker run -it hazelcast/hazelcast-jet jet -t 172.17.0.2 sql
+Connected to Hazelcast Jet 4.4 at [172.17.0.2]:5701 (+0 more)
+Type 'help' for instructions
+sql〉
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
 
-You are now ready to type some SQL. Try this:
+You are now ready to write some SQL. Try this:
 
 ```sql
 sql〉 SELECT * FROM TABLE(generate_series(1,5));
@@ -70,7 +97,7 @@ sql〉 SELECT sum(v) FROM TABLE(generate_series(1,5));
 sql〉
 ```
 
-Here are two more examples with streaming data. Streaming data never
+Here are two more examples with streaming SQL. Streaming queries never
 complete, so use `Ctrl+C` to cancel them after a while:
 
 ```sql
@@ -103,15 +130,19 @@ sql〉
 
 `generate_stream()` generates an infinite stream of values. It emits
 `bigint`'s starting from zero at the rate you indicate with the argument
-(in events per second). A stream behaves just like a traditional table,
-however it can be read only in one direction and never in full. For
-example, you can't use an aggregate function over a stream:
+(in events per second). For Jet SQL, a stream is like a table with
+infinitely many rows which you can only access sequentially and thus
+never reach the end. For example, you get a syntax error if you try to
+aggregate across a whole stream:
 
 ```sql
 sql〉 SELECT sum(v) FROM TABLE(generate_stream(10));
 From line 1, column 1 to line 1, column 45: Grouping/aggregations not
 supported for a streaming query
 ```
+
+For aggregation to work in the setting of an unbounded stream, you have
+to apply a windowing function. This is an upcoming feature of Jet SQL.
 
 ## Features in this Beta
 
@@ -167,14 +198,7 @@ The [DDL](ddl) section has more details.
 
 ## Query a CSV File
 
-To try out the CSV file format, first activate the CSV connector:
-
-```bash
-$ mv opt/hazelcast-jet-csv-4.4.jar lib/
-$
-```
-
-Restart the Jet server for this to take effect.
+Make sure you are in the same directory from which you started Jet.
 
 Create a sample CSV file named `trades.csv`:
 
@@ -189,11 +213,15 @@ id,name
 
 Now you can write the SQL:
 
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Tarball-->
+
 ```sql
 sql〉 CREATE MAPPING csv_trades (id TINYINT, name VARCHAR)
 TYPE File
 OPTIONS ('format'='csv',
-    'path'='/path/to/hazelcast-jet-4.4', 'glob'='trades.csv');
+    'path'='/path/to/curr-dir', 'glob'='trades.csv');
 OK
 sql〉 SELECT * FROM csv_trades;
 +----+--------------------+
@@ -206,6 +234,28 @@ sql〉 SELECT * FROM csv_trades;
 2 row(s) selected
 sql〉
 ```
+
+<!--Docker-->
+
+```sql
+sql〉 CREATE MAPPING csv_trades (id TINYINT, name VARCHAR)
+TYPE File
+OPTIONS ('format'='csv',
+    'path'='/csv-dir', 'glob'='trades.csv');
+OK
+sql〉 SELECT * FROM csv_trades;
++----+--------------------+
+|  id|name                |
++----+--------------------+
+|   1|Jerry               |
+|   2|Greg                |
+|   3|Mary                |
++----+--------------------+
+2 row(s) selected
+sql〉
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
 
 See the [File Connector](file-connector) page for more details.
 
@@ -224,23 +274,17 @@ Now start ZooKeeper, then Kafka:
 ```bash
 $ bin/zookeeper-server-start.sh config/zookeeper.properties
 ...
-[2021-01-20 12:44:04,863] INFO Created server with tickTime 3000 minSessionTimeout 6000 maxSessionTimeout 60000 datadir /tmp/zookeeper/version-2 snapdir /tmp/zookeeper/version-2 (org.apache.zookeeper.server.ZooKeeperServer)
+[2021-01-20 12:44:04,863] INFO Created server with tickTime 3000
+  minSessionTimeout 6000 maxSessionTimeout 60000 datadir
+  /tmp/zookeeper/version-2 snapdir /tmp/zookeeper/version-2
+  (org.apache.zookeeper.server.ZooKeeperServer)
 ...
 <Type Ctrl-Z to get the prompt back>
-[1]+  Stopped                 bin/zookeeper-server-start.sh config/zookeeper.properties
+[1]+  Stopped  bin/zookeeper-server-start.sh config/zookeeper.properties
 $ bg
 [1]+ bin/zookeeper-server-start.sh config/zookeeper.properties &
 $ bin/kafka-server-start.sh config/server.properties
 ```
-
-From the Jet home directory, activate the Kafka connector:
-
-```bash
-$ mv opt/hazelcast-jet-kafka-4.4.jar lib/
-$
-```
-
-Restart the Jet server for this to take effect.
 
 You are now ready to query Kafka. We'll use JSON messages like this one:
 
@@ -253,7 +297,7 @@ You are now ready to query Kafka. We'll use JSON messages like this one:
 }
 ```
 
-Let's create a streaming query that filters and transforms the trade
+First write a streaming query that filters and transforms the trade
 events it gets from Kafka:
 
 ```sql
@@ -306,8 +350,8 @@ You can send the query results to an IMap using the `SINK INTO` clause.
 `SINK INTO` is similar to the standard `INSERT INTO`, [see
 here](basic-commands#insertsink-statement) for the full details.
 
-This creates a map named `tradeMap` with a Java `Long` as the key
-and the JSON trade event as the value, and then stores an entry in it:
+This creates a map named `tradeMap` with an integer key and the JSON
+trade event as the value, and then stores an entry in it:
 
 ```sql
 sql〉 CREATE MAPPING tradeMap (
@@ -358,7 +402,7 @@ long-running query that lives on independently. We achieved this with
 `CREATE JOB`.
 
 Let's try it out by publishing some events to the Kafka topic and
-checking if they landed in the IMap:
+checking if they landed into the IMap:
 
 ```sql
 sql〉 INSERT INTO trades VALUES
