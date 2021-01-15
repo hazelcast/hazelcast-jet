@@ -21,6 +21,7 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.Processor.Context;
+import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.SourceBuilder.SourceBuffer;
@@ -35,7 +36,6 @@ import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
@@ -169,8 +169,8 @@ public final class S3Sources {
             @Nonnull FunctionEx<? super InputStream, ? extends Stream<I>> readFileFn,
             @Nonnull BiFunctionEx<String, ? super I, ? extends T> mapFn
     ) {
-        final FileReadingFunction<I> adaptedFunction = (inputStream, key, bucketName)
-                -> readFileFn.apply(inputStream);
+        TriFunction<? super InputStream, String, String, ? extends Stream<I>> adaptedFunction =
+                (inputStream, key, bucketName) -> readFileFn.apply(inputStream);
         return SourceBuilder
                 .batch("s3-source", context ->
                         new S3SourceContext<I, T>(bucketNames, prefix, context, clientSupplier, adaptedFunction,
@@ -224,7 +224,7 @@ public final class S3Sources {
             @Nonnull List<String> bucketNames,
             @Nullable String prefix,
             @Nonnull SupplierEx<? extends S3Client> clientSupplier,
-            @Nonnull FileReadingFunction<I> readFileFn,
+            @Nonnull TriFunction<? super InputStream, String, String, ? extends Stream<I>> readFileFn,
             @Nonnull BiFunctionEx<String, ? super I, ? extends T> mapFn
     ) {
         return SourceBuilder
@@ -237,32 +237,13 @@ public final class S3Sources {
                 .build();
     }
 
-    /**
-     * Functional interface for functions reading some file with context information of key and bucket name.
-     *
-     * @param <I> Type of elements returned from reading.
-     */
-    @FunctionalInterface
-    public interface FileReadingFunction<I> extends Serializable {
-
-        /**
-         * Reads file from given input stream. File key and bucket name are provided for additional context,
-         * eg. for logging.
-         * @param inputStream input stream providing file content
-         * @param key file key from S3
-         * @param bucketName S3 bucket name in which the file is
-         * @return Stream of parsed elements
-         */
-        Stream<I> readFile(InputStream inputStream, String key, String bucketName);
-    }
-
     private static final class S3SourceContext<I, T> {
 
         private static final int BATCH_COUNT = 1024;
 
         private final String prefix;
         private final S3Client amazonS3;
-        private final FileReadingFunction<I> readFileFn;
+        private final TriFunction<? super InputStream, String, String, ? extends Stream<I>> readFileFn;
         private final BiFunctionEx<String, ? super I, ? extends T> mapFn;
         private final int processorIndex;
         private final int totalParallelism;
@@ -277,7 +258,7 @@ public final class S3Sources {
                 String prefix,
                 Context context,
                 SupplierEx<? extends S3Client> clientSupplier,
-                FileReadingFunction<I> readFileFn,
+                TriFunction<? super InputStream, String, String, ? extends Stream<I>> readFileFn,
                 BiFunctionEx<String, ? super I, ? extends T> mapFn
         ) {
             this.prefix = prefix;
@@ -314,7 +295,7 @@ public final class S3Sources {
 
                 ResponseInputStream<GetObjectResponse> responseInputStream = amazonS3.getObject(getObjectRequest);
                 currentKey = key;
-                itemTraverser = traverseStream(readFileFn.readFile(responseInputStream, key, bucketName));
+                itemTraverser = traverseStream(readFileFn.apply(responseInputStream, key, bucketName));
                 addBatchToBuffer(buffer);
             } else {
                 // iterator is empty, we've exhausted all the objects
