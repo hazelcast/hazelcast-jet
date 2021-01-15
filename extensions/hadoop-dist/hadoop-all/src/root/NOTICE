@@ -30,6 +30,7 @@ Apache License, Version 2.0
   JCIP Annotations under Apache License:1.0-1
   FindBugs-jsr305:3.0.2
   Gson:2.8.6
+  error-prone annotations:2.3.4
   Guava InternalFutureFailureAccess and InternalFutures:1.0.1
   Guava: Google Core Libraries for Java:29.0-jre
   Guava ListenableFuture only:9999.0-empty-to-avoid-conflict-with-guava
