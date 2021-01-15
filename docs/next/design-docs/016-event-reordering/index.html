@@ -68,13 +68,13 @@
 <h2><a class="anchor" aria-hidden="true" id="problem-statement"></a><a href="#problem-statement" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Problem statement</h2>
 <p>Jet processes events in parallel, therefore a total order of events
 doesn't exist. However, in some use cases, users expect the order of
-events with the same key to be preserved, in order to be able to apply
-stateful processing logic on them.</p>
+events with the same key to be preserved, to be able to apply stateful
+processing logic on them.</p>
 <p>So far, Jet's default has been to use a round-robin strategy to balance
 the traffic across parallel processors. Typically, the pipeline starts
 out with a source that has low parallelism, and the round-robin edge
 spreads out the data to downstream transforms with full parallelism.</p>
-<p>It is also possible to spread out the data using a partitioning scheme,
+<p>It is also possible to spread out the data using a partitioning scheme
 so that all events with the same key go to the same downstream
 processor. This is less flexible and may suffer from data bias, where a
 handful of keys dominate the traffic volume. On the other hand, its
@@ -88,7 +88,7 @@ ordering-sensitive.</p>
 <code>aggregate</code> and can contain arbitrary stateful logic. This logic is
 often order-sensitive, so it breaks down under event reordering.</p>
 <p><img src="/docs/assets/events_getting_reordered.svg" alt="Events Getting Reordered"></p>
-<p>In this document we describe ways to avoid the usage of round-robin
+<p>In this document, we describe ways to avoid the usage of round-robin
 edges and still preserve the performance potential of the previous
 implementation.</p>
 <h2><a class="anchor" aria-hidden="true" id="design-ideas"></a><a href="#design-ideas" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Design Ideas</h2>
@@ -102,8 +102,8 @@ one constrains our freedom to balance the traffic, while the second one
 introduces a sorting overhead.</p>
 <p>The second approach is not feasible most of the time because we don't
 have a good enough sorting key. The obvious choice, event timestamp, is
-not good enough because there's nothing stopping two events from
-occurring within the same millisecond.</p>
+not good enough because nothing is stopping two events from occurring
+within the same millisecond.</p>
 <p>Therefore we're focusing on the first approach: keep maintaining the
 original event order at every stage. Let us analyze the situation at
 each stage, starting from the source. There are two kinds of data
@@ -148,15 +148,15 @@ windowed aggregation, which currently don't need the wrapping
 <code>JetEvent</code>.</p>
 <h2><a class="anchor" aria-hidden="true" id="decision-keep-the-order-without-the-key"></a><a href="#decision-keep-the-order-without-the-key" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Decision: Keep the Order Without the Key</h2>
 <p>This discussion was more relevant before we decided on this
-preserveOrder as property to globally activate/deactivate on the
-pipeline. For now, since user activates this property in pipeline, the
-decision to protect or not protect the order in pipelines that do not
-contain these keys is set there.</p>
+<code>preserveOrder</code> as property to globally activate/deactivate on the
+pipeline. For now, since the user activates this property in the
+pipeline, the decision to protect or not protect the order in pipelines
+that do not contain these keys is set there.</p>
 <h2><a class="anchor" aria-hidden="true" id="implementation-of-the-preserve-order-approach"></a><a href="#implementation-of-the-preserve-order-approach" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Implementation of the Preserve Order Approach</h2>
-<p>We added a setter/getter methods to Pipeline to activate/deactivate this
-approach on the pipeline. The default value for this property is <code>false</code>
-that means that do not preserve the order of events. User can set this
-property as follows:</p>
+<p>We added a setter/getter methods to <code>Pipeline</code> to activate/deactivate
+this approach on the pipeline. The default value for this property is
+<code>false</code> that means that do not preserve the order of events. User can
+set this property as follows:</p>
 <pre><code class="hljs css language-java">pipeline<span class="token punctuation">.</span><span class="token function">setPreserveOrder</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <p>and get the value of this property by:</p>
@@ -168,7 +168,7 @@ attach to the transform is a round-robin one (<code>unicast</code>), then Jet:</
 <ul>
 <li><p>Ensure that the local parallelism (LP) of the input vertex of the
 transform is equal to the PlannerVertex of the upstream transform.</p></li>
-<li><p>Connect these transform vertices with isolated edge.</p></li>
+<li><p>Connect these transform vertices with isolated edges.</p></li>
 </ul>
 <p>Otherwise, if it's a partitioned edge, do nothing.</p>
 <p>We applied the policy to enforce equal local parallelism during the
@@ -200,20 +200,20 @@ preserve order property is activated:</p>
 <h2><a class="anchor" aria-hidden="true" id="not-implementing-now-smart-job-planning-abandoned"></a><a href="#not-implementing-now-smart-job-planning-abandoned" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Not Implementing Now: Smart Job Planning (Abandoned)</h2>
 <p>Since it requires marking pipeline stages as order sensitive or not, we
 have abandoned using it in this first implementation. In other words,
-this approach requires the user to know which stages of the pipeline is
+this approach requires the user to know which stages of the pipeline are
 order-sensitive or not. I leave this section in the TDD as this approach
 can be used for fine-grained optimizations. You can also find the
 implementation we deleted
 <a href="https://github.com/hazelcast/hazelcast-jet/pull/2522/commits/a745b678f5fa05ee54400750bcb69117bcf37f1f#diff-e841e6cd817336dba2e28b8598d91ba0105f513b9ad56ddbbe79513c4bf63613L210-L231">here</a>.</p>
 <p>We classified the transforms as order-sensitive and order-insensitive.
 This allows us to analyze the graph of the pipeline and identify which
-parts of it need the ordering restrictions. Basically, we must protect
-the order only on a path going from an order-creating stage to a
-stateful mapping stage. We also classified the transforms into
-order-propagating and order-creating. Sources create the order, as well
-as sorting and aggregating stages. For example, if a pipeline contains
-stateful mapping downstream of an aggregating stage, only that part must
-preserve the order.</p>
+parts of it need the ordering restrictions. We must protect the order
+only on a path going from an order-creating stage to a stateful mapping
+stage. We also classified the transforms into order-propagating and
+order-creating. Sources create the order, as well as sorting and
+aggregating stages. For example, if a pipeline contains stateful mapping
+downstream of an aggregating stage, only that part must preserve the
+order.</p>
 <p>The algorithm to find these order-sensitive subgraphs requires us to
 traverse the <code>Transform</code> DAG in reverse topological order. This way, at
 each stage, we know whether somewhere in its downstream there's an
@@ -232,17 +232,16 @@ order-sensitive node.</li>
 <p>Jet already offers support for watermarking. If we have a sorting key
 for events, we can sort the events between the two consecutive watermark
 according to the sorting key so we can put the events in their initial
-order. Users will not define the window in an explicit way. The user
-will only add stateful mapping (or any order-sensitive stage) to his
-pipeline, and we will add such an intermediate sorting stage during
-planning.</p>
-<p>As the cost of this work, sorting events requires an extra computation
+order. Users will not explicitly define the window. The user will only
+add stateful mapping (or any order-sensitive stage) to his pipeline and
+we will add such an intermediate sorting stage during planning.</p>
+<p>As the cost of this work, sorting events requires an extra computation,
 and we have to wait for the closing watermark to arrive. This increases
 the latency with watermarkPeriod/2 on average. The issue of sparse
 events can also occur in this approach.</p>
 <p>To use this solution, we need a sorting key such as more precise
 timestamp or mark like a SequenceId for events- Our timestamp precision
-is low, resulting in overlapping events with the same timestamp and it
+is low, resulting in overlapping events with the same timestamp, and it
 is not easy to add this SequenceId (sorting key) to events in a reliable
 way especially when the total parallelism of the source is greater than
 one. I just put this approach to be seen.</p>

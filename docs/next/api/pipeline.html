@@ -74,24 +74,28 @@ p<span class="token punctuation">.</span><span class="token function">readFrom</
 <em>stage</em>. The stage resulting from a <code>writeTo</code> operation is called a
 <em>sink stage</em> and you can't attach more stages to it. All others are
 called <em>compute stages</em> and expect you to attach further stages to them.</p>
-<h2><a class="anchor" aria-hidden="true" id="batchstage-and-streamstage"></a><a href="#batchstage-and-streamstage" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>BatchStage and StreamStage</h2>
-<p>The API differentiates between batch (bounded) and stream (unbounded)
-sources and this is reflected in the naming: there is a
-<a href="/javadoc/4.4-SNAPSHOT/com/hazelcast/jet/pipeline/BatchStage.html">BatchStage</a>
-and a
+<h2><a class="anchor" aria-hidden="true" id="streamstage-and-batchstage"></a><a href="#streamstage-and-batchstage" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>StreamStage and BatchStage</h2>
+<p>A pipeline stage is one of two basic kinds: a stream stage or a batch
+stage. The data passing through a stream stage never reaches the end,
+while only a finite amount of data passes through a batch stage. This
+split is visible in the Java types: there is a
 <a href="/javadoc/4.4-SNAPSHOT/com/hazelcast/jet/pipeline/StreamStage.html">StreamStage</a>
-, each offering the operations appropriate to its kind.
-Depending on the data source, your pipeline will end up starting with a
-batch or streaming stage. A batch source still can be used to simulate
-a streaming source using the <code>addTimestamps</code> method, which will
-convert it into a <code>StreamStage</code>.</p>
-<p>In this section we'll mostly use batch stages, for simplicity, but the
-API of operations common to both kinds is identical. Jet internally
-treats batches as a bounded stream. We'll explain later on how to apply
-windowing, which is necessary to aggregate over unbounded streams.</p>
-<h3><a class="anchor" aria-hidden="true" id="adding-timestamps-to-a-stream"></a><a href="#adding-timestamps-to-a-stream" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Adding Timestamps to a Stream</h3>
+and a
+<a href="/javadoc/4.4-SNAPSHOT/com/hazelcast/jet/pipeline/BatchStage.html">BatchStage</a>,
+each offering the operations appropriate to its kind.</p>
+<p>The kind of a stage is usually determined from its upstream stage,
+ultimately reaching the source where you explicitly choose to use a
+<code>StreamSource</code> or a <code>BatchSource</code>.</p>
+<p>You can also use a batch source to simulate an unbounded stream by using
+the <code>addTimestamps</code> transform.</p>
+<p>In this section we'll often use batch stages in the code snippets for
+simplicity, but the API of operations common to both kinds is identical.
+Jet internally treats a batch as a bounded stream. We'll explain later
+on how to apply windowing, which is necessary to aggregate over
+unbounded streams.</p>
+<h3><a class="anchor" aria-hidden="true" id="add-timestamps-to-a-stream"></a><a href="#add-timestamps-to-a-stream" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Add Timestamps to a Stream</h3>
 <p>The Pipeline API guides you to set up the timestamp policy right after
-you obtain a source stage. <code>pipeline.readFrom(someStreamSource)</code> returns
+you obtain a source stage. <code>pipeline.readFrom(aStreamSource)</code> returns
 a <code>SourceStreamStage</code> which offers just these methods:</p>
 <ul>
 <li><p><code>withNativeTimestamps()</code>
@@ -109,40 +113,24 @@ declares that the source stage has no timestamps. Use this if you
 don't need them (i.e., your pipeline won't perform windowed
 aggregation or stateful mapping).</p></li>
 </ul>
-<p>Exceptionally, you may need to call <code>withoutTimestamps()</code> on the source
-stage, then perform some transformations that determine the event
-timestamps, and then call <code>addTimestamps(timestampFn)</code> to instruct Jet
-where to find them in the events. Some examples include an enrichment
-stage that retrieves the timestamps from a side input or flat-mapping
-the stream to unpack a series of events from each original item. If you
-do this, however, it will no longer be the source that determines the
-watermark.</p>
+<p>You may also have to start without timestamps, then perform a
+transformation, and only then use <code>addTimestamps(timestampFn)</code> to
+instruct Jet where to find them in the transformed events. Some examples
+include an enrichment stage that retrieves the timestamps from a side
+input or flat-mapping the stream to unpack a series of events from each
+original item. If you do this, however, you will remove the watermarking
+responsibility from the source.</p>
 <h4><a class="anchor" aria-hidden="true" id="issue-with-sparse-events"></a><a href="#issue-with-sparse-events" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Issue with Sparse Events</h4>
 <p>If the time is extracted from the events, time progresses only when
 newer events arrive. If the events are sparse, the time will effectively
-stop until a newer event arrives. This causes high latency for
-time-sensitive operations (such as window aggregation). The time is also
-tracked for every source partition separately and if just one partition
-has sparse events, time progress in the whole job is hindered.</p>
+stop between two events. This causes high latency for time-sensitive
+operations (such as window aggregation). The time is also tracked for
+every source partition separately and if just one partition has sparse
+events, time progress in the whole job is hindered.</p>
 <p>To overcome this you can either ensure there's a consistent influx of
 events in every partition, or you can use <code>withIngestionTimestamps()</code>
 which doesn't have this issue because it's based on system clock on the
 member machines.</p>
-<h4><a class="anchor" aria-hidden="true" id="preserving-event-order"></a><a href="#preserving-event-order" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Preserving Event Order</h4>
-<p>In some use cases, the order of events with the same key should be
-preserved, in order to be able to apply stateful processing logic on
-them.</p>
-<p><code>Pipeline</code> has a property named <code>preserveOrder</code> and enabling this
-property instructs Jet to keep the order of events with the same
-partitioning key by avoiding the usage of round-robin edges.</p>
-<p>You can enable this property as follows:</p>
-<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-p<span class="token punctuation">.</span><span class="token function">setPreserveOrder</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-</code></pre>
-<blockquote>
-<p>Note that: Changing the partition keys in the different stages of the
-pipeline may cause out-of-order.</p>
-</blockquote>
 <h4><a class="anchor" aria-hidden="true" id="prefer-assigning-timestamps-at-the-source"></a><a href="#prefer-assigning-timestamps-at-the-source" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Prefer Assigning Timestamps at the Source</h4>
 <p>In some source implementations, especially partitioned ones like Kafka,
 there is a risk of high <a href="../concepts/event-time">event time skew</a>
@@ -163,6 +151,32 @@ timestamps within each partition and knows how to reconcile the
 temporary differences that occur between them.</p>
 <p>This feature works only if you set the timestamping policy in the source
 using <code>withTimestamps()</code> or <code>withNativeTimestamps()</code>.</p>
+<h2><a class="anchor" aria-hidden="true" id="event-reordering-and-how-to-prevent-it"></a><a href="#event-reordering-and-how-to-prevent-it" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Event Reordering and How To Prevent It</h2>
+<p>By default Jet prefers parallel throughput over strict event ordering.
+Many transforms aren't sensitive to the exact order of events. This
+includes the stateless transforms, as well as aggregate operations.
+There are also transforms, especially <code>mapStateful</code>, where it's much
+easier to write the logic if you can rely on the strict order of events.</p>
+<p>A common example of this is recognizing patterns in the event sequence
+and other tasks commonly done in the discipline of Complex Event
+Processing. Also, external services that a pipeline interacts with can
+be stateful, and their state can also be order dependent.</p>
+<p>For those cases, <code>Pipeline</code> has a property named <code>preserveOrder</code>. If you
+enable it, Jet will keep the order of events with the same partitioning
+key at the expense of less flexible balancing of parallel processing
+tasks. You can enable it this way:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+p<span class="token punctuation">.</span><span class="token function">setPreserveOrder</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Note that a given pipeline may still reorder events. This happens
+whenever you change the partitioning key along a data path. For example,
+if you receive data from a partitioned source like Kafka, but then use
+a <code>groupingKey</code> which doesn't match the Kafka partitioning key, it
+means you have changed the partitioning key and the original order is
+lost.</p>
+<p>There's a discussion of the underlying mechanisms of this feature in the
+<a href="/docs/architecture/distributed-computing#introduction">Pipeline Execution Model
+section</a></p>
 <h2><a class="anchor" aria-hidden="true" id="multiple-inputs"></a><a href="#multiple-inputs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Multiple Inputs</h2>
 <p>Your pipeline can consist of multiple sources, each starting its own
 pipeline branch, and you are allowed to mix both kinds of stages in the
@@ -228,7 +242,7 @@ Examples: <a href="/docs/next/api/stateful-transforms#aggregate">aggregate</a>,
 <p>This distinction is important because any stateful computation requires
 the state to be saved for fault-tolerance and this has big implications
 in terms of operational design.</p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/next/concepts/processing-guarantees"><span class="arrow-prev">← </span><span>Processing Guarantees for Stateful Computation</span></a><a class="docs-next button" href="/docs/next/api/stateless-transforms"><span>Stateless Transforms</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#batchstage-and-streamstage">BatchStage and StreamStage</a><ul class="toc-headings"><li><a href="#adding-timestamps-to-a-stream">Adding Timestamps to a Stream</a></li></ul></li><li><a href="#multiple-inputs">Multiple Inputs</a></li><li><a href="#multiple-outputs">Multiple outputs</a></li><li><a href="#pipeline-lifecycle">Pipeline lifecycle</a></li><li><a href="#types-of-transforms">Types of Transforms</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2021 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/next/concepts/processing-guarantees"><span class="arrow-prev">← </span><span>Processing Guarantees for Stateful Computation</span></a><a class="docs-next button" href="/docs/next/api/stateless-transforms"><span>Stateless Transforms</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#streamstage-and-batchstage">StreamStage and BatchStage</a><ul class="toc-headings"><li><a href="#add-timestamps-to-a-stream">Add Timestamps to a Stream</a></li></ul></li><li><a href="#event-reordering-and-how-to-prevent-it">Event Reordering and How To Prevent It</a></li><li><a href="#multiple-inputs">Multiple Inputs</a></li><li><a href="#multiple-outputs">Multiple outputs</a></li><li><a href="#pipeline-lifecycle">Pipeline lifecycle</a></li><li><a href="#types-of-transforms">Types of Transforms</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2021 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;

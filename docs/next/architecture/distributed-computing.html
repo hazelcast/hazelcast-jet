@@ -63,6 +63,11 @@
               }
             });
         </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/architecture/distributed-computing.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Pipeline Execution Model</h1></header><article><div><span><h2><a class="anchor" aria-hidden="true" id="core-dag-planner"></a><a href="#core-dag-planner" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Core DAG Planner</h2>
+<p>The Pipeline API models the data processing job as a pipeline which
+consists of stages. Every processing stage accepts the events from
+upstream stages, processes them, and passes the results to the
+downstream stage. To run a pipeline, Jet transforms it into the Core
+DAG. The top-level component that does this is called the Planner.</p>
 <p>In the <a href="/docs/concepts/dag">Concepts: DAG</a> section we used this pipeline
 as an example:</p>
 <pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
@@ -73,9 +78,9 @@ p<span class="token punctuation">.</span><span class="token function">readFrom</
  <span class="token punctuation">.</span><span class="token function">aggregate</span><span class="token punctuation">(</span><span class="token class-name">AggregateOperations</span><span class="token punctuation">.</span><span class="token function">counting</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
  <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token function">someSink</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
-<p>As you write this code, you form the Pipeline DAG and when you submit it
-for the execution, the Jet <code>Planner</code> converts it to the DAG of the
-Jet Core API:</p>
+<p>Let's use this example to go through the work of the planner. As you
+write the above code, you form the Pipeline DAG and when you submit it
+for execution, the planner converts it to the Core DAG:</p>
 <p><img src="/docs/assets/arch-dag-1.svg" alt="From the Pipeline DAG to the Core DAG"></p>
 <p>We can see that Jet applied some simple graph transformations:</p>
 <ul>
@@ -85,19 +90,38 @@ Jet Core API:</p>
 <p>In addition to this, the Core DAG introduces details on how to implement
 the routing of the data among vertices:</p>
 <p><img src="/docs/assets/arch-dag-2.svg" alt="Edge Types in the Core DAG"></p>
-<p>There are two main types of edges:</p>
+<p>Jet creates multiple parallel tasklets for each stage. It transfers the
+data between the tasklets of consecutive stages using two main routing
+strategies:</p>
 <ul>
 <li><em>round-robin:</em> a load-balancing edge that sends items to tasklets in a
 round-robin fashion. If a given queue is full, it tries the next one.</li>
+<li><em>isolated</em>: isolates the parallel code paths from each other, thereby
+preserving the order of events in each path. When the two connected
+vertices have the same parallelism, it establishes one-to-one
+connections between tasklets.</li>
 <li><em>partitioned:</em> computes the partition key of every item, which
 uniquely determines the destination tasklet. Necessary for stateful
 keyed transformations like group-and-aggregate.</li>
 </ul>
 <p>There are more details on partitioned edges in the <a href="/docs/concepts/dag#group-and-aggregate-transform-needs-data-partitioning">Concepts
 section</a>.</p>
-<p>This planning step happens on the client side, so what you actually
-submit for execution to the cluster is not the Jet pipeline, but the
-Core DAG. You also have the option to build the Core DAG directly, using
+<p>Round-robin is the default strategy. This means that an event emitted by
+a tasklet can be routed to any tasklet of the following stage. This
+strategy results in good balancing of the load of every CPU core, but it
+introduces event reordering.</p>
+<p>You can tell Jet not to use the round-robin routing strategy by enabling
+the <code>preserveOrder</code> property on the pipeline. In this case Jet uses the
+<code>isolated</code> strategy. This also restricts the parallelism, which can't
+change from one stage to the next. Effectively, the entire pipeline has
+the same parallelism as the source. For example, if you have a
+non-partitioned source that Jet accesses with a single processor, the
+entire pipeline may have a parallelism of 1. Jet is still free to
+increase the parallelism at the point where you introduce a new
+<code>groupingKey</code> or explicitly <code>rebalance</code> the data flow.</p>
+<p>This planning step that transform the pipeline to the Core DAG happens
+on the server side after you submit the pipeline for execution to the
+cluster. You also have the option to build the Core DAG directly, using
 its API, but it mostly offers you a lot of ways to make mistakes with
 little opportunity to improve on the automatic process.</p>
 <p>When the job is starting inside Jet, it will print the DAG definition in
