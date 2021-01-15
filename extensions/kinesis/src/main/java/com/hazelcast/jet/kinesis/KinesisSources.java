@@ -250,6 +250,12 @@ public final class KinesisSources {
          * <b>AT_SEQUENCE_NUMBER</b> and <b>AFTER_SEQUENCE_NUMBER</b> it
          * must be a sequence number accepted by KDS. For other types it
          * must be left {@code null}.
+         * <p>
+         * <strong>NOTE:</strong> The <b>AT_TIMESTAMP</b> version, even though
+         * supported by Kinesis, doesn't currently work properly. This is due
+         * to be a bug in AWS SDK v1, used by the source. AWS SDK v2 fixes the
+         * problem and hopefully this source will be switched to using that
+         * in future Jet releases.
          */
         @Nonnull
         public Builder withInitialShardIteratorRule(@Nonnull String shardIdRegExp,

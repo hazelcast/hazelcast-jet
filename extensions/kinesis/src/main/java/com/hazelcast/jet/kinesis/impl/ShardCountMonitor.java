@@ -18,6 +18,7 @@ package com.hazelcast.jet.kinesis.impl;
 import com.amazonaws.SdkClientException;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.amazonaws.services.kinesis.model.DescribeStreamSummaryResult;
+import com.amazonaws.services.kinesis.model.StreamDescriptionSummary;
 import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.logging.ILogger;
 
@@ -111,7 +112,16 @@ public class ShardCountMonitor extends AbstractShardWorker {
 
             describeStreamRetryTracker.reset();
 
-            int newShardCount = result.getStreamDescriptionSummary().getOpenShardCount();
+            StreamDescriptionSummary streamDescription = result.getStreamDescriptionSummary();
+            if (streamDescription == null) {
+                return;
+            }
+
+            Integer newShardCount = streamDescription.getOpenShardCount();
+            if (newShardCount == null) {
+                return;
+            }
+
             int oldShardCount = shardCount.getAndSet(newShardCount);
             if (oldShardCount != newShardCount) {
                 logger.info(String.format("Updated shard count for stream %s: %d", stream, newShardCount));

@@ -173,22 +173,22 @@ public class TweetPublisher {
   public static void main(String[] args) {
     Pipeline p = Pipeline.create();
     p.readFrom(TestSources.itemStream(3))
-        .withoutTimestamps()
-        .flatMap(event -> {
-          ThreadLocalRandom random = ThreadLocalRandom.current();
-          long count = random.nextLong(1, 10);
+     .withoutTimestamps()
+     .flatMap(event -> {
+       ThreadLocalRandom random = ThreadLocalRandom.current();
+       long count = random.nextLong(1, 10);
 
-          Stream<Entry<String, byte[]>> tweets = LongStream.range(0, count)
-              .map(l -> event.sequence() * 10 + l)
-              .boxed()
-              .map(l -> entry(
-                  Long.toString(l % 10),
-                  String.format("tweet-%0,4d", l).getBytes())
-              );
+       Stream<Entry<String, byte[]>> tweets = LongStream.range(0, count)
+           .map(l -> event.sequence() * 10 + l)
+           .boxed()
+           .map(l -> entry(
+               Long.toString(l % 10),
+               String.format("tweet-%0,4d", l).getBytes())
+           );
 
-          return Traversers.traverseStream(tweets);
-        })
-        .writeTo(KinesisSinks.kinesis("Tweets").build());
+       return Traversers.traverseStream(tweets);
+     })
+     .writeTo(KinesisSinks.kinesis("Tweets").build());
 
     JobConfig cfg = new JobConfig().setName("tweet-publisher");
     Jet.bootstrappedInstance().newJob(p, cfg);
@@ -247,16 +247,20 @@ public class JetJob {
       DateTimeFormatter.ofPattern("HH:mm:ss:SSS");
 
   public static void main(String[] args) {
+    StreamSource<Map.Entry<String, byte[]>> source = KinesisSources.kinesis("Tweets")
+     .withInitialShardIteratorRule(".*", "LATEST", null)
+     .build();
+
     Pipeline p = Pipeline.create();
-    p.readFrom(KinesisSources.kinesis("Tweets").build())
-        .withNativeTimestamps(0)
-        .window(sliding(1_000, 500))
-        .aggregate(counting())
-        .writeTo(Sinks.logger(wr -> String.format(
-            "At %s Kinesis got %,d tweets per second",
-            TIME_FORMATTER.format(LocalDateTime.ofInstant(
-                Instant.ofEpochMilli(wr.end()), ZoneId.systemDefault())),
-            wr.result())));
+    p.readFrom(source)
+     .withNativeTimestamps(0)
+     .window(sliding(1_000, 500))
+     .aggregate(counting())
+     .writeTo(Sinks.logger(wr -> String.format(
+         "At %s Kinesis got %,d tweets per second",
+         TIME_FORMATTER.format(LocalDateTime.ofInstant(
+             Instant.ofEpochMilli(wr.end()), ZoneId.systemDefault())),
+         wr.result())));
 
     JobConfig cfg = new JobConfig().setName("kinesis-traffic-monitor");
     Jet.bootstrappedInstance().newJob(p, cfg);
@@ -310,6 +314,12 @@ Once you're done, cancel the Jet jobs:
 ```bash
 <path_to_jet>/bin/jet cancel tweet-publisher
 <path_to_jet>/bin/jet cancel kinesis-traffic-monitor
+```
+
+Then we shut down our Jet member/cluster:
+
+```bash
+<path_to_jet>/bin/jet-stop
 ```
 
 Also, clean up the "Tweets" stream from Kinesis (use the [AWS
