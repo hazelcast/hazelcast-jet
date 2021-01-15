@@ -108,7 +108,7 @@ however it can be read only in one direction and never in full. For
 example, you can't use an aggregate function over a stream:
 
 ```sql
-sql〉 SELECT SUM(v) FROM TABLE(generate_stream(10));
+sql〉 SELECT sum(v) FROM TABLE(generate_stream(10));
 From line 1, column 1 to line 1, column 45: Grouping/aggregations not
 supported for a streaming query
 ```
