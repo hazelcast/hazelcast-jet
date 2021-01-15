@@ -26,22 +26,23 @@ A pipeline stage is one of two basic kinds: a stream stage or a batch
 stage. The data passing through a stream stage never reaches the end,
 while only a finite amount of data passes through a batch stage. This
 split is visible in the Java types: there is a
-[BatchStage](/javadoc/{jet-version}/com/hazelcast/jet/pipeline/BatchStage.html)
+[StreamStage](/javadoc/{jet-version}/com/hazelcast/jet/pipeline/StreamStage.html)
 and a
-[StreamStage](/javadoc/{jet-version}/com/hazelcast/jet/pipeline/StreamStage.html),
+[BatchStage](/javadoc/{jet-version}/com/hazelcast/jet/pipeline/BatchStage.html),
 each offering the operations appropriate to its kind.
 
 The kind of a stage is usually determined from its upstream stage,
 ultimately reaching the source where you explicitly choose to use a
-`BatchSource` or a `StreamSource`.
+`StreamSource` or a `BatchSource`.
 
 You can also use a batch source to simulate an unbounded stream by using
 the `addTimestamps` transform.
 
-In this section we'll mostly use batch stages for simplicity, but the
-API of operations common to both kinds is identical. Jet internally
-treats a batch as a bounded stream. We'll explain later on how to apply
-windowing, which is necessary to aggregate over unbounded streams.
+In this section we'll often use batch stages in the code snippets for
+simplicity, but the API of operations common to both kinds is identical.
+Jet internally treats a batch as a bounded stream. We'll explain later
+on how to apply windowing, which is necessary to aggregate over
+unbounded streams.
 
 ### Add Timestamps to a Stream
 
@@ -118,18 +119,18 @@ using `withTimestamps()` or `withNativeTimestamps()`.
 By default Jet prefers parallel throughput over strict event ordering.
 Many transforms aren't sensitive to the exact order of events. This
 includes the stateless transforms, as well as aggregate operations.
-Some transforms, especially `mapStateful`, are usually sensitive to
-the order of processing the events.
+There are also transforms, especially `mapStateful`, where it's much
+easier to write the logic if you can rely on the strict order of events.
 
-A common example of this is recognizing patterns in the event sequence,
-and other tasks usually performed in the discipline of Complex Event
+A common example of this is recognizing patterns in the event sequence
+and other tasks commonly done in the discipline of Complex Event
 Processing. Also, external services that a pipeline interacts with can
 be stateful, and their state can also be order dependent.
 
 For those cases, `Pipeline` has a property named `preserveOrder`. If you
 enable it, Jet will keep the order of events with the same partitioning
 key at the expense of less flexible balancing of parallel processing
-tasks. You can enable this property as follows:
+tasks. You can enable it this way:
 
 ```java
 Pipeline p = Pipeline.create();

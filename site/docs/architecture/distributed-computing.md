@@ -24,9 +24,9 @@ p.readFrom(textSource())
  .writeTo(someSink());
  ```
 
-Let's use this example to work through the work of the planner. As you
+Let's use this example to go through the work of the planner. As you
 write the above code, you form the Pipeline DAG and when you submit it
-for execution, the planner converts it to Core DAG:
+for execution, the planner converts it to the Core DAG:
 
 ![From the Pipeline DAG to the Core DAG](/docs/assets/arch-dag-1.svg)
 
@@ -46,6 +46,10 @@ strategies:
 
 - *round-robin:* a load-balancing edge that sends items to tasklets in a
   round-robin fashion. If a given queue is full, it tries the next one.
+- *isolated*: isolates the parallel code paths from each other, thereby
+  preserving the order of events in each path. When the two connected
+  vertices have the same parallelism, it establishes one-to-one
+  connections between tasklets.
 - *partitioned:* computes the partition key of every item, which
   uniquely determines the destination tasklet. Necessary for stateful
   keyed transformations like group-and-aggregate.
@@ -60,14 +64,13 @@ introduces event reordering.
 
 You can tell Jet not to use the round-robin routing strategy by enabling
 the `preserveOrder` property on the pipeline. In this case Jet uses the
-`isolated` strategy, which isolates the parallel data paths from each
-other. This also restricts the parallelism, which can't change from one
-stage to the next. Effectively, the entire pipeline has the same
-parallelism as the source. For example, if you have a non-partitioned
-source that Jet accesses with a single processor, the entire pipeline
-may have a parallelism of 1. Jet is still free to increase the
-parallelism at the point where you introduce a new `groupingKey` or
-explicitly `rebalance` the data flow.
+`isolated` strategy. This also restricts the parallelism, which can't
+change from one stage to the next. Effectively, the entire pipeline has
+the same parallelism as the source. For example, if you have a
+non-partitioned source that Jet accesses with a single processor, the
+entire pipeline may have a parallelism of 1. Jet is still free to
+increase the parallelism at the point where you introduce a new
+`groupingKey` or explicitly `rebalance` the data flow.
 
 This planning step that transform the pipeline to the Core DAG happens
 on the server side after you submit the pipeline for execution to the
