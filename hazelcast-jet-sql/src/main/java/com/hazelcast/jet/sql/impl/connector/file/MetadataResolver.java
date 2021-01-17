@@ -92,42 +92,44 @@ abstract class MetadataResolver<T> {
     protected Supplier<ProcessorMetaSupplier> toProcessorMetaSupplierProvider(
             Map<String, ?> options, FileFormat<?> format
     ) {
-        FileSourceBuilder<?> builder = FileSources.files((String) options.get(OPTION_PATH)).format(format);
+        return () -> {
+            FileSourceBuilder<?> builder = FileSources.files((String) options.get(OPTION_PATH)).format(format);
 
-        String glob = (String) options.get(OPTION_GLOB);
-        if (glob != null) {
-            builder.glob(glob);
-        }
+            String glob = (String) options.get(OPTION_GLOB);
+            if (glob != null) {
+                builder.glob(glob);
+            }
 
-        String sharedFileSystem = (String) options.get(OPTION_SHARED_FILE_SYSTEM);
-        if (sharedFileSystem != null) {
-            builder.sharedFileSystem(Boolean.parseBoolean(sharedFileSystem));
-        }
+            String sharedFileSystem = (String) options.get(OPTION_SHARED_FILE_SYSTEM);
+            if (sharedFileSystem != null) {
+                builder.sharedFileSystem(Boolean.parseBoolean(sharedFileSystem));
+            }
 
-        String ignoreFileNotFound = (String) options.get(OPTION_IGNORE_FILE_NOT_FOUND);
-        if (ignoreFileNotFound != null) {
-            builder.ignoreFileNotFound(Boolean.parseBoolean(ignoreFileNotFound));
-        }
+            String ignoreFileNotFound = (String) options.get(OPTION_IGNORE_FILE_NOT_FOUND);
+            if (ignoreFileNotFound != null) {
+                builder.ignoreFileNotFound(Boolean.parseBoolean(ignoreFileNotFound));
+            }
 
-        for (Entry<String, ?> entry : options.entrySet()) {
-            String key = entry.getKey();
-            if (OPTION_PATH.equals(key) || OPTION_GLOB.equals(key) || OPTION_SHARED_FILE_SYSTEM.equals(key) ||
+            for (Entry<String, ?> entry : options.entrySet()) {
+                String key = entry.getKey();
+                if (OPTION_PATH.equals(key) || OPTION_GLOB.equals(key) || OPTION_SHARED_FILE_SYSTEM.equals(key) ||
                     OPTION_IGNORE_FILE_NOT_FOUND.equals(key)) {
-                continue;
-            }
-
-            Object value = entry.getValue();
-            if (value instanceof String) {
-                builder.option(key, (String) value);
-            } else if (value instanceof Map) {
-                for (Entry<String, String> option : ((Map<String, String>) value).entrySet()) {
-                    builder.option(option.getKey(), option.getValue());
+                    continue;
                 }
-            } else {
-                throw new IllegalArgumentException("Unexpected option type: " + value.getClass());
+
+                Object value = entry.getValue();
+                if (value instanceof String) {
+                    builder.option(key, (String) value);
+                } else if (value instanceof Map) {
+                    for (Entry<String, String> option : ((Map<String, String>) value).entrySet()) {
+                        builder.option(option.getKey(), option.getValue());
+                    }
+                } else {
+                    throw new IllegalArgumentException("Unexpected option type: " + value.getClass());
+                }
             }
-        }
-        return builder::buildMetaSupplier;
+            return builder.buildMetaSupplier();
+        };
     }
 
     protected abstract FileFormat<?> sampleFormat();
