@@ -56,7 +56,7 @@ final class ShardCountMonitorImpl extends AbstractShardWorker implements ShardCo
     private long nextDescribeStreamTime;
 
     ShardCountMonitorImpl(
-            int knownShardCountInstances,
+            int knownShardCounterInstances,
             AmazonKinesisAsync kinesis,
             String streamName,
             RetryStrategy retryStrategy,
@@ -64,7 +64,7 @@ final class ShardCountMonitorImpl extends AbstractShardWorker implements ShardCo
     ) {
         super(kinesis, streamName, logger);
         this.describeStreamRetryTracker = new RetryTracker(retryStrategy);
-        this.describeStreamRateTracker = initRandomizedTracker(knownShardCountInstances);
+        this.describeStreamRateTracker = initRandomizedTracker(knownShardCounterInstances);
         this.nextDescribeStreamTime = System.nanoTime();
     }
 
