@@ -19,30 +19,19 @@ it.
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Docker-->
-If you have previously used Hazelcast Jet in Docker make sure you are
-using the latest version available:
+Update and start the Jet container by pasting this into your terminal:
 
 ```text
 docker pull hazelcast/hazelcast-jet
+docker network create jet-network
+docker run --name jet --network jet-network -v $(pwd):/csv-dir --rm hazelcast/hazelcast-jet
 ```
 
-Then create a network to run the containers in:
+We created a named Docker network so we can easily make several
+containers talk to each other, using the container name as the hostname.
 
-```text
-docker network create cluster
-```
-
-And start the container:
-
-```text
-docker run --name jet --network cluster -v $(pwd):/csv-dir --rm hazelcast/hazelcast-jet
-```
-
-The option `--network cluster` puts runs the container inside a
-network. This allows us to refer to the containers by their names
-(specified by `--name` option) instead of their ip addresses.
 The `-v` option maps the current directory to `/csv-dir` inside the
-container, be in the same directory when you create the file in the
+container, stay in the same directory when you create the file in the
 CSV example below.
 
 <!--Tarball-->
@@ -75,11 +64,15 @@ Now start another terminal window and enter the SQL shell:
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Docker-->
 ```text
-$ docker run --network cluster -it hazelcast/hazelcast-jet jet -t jet sql
+$ docker run --network jet-network -it --rm hazelcast/hazelcast-jet jet --target jet sql
 Connected to Hazelcast Jet 4.4 at [172.17.0.2]:5701 (+0 more)
 Type 'help' for instructions
 sql〉
 ```
+
+Here, `--target jet` is the SQL shell's command-line parameter that
+tells it to connect to the host named `jet`.
+
 <!--Tarball-->
 ```text
 $ bin/jet sql
@@ -275,12 +268,12 @@ See the [File Connector](file-connector) page for more details.
 
 ## Query a Kafka Topic
 
-Let's start by starting a Kafka server.
+Let's start by running a Kafka server.
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Docker-->
-```bash
-docker run --name kafka --network cluster --rm hazelcast/hazelcast-quickstart-kafka
+```text
+docker run --name kafka --network jet-network --rm hazelcast/hazelcast-quickstart-kafka
 ```
 
 <!--Tarball-->
