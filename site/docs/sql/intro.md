@@ -19,12 +19,31 @@ it.
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Docker-->
+If you have previously used Hazelcast Jet in Docker make sure you are
+using the latest version available:
+
 ```text
-docker run -v $(pwd):/csv-dir --net=host hazelcast/hazelcast-jet
+docker pull hazelcast/hazelcast-jet
 ```
 
-This maps the current directory to `/csv-dir` inside the container, be
-in the same directory when you create the file in the CSV example below.
+Then create a network to run the containers in:
+
+```text
+docker network create cluster
+```
+
+And start the container:
+
+```text
+docker run --name jet --network cluster -v $(pwd):/csv-dir --rm hazelcast/hazelcast-jet
+```
+
+The option `--network cluster` puts runs the container inside a
+network. This allows us to refer to the containers by their names
+(specified by `--name` option) instead of their ip addresses.
+The `-v` option maps the current directory to `/csv-dir` inside the
+container, be in the same directory when you create the file in the
+CSV example below.
 
 <!--Tarball-->
 Prerequisite is Java.
@@ -56,7 +75,7 @@ Now start another terminal window and enter the SQL shell:
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Docker-->
 ```text
-$ docker run -it hazelcast/hazelcast-jet jet -t 172.17.0.2 sql
+$ docker run --network cluster -it hazelcast/hazelcast-jet jet -t jet sql
 Connected to Hazelcast Jet 4.4 at [172.17.0.2]:5701 (+0 more)
 Type 'help' for instructions
 sql〉
@@ -171,14 +190,15 @@ This is how you can create a mapping to a Kafka topic `trades` with
 JSON messages:
 
 ```sql
-sql〉 CREATE EXTERNAL MAPPING trades (
+sql〉 CREATE MAPPING trades (
+    id BIGINT,
     ticker VARCHAR,
     price DECIMAL,
     amount BIGINT)
 TYPE Kafka
 OPTIONS (
     'valueFormat' = 'json',
-    'bootstrap.servers' = '127.0.0.1:9092'
+    'bootstrap.servers' = 'kafka:9092'
 );
 OK
 sql〉 SHOW MAPPINGS;
@@ -260,7 +280,7 @@ Let's start by starting a Kafka server.
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Docker-->
 ```bash
-docker run hazelcast/kafka-quickstart
+docker run --name kafka --network cluster --rm hazelcast/hazelcast-quickstart-kafka
 ```
 
 <!--Tarball-->
@@ -315,7 +335,7 @@ sql〉 CREATE MAPPING trades (
 TYPE Kafka
 OPTIONS (
     'valueFormat' = 'json',
-    'bootstrap.servers' = '127.0.0.1:9092'
+    'bootstrap.servers' = 'kafka:9092'
 );
 OK
 sql〉 SELECT ticker, ROUND(price * 100) AS price_cents, amount
