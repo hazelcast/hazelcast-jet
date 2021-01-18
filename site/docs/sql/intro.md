@@ -14,13 +14,19 @@ formats will probably change in future releases._
 
 ## Quick Start
 
-You can either download our tarball and start Jet from it, or use our
-Docker image.
+You can use our Docker image, or download our tarball and start Jet from
+it.
 
 <!--DOCUSAURUS_CODE_TABS-->
+<!--Docker-->
+```text
+docker run -v $(pwd):/csv-dir --net=host hazelcast/hazelcast-jet
+```
+
+This maps the current directory to `/csv-dir` inside the container, be
+in the same directory when you create the file in the CSV example below.
 
 <!--Tarball-->
-
 Prerequisite is Java.
 
 Download and start Jet by pasting this into your terminal:
@@ -31,15 +37,6 @@ tar xvf hazelcast-jet-4.4.tar.gz
 cd hazelcast-jet-4.4
 bin/jet-start
 ```
-
-<!--Docker-->
-
-```text
-docker run -v $(pwd):/csv-dir hazelcast/hazelcast-jet
-```
-
-This maps the current directory to `/csv-dir` inside the container, be
-in the same directory when you create the file in the CSV example below.
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ----
@@ -57,17 +54,17 @@ Jet.
 Now start another terminal window and enter the SQL shell:
 
 <!--DOCUSAURUS_CODE_TABS-->
-<!--Tarball-->
-```text
-$ bin/jet sql
-Connected to Hazelcast Jet 4.4 at [192.168.0.1]:5701 (+0 more)
-Type 'help' for instructions
-sql〉
-```
 <!--Docker-->
 ```text
 $ docker run -it hazelcast/hazelcast-jet jet -t 172.17.0.2 sql
 Connected to Hazelcast Jet 4.4 at [172.17.0.2]:5701 (+0 more)
+Type 'help' for instructions
+sql〉
+```
+<!--Tarball-->
+```text
+$ bin/jet sql
+Connected to Hazelcast Jet 4.4 at [192.168.0.1]:5701 (+0 more)
 Type 'help' for instructions
 sql〉
 ```
@@ -214,14 +211,12 @@ id,name
 Now you can write the SQL:
 
 <!--DOCUSAURUS_CODE_TABS-->
-
-<!--Tarball-->
-
+<!--Docker-->
 ```sql
 sql〉 CREATE MAPPING csv_trades (id TINYINT, name VARCHAR)
 TYPE File
 OPTIONS ('format'='csv',
-    'path'='/path/to/curr-dir', 'glob'='trades.csv');
+    'path'='/csv-dir', 'glob'='trades.csv');
 OK
 sql〉 SELECT * FROM csv_trades;
 +----+--------------------+
@@ -235,13 +230,12 @@ sql〉 SELECT * FROM csv_trades;
 sql〉
 ```
 
-<!--Docker-->
-
+<!--Tarball-->
 ```sql
 sql〉 CREATE MAPPING csv_trades (id TINYINT, name VARCHAR)
 TYPE File
 OPTIONS ('format'='csv',
-    'path'='/csv-dir', 'glob'='trades.csv');
+    'path'='/path/to/curr-dir', 'glob'='trades.csv');
 OK
 sql〉 SELECT * FROM csv_trades;
 +----+--------------------+
@@ -261,7 +255,16 @@ See the [File Connector](file-connector) page for more details.
 
 ## Query a Kafka Topic
 
-Let's start by installing Kafka. Paste these into your terminal:
+Let's start by starting a Kafka server.
+
+<!--DOCUSAURUS_CODE_TABS-->
+<!--Docker-->
+```bash
+docker run hazelcast/kafka-quickstart
+```
+
+<!--Tarball-->
+Paste these into your terminal:
 
 ```text
 wget http://mirror.cc.columbia.edu/pub/software/apache/kafka/2.7.0/kafka_2.13-2.7.0.tgz
@@ -285,6 +288,9 @@ $ bg
 [1]+ bin/zookeeper-server-start.sh config/zookeeper.properties &
 $ bin/kafka-server-start.sh config/server.properties
 ```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+----
 
 You are now ready to query Kafka. We'll use JSON messages like this one:
 
@@ -426,9 +432,9 @@ To cancel the job, use:
 sql〉 DROP JOB ingest_trades;
 ```
 
-## Use Jet SQL Embedded Inside Your App
+## Use Jet SQL Embedded Inside Your Java App
 
-If you use Jet as an embedded library, besides the `hazelcast-jet`
+If you use Jet as an embedded Java library, besides the `hazelcast-jet`
 dependency add also the `hazelcast-jet-sql` dep:
 
 <!--DOCUSAURUS_CODE_TABS-->
