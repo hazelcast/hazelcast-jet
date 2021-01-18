@@ -202,10 +202,8 @@ class MasterSnapshotContext {
                 }
                 mergedResult.merge((SnapshotPhase1Result) response);
             }
-            boolean isSuccess = mergedResult.getError() == null;
-            SnapshotStats stats = mc.jobExecutionRecord().ongoingSnapshotDone(
-                    mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks(),
-                    mergedResult.getError());
+            boolean isSuccess;
+            SnapshotStats stats;
 
             mc.lock();
             try {
@@ -241,6 +239,11 @@ class MasterSnapshotContext {
                 } catch (Exception e) {
                     mergedResult.merge(new SnapshotPhase1Result(0, 0, 0, e));
                 }
+
+                isSuccess = mergedResult.getError() == null;
+                stats = mc.jobExecutionRecord().ongoingSnapshotDone(
+                        mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks(),
+                        mergedResult.getError());
 
                 // the decision moment for regular snapshots: after this the snapshot is ready to be restored from
                 mc.writeJobExecutionRecord(false);
