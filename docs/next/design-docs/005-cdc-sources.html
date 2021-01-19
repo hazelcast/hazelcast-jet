@@ -286,9 +286,9 @@ allows for the creation of PostgreSQL based CDC sources (see <a href="https://gi
 <li>more supported databases coming in future versions</li>
 </ul>
 <p><code>cdc-debezium</code> is the core module. It generates a self-contained JAR
-with all dependencies included and is stored in the <code>opt</code> folder of the
+with all dependencies included and is stored in the <code>lib</code> folder of the
 distribution. The <code>cdc-mysql</code> and <code>cdc-postgres</code> jars are also in the
-<code>opt</code> folder of the distribution, but they don't contain dependencies,
+<code>lib</code> folder of the distribution, but they don't contain dependencies,
 so have to be put on the classpath together with the <code>cdc-debezium</code> jar.</p>
 <p>For example to make members of a cluster able to work with MySQL CDC
 sources, what one needs to do is to move both the
