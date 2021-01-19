@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
@@ -25,11 +24,11 @@ import com.hazelcast.jet.pipeline.file.impl.FileProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.file.impl.FileTraverser;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
-import com.hazelcast.sql.impl.extract.QueryTarget;
 import com.hazelcast.sql.impl.schema.TableField;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.toList;
@@ -42,7 +41,7 @@ import static java.util.Map.Entry;
 abstract class MetadataResolver<T> {
 
     String supportedFormat() {
-        return format().format();
+        return sampleFormat().format();
     }
 
     List<MappingField> resolveAndValidateFields(List<MappingField> userFields, Map<String, ?> options) {
@@ -63,7 +62,7 @@ abstract class MetadataResolver<T> {
     @SuppressWarnings("unchecked")
     private List<MappingField> resolveFieldsFromSample(Map<String, ?> options) {
         FileProcessorMetaSupplier<T> fileProcessorMetaSupplier =
-                (FileProcessorMetaSupplier<T>) toProcessorMetaSupplier(options);
+                (FileProcessorMetaSupplier<T>) toProcessorMetaSupplierProvider(options, sampleFormat()).get();
 
         try (FileTraverser<T> traverser = fileProcessorMetaSupplier.traverser()) {
             T sample = traverser.next();
@@ -76,11 +75,9 @@ abstract class MetadataResolver<T> {
         }
     }
 
-    Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options) {
-        return new Metadata(toFields(resolvedFields), toProcessorMetaSupplier(options), queryTargetSupplier());
-    }
+    protected abstract Metadata resolveMetadata(List<MappingField> resolvedFields, Map<String, ?> options);
 
-    private List<TableField> toFields(List<MappingField> resolvedFields) {
+    protected List<TableField> toFields(List<MappingField> resolvedFields) {
         return toList(
                 resolvedFields,
                 field -> new FileTableField(
@@ -92,48 +89,50 @@ abstract class MetadataResolver<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private ProcessorMetaSupplier toProcessorMetaSupplier(Map<String, ?> options) {
-        FileSourceBuilder<?> builder = FileSources.files((String) options.get(OPTION_PATH)).format(format());
+    protected Supplier<ProcessorMetaSupplier> toProcessorMetaSupplierProvider(
+            Map<String, ?> options, FileFormat<?> format
+    ) {
+        return () -> {
+            FileSourceBuilder<?> builder = FileSources.files((String) options.get(OPTION_PATH)).format(format);
 
-        String glob = (String) options.get(OPTION_GLOB);
-        if (glob != null) {
-            builder.glob(glob);
-        }
+            String glob = (String) options.get(OPTION_GLOB);
+            if (glob != null) {
+                builder.glob(glob);
+            }
 
-        String sharedFileSystem = (String) options.get(OPTION_SHARED_FILE_SYSTEM);
-        if (sharedFileSystem != null) {
-            builder.sharedFileSystem(Boolean.parseBoolean(sharedFileSystem));
-        }
+            String sharedFileSystem = (String) options.get(OPTION_SHARED_FILE_SYSTEM);
+            if (sharedFileSystem != null) {
+                builder.sharedFileSystem(Boolean.parseBoolean(sharedFileSystem));
+            }
 
-        String ignoreFileNotFound = (String) options.get(OPTION_IGNORE_FILE_NOT_FOUND);
-        if (ignoreFileNotFound != null) {
-            builder.ignoreFileNotFound(Boolean.parseBoolean(ignoreFileNotFound));
-        }
+            String ignoreFileNotFound = (String) options.get(OPTION_IGNORE_FILE_NOT_FOUND);
+            if (ignoreFileNotFound != null) {
+                builder.ignoreFileNotFound(Boolean.parseBoolean(ignoreFileNotFound));
+            }
 
-        for (Entry<String, ?> entry : options.entrySet()) {
-            String key = entry.getKey();
-            if (OPTION_PATH.equals(key) || OPTION_GLOB.equals(key) || OPTION_SHARED_FILE_SYSTEM.equals(key) ||
+            for (Entry<String, ?> entry : options.entrySet()) {
+                String key = entry.getKey();
+                if (OPTION_PATH.equals(key) || OPTION_GLOB.equals(key) || OPTION_SHARED_FILE_SYSTEM.equals(key) ||
                     OPTION_IGNORE_FILE_NOT_FOUND.equals(key)) {
-                continue;
-            }
-
-            Object value = entry.getValue();
-            if (value instanceof String) {
-                builder.option(key, (String) value);
-            } else if (value instanceof Map) {
-                for (Entry<String, String> option : ((Map<String, String>) value).entrySet()) {
-                    builder.option(option.getKey(), option.getValue());
+                    continue;
                 }
-            } else {
-                throw new IllegalArgumentException("Unexpected option type: " + value.getClass());
+
+                Object value = entry.getValue();
+                if (value instanceof String) {
+                    builder.option(key, (String) value);
+                } else if (value instanceof Map) {
+                    for (Entry<String, String> option : ((Map<String, String>) value).entrySet()) {
+                        builder.option(option.getKey(), option.getValue());
+                    }
+                } else {
+                    throw new IllegalArgumentException("Unexpected option type: " + value.getClass());
+                }
             }
-        }
-        return builder.buildMetaSupplier();
+            return builder.buildMetaSupplier();
+        };
     }
 
-    protected abstract FileFormat<?> format();
+    protected abstract FileFormat<?> sampleFormat();
 
     protected abstract List<MappingField> resolveFieldsFromSample(T sample);
-
-    protected abstract SupplierEx<QueryTarget> queryTargetSupplier();
 }
