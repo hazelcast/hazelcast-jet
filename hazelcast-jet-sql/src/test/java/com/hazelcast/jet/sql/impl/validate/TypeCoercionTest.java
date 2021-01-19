@@ -30,6 +30,8 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.Parameterized.UseParametersRunnerFactory;
 
+import java.util.regex.Pattern;
+
 import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.BIGINT;
 import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.BOOLEAN;
 import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.DATE;
@@ -146,13 +148,13 @@ public class TypeCoercionTest extends SqlTestSupport {
                 TestParams.failingCase(1209, BOOLEAN, DOUBLE, "true", "true",
                         "CAST function cannot convert value of type BOOLEAN to type DOUBLE"),
                 TestParams.failingCase(1210, BOOLEAN, TIME, "true", "true",
-                        "Cannot assign to target field 'this' of type TIME from source field 'EXPR$1' of type BOOLEAN"),
+                        "Cannot assign to target field 'this' of type TIME from source field '.+' of type BOOLEAN"),
                 TestParams.failingCase(1211, BOOLEAN, DATE, "true", "true",
-                        "Cannot assign to target field 'this' of type DATE from source field 'EXPR$1' of type BOOLEAN"),
+                        "Cannot assign to target field 'this' of type DATE from source field '.+' of type BOOLEAN"),
                 TestParams.failingCase(1212, BOOLEAN, TIMESTAMP, "true", "true",
-                        "Cannot assign to target field 'this' of type TIMESTAMP from source field 'EXPR$1' of type BOOLEAN"),
+                        "Cannot assign to target field 'this' of type TIMESTAMP from source field '.+' of type BOOLEAN"),
                 TestParams.failingCase(1213, BOOLEAN, TIMESTAMP_WITH_TIME_ZONE, "true", "true",
-                        "Cannot assign to target field 'this' of type TIMESTAMP_WITH_TIME_ZONE from source field 'EXPR$1' of type BOOLEAN"),
+                        "Cannot assign to target field 'this' of type TIMESTAMP_WITH_TIME_ZONE from source field '.+' of type BOOLEAN"),
                 TestParams.failingCase(1214, BOOLEAN, OBJECT, "true", "true",
                         "Writing to top-level fields of type OBJECT not supported"),
 
@@ -498,16 +500,16 @@ public class TypeCoercionTest extends SqlTestSupport {
         logger.info(sql);
         try {
             sqlService.execute(sql);
-            if (testParams.expectedFailure != null) {
-                fail("Expected to fail with \"" + testParams.expectedFailure + "\", but no exception was thrown");
+            if (testParams.expectedFailureRegex != null) {
+                fail("Expected to fail with \"" + testParams.expectedFailureRegex + "\", but no exception was thrown");
             }
         } catch (Exception e) {
-            if (testParams.expectedFailure == null) {
+            if (testParams.expectedFailureRegex == null) {
                 throw e;
             }
-            if (!e.getMessage().contains(testParams.expectedFailure)) {
+            if (!testParams.exceptionMatches(e)) {
                 throw new AssertionError("'" + e.getMessage() + "' didn't contain expected '"
-                        + testParams.expectedFailure + "'", e);
+                        + testParams.expectedFailureRegex + "'", e);
             } else {
                 logger.info("Caught expected exception", e);
             }
@@ -519,7 +521,6 @@ public class TypeCoercionTest extends SqlTestSupport {
     @Test
     public void test_insertSelect() {
         assumeTrue(testParams.srcType != NULL && testParams.targetType != NULL);
-        Class<?> srcClass = javaClassForType(testParams.srcType);
         Class<?> targetClass = javaClassForType(testParams.targetType);
         TestBatchSqlConnector.create(sqlService, "src", singletonList("v"),
                 singletonList(resolveTypeForTypeFamily(testParams.srcType)),
@@ -527,9 +528,8 @@ public class TypeCoercionTest extends SqlTestSupport {
 
         String sql = "CREATE MAPPING target TYPE IMap " +
                 "OPTIONS(" +
-                "'keyFormat'='java', " +
+                "'keyFormat'='int', " +
                 "'valueFormat'='java', " +
-                "'keyJavaClass'='java.lang.Integer', " +
                 "'valueJavaClass'='" + targetClass.getName() +
                 "')";
         logger.info(sql);
@@ -539,16 +539,16 @@ public class TypeCoercionTest extends SqlTestSupport {
             sql = "SINK INTO target SELECT cast(0 as integer), v FROM src";
             logger.info(sql);
             sqlService.execute(sql);
-            if (testParams.expectedFailure != null) {
-                fail("Expected to fail with \"" + testParams.expectedFailure + "\", but no exception was thrown");
+            if (testParams.expectedFailureRegex != null) {
+                fail("Expected to fail with \"" + testParams.expectedFailureRegex + "\", but no exception was thrown");
             }
         } catch (Exception e) {
-            if (testParams.expectedFailure == null) {
+            if (testParams.expectedFailureRegex == null) {
                 throw e;
             }
-            if (!e.getMessage().contains(testParams.expectedFailure)) {
+            if (!testParams.exceptionMatches(e)) {
                 throw new AssertionError("'" + e.getMessage() + "' didn't contain expected '"
-                        + testParams.expectedFailure + "'", e);
+                        + testParams.expectedFailureRegex + "'", e);
             } else {
                 logger.info("Caught expected exception", e);
             }
@@ -573,16 +573,16 @@ public class TypeCoercionTest extends SqlTestSupport {
         private final String valueLiteral;
         private final String valueTestSource;
         private final Object targetValue;
-        private final String expectedFailure;
+        private final Pattern expectedFailureRegex;
 
-        private TestParams(int testId, QueryDataTypeFamily srcType, QueryDataTypeFamily targetType, String valueLiteral, String valueTestSource, Object targetValue, String expectedFailure) {
+        private TestParams(int testId, QueryDataTypeFamily srcType, QueryDataTypeFamily targetType, String valueLiteral, String valueTestSource, Object targetValue, String expectedFailureRegex) {
             this.testId = testId;
             this.srcType = srcType;
             this.targetType = targetType;
             this.valueLiteral = valueLiteral;
             this.valueTestSource = valueTestSource;
             this.targetValue = targetValue;
-            this.expectedFailure = expectedFailure;
+            this.expectedFailureRegex = expectedFailureRegex != null ? Pattern.compile(expectedFailureRegex) : null;
         }
 
         static TestParams passingCase(int testId, QueryDataTypeFamily srcType, QueryDataTypeFamily targetType, String valueLiteral, String valueTestSource, Object targetValue) {
@@ -601,8 +601,12 @@ public class TypeCoercionTest extends SqlTestSupport {
                     ", targetType=" + targetType +
                     ", value=" + valueTestSource +
                     ", targetValue=" + targetValue +
-                    ", expectedFailure=" + expectedFailure +
+                    ", expectedFailureRegex=" + expectedFailureRegex +
                     '}';
+        }
+
+        public boolean exceptionMatches(Exception e) {
+            return expectedFailureRegex.matcher(e.getMessage()).find();
         }
     }
 }

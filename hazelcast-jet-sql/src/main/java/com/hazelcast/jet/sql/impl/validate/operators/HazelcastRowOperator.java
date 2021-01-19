@@ -42,7 +42,8 @@ public class HazelcastRowOperator extends HazelcastSpecialOperator {
                 MDX_PRECEDENCE,
                 false,
                 null,
-                InferTypes.RETURN_TYPE);
+                InferTypes.RETURN_TYPE,
+                null);
     }
 
     @Override

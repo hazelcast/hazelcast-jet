@@ -67,7 +67,7 @@ public class SqlJoinUnsupportedFeaturesTest extends SqlTestSupport {
         assertThatThrownBy(() -> sqlService.execute(
                     "SELECT 1 FROM b WHERE EXISTS (SELECT 1 FROM b AS b2 WHERE b.v = b2.v)"))
                 .hasCauseInstanceOf(QueryException.class)
-                .hasMessageContaining("EXISTS not supported");
+                .hasMessageContaining("Function 'EXISTS' does not exist");
     }
 
     @Test
@@ -77,6 +77,6 @@ public class SqlJoinUnsupportedFeaturesTest extends SqlTestSupport {
         assertThatThrownBy(() -> sqlService.execute(
                     "SELECT 1 FROM b WHERE NOT EXISTS (SELECT 1 FROM b AS b2 WHERE b.v = b2.v)"))
                 .hasCauseInstanceOf(QueryException.class)
-                .hasMessageContaining("EXISTS not supported");
+                .hasMessageContaining("Function 'EXISTS' does not exist");
     }
 }
