@@ -372,7 +372,7 @@ probably want to use this one.
 
 The image with the `-slim` suffix, e.g. {jet-version}-slim, is
 equivalent to the slim distribution. It only includes the Jet core
-engine and the minimal packages needed to run the Jet, and it does not
+engine and the minimal packages needed to run Jet, and it does not
 contain any extension modules. It should be used in situations where
 size is a concern.
 
