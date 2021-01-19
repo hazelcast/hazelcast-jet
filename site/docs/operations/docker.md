@@ -359,18 +359,65 @@ To see the default content of the files run the following command:
 docker run hazelcast/hazelcast-jet cat /opt/hazelcast-jet/config/hazelcast-jet.yaml
 ```
 
-## Use Built-in Modules
+## Image Variants
 
-The image comes with several officially supported connectors. You can
-find out the module names on the
-[Sources and Sinks](../api/sources-sinks.md#summary) page.
+Since the Jet version 4.4, Hazelcast Jet docker images come in two
+different variants, these are:
 
-To use one or more modules provide a list of comma separated names in
-`JET_MODULES` environment variable when running the `docker run`
+### Regular image: hazelcast-jet:<version>
+
+This image includes all of the extension modules in its classpath. It is
+prepared for everything to work out-of-the-box. If you are unsure about
+what your needs are, you probably want to use this one.
+
+### Slim image: hazelcast-jet:<version>-slim
+
+This image only includes Jet core engine and the minimal packages needed
+to run the Jet. It does not contain any extension modules. It should be
+used in situations where size is a concern.
+
+## Build Custom Image from Our Slim Image
+
+You can build your custom image that contains a fine-grained set of Jet
+extension modules by using our slim image. You can achieve this by
+adding our extension modules one by one on the Dockerfile that takes the
+Jet slim image as a base.
+
+First, create a file named `Dockerfile` in an empty directory:
+
+```Dockerfile
+# Use hazelcast jet slim image as a base.
+FROM hazelcast-jet:<jet-version>-slim
+
+# Set JET_HOME variable
+ARG JET_HOME=/opt/hazelcast-jet
+
+# Add module jar to the classpath of Jet
+ADD <module_jar_url> $JET_HOME/lib/
+
+# Add another module jar to the classpath of Jet
+ADD <module_jar_url> $JET_HOME/lib/
+...
+
+```
+
+This `Dockerfile` uses `hazelcast/hazelcast-jet-slim` image as base
+image. The `ADD` commands add the specified jars to the Jet classpath.
+For more detailed information, you can refer to [Dockerfile
+reference](https://docs.docker.com/engine/reference/builder/)
+
+Then, build the image from the `Dockerfile` by running the following
+command from the current directory:
+
+```bash
+docker build . -t <custom-image-name>
+```
+
+You can start the Jet instance by running this image with the following
 command:
 
 ```bash
-docker run -e JET_MODULES="avro,kafka" -p 5701:5701 hazelcast/hazelcast-jet
+docker run -p 5701:5701 <custom-image-name>
 ```
 
 ## Package Job as a Docker Image
@@ -382,7 +429,7 @@ can use the same approach to package any job.
 
 Create a file called `Dockerfile` in the `<jet home>` directory.
 
-```text
+```Dockerfile
 FROM hazelcast/hazelcast-jet
 
 ADD examples/hello-world.jar /examples/
