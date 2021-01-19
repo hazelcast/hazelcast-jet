@@ -73,7 +73,7 @@ formats will probably change in future releases.</em></p>
 <p>You can use our Docker image, or download our tarball and start Jet from
 it.</p>
 <div class="tabs"><div class="nav-tabs"><div id="tab-group-67-tab-68" class="nav-link active" data-group="group_67" data-tab="tab-group-67-content-68">Docker</div><div id="tab-group-67-tab-69" class="nav-link" data-group="group_67" data-tab="tab-group-67-content-69">Tarball</div></div><div class="tab-content"><div id="tab-group-67-content-68" class="tab-pane active" data-group="group_67" tabindex="-1"><div><span><p>Update and start the Jet container by pasting this into your terminal:</p>
-<pre><code class="hljs css language-text">docker pull hazelcast/hazelcast-jet<br />docker network create jet-network<br />docker run --name jet --network jet-network -v $(pwd):/csv-dir --rm hazelcast/hazelcast-jet<br /></code></pre>
+<pre><code class="hljs css language-text">docker pull hazelcast/hazelcast-jet<br />docker network create jet-network<br />docker run --name jet --network jet-network -v "$(pwd)":/csv-dir --rm hazelcast/hazelcast-jet<br /></code></pre>
 <p>We created a named Docker network so we can easily make several
 containers talk to each other, using the container name as the hostname.</p>
 <p>The <code>-v</code> option maps the current directory to <code>/csv-dir</code> inside the
@@ -91,8 +91,8 @@ CSV example below.</p>
 <p>The prompt doesn't return, which allows you to easily stop or restart
 Jet.</p>
 <p>Now start another terminal window and enter the SQL shell:</p>
-<div class="tabs"><div class="nav-tabs"><div id="tab-group-70-tab-71" class="nav-link active" data-group="group_70" data-tab="tab-group-70-content-71">Docker</div><div id="tab-group-70-tab-72" class="nav-link" data-group="group_70" data-tab="tab-group-70-content-72">Tarball</div></div><div class="tab-content"><div id="tab-group-70-content-71" class="tab-pane active" data-group="group_70" tabindex="-1"><div><span><pre><code class="hljs css language-text">$ docker run --network jet-network -it --rm hazelcast/hazelcast-jet jet --target jet sql<br />Connected to Hazelcast Jet 4.4 at [172.17.0.2]:5701 (+0 more)<br />Type 'help' for instructions<br />sql〉<br /></code></pre>
-<p>Here, <code>--target jet</code> is the SQL shell's command-line parameter that
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-70-tab-71" class="nav-link active" data-group="group_70" data-tab="tab-group-70-content-71">Docker</div><div id="tab-group-70-tab-72" class="nav-link" data-group="group_70" data-tab="tab-group-70-content-72">Tarball</div></div><div class="tab-content"><div id="tab-group-70-content-71" class="tab-pane active" data-group="group_70" tabindex="-1"><div><span><pre><code class="hljs css language-text">$ docker run --network jet-network -it --rm hazelcast/hazelcast-jet jet --targets jet sql<br />Connected to Hazelcast Jet 4.4 at [172.17.0.2]:5701 (+0 more)<br />Type 'help' for instructions<br />sql〉<br /></code></pre>
+<p>Here, <code>--targets jet</code> is the SQL shell's command-line parameter that
 tells it to connect to the host named <code>jet</code>.</p>
 </span></div></div><div id="tab-group-70-content-72" class="tab-pane" data-group="group_70" tabindex="-1"><div><span><pre><code class="hljs css language-text">$ bin/jet sql<br />Connected to Hazelcast Jet 4.4 at [192.168.0.1]:5701 (+0 more)<br />Type 'help' for instructions<br />sql〉<br /></code></pre>
 </span></div></div></div></div>

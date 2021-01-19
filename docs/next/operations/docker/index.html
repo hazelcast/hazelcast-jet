@@ -62,200 +62,172 @@
                 };
               }
             });
-        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/operations/docker.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Running With Docker</h1></header><article><div><span><p>This section provides comprehensive coverage of usage of Hazelcast Jet
-inside a Docker environment. While it gives an explanation of all
-options and parameters used in the examples, it is recommended to be
-familiar with Docker; you can visit the <a href="https://docs.docker.com/get-started/">official
-documentation</a> for a beginner
-focused tutorial.</p>
-<h2><a class="anchor" aria-hidden="true" id="start-hazelcast-jet-member"></a><a href="#start-hazelcast-jet-member" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Start Hazelcast Jet Member</h2>
-<p>Let's begin with starting an instance of Hazelcast Jet using the
-official Docker image. To start the instance simply execute the
-following command in your terminal:</p>
-<pre><code class="hljs css language-bash">docker run -p 5701:5701 hazelcast/hazelcast-jet
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/operations/docker.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Running With Docker</h1></header><article><div><span><p>This section shows you how to use Hazelcast Jet with Docker. We explain
+the options and parameters used in the examples, but otherwise assume
+you are familiar with Docker in general. Visit the <a href="https://docs.docker.com/get-started/">official
+documentation</a> for a basic
+introduction.</p>
+<h2><a class="anchor" aria-hidden="true" id="start-a-hazelcast-jet-member"></a><a href="#start-a-hazelcast-jet-member" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Start a Hazelcast Jet Member</h2>
+<p>Paste the following into your command line:</p>
+<pre><code class="hljs css language-bash">docker pull hazelcast/hazelcast-jet
+docker run -p 5701:5701 hazelcast/hazelcast-jet
 </code></pre>
-<p>If you previously haven't run Hazelcast Jet Docker image, it will
-download the latest version of the image from <a href="https://hub.docker.com/r/hazelcast/hazelcast-jet/">Docker
-hub</a>. You can check
-the version of Jet in the logs, look for a line similar to this one:</p>
-<pre><code class="hljs css language-text">2020-05-18 19:34:43,872 [ INFO] [main] [c.h.system]: Hazelcast Jet 4.4-SNAPSHOT (20200429 - e6c60a1) starting at [172.17.0.2]:5701
+<p>On Linux you can omit the <code>-p 5701:5701</code> part, but on other platforms
+you may need it if the container's network isn't directly exposed to the
+host machine.</p>
+<p>Wait for a line like this in the log:</p>
+<pre><code class="hljs css language-text">2020-05-18 19:34:43,872 [ INFO] [main] [c.h.system]:
+    Hazelcast Jet <version> (20200429 - e6c60a1) starting at [172.17.0.2]:5701
 </code></pre>
-<p>You can also verify the version of Hazelcast Jet by running the
-following command without starting a full instance:</p>
-<pre><code class="hljs css language-bash">docker run hazelcast/hazelcast-jet jet --version
-</code></pre>
-<p>You should get an output similar to the following:</p>
-<pre><code class="hljs css language-text">$ docker run hazelcast/hazelcast-jet jet --version
-Hazelcast Jet 4.4-SNAPSHOT
+<p>The prompt doesn't return, which allows you to easily stop or restart
+Jet. Note Jet's IP address, you'll need it later.</p>
+<p>You can also see Jet's version and build info without starting it:</p>
+<pre><code class="hljs css language-text">$ docker run --rm hazelcast/hazelcast-jet jet --version
+Hazelcast Jet <version>
 Revision e6c60a1
 Build 20200429
 </code></pre>
-<p>If your <code>hazelcast/hazelcast-jet</code> latest image points to an older
-version you can update it by running the following command:</p>
-<pre><code class="hljs css language-bash">docker pull hazelcast/hazelcast-jet
+<h2><a class="anchor" aria-hidden="true" id="submit-a-job"></a><a href="#submit-a-job" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Submit a Job</h2>
+<p>Let's submit a Hello World job to the Jet server you started. It is
+packaged with the Hazelcast Jet distribution, so start by downloading
+it. Paste this into your command line:</p>
+<pre><code class="hljs css language-text">wget https://github.com/hazelcast/hazelcast-jet/releases/download/v4.4/hazelcast-jet-4.4.tar.gz
+tar xvf hazelcast-jet-4.4.tar.gz
+cd hazelcast-jet-4.4
 </code></pre>
-<p>You can also specify a particular version of the image to run when
-starting the container, e.g. when you need to run an older version of
-Jet:</p>
-<pre><code class="hljs css language-bash">docker run hazelcast/hazelcast-jet:4.0
+<p>Now submit the Hello World job:</p>
+<pre><code class="hljs css language-bash">docker run -it -v <span class="hljs-string">"<span class="hljs-variable">$(pwd)</span>"</span>/examples:/examples --rm hazelcast/hazelcast-jet jet -t 172.17.0.2 submit /examples/hello-world.jar
 </code></pre>
-<h2><a class="anchor" aria-hidden="true" id="submit-job-to-hazelcast-jet"></a><a href="#submit-job-to-hazelcast-jet" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Submit Job to Hazelcast Jet</h2>
-<p>We will submit a Hello World job, which is available in the Hazelcast
-Jet distribution. Download the Jet distribution from
-<a href="https://github.com/hazelcast/hazelcast-jet/releases/download/v4.4-SNAPSHOT/hazelcast-jet-4.4-SNAPSHOT.tar.gz">here</a>
-. From now on we will refer to the extracted location as <code>&lt;jet home&gt;</code>.</p>
-<p>Also, note the address of your Hazelcast Jet instance from the log:</p>
-<pre><code class="hljs css language-text">Members {size:1, ver:1} [
-    Member [172.17.0.2]:5701 - c54413e4-2cd2-4c07-91ec-d5992b18f9b0 this
-]
-</code></pre>
-<p>Run the following command to submit the Hello World job to your Hazelcast
-Jet instance:</p>
-<pre><code class="hljs css language-bash">docker run -it -v <span class="hljs-string">"<span class="hljs-variable">$(pwd)</span>"</span>/examples:/examples hazelcast/hazelcast-jet jet -t 172.17.0.2 submit /examples/hello-world.jar
-</code></pre>
-<p>The parameters are as follows:</p>
+<p>The Docker parameters are as follows:</p>
 <ul>
-<li><code>-it</code> allocates interactive terminal, allowing you to cancel the
-submit command by pressing Ctrl+C</li>
-<li><code>-v &quot;$(pwd)&quot;/examples:/examples</code> mounts folder <code>examples</code> from your
-current directory to <code>/examples</code> directory inside the container</li>
-<li><code>-t 172.17.0.2</code> - shortcut for <code>--targets</code>, specifies an address of
-running Hazelcast Jet instance, needs to be specified because the
-instance is not running on <code>localhost:5701</code></li>
-<li><code>submit</code> command to submit a job</li>
-<li><code>/examples/hello-world.jar</code> path to a jar with a job inside the
-container</li>
+<li><code>-it</code> tells Docker to start an interactive session, allowing you to
+cancel the <code>submit</code> command with <code>Ctrl+C</code></li>
+<li><code>-v &quot;$(pwd)&quot;/examples:/examples</code> mounts the folder <code>examples</code> from
+your current directory as <code>/examples</code> inside the container</li>
+<li><code>--rm</code> tells Docker to remove the container from its local cache once
+it exits</li>
 </ul>
-<p>You can list the running jobs inside the cluster by running the
-following command:</p>
-<pre><code class="hljs css language-bash">docker run hazelcast/hazelcast-jet jet -t 172.17.0.2 list-jobs
-</code></pre>
-<p>which gives an output similar to:</p>
-<pre><code class="hljs css language-text">$ docker run hazelcast/hazelcast-jet jet -t 172.17.0.2 list-jobs
+<p>These are the parameters for <code>jet submit</code>:</p>
+<ul>
+<li><code>-t 172.17.0.2</code>, short for <code>--targets</code>, is the address of the Jet
+server to connect to</li>
+<li><code>/examples/hello-world.jar</code> is the JAR containing the code which will
+create a Jet pipeline and submit it</li>
+</ul>
+<p>List the jobs running inside the cluster:</p>
+<pre><code class="hljs css language-bash">$ docker run --rm hazelcast/hazelcast-jet jet -t 172.17.0.2 list-jobs
 ID                  STATUS             SUBMISSION TIME         NAME
 045e-987c-1940-0001 RUNNING            2020-05-18T20:08:03.020 hello-world
 </code></pre>
-<p>You can cancel a running job using the following command:</p>
-<pre><code class="hljs css language-bash">docker run hazelcast/hazelcast-jet jet -t 172.17.0.2 cancel hello-world
+<p>To cancel the running job:</p>
+<pre><code class="hljs css language-bash">docker run --rm hazelcast/hazelcast-jet jet -t 172.17.0.2 cancel hello-world
 </code></pre>
-<h3><a class="anchor" aria-hidden="true" id="using-local-distribution"></a><a href="#using-local-distribution" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using Local Distribution</h3>
-<p>Alternatively you can use the downloaded distribution to submit a job to
-a cluster directly. While in <code>&lt;jet home&gt;</code>, run the following command:</p>
-<pre><code class="hljs css language-bash">bin/jet submit examples/hello-world.jar
+<h2><a class="anchor" aria-hidden="true" id="submit-a-job-as-a-docker-image"></a><a href="#submit-a-job-as-a-docker-image" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Submit a Job as a Docker Image</h2>
+<p>Let's create a Docker image with the code of the Hello World job and
+submit it to Jet. Create a <code>Dockerfile</code>:</p>
+<pre><code class="hljs css language-Dockerfile"><span class="hljs-keyword">FROM</span> hazelcast/hazelcast-jet
+
+<span class="hljs-keyword">ADD</span><span class="bash"> examples/hello-world.jar /examples/</span>
+
+<span class="hljs-keyword">ENV</span> JET_ADDRESS <span class="hljs-number">172.17</span>.<span class="hljs-number">0.2</span>
+
+<span class="hljs-keyword">CMD</span><span class="bash"> [<span class="hljs-string">"sh"</span>, <span class="hljs-string">"-c"</span>, <span class="hljs-string">"jet -t <span class="hljs-variable">$JET_ADDRESS</span> submit /examples/hello-world.jar"</span>]</span>
 </code></pre>
-<p>In some environments, e.g. on Windows or macOS, the container is not
-directly accessible via network from your host machine. When starting
-the container we have used the <code>-p 5701:5701</code> option to expose the
-container port 5701 on localhost. The command above uses that by
-default.</p>
-<p>On Linux it is enough to start the container with the following:</p>
-<pre><code class="hljs css language-bash">docker run hazelcast/hazelcast-jet
+<p>We exposed the Jet address through the <code>JTE_ADDRESS</code> environment
+variable, with the default value of <code>172.17.0.2</code>. This makes it easy to
+pass a different address with <code>docker run -e JET_ADDRESS=&lt;another.one&gt;</code>.</p>
+<p>Create the image:</p>
+<pre><code class="hljs css language-bash">$ docker build . -t hazelcast-jet-hello-world
+Sending build context to Docker daemon  77.35MB
+...
+Successfully built 6bc0f527b69c
+Successfully tagged hazelcast-jet-hello-world:latest
 </code></pre>
-<p>And submit the job, specifying the cluster address:</p>
-<pre><code class="hljs css language-bash">bin/jet -t 172.17.0.2 submit examples/hello-world.jar
+<p>Submit the job:</p>
+<pre><code class="hljs css language-bash">docker run -it hazelcast-jet-hello-world
 </code></pre>
-<h2><a class="anchor" aria-hidden="true" id="start-management-center"></a><a href="#start-management-center" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Start Management Center</h2>
-<p>Management center provides an easy way to monitor Hazelcast Jet cluster
-and running jobs. Start Management Center with the following command:</p>
+<h2><a class="anchor" aria-hidden="true" id="start-the-management-center"></a><a href="#start-the-management-center" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Start the Management Center</h2>
+<p>The Management Center provides an easy way to monitor Hazelcast Jet
+cluster and running jobs. Start it like this:</p>
 <pre><code class="hljs css language-bash">docker run -p 8081:8081 -e JET_MEMBER_ADDRESS=172.17.0.2 hazelcast/hazelcast-jet-management-center
 </code></pre>
 <p>After a few seconds you can access the management center on
 <a href="http://localhost:8081">http://localhost:8081</a>, the default
 username/password are admin/admin.</p>
 <h2><a class="anchor" aria-hidden="true" id="configure-hazelcast-jet"></a><a href="#configure-hazelcast-jet" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configure Hazelcast Jet</h2>
-<h3><a class="anchor" aria-hidden="true" id="java_opts"></a><a href="#java_opts" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>JAVA_OPTS</h3>
-<p>As shown below, you can use <code>JAVA_OPTS</code> environment variable if you need
-to pass multiple VM arguments to your Hazelcast Jet member.</p>
-<pre><code class="hljs css language-bash">docker run -e JAVA_OPTS=<span class="hljs-string">"-Xms512M -Xmx1024M"</span> -p 5701:5701 hazelcast/hazelcast-jet
-</code></pre>
 <h3><a class="anchor" aria-hidden="true" id="memory-configuration"></a><a href="#memory-configuration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Memory configuration</h3>
-<p>In the Docker environment the memory is limited by
-<code>-XX:MaxRAMPercentage=80.0</code> setting, this means the heap will take at
-most 80 % of all available memory.  By default a Docker container can
-use all available memory, unless <code>-m/--memory</code> parameter is specified.
-Run the following command to start Hazelcast Jet with 2 GB allocated to
-the container, maximum heap limited to 1640 MB (2048*0.8):</p>
-<pre><code class="hljs css language-bash">docker run --memory 2g hazelcast/hazelcast-jet
+<p>By default, Jet configures the JVM with <code>-XX:MaxRAMPercentage=80.0</code>.
+This limits the JVM heap to 80% of the RAM available to the container.
+We recommend you leave this as-is and control Jet's memory size with the
+Docker parameter <code>--memory</code>. For example, this will start Jet with 1.6
+GB assigned to the JVM:</p>
+<pre><code class="hljs css language-bash">docker run --memory 2g --rm hazelcast/hazelcast-jet
 </code></pre>
-<p>The <code>MaxRAMPercentage</code> value can be overridden in the <code>JAVA_OPTS</code>
-variable:</p>
-<pre><code class="hljs css language-bash">docker run --memory 2g -e JAVA_OPTS=<span class="hljs-string">"-XX:MaxRAMPercentage=85.0"</span> hazelcast/hazelcast-jet
+<h3><a class="anchor" aria-hidden="true" id="java_opts"></a><a href="#java_opts" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>JAVA_OPTS</h3>
+<p>To change the JVM parameters directly, use the <code>JAVA_OPTS</code> environment
+variable. Jet passes it to the JVM when starting. For example:</p>
+<pre><code class="hljs css language-bash">docker run --memory 2g -e JAVA_OPTS=<span class="hljs-string">"-XX:MaxRAMPercentage=85.0"</span> --rm hazelcast/hazelcast-jet
 </code></pre>
-<p>Note that you need to leave enough free space for Metaspace and other
-overheads.</p>
+<p>Make sure to leave enough free RAM for Metaspace and other overheads.</p>
 <h3><a class="anchor" aria-hidden="true" id="custom-hazelcast-jet-configuration-file"></a><a href="#custom-hazelcast-jet-configuration-file" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Custom Hazelcast Jet Configuration File</h3>
-<p>If you need to configure Hazelcast Jet with your own
-<code>hazelcast-jet.yaml</code>, or <code>hazelcast.yaml</code>, you just need to mount the
-file to configuration file location in the container. The configuration
-files are stored in the <code>/opt/hazelcast-jet/config</code> directory.</p>
-<p>For example to change the cluster name, create a file <code>hazelcast.yaml</code>
-with the following content:</p>
-<pre><code class="hljs css language-yaml"><span class="hljs-attr">hazelcast:</span>
-  <span class="hljs-comment"># The name of the cluster. All members of a single cluster must have the</span>
-  <span class="hljs-comment"># same cluster name configured and a client connecting to this cluster</span>
-  <span class="hljs-comment"># must use it as well.</span>
-  <span class="hljs-attr">cluster-name:</span> <span class="hljs-string">jet-1</span>
+<p>You can configure Hazelcast Jet with your own <code>hazelcast-jet.yaml</code> or
+<code>hazelcast.yaml</code> by replacing the default ones in the container at
+<code>/opt/hazelcast-jet/config</code>. We recommend that you use the default
+configuration file as a starting point:</p>
+<pre><code class="hljs css language-bash">docker run --rm hazelcast/hazelcast-jet cat /opt/hazelcast-jet/config/hazelcast.yaml &gt; hazelcast.yaml
 </code></pre>
-<p>Then use it when starting the Jet instance by running the following
-command (it expects the file in the current directory):</p>
+<p>Now edit the file and apply it when starting Jet:</p>
 <pre><code class="hljs css language-bash">docker run -v <span class="hljs-string">"<span class="hljs-variable">$(pwd)</span>"</span>/hazelcast.yaml:/opt/hazelcast-jet/config/hazelcast.yaml hazelcast/hazelcast-jet
 </code></pre>
-<p>Submit a job to the cluster, specifying cluster name in the jet command
-using <code>-n jet-1</code> option (shortcut for <code>--cluster-name</code>):</p>
-<pre><code class="hljs css language-bash">docker run -it -v <span class="hljs-string">"<span class="hljs-variable">$(pwd)</span>"</span>/examples:/examples hazelcast/hazelcast-jet jet -t 172.17.0.2 -n jet-1 submit /examples/hello-world.jar
+<h3><a class="anchor" aria-hidden="true" id="extend-jets-classpath-with-custom-jars-and-files"></a><a href="#extend-jets-classpath-with-custom-jars-and-files" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Extend Jet's CLASSPATH with Custom Jars and Files</h3>
+<p>If you have to add more classes or files to Jet's classpath, one way to
+do it is to put them in a folder, e.g., <code>ext</code>, mount it to the
+container, and set the <code>CLASSPATH</code> environment variable:</p>
+<pre><code class="hljs css language-bash">docker run -e CLASSPATH=<span class="hljs-string">"/opt/hazelcast-jet/ext/"</span> -v /path/to/ext:/opt/hazelcast-jet/ext hazelcast/hazelcast-jet
 </code></pre>
-<p>You can view the contents of the default configuration file inside the
-container by running the following command:</p>
-<pre><code class="hljs css language-bash">docker run hazelcast/hazelcast-jet cat /opt/hazelcast-jet/config/hazelcast.yaml
+<p>If you have just one file to add, it's simpler to mount it directly into
+Jet's <code>lib</code> folder:</p>
+<pre><code class="hljs css language-bash">docker run -v /path/to/my.jar:/opt/hazelcast-jet/lib/my.jar hazelcast/hazelcast-jet
 </code></pre>
-<h3><a class="anchor" aria-hidden="true" id="extend-classpath-with-new-jars-or-files"></a><a href="#extend-classpath-with-new-jars-or-files" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Extend CLASSPATH with new Jars or Files</h3>
-<p>If you have custom jars or files to put into classpath of your Docker
-container, you can put those files into a folder, e.g., <code>ext</code>, mount
-the folder to the container, use <code>CLASSPATH</code> environment variable and
-pass it via <code>docker run</code> command. Please see the following example:</p>
-<pre><code class="hljs css language-bash">docker run -e CLASSPATH=<span class="hljs-string">"/opt/hazelcast-jet/ext/"</span> -v PATH_TO_EXT_FOLDER:/opt/hazelcast-jet/ext hazelcast/hazelcast-jet
-</code></pre>
-<p>Alternatively you can mount a single jar file directly into the <code>lib</code> folder:</p>
-<pre><code class="hljs css language-bash">docker run -v PATH_TO_JAR_FILE:/opt/hazelcast-jet/lib/JAR_FILE.jar hazelcast/hazelcast-jet
-</code></pre>
-<h3><a class="anchor" aria-hidden="true" id="set-default-logging-level"></a><a href="#set-default-logging-level" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Set Default Logging Level</h3>
-<p>The logging level can be changed using the <code>LOGGING_LEVEL</code> environment
-variable, for example, to see the <code>DEBUG</code> logs run the following
-command:</p>
+<h3><a class="anchor" aria-hidden="true" id="change-logging-level"></a><a href="#change-logging-level" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Change Logging Level</h3>
+<p>You can set the logging level using the <code>LOGGING_LEVEL</code> environment
+variable:</p>
 <pre><code class="hljs css language-bash">docker run -e LOGGING_LEVEL=DEBUG hazelcast/hazelcast-jet
 </code></pre>
 <p>Available logging levels are (from highest to lowest): <code>FATAL</code>, <code>ERROR</code>,
 <code>WARN</code>, <code>INFO</code>, <code>DEBUG</code>, <code>TRACE</code>. The default logging level is <code>INFO</code>.</p>
-<p>Note that if you need more custom logging configuration, you can
-configure your own <code>log4j2.properties</code> file by mounting it into your
-container like below:</p>
-<pre><code class="hljs css language-bash">docker run -e -v PATH_TO_LOCAL_CONFIG_FILE:/opt/hazelcast-jet/config/log4j2.properties hazelcast/hazelcast-jet
+<p>If you need more control over logging, you can supply your own
+<code>log4j2.properties</code> file. Use the default one as the starting point:</p>
+<pre><code class="hljs css language-bash">docker run --rm hazelcast/hazelcast-jet cat /opt/hazelcast-jet/config/log4j2.properties &gt; log4j2.properties
 </code></pre>
-<h2><a class="anchor" aria-hidden="true" id="start-jet-cluster"></a><a href="#start-jet-cluster" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Start Jet Cluster</h2>
-<p>While running a cluster locally does not give you any computational
-advantage, it allows you to test your pipelines in a distributed
-environment.</p>
-<p>The simplest way to start a cluster is to start multiple docker
-instances. Just run the <code>docker run</code> command from multiple terminals,
-remember to use a different port each time:</p>
+<p>Edit the file and mount it when starting Jet:</p>
+<pre><code class="hljs css language-bash">docker run -v /path/to/log4j2.properties:/opt/hazelcast-jet/config/log4j2.properties hazelcast/hazelcast-jet
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="create-a-jet-cluster"></a><a href="#create-a-jet-cluster" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Create a Jet Cluster</h2>
+<p>To ensure your pipeline code will work in the cluster, you should test
+it locally in a cluster as well. Testing on a single node hides some
+common serialization issues your code may have.</p>
+<p>You can form a Jet cluster on your local machine by starting multiple
+Jet containers. Run <code>docker run</code> from multiple terminal windows, using a
+distinct port mapping for each:</p>
 <pre><code class="hljs css language-bash">docker run -p 5701:5701 hazelcast/hazelcast-jet
-...
-docker run -p 5702:5701 hazelcast/hazelcast-jet
 </code></pre>
-<p>Eventually, the instances should discover each other and you should
-see an output similar to the following:</p>
+<pre><code class="hljs css language-bash">docker run -p 5702:5701 hazelcast/hazelcast-jet
+</code></pre>
+<p>The two Jet instances will discover each other automatically. Wait for
+output like the following in the logs:</p>
 <pre><code class="hljs css language-text">Members {size:2, ver:2} [
     Member [172.17.0.2]:5701 - df428435-8cbd-464d-8671-afe396f5eef6
     Member [172.17.0.3]:5701 - 011a9dd4-936f-4170-a7c6-622b7430b789 this
 ]
 </code></pre>
-<p>You can use any instance to submit jobs to the cluster. Jet will
-take care of distributing it across all instances.</p>
-<h2><a class="anchor" aria-hidden="true" id="docker-compose-example"></a><a href="#docker-compose-example" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Docker Compose Example</h2>
-<p>When the configuration is more involved such as  including networks and
-volumes etc. it is usually easier to create a <code>docker-compose.yml</code> file.
-It also provides an advantage that you can easily scale the Jet cluster:</p>
-<p>Create a file called <code>docker-compose.yml</code>:</p>
+<p>You can use the IP of any Jet node to submit a job. Jet takes care of
+distributing it across the whole cluster.</p>
+<h2><a class="anchor" aria-hidden="true" id="docker-compose"></a><a href="#docker-compose" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Docker Compose</h2>
+<p>You can start a Hazelcast Jet cluster managed by Docker Compose. This
+also makes it easier to customize Jet with configuration files, mounted
+directories etc.</p>
+<p>Here's a simple <code>docker-compose.yml</code>:</p>
 <pre><code class="hljs css language-yaml"><span class="hljs-attr">version:</span> <span class="hljs-string">'3'</span>
 
 <span class="hljs-attr">services:</span>
@@ -264,11 +236,10 @@ It also provides an advantage that you can easily scale the Jet cluster:</p>
     <span class="hljs-attr">ports:</span>
       <span class="hljs-bullet">-</span> <span class="hljs-string">"5701-5703:5701"</span>
 </code></pre>
-<p>And then start 3-node cluster by running the following command:</p>
+<p>Now you can start a 3-node Jet cluster:</p>
 <pre><code class="hljs css language-bash">docker-compose up --scale jet=3
 </code></pre>
-<p>You should eventually see a 3-node cluster formed. Note that you will
-see the output multiple times, prefixed by the container name:</p>
+<p>You should eventually see a 3-node cluster has formed:</p>
 <pre><code class="hljs css language-text">jet_3  | Members {size:3, ver:3} [
 jet_3  |    Member [172.21.0.3]:5701 - 99d3de67-8c5d-452b-8165 -085a4cd1fcda
 jet_3  |    Member [172.21.0.2]:5701 - 64f5b01b-847e-49e0-87f2 -db2a6f7750b7
@@ -277,7 +248,7 @@ jet_3  | ]
 </code></pre>
 <p>The <code>ports</code> section says that port 5701 from each container should be
 mapped to a port from the range 5701-5703. Increase the range if you
-would like to start more than 3 instances.</p>
+want to start more than three instances.</p>
 <h3><a class="anchor" aria-hidden="true" id="configuration"></a><a href="#configuration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuration</h3>
 <p>You can provide custom <code>hazelcast.yaml</code> or <code>hazelcast-jet.yaml</code>
 configuration files by using a volume:</p>
@@ -292,73 +263,29 @@ configuration files by using a volume:</p>
     <span class="hljs-attr">volumes:</span>
       <span class="hljs-bullet">-</span> <span class="hljs-string">./hazelcast.yaml:/opt/hazelcast-jet/config/hazelcast.yaml</span>
 </code></pre>
-<p>To see the default content of the files run the following command:</p>
-<pre><code class="hljs css language-bash">docker run hazelcast/hazelcast-jet cat /opt/hazelcast-jet/config/hazelcast-jet.yaml
+<h2><a class="anchor" aria-hidden="true" id="build-a-custom-image-from-the-slim-image"></a><a href="#build-a-custom-image-from-the-slim-image" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Build a Custom Image from the Slim Image</h2>
+<p>Since version 4.4, Hazelcast Jet offers a slim Docker image that
+contains just the core Jet engine. When image size is a concern, use it
+as the starting point to build your custom image with just the
+extensions you need.</p>
+<p>Here's a quick example. Write a Dockerfile in an empty directory:</p>
+<pre><code class="hljs css language-Dockerfile"><span class="hljs-keyword">FROM</span> hazelcast-jet:&lt;jet-version&gt;-slim
+<span class="hljs-keyword">ARG</span> JET_HOME=/opt/hazelcast-jet
+<span class="hljs-keyword">ARG</span> REPO_URL=https://repo1.maven.org/maven2/com/hazelcast/jet
+<span class="hljs-keyword">ADD</span><span class="bash"> <span class="hljs-variable">$REPO_URL</span>/hazelcast-jet-kafka/4.3/hazelcast-jet-kafka-4.3-jar-with-dependencies.jar <span class="hljs-variable">$JET_HOME</span>/lib/</span>
+<span class="hljs-comment"># ... more ADD statements ...</span>
 </code></pre>
-<h2><a class="anchor" aria-hidden="true" id="use-built-in-modules"></a><a href="#use-built-in-modules" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Use Built-in Modules</h2>
-<p>The image comes with several officially supported connectors. You can
-find out the module names on the
-<a href="/docs/next/api/sources-sinks#summary">Sources and Sinks</a> page.</p>
-<p>To use one or more modules provide a list of comma separated names in
-<code>JET_MODULES</code> environment variable when running the <code>docker run</code>
-command:</p>
-<pre><code class="hljs css language-bash">docker run -e JET_MODULES=<span class="hljs-string">"avro,kafka"</span> -p 5701:5701 hazelcast/hazelcast-jet
+<p>To find the available extensions and their URLs, open the <a href="https://repo1.maven.org/maven2/com/hazelcast/jet">Maven
+URL</a> in your browser.</p>
+<p>Build the image from the <code>Dockerfile</code>:</p>
+<pre><code class="hljs css language-bash">docker build . -t jet-with-kafka
 </code></pre>
-<h2><a class="anchor" aria-hidden="true" id="package-job-as-a-docker-image"></a><a href="#package-job-as-a-docker-image" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Package Job as a Docker Image</h2>
-<p>When your architecture is Docker focused it might be easier to have
-also your job packaged as a Docker image. We will use Hazelcast Jet
-image as the base image and create an image with Hello World job. You
-can use the same approach to package any job.</p>
-<p>Create a file called <code>Dockerfile</code> in the <code>&lt;jet home&gt;</code> directory.</p>
-<pre><code class="hljs css language-text">FROM hazelcast/hazelcast-jet
-
-ADD examples/hello-world.jar /examples/
-
-ENV ADDRESSES 172.17.0.2
-
-CMD ["sh", "-c", "jet -t $ADDRESSES submit /examples/hello-world.jar"]
+<p>Start the image:</p>
+<pre><code class="hljs css language-bash">docker run -p 5701:5701 jet-with-kafka
 </code></pre>
-<p>The first line specifies the <code>hazelcast/hazelcast-jet</code> image as base
-image. The <code>ADD</code> command copies the <code>hello-world.jar</code> to the <code>/examples</code>
-directory inside the container image. <code>ENV</code> command defines an
-environment variable <code>ADDRESSES</code> with default value of <code>172.17.0.2</code>.
-This can be overridden via <code>-e</code> parameter of the <code>docker run</code>
-command. The <code>CMD</code> command specifies what command to run.</p>
-<p>Then create the image by running the following command:</p>
-<pre><code class="hljs css language-bash">docker build . -t hazelcast-jet-hello-world
-</code></pre>
-<p>You should see output similar to the following:</p>
-<pre><code class="hljs css language-text">Sending build context to Docker daemon  77.35MB
-Step 1/4 : FROM hazelcast/hazelcast-jet:4.4-SNAPSHOT
- ---> c126c24c3d0b
-Step 2/4 : ADD examples/hello-world.jar /examples/
- ---> Using cache
- ---> 2e3fa98d0c7e
-Step 3/4 : ENV ADDRESSES 172.17.0.2
- ---> Using cache
- ---> f96d01158d6e
-Step 4/4 : CMD ["sh", "-c", "jet -t $ADDRESSES submit /examples/hello-world.jar"]
- ---> Using cache
- ---> 6bc0f527b69c
-Successfully built 6bc0f527b69c
-Successfully tagged hazelcast-jet-hello-world:latest
-</code></pre>
-<p>Now you can submit the job by creating a container from the newly built
-image:</p>
-<pre><code class="hljs css language-bash">docker run -it hazelcast-jet-hello-world
-</code></pre>
-<blockquote>
-<p>You don't need the <code>-i</code> and <code>-t</code> parameters if your job class exits
-after the job is submitted.</p>
-</blockquote>
-<h2><a class="anchor" aria-hidden="true" id="docker-image-tags"></a><a href="#docker-image-tags" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Docker Image Tags</h2>
-<p>Similarly to available distributions, there are multiple images
-available for each Jet version.</p>
-<p>The image with regular version number, e.g. 4.4-SNAPSHOT, is equivalent
-to the regular distribution.</p>
-<p>The image with <code>-slim</code> suffix, e.g. 4.4-SNAPSHOT-slim, is equivalent
-to the slim distribution.</p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/next/operations/job-management"><span class="arrow-prev">← </span><span>Job Management</span></a><a class="docs-next button" href="/docs/next/operations/kubernetes"><span>Deployment On Kubernetes</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#start-hazelcast-jet-member">Start Hazelcast Jet Member</a></li><li><a href="#submit-job-to-hazelcast-jet">Submit Job to Hazelcast Jet</a><ul class="toc-headings"><li><a href="#using-local-distribution">Using Local Distribution</a></li></ul></li><li><a href="#start-management-center">Start Management Center</a></li><li><a href="#configure-hazelcast-jet">Configure Hazelcast Jet</a><ul class="toc-headings"><li><a href="#java_opts">JAVA_OPTS</a></li><li><a href="#memory-configuration">Memory configuration</a></li><li><a href="#custom-hazelcast-jet-configuration-file">Custom Hazelcast Jet Configuration File</a></li><li><a href="#extend-classpath-with-new-jars-or-files">Extend CLASSPATH with new Jars or Files</a></li><li><a href="#set-default-logging-level">Set Default Logging Level</a></li></ul></li><li><a href="#start-jet-cluster">Start Jet Cluster</a></li><li><a href="#docker-compose-example">Docker Compose Example</a><ul class="toc-headings"><li><a href="#configuration">Configuration</a></li></ul></li><li><a href="#use-built-in-modules">Use Built-in Modules</a></li><li><a href="#package-job-as-a-docker-image">Package Job as a Docker Image</a></li><li><a href="#docker-image-tags">Docker Image Tags</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2021 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+<p>For more information on Dockerfile, go to its <a href="https://docs.docker.com/engine/reference/builder/">reference
+manual</a>.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/next/operations/job-management"><span class="arrow-prev">← </span><span>Job Management</span></a><a class="docs-next button" href="/docs/next/operations/kubernetes"><span>Deployment On Kubernetes</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#start-a-hazelcast-jet-member">Start a Hazelcast Jet Member</a></li><li><a href="#submit-a-job">Submit a Job</a></li><li><a href="#submit-a-job-as-a-docker-image">Submit a Job as a Docker Image</a></li><li><a href="#start-the-management-center">Start the Management Center</a></li><li><a href="#configure-hazelcast-jet">Configure Hazelcast Jet</a><ul class="toc-headings"><li><a href="#memory-configuration">Memory configuration</a></li><li><a href="#java_opts">JAVA_OPTS</a></li><li><a href="#custom-hazelcast-jet-configuration-file">Custom Hazelcast Jet Configuration File</a></li><li><a href="#extend-jets-classpath-with-custom-jars-and-files">Extend Jet's CLASSPATH with Custom Jars and Files</a></li><li><a href="#change-logging-level">Change Logging Level</a></li></ul></li><li><a href="#create-a-jet-cluster">Create a Jet Cluster</a></li><li><a href="#docker-compose">Docker Compose</a><ul class="toc-headings"><li><a href="#configuration">Configuration</a></li></ul></li><li><a href="#build-a-custom-image-from-the-slim-image">Build a Custom Image from the Slim Image</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2021 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
