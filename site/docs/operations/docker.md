@@ -359,28 +359,28 @@ To see the default content of the files run the following command:
 docker run hazelcast/hazelcast-jet cat /opt/hazelcast-jet/config/hazelcast-jet.yaml
 ```
 
-## Image Variants
+## Docker Image Tags
 
-Since the Jet version 4.4, Hazelcast Jet docker images come in two
-different variants, these are:
+Similarly to available distributions, there are multiple images
+available for each Jet version.
 
-### Regular image: hazelcast-jet:<version>
+The image with a regular version number, e.g. {jet-version}, is
+equivalent to the regular distribution. This image includes all of the
+extension modules in its classpath. It is prepared for everything to
+work out-of-the-box. If you are unsure about what your needs are, you
+probably want to use this one.
 
-This image includes all of the extension modules in its classpath. It is
-prepared for everything to work out-of-the-box. If you are unsure about
-what your needs are, you probably want to use this one.
+The image with the `-slim` suffix, e.g. {jet-version}-slim, is
+equivalent to the slim distribution. It only includes the Jet core
+engine and the minimal packages needed to run the Jet, and it does not
+contain any extension modules. It should be used in situations where
+size is a concern.
 
-### Slim image: hazelcast-jet:<version>-slim
-
-This image only includes Jet core engine and the minimal packages needed
-to run the Jet. It does not contain any extension modules. It should be
-used in situations where size is a concern.
-
-## Build Custom Image from Our Slim Image
+## Build Custom Image from Slim Image
 
 You can build your custom image that contains a fine-grained set of Jet
 extension modules by using our slim image. You can achieve this by
-adding our extension modules one by one on the Dockerfile that takes the
+adding our extension modules one by one to the Dockerfile that takes the
 Jet slim image as a base.
 
 First, create a file named `Dockerfile` in an empty directory:
@@ -480,14 +480,3 @@ docker run -it hazelcast-jet-hello-world
 
 > You don't need the `-i` and `-t` parameters if your job class exits
 > after the job is submitted.
-
-## Docker Image Tags
-
-Similarly to available distributions, there are multiple images
-available for each Jet version.
-
-The image with regular version number, e.g. {jet-version}, is equivalent
-to the regular distribution.
-
-The image with `-slim` suffix, e.g. {jet-version}-slim, is equivalent
-to the slim distribution.
