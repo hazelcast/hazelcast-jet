@@ -83,13 +83,13 @@ JetInstance jet = Jet.newJetInstance(jetConfig);
 ### Configuration Loaders
 
 Alternatively, you can configure Jet to load its configuration from the
-classpath or working directory. By default it will search for
+classpath or working directory. By default, it will search for
 `hazelcast-jet.yaml` and `hazelcast.yaml` files in the classpath and
 working directory, but you can control the name of the files using the
 relevant system properties, `hazelcast.jet.config` and
 `hazelcast.config`, respectively.
 
-All configuration loaders takes an optional `properties` parameter.
+All configuration loaders take an optional `properties` parameter.
 In case of its absence `System.getProperties()` is used to resolve Jet
 configuration file (XML or YAML).
 
