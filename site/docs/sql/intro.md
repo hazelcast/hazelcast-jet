@@ -93,7 +93,7 @@ sql〉 SELECT * FROM TABLE(generate_series(1,3));
 |           2|
 |           3|
 +------------+
-5 row(s) selected
+3 row(s) selected
 sql〉 SELECT sum(v) as total FROM TABLE(generate_series(0, 9));
 +--------------------+
 |               total|
@@ -175,7 +175,7 @@ expressions](https://docs.hazelcast.org/docs/{imdg-version}/manual/html-single/i
 - [INSERT/SINK INTO](basic-commands#insertsink-statement) a Kafka topic
   or an IMap inside the cluster
 - [GROUP BY and aggregate functions](basic-commands#aggregate-functions)
-  on files
+  on bounded data (non-streaming)
 
 These are some of the features on our roadmap:
 
@@ -190,8 +190,8 @@ There is no native storage system in Jet SQL, instead it works with
 _external mappings_ to access various resources as if they were tables.
 This includes its own internal IMaps.
 
-This is how you can create a mapping to a Kafka topic `trades` with
-JSON messages:
+This is how you can create a mapping for a Hazelcast IMap `myMap` with
+JSON values:
 
 ```sql
 sql〉 CREATE EXTERNAL MAPPING myMap (
