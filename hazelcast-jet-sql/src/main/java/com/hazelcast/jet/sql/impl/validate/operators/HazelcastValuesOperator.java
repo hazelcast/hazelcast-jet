@@ -17,16 +17,21 @@
 package com.hazelcast.jet.sql.impl.validate.operators;
 
 import com.hazelcast.sql.impl.calcite.validate.HazelcastCallBinding;
+import com.hazelcast.sql.impl.calcite.validate.operators.ReplaceUnknownOperandTypeInference;
 import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastSpecialOperator;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlValuesOperator;
+
+import static org.apache.calcite.sql.type.SqlTypeName.BIGINT;
 
 /**
  * Hazelcast equivalent of {@link SqlValuesOperator}.
  */
 public class HazelcastValuesOperator extends HazelcastSpecialOperator {
     public HazelcastValuesOperator() {
-        super("VALUES", SqlKind.VALUES);
+        super("VALUES", SqlKind.VALUES, 2, true,
+                null,
+                new ReplaceUnknownOperandTypeInference(BIGINT));
     }
 
     @Override

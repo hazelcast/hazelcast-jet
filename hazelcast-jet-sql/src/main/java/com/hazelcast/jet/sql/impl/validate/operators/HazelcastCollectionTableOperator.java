@@ -20,11 +20,10 @@ import com.hazelcast.sql.impl.calcite.validate.HazelcastCallBinding;
 import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastSpecialOperator;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.validate.SqlModality;
 
 public class HazelcastCollectionTableOperator extends HazelcastSpecialOperator {
 
-    public HazelcastCollectionTableOperator(String name, SqlModality modality) {
+    public HazelcastCollectionTableOperator(String name) {
         super(
                 name,
                 SqlKind.COLLECTION_TABLE,

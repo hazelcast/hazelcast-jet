@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.aggregate.function;
 
 import com.hazelcast.sql.impl.calcite.validate.HazelcastCallBinding;
+import com.hazelcast.sql.impl.calcite.validate.operators.ReplaceUnknownOperandTypeInference;
 import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastAggFunction;
 import com.hazelcast.sql.impl.calcite.validate.param.NoOpParameterConverter;
 import org.apache.calcite.rel.type.RelDataType;
@@ -32,6 +33,8 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.Optionality;
 
+import static org.apache.calcite.sql.type.SqlTypeName.BIGINT;
+
 public class HazelcastCountAggFunction extends HazelcastAggFunction {
 
     public HazelcastCountAggFunction() {
@@ -40,7 +43,8 @@ public class HazelcastCountAggFunction extends HazelcastAggFunction {
                 SqlKind.COUNT,
                 // TODO [viliam] How to use BIGINT(64)? Currently, BIGINT(63) is used
                 ReturnTypes.BIGINT,
-                null,
+                // TODO consider fixing MIN(null) case, currently it returns BIGINT, it should return NULL
+                new ReplaceUnknownOperandTypeInference(BIGINT),
                 null,
                 SqlFunctionCategory.NUMERIC,
                 false,

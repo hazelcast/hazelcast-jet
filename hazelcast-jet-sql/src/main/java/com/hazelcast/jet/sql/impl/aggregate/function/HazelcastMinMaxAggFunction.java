@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.aggregate.function;
 
 import com.hazelcast.sql.impl.calcite.validate.HazelcastCallBinding;
+import com.hazelcast.sql.impl.calcite.validate.operators.ReplaceUnknownOperandTypeInference;
 import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastAggFunction;
 import com.hazelcast.sql.impl.calcite.validate.param.NoOpParameterConverter;
 import org.apache.calcite.sql.SqlDynamicParam;
@@ -26,6 +27,8 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.util.Optionality;
 
+import static org.apache.calcite.sql.type.SqlTypeName.BIGINT;
+
 public class HazelcastMinMaxAggFunction extends HazelcastAggFunction {
 
     public HazelcastMinMaxAggFunction(SqlKind kind) {
@@ -33,7 +36,8 @@ public class HazelcastMinMaxAggFunction extends HazelcastAggFunction {
                 kind.name(),
                 kind,
                 ReturnTypes.ARG0_NULLABLE_IF_EMPTY,
-                null,
+                // TODO consider fixing MIN(null) case, currently it returns BIGINT, it should return NULL
+                new ReplaceUnknownOperandTypeInference(BIGINT),
                 null,
                 SqlFunctionCategory.SYSTEM,
                 false,
