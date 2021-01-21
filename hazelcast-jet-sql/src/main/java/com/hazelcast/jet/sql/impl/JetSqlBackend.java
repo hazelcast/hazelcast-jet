@@ -53,6 +53,7 @@ import com.hazelcast.security.permission.MapPermission;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlColumnMetadata;
 import com.hazelcast.sql.SqlRowMetadata;
+import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.QueryUtils;
 import com.hazelcast.sql.impl.calcite.OptimizerContext;
@@ -150,7 +151,11 @@ class JetSqlBackend implements SqlBackend {
             OptimizerContext context
     ) {
         SqlNode node = parseResult.getNode();
-
+        
+        if (parseResult.getParameterMetadata() != null && parseResult.getParameterMetadata().getParameterCount() != 0) {
+            throw QueryException.error("Query parameters not yet supported");
+        }
+        
         if (node instanceof SqlCreateMapping) {
             return toCreateMappingPlan((SqlCreateMapping) node);
         } else if (node instanceof SqlDropMapping) {

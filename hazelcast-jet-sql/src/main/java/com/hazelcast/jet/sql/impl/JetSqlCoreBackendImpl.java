@@ -80,9 +80,7 @@ public class JetSqlCoreBackendImpl implements JetSqlCoreBackend, ManagedService 
 
     @Override
     public SqlResult execute(SqlPlan plan, List<Object> params, long timeout, int pageSize) {
-        if (params != null && !params.isEmpty()) {
-            throw new JetException("Query parameters not yet supported");
-        }
+        assert params == null || params.isEmpty();
         if (timeout > 0) {
             throw new JetException("Query timeout not yet supported");
         }
