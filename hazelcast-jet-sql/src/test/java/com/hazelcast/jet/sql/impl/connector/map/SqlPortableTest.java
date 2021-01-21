@@ -273,34 +273,34 @@ public class SqlPortableTest extends SqlTestSupport {
         );
 
         // insert initial record
-        sqlService.execute("SINK INTO " + name + " VALUES (1, 'Alice')");
-
-        // alter schema
-        sqlService.execute("CREATE OR REPLACE MAPPING " + name + ' '
-                + "TYPE " + IMapSqlConnector.TYPE_NAME + ' '
-                + "OPTIONS ("
-                + '\'' + OPTION_KEY_FORMAT + "'='" + PORTABLE_FORMAT + '\''
-                + ", '" + OPTION_KEY_FACTORY_ID + "'='" + PERSON_ID_FACTORY_ID + '\''
-                + ", '" + OPTION_KEY_CLASS_ID + "'='" + PERSON_ID_CLASS_ID + '\''
-                + ", '" + OPTION_KEY_CLASS_VERSION + "'='" + PERSON_ID_CLASS_VERSION + '\''
-                + ", '" + OPTION_VALUE_FORMAT + "'='" + PORTABLE_FORMAT + '\''
-                + ", '" + OPTION_VALUE_FACTORY_ID + "'='" + PERSON_FACTORY_ID + '\''
-                + ", '" + OPTION_VALUE_CLASS_ID + "'='" + PERSON_CLASS_ID + '\''
-                + ", '" + OPTION_VALUE_CLASS_VERSION + "'='" + (PERSON_CLASS_VERSION + 1) + '\''
-                + ")"
-        );
-
-        // insert record against new schema/class definition
-        sqlService.execute("SINK INTO " + name + " VALUES (2, 'Bob', 123456789)");
-
-        // assert both - initial & evolved - records are correctly read
-        assertRowsAnyOrder(
-                "SELECT * FROM " + name,
-                asList(
-                        new Row(1, "Alice", null),
-                        new Row(2, "Bob", 123456789L)
-                )
-        );
+        sqlService.execute("SINK INTO " + name + " VALUES (1, null)");
+//
+//        // alter schema
+//        sqlService.execute("CREATE OR REPLACE MAPPING " + name + ' '
+//                + "TYPE " + IMapSqlConnector.TYPE_NAME + ' '
+//                + "OPTIONS ("
+//                + '\'' + OPTION_KEY_FORMAT + "'='" + PORTABLE_FORMAT + '\''
+//                + ", '" + OPTION_KEY_FACTORY_ID + "'='" + PERSON_ID_FACTORY_ID + '\''
+//                + ", '" + OPTION_KEY_CLASS_ID + "'='" + PERSON_ID_CLASS_ID + '\''
+//                + ", '" + OPTION_KEY_CLASS_VERSION + "'='" + PERSON_ID_CLASS_VERSION + '\''
+//                + ", '" + OPTION_VALUE_FORMAT + "'='" + PORTABLE_FORMAT + '\''
+//                + ", '" + OPTION_VALUE_FACTORY_ID + "'='" + PERSON_FACTORY_ID + '\''
+//                + ", '" + OPTION_VALUE_CLASS_ID + "'='" + PERSON_CLASS_ID + '\''
+//                + ", '" + OPTION_VALUE_CLASS_VERSION + "'='" + (PERSON_CLASS_VERSION + 1) + '\''
+//                + ")"
+//        );
+//
+//        // insert record against new schema/class definition
+//        sqlService.execute("SINK INTO " + name + " VALUES (2, 'Bob', 123456789)");
+//
+//        // assert both - initial & evolved - records are correctly read
+//        assertRowsAnyOrder(
+//                "SELECT * FROM " + name,
+//                asList(
+//                        new Row(1, "Alice", null),
+//                        new Row(2, "Bob", 123456789L)
+//                )
+//        );
     }
 
     @Test
