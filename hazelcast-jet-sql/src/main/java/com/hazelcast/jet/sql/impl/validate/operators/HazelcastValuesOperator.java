@@ -30,7 +30,7 @@ import static org.apache.calcite.sql.type.SqlTypeName.BIGINT;
 public class HazelcastValuesOperator extends HazelcastSpecialOperator {
     public HazelcastValuesOperator() {
         super("VALUES", SqlKind.VALUES, 2, true,
-                null,
+                b -> {throw new UnsupportedOperationException();},
                 new ReplaceUnknownOperandTypeInference(BIGINT));
     }
 

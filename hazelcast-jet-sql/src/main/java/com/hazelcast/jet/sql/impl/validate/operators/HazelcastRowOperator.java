@@ -21,7 +21,6 @@ import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastSpecial
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperandCountRange;
-import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.fun.SqlRowOperator;
 import org.apache.calcite.sql.type.InferTypes;
@@ -41,37 +40,33 @@ public class HazelcastRowOperator extends HazelcastSpecialOperator {
                 SqlKind.ROW,
                 MDX_PRECEDENCE,
                 false,
-                null,
-                InferTypes.RETURN_TYPE,
-                null);
+                opBinding -> {
+                    // The type of a ROW(e1,e2) expression is a record with the types
+                    // {e1type,e2type}.  According to the standard, field names are
+                    // implementation-defined.
+                    return opBinding.getTypeFactory().createStructType(
+                            new AbstractList<Entry<String, RelDataType>>() {
+                                public Map.Entry<String, RelDataType> get(int index) {
+                                    return Pair.of(
+                                            SqlUtil.deriveAliasFromOrdinal(index),
+                                            opBinding.getOperandType(index));
+                                }
+
+                                public int size() {
+                                    return opBinding.getOperandCount();
+                                }
+                            });
+                },
+                InferTypes.RETURN_TYPE);
     }
 
     @Override
     protected boolean checkOperandTypes(HazelcastCallBinding callBinding, boolean throwOnFailure) {
-    return true;
+        return true;
     }
 
     @Override
     public SqlOperandCountRange getOperandCountRange() {
         return SqlOperandCountRanges.any();
-    }
-
-    @Override
-    public RelDataType inferReturnType(SqlOperatorBinding opBinding) {
-        // The type of a ROW(e1,e2) expression is a record with the types
-        // {e1type,e2type}.  According to the standard, field names are
-        // implementation-defined.
-        return opBinding.getTypeFactory().createStructType(
-                new AbstractList<Entry<String, RelDataType>>() {
-                    public Map.Entry<String, RelDataType> get(int index) {
-                        return Pair.of(
-                                SqlUtil.deriveAliasFromOrdinal(index),
-                                opBinding.getOperandType(index));
-                    }
-
-                    public int size() {
-                        return opBinding.getOperandCount();
-                    }
-                });
     }
 }
