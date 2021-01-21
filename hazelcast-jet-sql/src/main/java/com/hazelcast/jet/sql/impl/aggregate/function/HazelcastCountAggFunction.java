@@ -22,12 +22,14 @@ import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastAggFunc
 import com.hazelcast.sql.impl.calcite.validate.param.NoOpParameterConverter;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlDynamicParam;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SqlOperandTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
@@ -44,7 +46,7 @@ public class HazelcastCountAggFunction extends HazelcastAggFunction {
                 // TODO [viliam] How to use BIGINT(64)? Currently, BIGINT(63) is used
                 ReturnTypes.BIGINT,
                 // TODO consider fixing MIN(null) case, currently it returns BIGINT, it should return NULL
-                new ReplaceUnknownOperandTypeInference(BIGINT),
+                new IgnoreCountStarOperandTypeInference(new ReplaceUnknownOperandTypeInference(BIGINT)),
                 null,
                 SqlFunctionCategory.NUMERIC,
                 false,
@@ -80,5 +82,25 @@ public class HazelcastCountAggFunction extends HazelcastAggFunction {
 
         // COUNT accepts any operand type
         return true;
+    }
+
+    /**
+     * A wrapper for {@link SqlOperandTypeInference} that does nothing if the
+     * call is COUNT(*). In other case it delegates to the wrapped inference.
+     */
+    private static class IgnoreCountStarOperandTypeInference implements SqlOperandTypeInference {
+        private final SqlOperandTypeInference delegate;
+
+        public IgnoreCountStarOperandTypeInference(SqlOperandTypeInference delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void inferOperandTypes(SqlCallBinding callBinding, RelDataType returnType, RelDataType[] operandTypes) {
+            if (callBinding.getCall().isCountStar()) {
+                return;
+            }
+            delegate.inferOperandTypes(callBinding, returnType, operandTypes);
+        }
     }
 }

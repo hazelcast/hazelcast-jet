@@ -663,7 +663,7 @@ public class SqlJoinTest extends SqlTestSupport {
                 asList(
                         new Row(0, null, null),
                         new Row(null, null, null),
-                        new Row(2, "2", "value-2-s")
+                        new Row(2, 2, "value-2-s")
                 )
         );
     }
