@@ -174,7 +174,7 @@ to apply a windowing function. This is an upcoming feature of Jet SQL.
 In this beta release, you can use these:
 
 - [SELECT and WHERE
-expressions](https://docs.hazelcast.org/docs/{imdg-version}/manual/html-single/index.html#expressions)
+expressions](https://docs.hazelcast.org/docs/{imdg-minor-version}/manual/html-single/index.html#expressions)
 - FROM [Apache Kafka topics](kafka-connector.md) and
 [files (local and remote)](file-connector.md)
 - JOIN with an IMap inside the Jet cluster (enrichment)
@@ -552,5 +552,5 @@ can't execute the statement, try the Jet backend.
 This documentation summarizes the additional SQL features of Hazelcast
 Jet. For a summary of the default SQL engine features, supported data
 types and the built-in functions and operators, please see the [chapter
-on SQL](https://docs.hazelcast.org/docs/{imdg-version}/manual/html-single/index.html#sql)
+on SQL](https://docs.hazelcast.org/docs/{imdg-minor-version}/manual/html-single/index.html#sql)
 in the Hazelcast IMDG reference manual.

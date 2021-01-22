@@ -45,7 +45,7 @@ mapping name, either as created using [DDL](ddl.md) or one created
 automatically for non-empty IMaps.
 
 Jet supports all operators and functions supported by IMDG. Go to the
-[chapter on SQL](https://docs.hazelcast.org/docs/{imdg-version}/manual/html-single/index.html#sql)
+[chapter on SQL](https://docs.hazelcast.org/docs/{imdg-minor-version}/manual/html-single/index.html#sql)
 in the Hazelcast IMDG reference manual for the full reference.
 
 ### Aggregate Functions
