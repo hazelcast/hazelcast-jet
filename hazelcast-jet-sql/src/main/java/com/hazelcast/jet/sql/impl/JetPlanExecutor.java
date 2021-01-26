@@ -20,6 +20,8 @@ import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobStateSnapshot;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.impl.AbstractJetInstance;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.sql.impl.JetPlan.AlterJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateJobPlan;
@@ -44,16 +46,14 @@ import com.hazelcast.sql.impl.row.HeapRow;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 class JetPlanExecutor {
 
     private final MappingCatalog catalog;
-    private final JetInstance jetInstance;
+    private final AbstractJetInstance jetInstance;
     private final Map<Long, JetQueryResultProducer> resultConsumerRegistry;
 
     JetPlanExecutor(
@@ -62,7 +62,7 @@ class JetPlanExecutor {
             Map<Long, JetQueryResultProducer> resultConsumerRegistry
     ) {
         this.catalog = catalog;
-        this.jetInstance = jetInstance;
+        this.jetInstance = (AbstractJetInstance) jetInstance;
         this.resultConsumerRegistry = resultConsumerRegistry;
     }
 
@@ -165,32 +165,19 @@ class JetPlanExecutor {
 
             return SqlResultImpl.createUpdateCountResult(0);
         } else {
-            JetQueryResultProducer queryResultProducer;
-            Long jobId = null;
+            JetQueryResultProducer queryResultProducer = new JetQueryResultProducer();
+            Long jobId = jetInstance.newJobId();
+            Object oldValue = resultConsumerRegistry.put(jobId, queryResultProducer);
+            assert oldValue == null : oldValue;
             try {
-                Job job = jetInstance.newJob(plan.getDag());
-                jobId = job.getId();
-                // The JetQueryResultProducer is created by the RootResultConsumerSink in its `init` method
-                // and added to the `resultConsumerRegistry` under the job ID. Here we poll that registry
-                // until we find it.
-                while (true) {
-                    queryResultProducer = resultConsumerRegistry.remove(jobId);
-                    if (queryResultProducer != null) {
-                        break;
-                    }
-                    LockSupport.parkNanos(MILLISECONDS.toNanos(1));
-                }
-
-                JetQueryResultProducer finalQueryResultProducer = queryResultProducer;
+                Job job = jetInstance.newJob(jobId, plan.getDag(), new JobConfig());
                 job.getFuture().whenComplete((r, t) -> {
                     if (t != null) {
-                        finalQueryResultProducer.onError(QueryException.error(t.toString()));
+                        queryResultProducer.onError(QueryException.error(t.toString()));
                     }
                 });
             } catch (Throwable e) {
-                if (jobId != null) {
-                    resultConsumerRegistry.remove(jobId);
-                }
+                resultConsumerRegistry.remove(jobId);
                 throw e;
             }
 

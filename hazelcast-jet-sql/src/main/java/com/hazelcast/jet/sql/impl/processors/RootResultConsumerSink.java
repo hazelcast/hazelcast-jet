@@ -43,9 +43,8 @@ public final class RootResultConsumerSink implements Processor {
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         HazelcastInstanceImpl hzInst = (HazelcastInstanceImpl) context.jetInstance().getHazelcastInstance();
         JetSqlCoreBackendImpl jetSqlCoreBackend = hzInst.node.nodeEngine.getService(JetSqlCoreBackend.SERVICE_NAME);
-        rootResultConsumer = new JetQueryResultProducer();
-        JetQueryResultProducer oldValue = jetSqlCoreBackend.getResultConsumerRegistry().put(context.jobId(), rootResultConsumer);
-        assert oldValue == null;
+        rootResultConsumer = jetSqlCoreBackend.getResultConsumerRegistry().remove(context.jobId());
+        assert rootResultConsumer != null;
     }
 
     @Override
