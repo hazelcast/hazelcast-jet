@@ -17,6 +17,8 @@
 package com.hazelcast.jet.cdc.impl;
 
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.cdc.CommitStrategies;
+import com.hazelcast.jet.cdc.CommitStrategy;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.retry.RetryStrategies;
@@ -57,9 +59,11 @@ public abstract class CdcSource<T> {
     public static final String CONNECTOR_CLASS_PROPERTY = "connector.class";
     public static final String SEQUENCE_EXTRACTOR_CLASS_PROPERTY = "sequence.extractor.class";
     public static final String RECONNECT_BEHAVIOR_PROPERTY = "reconnect.behavior";
+    public static final String COMMIT_BEHAVIOUR_PROPERTY = "commit.behavior";
     public static final String RECONNECT_RESET_STATE_PROPERTY = "reconnect.reset.state";
 
     public static final RetryStrategy DEFAULT_RECONNECT_BEHAVIOR = RetryStrategies.never();
+    public static final CommitStrategy DEFAULT_COMMIT_BEHAVIOR = CommitStrategies.always();
 
     private static final ThreadLocal<List<byte[]>> THREAD_LOCAL_HISTORY = new ThreadLocal<>();
 
@@ -68,6 +72,8 @@ public abstract class CdcSource<T> {
 
     private final RetryTracker reconnectTracker;
     private final boolean clearStateOnReconnect;
+
+    private final CommitStrategy commitStrategy;
 
     private State state = new State();
     private SourceConnector connector;
@@ -80,6 +86,7 @@ public abstract class CdcSource<T> {
         this.logger = context.logger();
         this.properties = properties;
         this.reconnectTracker = new RetryTracker(getRetryStrategy(properties));
+        this.commitStrategy = getCommitStrategy(properties);
         this.clearStateOnReconnect = getClearStateOnReconnect(properties);
     }
 
@@ -105,7 +112,7 @@ public abstract class CdcSource<T> {
 
         try {
             List<SourceRecord> records = task.poll();
-            if (records == null) {
+            if (records == null || records.isEmpty()) {
                 return;
             }
 
@@ -115,7 +122,12 @@ public abstract class CdcSource<T> {
                     Map<String, ?> partition = record.sourcePartition();
                     Map<String, ?> offset = record.sourceOffset();
                     state.setOffset(partition, offset);
+                    task.commitRecord(record);
                 }
+            }
+
+            if (commitStrategy.commitBatch()) {
+                task.commit();
             }
         } catch (InterruptedException ie) {
             logger.warning("Interrupted while waiting for data");
@@ -201,6 +213,15 @@ public abstract class CdcSource<T> {
     }
 
     public State createSnapshot() {
+        if (commitStrategy.commitOnSnapshot()) {
+            try {
+                task.commit();
+            } catch (InterruptedException e) {
+                logger.warning("Interrupted while committing");
+                Thread.currentThread().interrupt();
+            }
+        }
+
         return state;
     }
 
@@ -284,6 +305,11 @@ public abstract class CdcSource<T> {
     private static RetryStrategy getRetryStrategy(Properties properties) {
         RetryStrategy strategy = (RetryStrategy) properties.get(RECONNECT_BEHAVIOR_PROPERTY);
         return strategy == null ? DEFAULT_RECONNECT_BEHAVIOR : strategy;
+    }
+
+    private static CommitStrategy getCommitStrategy(Properties properties) {
+        CommitStrategy strategy = (CommitStrategy) properties.get(COMMIT_BEHAVIOUR_PROPERTY);
+        return strategy == null ? DEFAULT_COMMIT_BEHAVIOR : strategy;
     }
 
     private static boolean getClearStateOnReconnect(Properties properties) {

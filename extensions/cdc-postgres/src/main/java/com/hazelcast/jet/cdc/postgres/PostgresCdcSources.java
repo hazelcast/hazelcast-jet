@@ -19,14 +19,15 @@ package com.hazelcast.jet.cdc.postgres;
 import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.annotation.EvolvingApi;
 import com.hazelcast.jet.cdc.ChangeRecord;
+import com.hazelcast.jet.cdc.CommitStrategies;
+import com.hazelcast.jet.cdc.CommitStrategy;
 import com.hazelcast.jet.cdc.impl.CdcSource;
 import com.hazelcast.jet.cdc.impl.ChangeRecordCdcSource;
 import com.hazelcast.jet.cdc.impl.DebeziumConfig;
 import com.hazelcast.jet.cdc.impl.PropertyRules;
-import com.hazelcast.jet.retry.RetryStrategies;
-import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.jet.cdc.postgres.impl.PostgresSequenceExtractor;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.jet.retry.RetryStrategy;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
@@ -68,6 +69,18 @@ public final class PostgresCdcSources {
      * source will behave as on its initial start, so will do a database
      * snapshot and will start trailing the WAL where it syncs with the database
      * snapshot's end.
+     * <p>
+     * You can also configure when and if the source will send feedback about
+     * processed change record offsets to the backing database. The replication
+     * slots of the database will clean up their internal data structures based
+     * on this feedback. Defaults to {@link CdcSource#DEFAULT_COMMIT_BEHAVIOR}.
+     * While this might not be the most efficient option, it's one that always
+     * works. For other available options, see the factory methods of
+     * {@link CommitStrategies}. Our recommendation is to specify a processing
+     * guarantee for your Jet job and then use the
+     * {@link CommitStrategies#onSnapshot() onSnapshot} strategy. This way,
+     * saving the latest processed change record snapshot and confirming it to
+     * the database will go hand-in-hand.
      *
      * @param name name of this source, needs to be unique, will be passed to
      *             the underlying Kafka Connect source
@@ -379,11 +392,11 @@ public final class PostgresCdcSources {
          * Specifies how the connector should behave when it detects that the
          * backing database has been shut dow.
          * <p>
-         * Defaults to {@link RetryStrategies#never()}.
+         * Defaults to {@link CdcSource#DEFAULT_RECONNECT_BEHAVIOR}.
          *
          */
         @Nonnull
-        public Builder setReconnectBehavior(RetryStrategy retryStrategy) {
+        public Builder setReconnectBehavior(@Nonnull RetryStrategy retryStrategy) {
             config.setProperty(CdcSource.RECONNECT_BEHAVIOR_PROPERTY, retryStrategy);
             return this;
         }
@@ -400,6 +413,20 @@ public final class PostgresCdcSources {
         @Nonnull
         public Builder setShouldStateBeResetOnReconnect(boolean reset) {
             config.setProperty(CdcSource.RECONNECT_RESET_STATE_PROPERTY, reset);
+            return this;
+        }
+
+        /**
+         * Specifies when and if the connector should confirm processed offsets
+         * to the Postgres database's replication slot.
+         * <p>
+         * Defaults to {@link CdcSource#DEFAULT_COMMIT_BEHAVIOR}.
+         *
+         * @since 4.5
+         */
+        @Nonnull
+        public Builder setCommitBehaviour(@Nonnull CommitStrategy commitStrategy) {
+            config.setProperty(CdcSource.COMMIT_BEHAVIOUR_PROPERTY, commitStrategy);
             return this;
         }
 

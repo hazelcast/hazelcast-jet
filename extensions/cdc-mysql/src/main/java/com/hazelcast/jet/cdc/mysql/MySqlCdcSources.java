@@ -24,7 +24,6 @@ import com.hazelcast.jet.cdc.impl.DebeziumConfig;
 import com.hazelcast.jet.cdc.impl.PropertyRules;
 import com.hazelcast.jet.cdc.mysql.impl.MySqlSequenceExtractor;
 import com.hazelcast.jet.pipeline.StreamSource;
-import com.hazelcast.jet.retry.RetryStrategies;
 import com.hazelcast.jet.retry.RetryStrategy;
 
 import javax.annotation.Nonnull;
@@ -324,10 +323,10 @@ public final class MySqlCdcSources {
          * backing database has been shut down (read class javadoc for details
          * and special cases).
          * <p>
-         * Defaults to {@link RetryStrategies#never()}.
+         * Defaults to {@link CdcSource#DEFAULT_RECONNECT_BEHAVIOR}.
          */
         @Nonnull
-        public Builder setReconnectBehavior(RetryStrategy retryStrategy) {
+        public Builder setReconnectBehavior(@Nonnull RetryStrategy retryStrategy) {
             config.setProperty(RECONNECT_BEHAVIOR_PROPERTY, retryStrategy);
             return this;
         }
