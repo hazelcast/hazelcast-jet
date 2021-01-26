@@ -44,20 +44,22 @@ import com.hazelcast.sql.impl.row.HeapRow;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 class JetPlanExecutor {
 
     private final MappingCatalog catalog;
     private final JetInstance jetInstance;
-    private final Map<String, JetQueryResultProducer> resultConsumerRegistry;
+    private final Map<Long, JetQueryResultProducer> resultConsumerRegistry;
 
     JetPlanExecutor(
             MappingCatalog catalog,
             JetInstance jetInstance,
-            Map<String, JetQueryResultProducer> resultConsumerRegistry
+            Map<Long, JetQueryResultProducer> resultConsumerRegistry
     ) {
         this.catalog = catalog;
         this.jetInstance = jetInstance;
@@ -152,10 +154,9 @@ class JetPlanExecutor {
         return SqlResultImpl.createUpdateCountResult(0);
     }
 
-    SqlResult execute(SelectOrSinkPlan plan) {
+    SqlResult execute(SelectOrSinkPlan plan, QueryId queryId) {
         if (plan.isInsert()) {
             if (plan.isStreaming()) {
-                // TODO [viliam] add test for this situation
                 throw QueryException.error("Cannot execute a streaming DML statement without a CREATE JOB command");
             }
 
@@ -164,24 +165,36 @@ class JetPlanExecutor {
 
             return SqlResultImpl.createUpdateCountResult(0);
         } else {
-            JetQueryResultProducer queryResultProducer = new JetQueryResultProducer();
-            String queryIdStr = plan.getQueryId().toString();
-            Object oldValue = resultConsumerRegistry.put(queryIdStr, queryResultProducer);
-            assert oldValue == null : oldValue;
-
+            JetQueryResultProducer queryResultProducer;
+            Long jobId = null;
             try {
                 Job job = jetInstance.newJob(plan.getDag());
+                jobId = job.getId();
+                // The JetQueryResultProducer is created by the RootResultConsumerSink in its `init` method
+                // and added to the `resultConsumerRegistry` under the job ID. Here we poll that registry
+                // until we find it.
+                while (true) {
+                    queryResultProducer = resultConsumerRegistry.remove(jobId);
+                    if (queryResultProducer != null) {
+                        break;
+                    }
+                    LockSupport.parkNanos(MILLISECONDS.toNanos(1));
+                }
+
+                JetQueryResultProducer finalQueryResultProducer = queryResultProducer;
                 job.getFuture().whenComplete((r, t) -> {
                     if (t != null) {
-                        queryResultProducer.onError(QueryException.error(t.toString()));
+                        finalQueryResultProducer.onError(QueryException.error(t.toString()));
                     }
                 });
             } catch (Throwable e) {
-                resultConsumerRegistry.remove(queryIdStr);
+                if (jobId != null) {
+                    resultConsumerRegistry.remove(jobId);
+                }
                 throw e;
             }
 
-            return new JetSqlResultImpl(plan.getQueryId(), queryResultProducer, plan.getRowMetadata());
+            return new JetSqlResultImpl(queryId, queryResultProducer, plan.getRowMetadata(), plan.isStreaming());
         }
     }
 
@@ -202,7 +215,7 @@ class JetPlanExecutor {
         return new JetSqlResultImpl(
                 QueryId.create(jetInstance.getHazelcastInstance().getLocalEndpoint().getUuid()),
                 new JetStaticQueryResultProducer(rows.sorted().map(name -> new HeapRow(new Object[]{name})).iterator()),
-                metadata
-        );
+                metadata,
+                false);
     }
 }

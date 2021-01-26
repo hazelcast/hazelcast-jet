@@ -194,10 +194,10 @@ public class SqlJobManagementTest extends SimpleTestInClusterSupport {
         JetInstance client = factory().newClient();
         SqlService sqlService = client.getSql();
 
-        sqlService.execute("CREATE MAPPING src TYPE TestStream");
-        sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
+        sqlService.execute("CREATE MAPPING src TYPE TestStream").updateCount();
+        sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class)).updateCount();
 
-        sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src");
+        sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src").updateCount();
         Job job = instance().getJob("testJob");
         assertNotNull(job);
         assertJobStatusEventually(job, RUNNING);

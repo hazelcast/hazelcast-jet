@@ -54,7 +54,6 @@ import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlColumnMetadata;
 import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.QueryException;
-import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.QueryUtils;
 import com.hazelcast.sql.impl.calcite.OptimizerContext;
 import com.hazelcast.sql.impl.calcite.SqlBackend;
@@ -254,12 +253,11 @@ class JetSqlBackend implements SqlBackend {
         List<Permission> permissions = extractPermissions(physicalRel);
         if (isInsert) {
             DAG dag = createDag(physicalRel);
-            return new SelectOrSinkPlan(dag, isStreaming, true, null, null, planExecutor, permissions);
+            return new SelectOrSinkPlan(dag, isStreaming, true, null, planExecutor, permissions);
         } else {
-            QueryId queryId = QueryId.create(nodeEngine.getLocalMember().getUuid());
-            DAG dag = createDag(new JetRootRel(physicalRel, nodeEngine.getThisAddress(), queryId));
+            DAG dag = createDag(new JetRootRel(physicalRel, nodeEngine.getThisAddress()));
             SqlRowMetadata rowMetadata = createRowMetadata(fieldNames, physicalRel.schema().getTypes());
-            return new SelectOrSinkPlan(dag, isStreaming, false, queryId, rowMetadata, planExecutor, permissions);
+            return new SelectOrSinkPlan(dag, isStreaming, false, rowMetadata, planExecutor, permissions);
         }
     }
 

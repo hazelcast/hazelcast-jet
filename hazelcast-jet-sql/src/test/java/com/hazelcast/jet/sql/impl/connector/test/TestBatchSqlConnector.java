@@ -110,7 +110,7 @@ public class TestBatchSqlConnector implements SqlConnector {
                 + ", '" + OPTION_TYPES + "'='" + typesStringified + "'"
                 + ", '" + OPTION_VALUES + "'='" + valuesStringified + "'"
                 + ")"
-        );
+        ).updateCount();
     }
 
     @Override

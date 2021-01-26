@@ -27,6 +27,7 @@ import com.hazelcast.jet.sql.impl.schema.MappingStorage;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.impl.JetSqlCoreBackend;
+import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.optimizer.SqlPlan;
 import com.hazelcast.sql.impl.schema.TableResolver;
 import com.hazelcast.sql.impl.schema.map.JetMapMetadataResolver;
@@ -42,7 +43,7 @@ public class JetSqlCoreBackendImpl implements JetSqlCoreBackend, ManagedService 
 
     private MappingCatalog catalog;
     private JetSqlBackend sqlBackend;
-    private Map<String, JetQueryResultProducer> resultConsumerRegistry;
+    private Map<Long, JetQueryResultProducer> resultConsumerRegistry;
 
     @SuppressWarnings("unused") // used through reflection
     public void init(@Nonnull JetInstance jetInstance) {
@@ -79,17 +80,17 @@ public class JetSqlCoreBackendImpl implements JetSqlCoreBackend, ManagedService 
     }
 
     @Override
-    public SqlResult execute(SqlPlan plan, List<Object> params, long timeout, int pageSize) {
+    public SqlResult execute(QueryId queryId, SqlPlan plan, List<Object> params, long timeout, int pageSize) {
         assert params == null || params.isEmpty();
         if (timeout > 0) {
             throw new JetException("Query timeout not yet supported");
         }
         // TODO: query page size defaults to 4096
 
-        return ((JetPlan) plan).execute();
+        return ((JetPlan) plan).execute(queryId);
     }
 
-    public Map<String, JetQueryResultProducer> getResultConsumerRegistry() {
+    public Map<Long, JetQueryResultProducer> getResultConsumerRegistry() {
         return resultConsumerRegistry;
     }
 

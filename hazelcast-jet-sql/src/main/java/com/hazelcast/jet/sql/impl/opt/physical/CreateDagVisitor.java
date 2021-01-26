@@ -195,10 +195,8 @@ public class CreateDagVisitor {
     }
 
     public Vertex onRoot(JetRootRel rootRel) {
-        Vertex vertex = dag.newUniqueVertex(
-                "ClientSink",
-                rootResultConsumerSink(rootRel.getInitiatorAddress(), rootRel.getQueryId())
-        );
+        Vertex vertex = dag.newUniqueVertex("ClientSink",
+                rootResultConsumerSink(rootRel.getInitiatorAddress()));
 
         // We use distribute-to-one edge to send all the items to the initiator member.
         // Such edge has to be partitioned, but the sink is LP=1 anyway, so we can use
