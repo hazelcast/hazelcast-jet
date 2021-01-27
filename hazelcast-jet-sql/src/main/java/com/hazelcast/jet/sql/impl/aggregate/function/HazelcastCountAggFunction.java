@@ -20,6 +20,7 @@ import com.hazelcast.sql.impl.calcite.validate.HazelcastCallBinding;
 import com.hazelcast.sql.impl.calcite.validate.operators.ReplaceUnknownOperandTypeInference;
 import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastAggFunction;
 import com.hazelcast.sql.impl.calcite.validate.param.NoOpParameterConverter;
+import com.hazelcast.sql.impl.calcite.validate.types.HazelcastIntegerType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCallBinding;
@@ -28,9 +29,7 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlSyntax;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandTypeInference;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.Optionality;
@@ -44,8 +43,7 @@ public class HazelcastCountAggFunction extends HazelcastAggFunction {
                 "COUNT",
                 SqlKind.COUNT,
                 // TODO [viliam] How to use BIGINT(64)? Currently, BIGINT(63) is used
-                ReturnTypes.BIGINT,
-                // TODO consider fixing MIN(null) case, currently it returns BIGINT, it should return NULL
+                opBinding -> HazelcastIntegerType.create(64, false),
                 new IgnoreCountStarOperandTypeInference(new ReplaceUnknownOperandTypeInference(BIGINT)),
                 null,
                 SqlFunctionCategory.NUMERIC,
@@ -65,12 +63,8 @@ public class HazelcastCountAggFunction extends HazelcastAggFunction {
             SqlValidatorScope scope,
             SqlCall call
     ) {
-        // Check for COUNT(*) function.  If it is, we don't want to try and derive the "*"
-        if (call.isCountStar()) {
-            return validator.getTypeFactory().createSqlType(
-                    SqlTypeName.BIGINT);
-        }
-        return super.deriveType(validator, scope, call);
+        // Check for COUNT(*) function. If it is, we don't want to try and derive the "*"
+        return HazelcastIntegerType.create(64, false);
     }
 
     protected boolean checkOperandTypes(HazelcastCallBinding binding, boolean throwOnFailure) {
