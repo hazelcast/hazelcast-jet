@@ -31,27 +31,27 @@ import java.io.Serializable;
 public interface CommitStrategy extends Serializable {
 
     /**
-     * Tells the source if it should confirm the offset of the current batch
-     * when it has finishes processing it.
+     * Returns whether the last batch should be committed. This method will be
+     * called after each batch.
      * <p>
-     * Implementations can always return {@code true} to have each bach be
-     * immediately confirmed, or they can only return {@code true} when, for
-     * example, the last batch confirmation was more than a certain time ago,
-     * thus producing periodic commits.
+     * Implementations can always return {@code true} to immediately commit
+     * each batch, or they can return {@code true} only when, for example, the
+     * last batch confirmation was more than a certain time ago, thus producing
+     * periodic commits.
      */
     boolean commitBatch();
 
     /**
-     * Tells the source if it should confirm the last received offset
-     * when a distributed Jet snapshot is being taken. This is the natural
-     * choice for commits, since the last received offset is also being saved
-     * into the Jet snapshots and jobs are being resumed based on those.
+     * Returns whether the offsets should be committed as a part of the current
+     * snapshot. This method will be called for each snapshot. This is the
+     * natural choice for commits since the last received offset is also saved
+     * into the state snapshot and jobs are resumed from it.
      * <p>
      * Even though it makes the most sense, this kind of commit is not always
-     * suitable, for example in jobs without processing guarantees, which
+     * suitable, for example in jobs without a processing guarantee, which
      * never take any snapshots, so would never confirm any offsets, as
-     * processed, for the replication slot. This could lead to resource
-     * starvation on the DB side.
+     * processed, for the replication slot. This can lead to resource
+     * exhaustion on the DB side.
      */
     boolean commitOnSnapshot();
 }

@@ -58,10 +58,13 @@ public final class CommitStrategies {
      * Commit latest processed change record offset if last such commit happened
      * more than the specified time ago.
      * <p>
-     * The period having passed is checked every time a new record batch is
-     * processed and when a Jet snapshot is being taken. Ideally, the specified
-     * period should be a multiple of the Jet snapshot interval, and then it will
-     * always be strictly respected.
+     * We check if the period passed in two cases:<ul>
+     *     <li>each time a new record batch is processed
+     *     <li>when a state snapshot is taken
+     * </ul>
+     *
+     * Ideally, the specified period should be a multiple of the Jet snapshot
+     * interval, and then it will always be strictly respected.
      */
     public static CommitStrategy periodically(TimeUnit unit, long period) {
         return new PeriodicStrategy(TimeUnit.NANOSECONDS.convert(period, unit));
@@ -90,7 +93,7 @@ public final class CommitStrategies {
 
     private static class PeriodicStrategy implements CommitStrategy {
 
-        private long periodNs;
+        private final long periodNs;
         private long lastNs = System.nanoTime();
 
         PeriodicStrategy(long periodNs) {
