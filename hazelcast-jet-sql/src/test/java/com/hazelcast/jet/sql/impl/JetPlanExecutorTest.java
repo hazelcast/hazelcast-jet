@@ -17,9 +17,9 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.internal.util.UuidUtil;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.impl.AbstractJetInstance;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.SelectOrSinkPlan;
@@ -62,7 +62,7 @@ public class JetPlanExecutorTest {
     private MappingCatalog catalog;
 
     @Mock
-    private JetInstance jetInstance;
+    private AbstractJetInstance jetInstance;
 
     @Mock
     private Map<String, QueryResultProducer> resultConsumerRegistry;
