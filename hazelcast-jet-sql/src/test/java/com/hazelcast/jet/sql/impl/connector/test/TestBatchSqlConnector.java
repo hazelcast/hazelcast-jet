@@ -26,6 +26,7 @@ import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlService;
 import com.hazelcast.sql.impl.QueryException;
@@ -71,14 +72,15 @@ public class TestBatchSqlConnector implements SqlConnector {
      * Creates a table with single column named "v" with INT type.
      * The rows contain the sequence {@code 0 .. itemCount}.
      */
-    public static void create(SqlService sqlService, String tableName, int itemCount) {
+    public static void create(ILogger logger, SqlService sqlService, String tableName, int itemCount) {
         List<String[]> values = IntStream.range(0, itemCount)
                                          .mapToObj(i -> new String[]{String.valueOf(i)})
                                          .collect(toList());
-        create(sqlService, tableName, singletonList("v"), singletonList(QueryDataType.INT), values);
+        create(logger, sqlService, tableName, singletonList("v"), singletonList(QueryDataType.INT), values);
     }
 
     public static void create(
+            ILogger logger,
             SqlService sqlService,
             String tableName,
             List<String> names,
@@ -104,13 +106,14 @@ public class TestBatchSqlConnector implements SqlConnector {
         String typesStringified = types.stream().map(type -> type.getTypeFamily().name()).collect(joining(DELIMITER));
         String valuesStringified = values.stream().map(row -> join(DELIMITER, row)).collect(joining(VALUES_DELIMITER));
 
-        sqlService.execute("CREATE MAPPING " + tableName + " TYPE " + TYPE_NAME
+        String sql = "CREATE MAPPING " + tableName + " TYPE " + TYPE_NAME
                 + " OPTIONS ("
                 + '\'' + OPTION_NAMES + "'='" + namesStringified + "'"
                 + ", '" + OPTION_TYPES + "'='" + typesStringified + "'"
                 + ", '" + OPTION_VALUES + "'='" + valuesStringified + "'"
-                + ")"
-        ).updateCount();
+                + ")";
+        logger.info(sql);
+        sqlService.execute(sql).updateCount();
     }
 
     @Override
@@ -226,7 +229,6 @@ public class TestBatchSqlConnector implements SqlConnector {
             super(sqlConnector, fields, schemaName, name, new ConstantTableStatistics(rows.size()));
             this.rows = rows;
         }
-
 
         @Override
         public String toString() {

@@ -77,7 +77,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
 
         String from = randomName();
-        TestBatchSqlConnector.create(sqlService, from, 2);
+        TestBatchSqlConnector.create(logger, sqlService, from, 2);
 
         assertMapEventually(
                 name,

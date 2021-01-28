@@ -307,7 +307,7 @@ public class SqlJobManagementTest extends SimpleTestInClusterSupport {
     }
 
     private void createCompletedJob() {
-        TestBatchSqlConnector.create(sqlService, "t", 1);
+        TestBatchSqlConnector.create(logger, sqlService, "t", 1);
         sqlService.execute(javaSerializableMapDdl("m", Integer.class, Integer.class));
         sqlService.execute("create job " + COMPLETED_JOB_NAME + " as sink into m select v, v from t");
         Job job = instance().getJob(COMPLETED_JOB_NAME);

@@ -45,7 +45,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_innerJoin() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 3);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 3);
 
         String mapName = randomName();
         instance().getMap(mapName).put(1, "value-1");
@@ -67,7 +67,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_innerJoinUsing() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
-                sqlService,
+                logger, sqlService,
                 leftName,
                 singletonList("__key"),
                 singletonList(INT),
@@ -93,7 +93,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_innerJoinConditionInWhereClause() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 3);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 3);
 
         String mapName = randomName();
         instance().getMap(mapName).put(1, "value-1");
@@ -114,7 +114,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_innerJoinAndConditionInWhereClause() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 3);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 3);
 
         String mapName = randomName();
         instance().getMap(mapName).put(1, "value-1");
@@ -137,7 +137,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_innerJoinWithoutCondition() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 2);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 2);
 
         String mapName = randomName();
         instance().getMap(mapName).put(1, "value-1");
@@ -158,7 +158,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_crossJoin() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 2);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 2);
 
         String mapName = randomName();
         instance().getMap(mapName).put(1, "value-1");
@@ -181,7 +181,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_innerJoinNull() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
-                sqlService,
+                logger, sqlService,
                 leftName,
                 singletonList("v"),
                 singletonList(INT),
@@ -204,7 +204,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_innerJoinFilter() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 3);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 3);
 
         String mapName = randomName();
         instance().getMap(mapName).put(1, "value-1");
@@ -223,7 +223,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_innerJoinProject() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 3);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 3);
 
         String mapName = randomName();
         instance().getMap(mapName).put(1, "value-1");
@@ -244,7 +244,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_innerJoinConditionProject() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 3);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 3);
 
         String mapName = randomName();
         instance().getMap(mapName).put(1, "value-1");
@@ -262,7 +262,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_innerJoinOnValue() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 3);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 3);
 
         String mapName = randomName();
         instance().getMap(mapName).put("value-1", 1);
@@ -283,7 +283,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_innerJoinNonEqui() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 4);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 4);
 
         String mapName = randomName();
         instance().getMap(mapName).put(1, "value-1");
@@ -305,7 +305,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_joinEquiJoinAndDisjunction() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 4);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 4);
 
         String mapName = randomName();
         instance().getMap(mapName).put(1, "value-1");
@@ -329,7 +329,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_innerJoinEquiAndNonEqui() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
-                sqlService,
+                logger, sqlService,
                 leftName,
                 asList("v1", "v2"),
                 asList(INT, INT),
@@ -352,7 +352,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_innerJoinMulti() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 3);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 3);
 
         String mapName1 = randomName();
         instance().getMap(mapName1).put(1, "value-1.1");
@@ -382,7 +382,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_innerJoinPartOfTheCompositeKey() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
-                sqlService,
+                logger, sqlService,
                 leftName,
                 singletonList("v"),
                 singletonList(INT),
@@ -406,7 +406,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_innerJoinFullCompositeKeyConjunction() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
-                sqlService,
+                logger, sqlService,
                 leftName,
                 asList("v1", "v2"),
                 asList(INT, VARCHAR),
@@ -430,7 +430,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_innerJoinFullCompositeKeyDisjunction() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
-                sqlService,
+                logger, sqlService,
                 leftName,
                 asList("v1", "v2"),
                 asList(INT, VARCHAR),
@@ -457,7 +457,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_innerJoinPartOfTheCompositeValue() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
-                sqlService,
+                logger, sqlService,
                 leftName,
                 singletonList("v"),
                 singletonList(VARCHAR),
@@ -483,7 +483,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_innerJoinKeyAndValue() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 3);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 3);
 
         String mapName = randomName();
         instance().getMap(mapName).put(1, new Person(0, "value-1"));
@@ -501,7 +501,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_innerJoinWithAlwaysFalseCondition() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 4);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 4);
 
         String mapName = randomName();
         instance().getMap(mapName).put(1, "value-1");
@@ -519,7 +519,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_innerJoinWithTypeConversion_smallerLeft() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 3);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 3);
 
         String mapName = randomName();
         instance().getMap(mapName).put((short) 1, "value-1");
@@ -540,7 +540,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_innerJoinWithTypeConversion_smallerRight() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 3);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 3);
 
         String mapName = randomName();
         instance().getMap(mapName).put(1L, "value-1");
@@ -561,7 +561,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_joinSubquery() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 1);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 1);
 
         String mapName = randomName();
         instance().getMap(mapName).put(1, "value-1");
@@ -579,7 +579,7 @@ public class SqlJoinTest extends SqlTestSupport {
     @Test
     public void test_joinValues() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 1);
+        TestBatchSqlConnector.create(logger, sqlService, leftName, 1);
 
         assertThatThrownBy(() ->
                 sqlService.execute(
@@ -593,7 +593,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_leftJoin() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
-                sqlService,
+                logger, sqlService,
                 leftName,
                 singletonList("v"),
                 singletonList(INT),
@@ -621,7 +621,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_leftJoinOnPrimitiveKey() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
-                sqlService,
+                logger, sqlService,
                 leftName,
                 singletonList("v"),
                 singletonList(INT),
@@ -649,7 +649,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_leftJoinNotOnPrimitiveKey() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
-                sqlService,
+                logger, sqlService,
                 leftName,
                 singletonList("v"),
                 singletonList(INT),
@@ -677,7 +677,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_leftJoinNotOnPrimitiveKey_withAdditionalCondition() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
-                sqlService,
+                logger, sqlService,
                 leftName,
                 singletonList("v"),
                 singletonList(INT),
@@ -705,7 +705,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_leftJoinNotOnPrimitiveKey_multipleMatches() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
-                sqlService,
+                logger, sqlService,
                 leftName,
                 singletonList("v"),
                 singletonList(INT),
@@ -734,7 +734,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_leftJoinNotOnPrimitiveKey_multipleMatches_additionalCondition() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
-                sqlService,
+                logger, sqlService,
                 leftName,
                 singletonList("v"),
                 singletonList(INT),
@@ -762,7 +762,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_leftJoinWithAlwaysTrueCondition() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
-                sqlService,
+                logger, sqlService,
                 leftName,
                 singletonList("v"),
                 singletonList(INT),
@@ -793,7 +793,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_leftJoinWithNonEquiJoin() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
-                sqlService,
+                logger, sqlService,
                 leftName,
                 singletonList("v"),
                 singletonList(INT),
@@ -824,7 +824,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void test_leftJoinWithNonEquiJoin_additionalCondition() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
-                sqlService,
+                logger, sqlService,
                 leftName,
                 singletonList("v"),
                 singletonList(INT),

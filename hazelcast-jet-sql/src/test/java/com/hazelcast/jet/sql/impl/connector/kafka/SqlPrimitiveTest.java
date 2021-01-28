@@ -80,7 +80,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         );
 
         String from = randomName();
-        TestBatchSqlConnector.create(sqlService, from, 2);
+        TestBatchSqlConnector.create(logger, sqlService, from, 2);
 
         assertTopicEventually(
                 name,

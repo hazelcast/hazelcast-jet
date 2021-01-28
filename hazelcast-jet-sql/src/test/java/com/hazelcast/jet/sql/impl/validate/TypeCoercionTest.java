@@ -30,6 +30,12 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.Parameterized.UseParametersRunnerFactory;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.regex.Pattern;
 
 import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.BIGINT;
@@ -51,6 +57,7 @@ import static com.hazelcast.sql.impl.type.QueryDataTypeUtils.resolveTypeForTypeF
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.fail;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
@@ -81,72 +88,72 @@ public class TypeCoercionTest extends SqlTestSupport {
 //                TestParams.passingCase(1013, NULL, TIMESTAMP_WITH_TIME_ZONE, "null", "null", null),
 //                TestParams.failingCase(1014, NULL, OBJECT, "null",
 //                        "null", "Writing to top-level fields of type OBJECT not supported"),
-//
-//                // VARCHAR
-//                TestParams.passingCase(1101, VARCHAR, VARCHAR, "'foo'", "foo", "foo"),
-//                TestParams.passingCase(1102, VARCHAR, BOOLEAN, "'true'", "true", true),
-//                TestParams.passingCase(1103, VARCHAR, TINYINT, "'42'", "42", (byte) 42),
-//                TestParams.failingCase(1104, VARCHAR, TINYINT, "'420'", "420",
-//                        "Cannot parse VARCHAR value to TINYINT"),
-//                TestParams.failingCase(1105, VARCHAR, TINYINT, "'foo'", "foo",
-//                        "Cannot parse VARCHAR value to TINYINT"),
-//                TestParams.passingCase(1106, VARCHAR, SMALLINT, "'42'", "42", (short) 42),
-//                TestParams.failingCase(1107, VARCHAR, SMALLINT, "'42000'", "42000",
-//                        "Cannot parse VARCHAR value to SMALLINT"),
-//                TestParams.failingCase(1108, VARCHAR, SMALLINT, "'foo'", "foo",
-//                        "Cannot parse VARCHAR value to SMALLINT"),
-//                TestParams.passingCase(1109, VARCHAR, INTEGER, "'42'", "42", 42),
-//                TestParams.failingCase(1110, VARCHAR, INTEGER, "'4200000000'", "4200000000",
-//                        "Cannot parse VARCHAR value to INTEGER"),
-//                TestParams.failingCase(1111, VARCHAR, INTEGER, "'foo'", "foo",
-//                        "Cannot parse VARCHAR value to INTEGER"),
-//                TestParams.passingCase(1112, VARCHAR, BIGINT, "'42'", "42", 42L),
-//                TestParams.failingCase(1113, VARCHAR, BIGINT, "'9223372036854775808000'", "9223372036854775808000",
-//                        "Cannot parse VARCHAR value to BIGINT"),
-//                TestParams.failingCase(1114, VARCHAR, BIGINT, "'foo'", "foo",
-//                        "Cannot parse VARCHAR value to BIGINT"),
-//                TestParams.passingCase(1115, VARCHAR, DECIMAL, "'1.5'", "1.5", BigDecimal.valueOf(1.5)),
-//                TestParams.failingCase(1116, VARCHAR, DECIMAL, "'foo'", "foo",
-//                        "Cannot parse VARCHAR value to DECIMAL"),
-//                TestParams.passingCase(1117, VARCHAR, REAL, "'1.5'", "1.5", 1.5f),
-//                TestParams.failingCase(1118, VARCHAR, REAL, "'foo'", "foo",
-//                        "Cannot parse VARCHAR value to REAL"),
-//                TestParams.passingCase(1119, VARCHAR, DOUBLE, "'1.5'", "1.5", 1.5d),
-//                TestParams.failingCase(1120, VARCHAR, DOUBLE, "'foo'", "foo",
-//                        "Cannot parse VARCHAR value to DOUBLE"),
-//                TestParams.passingCase(1121, VARCHAR, TIME, "'01:42:00'", "01:42:00", LocalTime.of(1, 42)),
-//                TestParams.failingCase(1122, VARCHAR, TIME, "'foo'", "foo",
-//                        "Cannot parse VARCHAR value to TIME"),
-//                TestParams.passingCase(1123, VARCHAR, DATE, "'2020-12-30'", "2020-12-30", LocalDate.of(2020, 12, 30)),
-//                TestParams.failingCase(1124, VARCHAR, DATE, "'foo'", "foo",
-//                        "Cannot parse VARCHAR value to DATE"),
-//                TestParams.passingCase(1125, VARCHAR, TIMESTAMP, "'2020-12-30T01:42:00'", "2020-12-30T01:42:00", LocalDateTime.of(2020, 12, 30, 1, 42)),
-//                TestParams.failingCase(1126, VARCHAR, TIMESTAMP, "'foo'", "foo",
-//                        "Cannot parse VARCHAR value to TIMESTAMP"),
-//                TestParams.passingCase(1127, VARCHAR, TIMESTAMP_WITH_TIME_ZONE, "'2020-12-30T01:42:00-05:00'", "2020-12-30T01:42:00-05:00",
-//                        OffsetDateTime.of(2020, 12, 30, 1, 42, 0, 0, ZoneOffset.ofHours(-5))),
-//                TestParams.failingCase(1128, VARCHAR, TIMESTAMP_WITH_TIME_ZONE, "'foo'", "foo",
-//                        "Cannot parse VARCHAR value to TIMESTAMP_WITH_TIME_ZONE"),
-//                TestParams.failingCase(1129, VARCHAR, OBJECT, "'foo'", "foo",
-//                        "Writing to top-level fields of type OBJECT not supported"),
-//
+
+                // VARCHAR
+                TestParams.passingCase(1101, VARCHAR, VARCHAR, "'foo'", "foo", "foo"),
+                TestParams.passingCase(1102, VARCHAR, BOOLEAN, "'true'", "true", true),
+                TestParams.passingCase(1103, VARCHAR, TINYINT, "'42'", "42", (byte) 42),
+                TestParams.failingCase(1104, VARCHAR, TINYINT, "'420'", "420",
+                        "Cannot parse VARCHAR value to TINYINT"),
+                TestParams.failingCase(1105, VARCHAR, TINYINT, "'foo'", "foo",
+                        "Cannot parse VARCHAR value to TINYINT"),
+                TestParams.passingCase(1106, VARCHAR, SMALLINT, "'42'", "42", (short) 42),
+                TestParams.failingCase(1107, VARCHAR, SMALLINT, "'42000'", "42000",
+                        "Cannot parse VARCHAR value to SMALLINT"),
+                TestParams.failingCase(1108, VARCHAR, SMALLINT, "'foo'", "foo",
+                        "Cannot parse VARCHAR value to SMALLINT"),
+                TestParams.passingCase(1109, VARCHAR, INTEGER, "'42'", "42", 42),
+                TestParams.failingCase(1110, VARCHAR, INTEGER, "'4200000000'", "4200000000",
+                        "Cannot parse VARCHAR value to INTEGER"),
+                TestParams.failingCase(1111, VARCHAR, INTEGER, "'foo'", "foo",
+                        "Cannot parse VARCHAR value to INTEGER"),
+                TestParams.passingCase(1112, VARCHAR, BIGINT, "'42'", "42", 42L),
+                TestParams.failingCase(1113, VARCHAR, BIGINT, "'9223372036854775808000'", "9223372036854775808000",
+                        "Cannot parse VARCHAR value to BIGINT"),
+                TestParams.failingCase(1114, VARCHAR, BIGINT, "'foo'", "foo",
+                        "Cannot parse VARCHAR value to BIGINT"),
+                TestParams.passingCase(1115, VARCHAR, DECIMAL, "'1.5'", "1.5", BigDecimal.valueOf(1.5)),
+                TestParams.failingCase(1116, VARCHAR, DECIMAL, "'foo'", "foo",
+                        "Cannot parse VARCHAR value to DECIMAL"),
+                TestParams.passingCase(1117, VARCHAR, REAL, "'1.5'", "1.5", 1.5f),
+                TestParams.failingCase(1118, VARCHAR, REAL, "'foo'", "foo",
+                        "Cannot parse VARCHAR value to REAL"),
+                TestParams.passingCase(1119, VARCHAR, DOUBLE, "'1.5'", "1.5", 1.5d),
+                TestParams.failingCase(1120, VARCHAR, DOUBLE, "'foo'", "foo",
+                        "Cannot parse VARCHAR value to DOUBLE"),
+                TestParams.passingCase(1121, VARCHAR, TIME, "'01:42:00'", "01:42:00", LocalTime.of(1, 42)),
+                TestParams.failingCase(1122, VARCHAR, TIME, "'foo'", "foo",
+                        "Cannot parse VARCHAR value to TIME"),
+                TestParams.passingCase(1123, VARCHAR, DATE, "'2020-12-30'", "2020-12-30", LocalDate.of(2020, 12, 30)),
+                TestParams.failingCase(1124, VARCHAR, DATE, "'foo'", "foo",
+                        "Cannot parse VARCHAR value to DATE"),
+                TestParams.passingCase(1125, VARCHAR, TIMESTAMP, "'2020-12-30T01:42:00'", "2020-12-30T01:42:00", LocalDateTime.of(2020, 12, 30, 1, 42)),
+                TestParams.failingCase(1126, VARCHAR, TIMESTAMP, "'foo'", "foo",
+                        "Cannot parse VARCHAR value to TIMESTAMP"),
+                TestParams.passingCase(1127, VARCHAR, TIMESTAMP_WITH_TIME_ZONE, "'2020-12-30T01:42:00-05:00'", "2020-12-30T01:42:00-05:00",
+                        OffsetDateTime.of(2020, 12, 30, 1, 42, 0, 0, ZoneOffset.ofHours(-5))),
+                TestParams.failingCase(1128, VARCHAR, TIMESTAMP_WITH_TIME_ZONE, "'foo'", "foo",
+                        "Cannot parse VARCHAR value to TIMESTAMP_WITH_TIME_ZONE"),
+                TestParams.failingCase(1129, VARCHAR, OBJECT, "'foo'", "foo",
+                        "Writing to top-level fields of type OBJECT not supported"),
+
                 // BOOLEAN
                 TestParams.passingCase(1201, BOOLEAN, VARCHAR, "true", "true", "true"),
                 TestParams.passingCase(1202, BOOLEAN, BOOLEAN, "true", "true", true),
                 TestParams.failingCase(1203, BOOLEAN, TINYINT, "true", "true",
-                        "CAST function cannot convert value of type BOOLEAN to type TINYINT"),
+                        "Cannot assign to target field 'this' of type TINYINT from source field 'EXPR\\$1' of type BOOLEAN"),
                 TestParams.failingCase(1204, BOOLEAN, SMALLINT, "true", "true",
-                        "CAST function cannot convert value of type BOOLEAN to type SMALLINT"),
+                        "Cannot assign to target field 'this' of type SMALLINT from source field 'EXPR\\$1' of type BOOLEAN"),
                 TestParams.failingCase(1205, BOOLEAN, INTEGER, "true", "true",
-                        "CAST function cannot convert value of type BOOLEAN to type INTEGER"),
+                        "Cannot assign to target field 'this' of type INTEGER from source field 'EXPR\\$1' of type BOOLEAN"),
                 TestParams.failingCase(1206, BOOLEAN, BIGINT, "true", "true",
-                        "CAST function cannot convert value of type BOOLEAN to type BIGINT"),
+                        "Cannot assign to target field 'this' of type BIGINT from source field 'EXPR\\$1' of type BOOLEAN"),
                 TestParams.failingCase(1207, BOOLEAN, DECIMAL, "true", "true",
-                        "CAST function cannot convert value of type BOOLEAN to type DECIMAL"),
+                        "Cannot assign to target field 'this' of type DECIMAL\\(38, 38\\) from source field 'EXPR\\$1' of type BOOLEAN"),
                 TestParams.failingCase(1208, BOOLEAN, REAL, "true", "true",
-                        "CAST function cannot convert value of type BOOLEAN to type REAL"),
+                        "Cannot assign to target field 'this' of type REAL from source field 'EXPR\\$1' of type BOOLEAN"),
                 TestParams.failingCase(1209, BOOLEAN, DOUBLE, "true", "true",
-                        "CAST function cannot convert value of type BOOLEAN to type DOUBLE"),
+                        "Cannot assign to target field 'this' of type DOUBLE from source field 'EXPR\\$1' of type BOOLEAN"),
                 TestParams.failingCase(1210, BOOLEAN, TIME, "true", "true",
                         "Cannot assign to target field 'this' of type TIME from source field '.+' of type BOOLEAN"),
                 TestParams.failingCase(1211, BOOLEAN, DATE, "true", "true",
@@ -158,28 +165,28 @@ public class TypeCoercionTest extends SqlTestSupport {
                 TestParams.failingCase(1214, BOOLEAN, OBJECT, "true", "true",
                         "Writing to top-level fields of type OBJECT not supported"),
 
-//                // TINYINT
-//                TestParams.passingCase(1301, TINYINT, VARCHAR, "cast(132 as tinyint)", aaa, "42"),
-//                TestParams.failingCase(1302, TINYINT, BOOLEAN, "cast(132 as tinyint)",
-//                        valueTestSource, "cannot convert value of type TINYINT to type BOOLEAN"),
-//                TestParams.passingCase(1303, TINYINT, TINYINT, "cast(132 as tinyint)", aaa, (byte) 42),
-//                TestParams.passingCase(1304, TINYINT, SMALLINT, "cast(132 as tinyint)", aaa, (short) 42),
-//                TestParams.passingCase(1305, TINYINT, INTEGER, "cast(132 as tinyint)", aaa, 42),
-//                TestParams.passingCase(1306, TINYINT, BIGINT, "cast(132 as tinyint)", aaa, 42L),
-//                TestParams.passingCase(1307, TINYINT, DECIMAL, "cast(132 as tinyint)", aaa, BigDecimal.valueOf(132)),
-//                TestParams.passingCase(1308, TINYINT, REAL, "cast(132 as tinyint)", aaa, 42f),
-//                TestParams.passingCase(1309, TINYINT, DOUBLE, "cast(132 as tinyint)", aaa, 42d),
-//                TestParams.failingCase(1310, TINYINT, TIME, "cast(132 as tinyint)",
-//                        valueTestSource, "Cannot assign to target field 'this' of type TIME from source field 'EXPR$1' of type TINYINT"),
-//                TestParams.failingCase(1311, TINYINT, DATE, "cast(132 as tinyint)",
-//                        valueTestSource, "Cannot assign to target field 'this' of type DATE from source field 'EXPR$1' of type TINYINT"),
-//                TestParams.failingCase(1312, TINYINT, TIMESTAMP, "cast(132 as tinyint)",
-//                        valueTestSource, "CAST function cannot convert value of type TINYINT to type TIMESTAMP"),
-//                TestParams.failingCase(1313, TINYINT, TIMESTAMP_WITH_TIME_ZONE, "cast(132 as tinyint)",
-//                        valueTestSource, "CAST function cannot convert value of type TINYINT to type TIMESTAMP_WITH_TIME_ZONE"),
-//                TestParams.failingCase(1314, TINYINT, OBJECT, "cast(132 as tinyint)",
-//                        valueTestSource, "Writing to top-level fields of type OBJECT not supported"),
-//
+                // TINYINT
+                TestParams.passingCase(1301, TINYINT, VARCHAR, "cast(42 as tinyint)", "42", "42"),
+                TestParams.failingCase(1302, TINYINT, BOOLEAN, "cast(42 as tinyint)", "42",
+                        "Cannot assign to target field 'this' of type BOOLEAN from source field 'EXPR\\$1' of type TINYINT"),
+                TestParams.passingCase(1303, TINYINT, TINYINT, "cast(42 as tinyint)", "42", (byte) 42),
+                TestParams.passingCase(1304, TINYINT, SMALLINT, "cast(42 as tinyint)", "42", (short) 42),
+                TestParams.passingCase(1305, TINYINT, INTEGER, "cast(42 as tinyint)", "42", 42),
+                TestParams.passingCase(1306, TINYINT, BIGINT, "cast(42 as tinyint)", "42", 42L),
+                TestParams.passingCase(1307, TINYINT, DECIMAL, "cast(42 as tinyint)", "42", BigDecimal.valueOf(42)),
+                TestParams.passingCase(1308, TINYINT, REAL, "cast(42 as tinyint)", "42", 42f),
+                TestParams.passingCase(1309, TINYINT, DOUBLE, "cast(42 as tinyint)", "42", 42d),
+                TestParams.failingCase(1310, TINYINT, TIME, "cast(42 as tinyint)",
+                        "42", "Cannot assign to target field 'this' of type TIME from source field 'EXPR$1' of type TINYINT"),
+                TestParams.failingCase(1311, TINYINT, DATE, "cast(42 as tinyint)",
+                        "42", "Cannot assign to target field 'this' of type DATE from source field 'EXPR$1' of type TINYINT"),
+                TestParams.failingCase(1312, TINYINT, TIMESTAMP, "cast(42 as tinyint)",
+                        "42", "CAST function cannot convert value of type TINYINT to type TIMESTAMP"),
+                TestParams.failingCase(1313, TINYINT, TIMESTAMP_WITH_TIME_ZONE, "cast(42 as tinyint)",
+                        "42", "CAST function cannot convert value of type TINYINT to type TIMESTAMP_WITH_TIME_ZONE"),
+                TestParams.failingCase(1314, TINYINT, OBJECT, "cast(42 as tinyint)",
+                        "42", "Writing to top-level fields of type OBJECT not supported"),
+
 //                // SMALLINT
 //                TestParams.passingCase(1401, SMALLINT, VARCHAR, "cast(42 as smallint)", aaa, "42"),
 //                TestParams.failingCase(1402, SMALLINT, BOOLEAN, "cast(42 as smallint)",
@@ -486,12 +493,14 @@ public class TypeCoercionTest extends SqlTestSupport {
 
     @Test
     public void test_insertValues() {
+        // TODO remove this once we support the TIMESTAMP and TIMESTAMP_WITH_TIME_ZONE literals
+        assumeFalse(testParams.targetType == TIMESTAMP || testParams.targetType == TIMESTAMP_WITH_TIME_ZONE);
+
         Class<?> targetClass = javaClassForType(testParams.targetType);
         String sql = "CREATE MAPPING m type IMap " +
                 "OPTIONS(" +
-                "'keyFormat'='java', " +
+                "'keyFormat'='int', " +
                 "'valueFormat'='java', " +
-                "'keyJavaClass'='java.lang.Integer', " +
                 "'valueJavaClass'='" + targetClass.getName() +
                 "')";
         logger.info(sql);
@@ -508,7 +517,7 @@ public class TypeCoercionTest extends SqlTestSupport {
                 throw e;
             }
             if (!testParams.exceptionMatches(e)) {
-                throw new AssertionError("'" + e.getMessage() + "' didn't contain expected '"
+                throw new AssertionError("'" + e.getMessage() + "' didn't match the regexp '"
                         + testParams.expectedFailureRegex + "'", e);
             } else {
                 logger.info("Caught expected exception", e);
@@ -520,9 +529,13 @@ public class TypeCoercionTest extends SqlTestSupport {
 
     @Test
     public void test_insertSelect() {
+        // TODO remove this assume after https://github.com/hazelcast/hazelcast/pull/18067 is merged.
+        //  Calcite converts these to `CASE WHEN bool THEN 0 ELSE 1 END`, we don't support CASE yet.
+        assumeFalse(testParams.srcType == BOOLEAN && testParams.targetType.isNumeric());
+
         assumeTrue(testParams.srcType != NULL && testParams.targetType != NULL);
         Class<?> targetClass = javaClassForType(testParams.targetType);
-        TestBatchSqlConnector.create(sqlService, "src", singletonList("v"),
+        TestBatchSqlConnector.create(logger, sqlService, "src", singletonList("v"),
                 singletonList(resolveTypeForTypeFamily(testParams.srcType)),
                 singletonList(new String[]{testParams.valueTestSource}));
 
@@ -536,7 +549,7 @@ public class TypeCoercionTest extends SqlTestSupport {
         sqlService.execute(sql);
         try {
             // TODO [viliam] remove the cast
-            sql = "SINK INTO target SELECT cast(0 as integer), v FROM src";
+            sql = "SINK INTO target SELECT 0, v FROM src";
             logger.info(sql);
             sqlService.execute(sql);
             if (testParams.expectedFailureRegex != null) {
@@ -547,7 +560,7 @@ public class TypeCoercionTest extends SqlTestSupport {
                 throw e;
             }
             if (!testParams.exceptionMatches(e)) {
-                throw new AssertionError("'" + e.getMessage() + "' didn't contain expected '"
+                throw new AssertionError("'" + e.getMessage() + "' didn't match the regexp '"
                         + testParams.expectedFailureRegex + "'", e);
             } else {
                 logger.info("Caught expected exception", e);
