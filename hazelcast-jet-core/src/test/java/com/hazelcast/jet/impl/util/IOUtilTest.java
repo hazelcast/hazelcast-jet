@@ -126,8 +126,7 @@ public class IOUtilTest extends JetTestSupport {
      * @param entryFunction maps from (targetDir, nonTargetDir) to an entry path
      */
     private void when_zipSlipVulnerability_then_zipEntryIgnored(BiFunction<Path, Path, Path> entryFunction)
-            throws Exception
-    {
+            throws Exception {
         Path tmpTargetDir = Files.createTempDirectory(testName.getMethodName());
         Path tmpNonTargetDir = Files.createTempDirectory(testName.getMethodName());
         try {
