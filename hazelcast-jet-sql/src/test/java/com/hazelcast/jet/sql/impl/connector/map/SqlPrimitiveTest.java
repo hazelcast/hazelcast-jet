@@ -40,6 +40,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FOR
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertEquals;
 
 public class SqlPrimitiveTest extends SqlTestSupport {
 
@@ -353,5 +354,15 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         instance().getMap(mapName).put(testValue, testValue);
 
         assertRowsAnyOrder("SELECT * FROM " + mapName, singletonList(new Row(testValue, testValue)));
+    }
+
+    @Test
+    public void test_insertFromSelectWithLiterals() {
+        // test for https://github.com/hazelcast/hazelcast-jet/issues/2859
+        sqlService.execute(javaSerializableMapDdl("targetMap", Integer.class, String.class));
+        sqlService.execute("SINK INTO targetMap SELECT 42, 'foo' FROM TABLE(generate_series(0, 0))");
+        IMap<Object, Object> targetMap = instance().getMap("targetMap");
+        assertEquals(1, targetMap.size());
+        assertEquals("foo", targetMap.get(42));
     }
 }
