@@ -17,10 +17,14 @@
 package com.hazelcast.jet.cdc.impl;
 
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.cdc.CommitStrategies;
 import com.hazelcast.jet.cdc.CommitStrategy;
-import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.pipeline.SourceBuilder;
+import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.BroadcastKey;
+import com.hazelcast.jet.core.EventTimeMapper;
+import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.retry.RetryStrategies;
 import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.jet.retry.impl.RetryTracker;
@@ -39,6 +43,8 @@ import org.apache.kafka.connect.source.SourceTask;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.DriverManager;
@@ -52,9 +58,11 @@ import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
+import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
-public abstract class CdcSource<T> {
+public abstract class CdcSourceP<T> extends AbstractProcessor {
 
     public static final String CONNECTOR_CLASS_PROPERTY = "connector.class";
     public static final String SEQUENCE_EXTRACTOR_CLASS_PROPERTY = "sequence.extractor.class";
@@ -65,76 +73,120 @@ public abstract class CdcSource<T> {
     public static final RetryStrategy DEFAULT_RECONNECT_BEHAVIOR = RetryStrategies.never();
     public static final CommitStrategy DEFAULT_COMMIT_BEHAVIOR = CommitStrategies.always();
 
+    private static final BroadcastKey<String> SNAPSHOT_KEY = broadcastKey("snap");
     private static final ThreadLocal<List<byte[]>> THREAD_LOCAL_HISTORY = new ThreadLocal<>();
 
-    private final ILogger logger;
+    @Nonnull
     private final Properties properties;
+    @Nonnull
+    private final EventTimeMapper<? super T> eventTimeMapper;
 
-    private final RetryTracker reconnectTracker;
-    private final boolean clearStateOnReconnect;
-
-    private final CommitStrategy commitStrategy;
-
-    private State state = new State();
     private SourceConnector connector;
     private Map<String, String> taskConfig;
     private SourceTask task;
+    private State state = new State();
 
-    CdcSource(Processor.Context context, Properties properties) {
+    private RetryTracker reconnectTracker;
+    private boolean clearStateOnReconnect;
+
+    private CommitStrategy commitStrategy;
+
+    private ILogger logger;
+
+    private Traverser<Object> traverser = Traversers.empty();
+    private Traverser<Map.Entry<BroadcastKey<String>, State>> snapshotTraverser;
+
+    public CdcSourceP(
+            @Nonnull Properties properties,
+            @Nonnull EventTimePolicy<? super T> eventTimePolicy
+    ) {
+        this.properties = Objects.requireNonNull(properties, "properties");
+        this.eventTimeMapper = new EventTimeMapper<>(Objects.requireNonNull(eventTimePolicy, "eventTimePolicy"));
+        this.eventTimeMapper.addPartitions(1);
+    }
+
+    @Override
+    protected void init(@Nonnull Context context) throws Exception {
         // workaround for https://github.com/hazelcast/hazelcast-jet/issues/2603
         DriverManager.getDrivers();
         this.logger = context.logger();
-        this.properties = properties;
         this.reconnectTracker = new RetryTracker(getRetryStrategy(properties));
         this.commitStrategy = getCommitStrategy(properties);
         this.clearStateOnReconnect = getClearStateOnReconnect(properties);
     }
 
-    public void destroy() {
-        if (task != null) {
-            task.stop();
-            task = null;
+    @Override
+    public boolean complete() {
+        if (!emitFromTraverser(traverser)) {
+            return false;
         }
-        if (connector != null) {
-            connector.stop();
-            connector = null;
-        }
-    }
 
-    public void fillBuffer(SourceBuilder.TimestampedSourceBuffer<T> buf) {
         if (reconnectTracker.needsToWait()) {
-            return;
+            return false;
         }
 
         if (!isConnectionUp()) {
-            return;
+            return false;
         }
 
         try {
             List<SourceRecord> records = task.poll();
             if (records == null || records.isEmpty()) {
-                return;
+                traverser = eventTimeMapper.flatMapIdle();
+                emitFromTraverser(traverser);
+                return false;
             }
 
             for (SourceRecord record : records) {
-                boolean added = addToBuffer(record, buf);
-                if (added) {
-                    Map<String, ?> partition = record.sourcePartition();
-                    Map<String, ?> offset = record.sourceOffset();
-                    state.setOffset(partition, offset);
-                    task.commitRecord(record);
-                }
+                Map<String, ?> partition = record.sourcePartition();
+                Map<String, ?> offset = record.sourceOffset();
+                state.setOffset(partition, offset);
+                task.commitRecord(record);
             }
 
             if (commitStrategy.commitBatch()) {
                 task.commit();
             }
+
+            traverser = Traversers.traverseIterable(records)
+                    .flatMap(record -> {
+                        T t = map(record);
+                        return t == null ? Traversers.empty() :
+                                eventTimeMapper.flatMapEvent(t, 0, extractTimestamp(record)
+                                );
+                    });
+            emitFromTraverser(traverser);
         } catch (InterruptedException ie) {
             logger.warning("Interrupted while waiting for data");
             Thread.currentThread().interrupt();
         } catch (RuntimeException re) {
             reconnect(re);
         }
+
+        return false;
+    }
+
+    @Nullable
+    protected abstract T map(SourceRecord record);
+
+    private void reconnect(RuntimeException re) {
+        if (reconnectTracker.shouldTryAgain()) {
+            logger.warning("Connection to database lost, will attempt to reconnect and retry operations from " +
+                    "scratch" + getCause(re));
+
+            close();
+            reconnectTracker.reset();
+            if (clearStateOnReconnect) {
+                state = new State();
+            }
+        } else {
+            throw shutDownAndThrow(new JetException("Failed to connect to database" + getCause(re)));
+        }
+    }
+
+    private <T extends Throwable> T shutDownAndThrow(T t) {
+        close();
+        return t;
     }
 
     private boolean isConnectionUp() {
@@ -156,6 +208,20 @@ public abstract class CdcSource<T> {
         }
     }
 
+    private SourceTask startNewTask() {
+        SourceTask task = newInstance(connector.taskClass().getName(), "task");
+        task.initialize(new JetSourceTaskContext());
+
+        // Our DatabaseHistory implementation will be created by the
+        // following start() call, on this thread (blocking worker
+        // thread) and this is how we pass it the list it should
+        // use for storing history records.
+        THREAD_LOCAL_HISTORY.set(state.historyRecords);
+        task.start(taskConfig);
+        THREAD_LOCAL_HISTORY.remove();
+        return task;
+    }
+
     private void handleConnectException(RuntimeException ce) {
         reconnectTracker.attemptFailed();
         if (reconnectTracker.shouldTryAgain()) {
@@ -173,78 +239,52 @@ public abstract class CdcSource<T> {
         return connector;
     }
 
-    private SourceTask startNewTask() {
-        SourceTask task = newInstance(connector.taskClass().getName(), "task");
-        task.initialize(new JetSourceTaskContext());
+    @Override
+    public boolean saveToSnapshot() {
+        if (!emitFromTraverser(traverser)) {
+            return false;
+        }
 
-        // Our DatabaseHistory implementation will be created by the
-        // following start() call, on this thread (blocking worker
-        // thread) and this is how we pass it the list it should
-        // use for storing history records.
-        THREAD_LOCAL_HISTORY.set(state.historyRecords);
-        task.start(taskConfig);
-        THREAD_LOCAL_HISTORY.remove();
-        return task;
-    }
-
-    private void reconnect(RuntimeException re) {
-        if (reconnectTracker.shouldTryAgain()) {
-            logger.warning("Connection to database lost, will attempt to reconnect and retry operations from " +
-                    "scratch" + getCause(re));
-
-            destroy();
-            reconnectTracker.reset();
-            if (clearStateOnReconnect) {
-                state = new State();
+        if (snapshotTraverser == null) {
+            if (commitStrategy.commitOnSnapshot()) {
+                try {
+                    task.commit();
+                } catch (InterruptedException e) {
+                    logger.warning("Interrupted while committing");
+                    Thread.currentThread().interrupt();
+                }
             }
-        } else {
-            throw shutDownAndThrow(new JetException("Failed to connect to database" + getCause(re)));
+
+            snapshotTraverser = Traversers.singleton(entry(SNAPSHOT_KEY, state))
+                    .onFirstNull(() -> {
+                        snapshotTraverser = null;
+                        if (getLogger().isFinestEnabled()) {
+                            getLogger().finest("Finished saving snapshot.");
+                        }
+                    });
         }
+        return emitFromTraverserToSnapshot(snapshotTraverser);
     }
 
-    private boolean addToBuffer(SourceRecord sourceRecord, SourceBuilder.TimestampedSourceBuffer<T> buf) {
-        T t = mapToOutput(sourceRecord);
-        if (t != null) {
-            long timestamp = extractTimestamp(sourceRecord);
-            buf.add(t, timestamp);
-            return true;
-        }
-        return false;
-    }
-
-    public State createSnapshot() {
-        if (commitStrategy.commitOnSnapshot()) {
-            try {
-                task.commit();
-            } catch (InterruptedException e) {
-                logger.warning("Interrupted while committing");
-                Thread.currentThread().interrupt();
-            }
+    @Override
+    protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
+        if (!SNAPSHOT_KEY.equals(key)) {
+            throw new RuntimeException("Unexpected key received from snapshot: " + key);
         }
 
-        return state;
+        state = (State) value;
     }
 
-    public void restoreSnapshot(List<State> snapshots) {
-        this.state = snapshots.get(0);
-    }
-
-    protected abstract T mapToOutput(SourceRecord record);
-
-    private <T extends Throwable> T shutDownAndThrow(T t) {
-        destroy();
-        return t;
-    }
-
-    private static String getCause(Exception e) {
-        StringBuilder sb = new StringBuilder();
-        if (e.getMessage() != null) {
-            sb.append(" : ").append(e.getMessage());
+    @Override
+    public void close() {
+        if (task != null) {
+            task.stop();
+            task = null;
         }
-        if (e.getCause() != null && e.getCause().getMessage() != null) {
-            sb.append(" : ").append(e.getCause().getMessage());
+        if (connector != null) {
+            connector.stop();
+            connector = null;
         }
-        return sb.toString();
     }
 
     private class JetSourceTaskContext implements SourceTaskContext {
@@ -276,6 +316,17 @@ public abstract class CdcSource<T> {
         }
     }
 
+    private static String getCause(Exception e) {
+        StringBuilder sb = new StringBuilder();
+        if (e.getMessage() != null) {
+            sb.append(" : ").append(e.getMessage());
+        }
+        if (e.getCause() != null && e.getCause().getMessage() != null) {
+            sb.append(" : ").append(e.getCause().getMessage());
+        }
+        return sb.toString();
+    }
+
     protected static <T> T newInstance(String className, String type) throws JetException {
         try {
             Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(className);
@@ -294,14 +345,6 @@ public abstract class CdcSource<T> {
         }
     }
 
-    private static long extractTimestamp(SourceRecord record) {
-        if (record.valueSchema().field("ts_ms") == null) {
-            return 0L;
-        } else {
-            return ((Struct) record.value()).getInt64("ts_ms");
-        }
-    }
-
     private static RetryStrategy getRetryStrategy(Properties properties) {
         RetryStrategy strategy = (RetryStrategy) properties.get(RECONNECT_BEHAVIOR_PROPERTY);
         return strategy == null ? DEFAULT_RECONNECT_BEHAVIOR : strategy;
@@ -315,6 +358,14 @@ public abstract class CdcSource<T> {
     private static boolean getClearStateOnReconnect(Properties properties) {
         String s = (String) properties.get(RECONNECT_RESET_STATE_PROPERTY);
         return Boolean.parseBoolean(s);
+    }
+
+    private static long extractTimestamp(SourceRecord record) {
+        if (record.valueSchema().field("ts_ms") == null) {
+            return 0L;
+        } else {
+            return ((Struct) record.value()).getInt64("ts_ms");
+        }
     }
 
     private static class JetConnectorContext implements ConnectorContext {

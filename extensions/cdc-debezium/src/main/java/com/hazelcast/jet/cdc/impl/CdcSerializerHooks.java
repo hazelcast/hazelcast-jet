@@ -106,31 +106,31 @@ public class CdcSerializerHooks {
         }
     }
 
-    public static final class CdcSourceStateHook implements SerializerHook<CdcSource.State> {
+    public static final class CdcSourceStateHook implements SerializerHook<CdcSourceP.State> {
         @Override
-        public Class<CdcSource.State> getSerializationType() {
-            return CdcSource.State.class;
+        public Class<CdcSourceP.State> getSerializationType() {
+            return CdcSourceP.State.class;
         }
 
         @Override
         public Serializer createSerializer() {
-            return new StreamSerializer<CdcSource.State>() {
+            return new StreamSerializer<CdcSourceP.State>() {
                 @Override
                 public int getTypeId() {
                     return SerializerHookConstants.CDC_SOURCE_STATE;
                 }
 
                 @Override
-                public void write(ObjectDataOutput out, CdcSource.State state) throws IOException {
+                public void write(ObjectDataOutput out, CdcSourceP.State state) throws IOException {
                     out.writeObject(state.getPartitionsToOffset());
                     out.writeObject(state.getHistoryRecords());
                 }
 
                 @Override
-                public CdcSource.State read(ObjectDataInput in) throws IOException {
+                public CdcSourceP.State read(ObjectDataInput in) throws IOException {
                     Map<Map<String, ?>, Map<String, ?>> partitionsToOffset = in.readObject();
                     CopyOnWriteArrayList<byte[]> historyRecords = in.readObject();
-                    return new CdcSource.State(partitionsToOffset, historyRecords);
+                    return new CdcSourceP.State(partitionsToOffset, historyRecords);
                 }
             };
         }

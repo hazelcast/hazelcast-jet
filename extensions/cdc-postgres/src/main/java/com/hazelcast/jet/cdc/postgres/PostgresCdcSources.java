@@ -21,11 +21,14 @@ import com.hazelcast.jet.annotation.EvolvingApi;
 import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.cdc.CommitStrategies;
 import com.hazelcast.jet.cdc.CommitStrategy;
-import com.hazelcast.jet.cdc.impl.CdcSource;
-import com.hazelcast.jet.cdc.impl.ChangeRecordCdcSource;
+import com.hazelcast.jet.cdc.impl.CdcSourceP;
+import com.hazelcast.jet.cdc.impl.ChangeRecordCdcSourceP;
 import com.hazelcast.jet.cdc.impl.DebeziumConfig;
 import com.hazelcast.jet.cdc.impl.PropertyRules;
 import com.hazelcast.jet.cdc.postgres.impl.PostgresSequenceExtractor;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.retry.RetryStrategy;
 
@@ -73,7 +76,7 @@ public final class PostgresCdcSources {
      * You can also configure when and if the source will send feedback about
      * processed change record offsets to the backing database. The replication
      * slots of the database will clean up their internal data structures based
-     * on this feedback. Defaults to {@link CdcSource#DEFAULT_COMMIT_BEHAVIOR}.
+     * on this feedback. Defaults to {@link CdcSourceP#DEFAULT_COMMIT_BEHAVIOR}.
      * While this might not be the most efficient option, it's one that always
      * works. For other available options, see the factory methods of
      * {@link CommitStrategies}. Our recommendation is to specify a processing
@@ -117,8 +120,8 @@ public final class PostgresCdcSources {
             Objects.requireNonNull(name, "name");
 
             config = new DebeziumConfig(name, "io.debezium.connector.postgresql.PostgresConnector");
-            config.setProperty(CdcSource.SEQUENCE_EXTRACTOR_CLASS_PROPERTY, PostgresSequenceExtractor.class.getName());
-            config.setProperty(ChangeRecordCdcSource.DB_SPECIFIC_EXTRA_FIELDS_PROPERTY, "schema");
+            config.setProperty(CdcSourceP.SEQUENCE_EXTRACTOR_CLASS_PROPERTY, PostgresSequenceExtractor.class.getName());
+            config.setProperty(ChangeRecordCdcSourceP.DB_SPECIFIC_EXTRA_FIELDS_PROPERTY, "schema");
             config.setProperty("database.server.name", UuidUtil.newUnsecureUuidString());
             config.setProperty("snapshot.mode", "exported");
         }
@@ -392,12 +395,11 @@ public final class PostgresCdcSources {
          * Specifies how the connector should behave when it detects that the
          * backing database has been shut dow.
          * <p>
-         * Defaults to {@link CdcSource#DEFAULT_RECONNECT_BEHAVIOR}.
-         *
+         * Defaults to {@link CdcSourceP#DEFAULT_RECONNECT_BEHAVIOR}.
          */
         @Nonnull
         public Builder setReconnectBehavior(@Nonnull RetryStrategy retryStrategy) {
-            config.setProperty(CdcSource.RECONNECT_BEHAVIOR_PROPERTY, retryStrategy);
+            config.setProperty(CdcSourceP.RECONNECT_BEHAVIOR_PROPERTY, retryStrategy);
             return this;
         }
 
@@ -412,7 +414,7 @@ public final class PostgresCdcSources {
          */
         @Nonnull
         public Builder setShouldStateBeResetOnReconnect(boolean reset) {
-            config.setProperty(CdcSource.RECONNECT_RESET_STATE_PROPERTY, reset);
+            config.setProperty(CdcSourceP.RECONNECT_RESET_STATE_PROPERTY, reset);
             return this;
         }
 
@@ -420,13 +422,13 @@ public final class PostgresCdcSources {
          * Specifies when and if the connector should confirm processed offsets
          * to the Postgres database's replication slot.
          * <p>
-         * Defaults to {@link CdcSource#DEFAULT_COMMIT_BEHAVIOR}.
+         * Defaults to {@link CdcSourceP#DEFAULT_COMMIT_BEHAVIOR}.
          *
          * @since 4.5
          */
         @Nonnull
         public Builder setCommitBehaviour(@Nonnull CommitStrategy commitStrategy) {
-            config.setProperty(CdcSource.COMMIT_BEHAVIOUR_PROPERTY, commitStrategy);
+            config.setProperty(CdcSourceP.COMMIT_BEHAVIOUR_PROPERTY, commitStrategy);
             return this;
         }
 
@@ -447,7 +449,11 @@ public final class PostgresCdcSources {
         public StreamSource<ChangeRecord> build() {
             Properties properties = config.toProperties();
             RULES.check(properties);
-            return ChangeRecordCdcSource.fromProperties(properties);
+            return Sources.streamFromProcessorWithWatermarks(
+                    properties.getProperty("name"),
+                    true,
+                    eventTimePolicy -> ProcessorMetaSupplier.forceTotalParallelismOne(
+                            ProcessorSupplier.of(() -> new ChangeRecordCdcSourceP(properties, eventTimePolicy))));
         }
 
     }
