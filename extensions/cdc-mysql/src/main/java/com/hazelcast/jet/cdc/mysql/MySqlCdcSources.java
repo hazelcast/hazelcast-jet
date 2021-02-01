@@ -373,7 +373,7 @@ public final class MySqlCdcSources {
             properties.setProperty("connect.timeout.ms", intervalMs);
 
             return Sources.streamFromProcessorWithWatermarks(
-                    properties.getProperty("name"),
+                    properties.getProperty(CdcSourceP.NAME_PROPERTY),
                     true,
                     eventTimePolicy -> ProcessorMetaSupplier.forceTotalParallelismOne(
                             ProcessorSupplier.of(() -> new ChangeRecordCdcSourceP(properties, eventTimePolicy))));

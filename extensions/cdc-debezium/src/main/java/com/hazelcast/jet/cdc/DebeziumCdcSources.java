@@ -122,7 +122,7 @@ public final class DebeziumCdcSources {
                     this.processorFn;
 
             return Sources.streamFromProcessorWithWatermarks(
-                    properties.getProperty("name"),
+                    properties.getProperty(CdcSourceP.NAME_PROPERTY),
                     true,
                     eventTimePolicy -> {
                         ProcessorSupplier supplier = ProcessorSupplier.of(

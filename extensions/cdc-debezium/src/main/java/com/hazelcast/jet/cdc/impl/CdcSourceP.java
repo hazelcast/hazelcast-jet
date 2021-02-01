@@ -19,8 +19,6 @@ package com.hazelcast.jet.cdc.impl;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
-import com.hazelcast.jet.cdc.CommitStrategies;
-import com.hazelcast.jet.cdc.CommitStrategy;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.EventTimeMapper;
@@ -56,6 +54,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.Util.entry;
@@ -64,14 +63,15 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
 public abstract class CdcSourceP<T> extends AbstractProcessor {
 
+    public static final String NAME_PROPERTY = "name";
     public static final String CONNECTOR_CLASS_PROPERTY = "connector.class";
     public static final String SEQUENCE_EXTRACTOR_CLASS_PROPERTY = "sequence.extractor.class";
     public static final String RECONNECT_BEHAVIOR_PROPERTY = "reconnect.behavior";
-    public static final String COMMIT_BEHAVIOUR_PROPERTY = "commit.behavior";
+    public static final String COMMIT_PERIOD_MILLIS_PROPERTY = "commit.period";
     public static final String RECONNECT_RESET_STATE_PROPERTY = "reconnect.reset.state";
 
     public static final RetryStrategy DEFAULT_RECONNECT_BEHAVIOR = RetryStrategies.never();
-    public static final CommitStrategy DEFAULT_COMMIT_BEHAVIOR = CommitStrategies.always();
+    public static final long DEFAULT_COMMIT_PERIOD_MS = TimeUnit.SECONDS.toMillis(10);
 
     private static final BroadcastKey<String> SNAPSHOT_KEY = broadcastKey("snap");
     private static final ThreadLocal<List<byte[]>> THREAD_LOCAL_HISTORY = new ThreadLocal<>();
@@ -85,51 +85,71 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
     private Map<String, String> taskConfig;
     private SourceTask task;
     private State state = new State();
-
     private RetryTracker reconnectTracker;
     private boolean clearStateOnReconnect;
-
-    private CommitStrategy commitStrategy;
-
-    private ILogger logger;
-
     private Traverser<Object> traverser = Traversers.empty();
     private Traverser<Map.Entry<BroadcastKey<String>, State>> snapshotTraverser;
+    private long lastCommitTime;
+    private long commitPeriod;
+    private boolean snapshotInProgress;
+    private ILogger logger;
 
     public CdcSourceP(
             @Nonnull Properties properties,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy
     ) {
         this.properties = Objects.requireNonNull(properties, "properties");
+
         this.eventTimeMapper = new EventTimeMapper<>(Objects.requireNonNull(eventTimePolicy, "eventTimePolicy"));
         this.eventTimeMapper.addPartitions(1);
     }
 
     @Override
-    protected void init(@Nonnull Context context) throws Exception {
+    protected void init(@Nonnull Context context) {
         // workaround for https://github.com/hazelcast/hazelcast-jet/issues/2603
         DriverManager.getDrivers();
+
+        String name = getName(properties);
         this.logger = context.logger();
-        this.reconnectTracker = new RetryTracker(getRetryStrategy(properties));
-        this.commitStrategy = getCommitStrategy(properties);
+
+        RetryStrategy retryStrategy = getRetryStrategy(properties);
+        log(retryStrategy, "retry strategy", name, logger);
+        this.reconnectTracker = new RetryTracker(retryStrategy);
+
+        this.commitPeriod = getCommitPeriod(properties);
+        log(commitPeriod, "commit period", name, logger);
+        if (commitPeriod > 0) {
+            lastCommitTime = System.nanoTime();
+        }
+
         this.clearStateOnReconnect = getClearStateOnReconnect(properties);
+        log(clearStateOnReconnect, "clear state on reconnect", name, logger);
     }
 
     @Override
     public boolean complete() {
+        if (reconnectTracker.needsToWait()) {
+            return false;
+        }
+        if (!isConnectionUp()) {
+            return false;
+        }
+        if (snapshotInProgress) {
+            return false;
+        }
         if (!emitFromTraverser(traverser)) {
             return false;
         }
 
-        if (reconnectTracker.needsToWait()) {
-            return false;
-        }
-
-        if (!isConnectionUp()) {
-            return false;
-        }
-
         try {
+            if (commitPeriod > 0) {
+                long currentTime = System.nanoTime();
+                if (currentTime - lastCommitTime > commitPeriod) {
+                    task.commit();
+                    lastCommitTime = currentTime;
+                }
+            }
+
             List<SourceRecord> records = task.poll();
             if (records == null || records.isEmpty()) {
                 traverser = eventTimeMapper.flatMapIdle();
@@ -144,7 +164,7 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
                 task.commitRecord(record);
             }
 
-            if (commitStrategy.commitBatch()) {
+            if (commitPeriod == 0) {
                 task.commit();
             }
 
@@ -184,9 +204,9 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
         }
     }
 
-    private <T extends Throwable> T shutDownAndThrow(T t) {
+    private <Th extends Throwable> Th shutDownAndThrow(Th th) {
         close();
-        return t;
+        return th;
     }
 
     private boolean isConnectionUp() {
@@ -206,6 +226,13 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
             handleConnectException(re);
             return false;
         }
+    }
+
+    private SourceConnector startNewConnector() {
+        SourceConnector connector = newInstance(properties.getProperty(CONNECTOR_CLASS_PROPERTY), "connector");
+        connector.initialize(new JetConnectorContext());
+        connector.start((Map) properties);
+        return connector;
     }
 
     private SourceTask startNewTask() {
@@ -232,29 +259,13 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
         }
     }
 
-    private SourceConnector startNewConnector() {
-        SourceConnector connector = newInstance(properties.getProperty(CONNECTOR_CLASS_PROPERTY), "connector");
-        connector.initialize(new JetConnectorContext());
-        connector.start((Map) properties);
-        return connector;
-    }
-
     @Override
-    public boolean saveToSnapshot() {
+    public boolean snapshotCommitPrepare() {
         if (!emitFromTraverser(traverser)) {
             return false;
         }
-
+        snapshotInProgress = true;
         if (snapshotTraverser == null) {
-            if (commitStrategy.commitOnSnapshot()) {
-                try {
-                    task.commit();
-                } catch (InterruptedException e) {
-                    logger.warning("Interrupted while committing");
-                    Thread.currentThread().interrupt();
-                }
-            }
-
             snapshotTraverser = Traversers.singleton(entry(SNAPSHOT_KEY, state))
                     .onFirstNull(() -> {
                         snapshotTraverser = null;
@@ -267,11 +278,26 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
     }
 
     @Override
+    public boolean snapshotCommitFinish(boolean success) {
+        if (success) {
+            try {
+                task.commit();
+            } catch (InterruptedException e) {
+                logger.warning("Interrupted while committing");
+                Thread.currentThread().interrupt();
+            }
+            snapshotInProgress = false;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
     protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
         if (!SNAPSHOT_KEY.equals(key)) {
             throw new RuntimeException("Unexpected key received from snapshot: " + key);
         }
-
         state = (State) value;
     }
 
@@ -345,19 +371,30 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
         }
     }
 
+    private static String getName(Properties properties) {
+        return (String) properties.get(NAME_PROPERTY);
+    }
+
     private static RetryStrategy getRetryStrategy(Properties properties) {
         RetryStrategy strategy = (RetryStrategy) properties.get(RECONNECT_BEHAVIOR_PROPERTY);
         return strategy == null ? DEFAULT_RECONNECT_BEHAVIOR : strategy;
     }
 
-    private static CommitStrategy getCommitStrategy(Properties properties) {
-        CommitStrategy strategy = (CommitStrategy) properties.get(COMMIT_BEHAVIOUR_PROPERTY);
-        return strategy == null ? DEFAULT_COMMIT_BEHAVIOR : strategy;
+    private static long getCommitPeriod(Properties properties) {
+        String periodString = (String) properties.get(COMMIT_PERIOD_MILLIS_PROPERTY);
+        long periodMillis = periodString == null ? DEFAULT_COMMIT_PERIOD_MS : Long.parseLong(periodString);
+        return TimeUnit.MILLISECONDS.toNanos(periodMillis);
     }
 
     private static boolean getClearStateOnReconnect(Properties properties) {
         String s = (String) properties.get(RECONNECT_RESET_STATE_PROPERTY);
         return Boolean.parseBoolean(s);
+    }
+
+    private static void log(Object value, String property, String name, ILogger logger) {
+        if (logger.isInfoEnabled()) {
+            logger.info(name + " has `" + property + "` to " + value);
+        }
     }
 
     private static long extractTimestamp(SourceRecord record) {

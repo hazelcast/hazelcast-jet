@@ -19,8 +19,6 @@ package com.hazelcast.jet.cdc.postgres;
 import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.annotation.EvolvingApi;
 import com.hazelcast.jet.cdc.ChangeRecord;
-import com.hazelcast.jet.cdc.CommitStrategies;
-import com.hazelcast.jet.cdc.CommitStrategy;
 import com.hazelcast.jet.cdc.impl.CdcSourceP;
 import com.hazelcast.jet.cdc.impl.ChangeRecordCdcSourceP;
 import com.hazelcast.jet.cdc.impl.DebeziumConfig;
@@ -73,17 +71,14 @@ public final class PostgresCdcSources {
      * snapshot and will start trailing the WAL where it syncs with the database
      * snapshot's end.
      * <p>
-     * You can also configure when and if the source will send feedback about
+     * You can also configure how often the source will send feedback about
      * processed change record offsets to the backing database. The replication
      * slots of the database will clean up their internal data structures based
-     * on this feedback. Defaults to {@link CdcSourceP#DEFAULT_COMMIT_BEHAVIOR}.
-     * While this might not be the most efficient option, it's one that always
-     * works. For other available options, see the factory methods of
-     * {@link CommitStrategies}. Our recommendation is to specify a processing
-     * guarantee for your Jet job and then use the
-     * {@link CommitStrategies#onSnapshot() onSnapshot} strategy. This way,
-     * saving the latest processed change record snapshot and confirming it to
-     * the database will go hand-in-hand.
+     * on this feedback. Defaults to {@link CdcSourceP#DEFAULT_COMMIT_PERIOD_MS}.
+     * If the job driving this source has a processing guarantee set, the
+     * source also commits these processed offsets whenever it's saving a state
+     * snapshot. If this is the case, then the periodic saving can be disabled
+     * completely by setting it to a negative value.
      *
      * @param name name of this source, needs to be unique, will be passed to
      *             the underlying Kafka Connect source
@@ -419,16 +414,33 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * Specifies when and if the connector should confirm processed offsets
+         * Specifies how often the connector should confirm processed offsets
          * to the Postgres database's replication slot.
          * <p>
-         * Defaults to {@link CdcSourceP#DEFAULT_COMMIT_BEHAVIOR}.
+         * If set to <em>zero</em>, then the connector will commit the latest
+         * processed offset of each batch of change records immediately after
+         * finishing the batch's processing.
+         * <p>
+         * If set to a <em>negative</em> value, then the connector will never
+         * do the periodic offset commit. This setting makes sense when used
+         * in jobs with a processing guarantee. When used in such jobs, the
+         * source commits the offsets whenever the state snapshot is saved.
+         * <p>
+         * If set to a <em>non-zero, positive</em> value, then the commits
+         * will be done periodically, after as many milliseconds as specified
+         * in the value.
+         * <p>
+         * Periodic commits, if not disabled, are done regardless of the
+         * processing guarantee of the job.
          *
-         * @since 4.5
+         * <p>
+         * Defaults to {@link CdcSourceP#DEFAULT_COMMIT_PERIOD_MS}.
+         *
+         * @since 4.4.1
          */
         @Nonnull
-        public Builder setCommitBehaviour(@Nonnull CommitStrategy commitStrategy) {
-            config.setProperty(CdcSourceP.COMMIT_BEHAVIOUR_PROPERTY, commitStrategy);
+        public Builder setCommitPeriod(@Nonnull long milliseconds) {
+            config.setProperty(CdcSourceP.COMMIT_PERIOD_MILLIS_PROPERTY, milliseconds);
             return this;
         }
 
@@ -450,7 +462,7 @@ public final class PostgresCdcSources {
             Properties properties = config.toProperties();
             RULES.check(properties);
             return Sources.streamFromProcessorWithWatermarks(
-                    properties.getProperty("name"),
+                    properties.getProperty(CdcSourceP.NAME_PROPERTY),
                     true,
                     eventTimePolicy -> ProcessorMetaSupplier.forceTotalParallelismOne(
                             ProcessorSupplier.of(() -> new ChangeRecordCdcSourceP(properties, eventTimePolicy))));

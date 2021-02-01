@@ -41,8 +41,10 @@ public class ChangeRecordCdcSourceP extends CdcSourceP<ChangeRecord> {
     private final SequenceExtractor sequenceExtractor;
     private final ExtractNewRecordState<SourceRecord> transform;
 
-    public ChangeRecordCdcSourceP(@Nonnull Properties properties,
-                                  @Nonnull EventTimePolicy<? super ChangeRecord> eventTimePolicy) {
+    public ChangeRecordCdcSourceP(
+            @Nonnull Properties properties,
+            @Nonnull EventTimePolicy<? super ChangeRecord> eventTimePolicy
+    ) {
         super(properties, eventTimePolicy);
 
         try {

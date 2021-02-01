@@ -22,8 +22,6 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.cdc.CdcSinks;
 import com.hazelcast.jet.cdc.ChangeRecord;
-import com.hazelcast.jet.cdc.CommitStrategies;
-import com.hazelcast.jet.cdc.CommitStrategy;
 import com.hazelcast.jet.cdc.Operation;
 import com.hazelcast.jet.cdc.ParsingException;
 import com.hazelcast.jet.cdc.RecordPart;
@@ -149,7 +147,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
     public void restart_withProcessingGuarantee() throws Exception {
         restart(
                 new JobConfig().setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE),
-                CommitStrategies.onSnapshot(),
+                -1L,
                 Arrays.asList(
                         "1004/1:UPDATE:Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, " +
                                 "email=annek@noanswer.org}",
@@ -164,7 +162,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
     public void restart_noProcessingGuarantee() throws Exception {
         restart(
                 new JobConfig(),
-                null,
+                250L,
                 Arrays.asList(
                         "1001/0:SYNC:" + new Customer(1001, "Sally", "Thomas", "sally.thomas@acme.com"),
                         "1002/0:SYNC:" + new Customer(1002, "George", "Bailey", "gbailey@foobar.com"),
@@ -180,11 +178,11 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
 
     private void restart(
             JobConfig jobConfig,
-            CommitStrategy commitStrategy,
+            Long commitPeriod,
             List<String> expectedRecords,
             int postRestartSnapshotLength
     ) throws SQLException {
-        Pipeline pipeline = customersPipeline(commitStrategy);
+        Pipeline pipeline = customersPipeline(commitPeriod);
 
         // when
         JetInstance jet = createJetMembers(2)[0];
@@ -285,9 +283,9 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
     }
 
     @Nonnull
-    private Pipeline customersPipeline(CommitStrategy commitStrategy) {
+    private Pipeline customersPipeline(Long commitPeriod) {
         Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(source("customers", commitStrategy))
+        pipeline.readFrom(source("customers", commitPeriod))
                 .withNativeTimestamps(0)
                 .<ChangeRecord>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
                 .groupingKey(record -> (Integer) record.key().toMap().get("id"))
@@ -368,10 +366,10 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
         return source(tableName, null);
     }
 
-    private StreamSource<ChangeRecord> source(String tableName, CommitStrategy commitStrategy) {
+    private StreamSource<ChangeRecord> source(String tableName, Long commitPeriod) {
         PostgresCdcSources.Builder builder = sourceBuilder(tableName);
-        if (commitStrategy != null) {
-            builder.setCommitBehaviour(commitStrategy);
+        if (commitPeriod != null) {
+            builder.setCommitPeriod(commitPeriod);
         }
         return builder
                 .setReplicationSlotName(REPLICATION_SLOT_NAME)
