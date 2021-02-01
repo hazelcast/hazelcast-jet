@@ -376,18 +376,18 @@ public class TypeCoercionTest extends SqlTestSupport {
                         "01:42:00", "Cannot assign to target field 'this' of type REAL from source field '.+' of type TIME"),
                 TestParams.failingCase(2009, TIME, DOUBLE, "cast('1:42:00' as time)",
                         "01:42:00", "Cannot assign to target field 'this' of type DOUBLE from source field '.+' of type TIME"),
-                TestParams.passingCase(2010, TIME, TIME, "cast('1:42:00' as time)", "01:42:00", LocalTime.of(1, 42)),
-                TestParams.failingCase(2011, TIME, DATE, "cast('1:42:00' as time)",
+                TestParams.passingCase(2010, TIME, TIME, "cast('01:42:00' as time)", "01:42:00", LocalTime.of(1, 42)),
+                TestParams.failingCase(2011, TIME, DATE, "cast('01:42:00' as time)",
                         "01:42:00", "Cannot assign to target field 'this' of type DATE from source field '.+' of type TIME"),
                 // this variant can fail around midnight
-                TestParams.passingCase(2012, TIME, TIMESTAMP, "cast('1:42:00' as time)", "01:42:00",
+                TestParams.passingCase(2012, TIME, TIMESTAMP, "cast('01:42:00' as time)", "01:42:00",
                         LocalDateTime.of(LocalDate.now(), LocalTime.of(1, 42))),
                 // this variant can fail around midnight
-                TestParams.passingCase(2013, TIME, TIMESTAMP_WITH_TIME_ZONE, "cast('1:42:00' as time)", "01:42:00",
+                TestParams.passingCase(2013, TIME, TIMESTAMP_WITH_TIME_ZONE, "cast('01:42:00' as time)", "01:42:00",
                         ZonedDateTime.of(
                                 LocalDateTime.of(LocalDate.now(), LocalTime.of(1, 42)),
                                 DEFAULT_ZONE).toOffsetDateTime()),
-                TestParams.failingCase(2014, TIME, OBJECT, "cast('1:42:00' as time)",
+                TestParams.failingCase(2014, TIME, OBJECT, "cast('01:42:00' as time)",
                         "01:42:00", "Writing to top-level fields of type OBJECT not supported"),
 
                 // DATE
@@ -562,6 +562,48 @@ public class TypeCoercionTest extends SqlTestSupport {
         try {
             // TODO [viliam] remove the cast
             sql = "SINK INTO target SELECT 0, v FROM src";
+            logger.info(sql);
+            sqlService.execute(sql);
+            if (testParams.expectedFailureRegex != null) {
+                fail("Expected to fail with \"" + testParams.expectedFailureRegex + "\", but no exception was thrown");
+            }
+        } catch (Exception e) {
+            if (testParams.expectedFailureRegex == null) {
+                throw e;
+            }
+            if (!testParams.exceptionMatches(e)) {
+                throw new AssertionError("\n'" + e.getMessage() + "'\ndidn't find the regexp \n'"
+                        + testParams.expectedFailureRegex + "'", e);
+            } else {
+                logger.info("Caught expected exception", e);
+            }
+        }
+        Object actualValue = instance().getMap("target").get(0);
+        assertEquals(testParams.targetValue, actualValue);
+    }
+
+    @Test
+    public void test_insertSelect_withLiteral() {
+        // TODO remove this assume after https://github.com/hazelcast/hazelcast/pull/18067 is merged.
+        //  Calcite converts these to `CASE WHEN bool THEN 0 ELSE 1 END`, we don't support CASE yet.
+        assumeFalse(testParams.srcType == BOOLEAN && testParams.targetType.isNumeric());
+
+        assumeTrue(testParams.srcType != NULL && testParams.targetType != NULL);
+
+        Class<?> targetClass = javaClassForType(testParams.targetType);
+        TestBatchSqlConnector.create(logger, sqlService, "src", 1);
+
+        String sql = "CREATE MAPPING target TYPE IMap " +
+                "OPTIONS(" +
+                "'keyFormat'='int', " +
+                "'valueFormat'='java', " +
+                "'valueJavaClass'='" + targetClass.getName() +
+                "')";
+        logger.info(sql);
+        sqlService.execute(sql);
+        try {
+            // TODO [viliam] remove the cast
+            sql = "SINK INTO target SELECT 0, " + testParams.valueLiteral + " FROM src";
             logger.info(sql);
             sqlService.execute(sql);
             if (testParams.expectedFailureRegex != null) {
