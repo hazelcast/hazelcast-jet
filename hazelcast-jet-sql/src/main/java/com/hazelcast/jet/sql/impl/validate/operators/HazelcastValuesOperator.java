@@ -36,6 +36,6 @@ public class HazelcastValuesOperator extends HazelcastSpecialOperator {
 
     @Override
     protected boolean checkOperandTypes(HazelcastCallBinding callBinding, boolean throwOnFailure) {
-        return true;
+        throw new UnsupportedOperationException("never called for VALUES");
     }
 }
