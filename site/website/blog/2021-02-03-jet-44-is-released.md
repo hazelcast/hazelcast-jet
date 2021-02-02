@@ -178,7 +178,7 @@ Dockerfile that combines it with the extensions, like this:
 FROM hazelcast-jet:4.4-slim
 ARG JET_HOME=/opt/hazelcast-jet
 ARG REPO_URL=https://repo1.maven.org/maven2/com/hazelcast/jet
-ADD $REPO_URL/hazelcast-jet-kafka/4.3/hazelcast-jet-kafka-4.3-jar-with-dependencies.jar $JET_HOME/lib/
+ADD $REPO_URL/hazelcast-jet-kafka/4.4/hazelcast-jet-kafka-4.4-jar-with-dependencies.jar $JET_HOME/lib/
 # ... more ADD statements ...
 ```
 
