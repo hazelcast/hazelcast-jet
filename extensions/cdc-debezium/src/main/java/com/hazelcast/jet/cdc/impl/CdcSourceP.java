@@ -393,7 +393,7 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
 
     private static void log(Object value, String property, String name, ILogger logger) {
         if (logger.isInfoEnabled()) {
-            logger.info(name + " has `" + property + "` to " + value);
+            logger.info(name + " has '" + property + "' set to '" + value + '\'');
         }
     }
 

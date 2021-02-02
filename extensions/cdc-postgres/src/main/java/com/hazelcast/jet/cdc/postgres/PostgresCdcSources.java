@@ -439,14 +439,14 @@ public final class PostgresCdcSources {
          * @since 4.4.1
          */
         @Nonnull
-        public Builder setCommitPeriod(@Nonnull long milliseconds) {
+        public Builder setCommitPeriod(long milliseconds) {
             config.setProperty(CdcSourceP.COMMIT_PERIOD_MILLIS_PROPERTY, milliseconds);
             return this;
         }
 
         /**
          * Can be used to set any property not explicitly covered by other
-         * methods or to override properties we have hidden.
+         * methods or to override internal properties.
          */
         @Nonnull
         public Builder setCustomProperty(@Nonnull String key, @Nonnull String value) {

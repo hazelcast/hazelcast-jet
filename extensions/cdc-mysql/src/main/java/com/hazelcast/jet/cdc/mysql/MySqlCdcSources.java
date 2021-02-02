@@ -351,7 +351,7 @@ public final class MySqlCdcSources {
 
         /**
          * Can be used to set any property not explicitly covered by other
-         * methods or to override properties we have hidden.
+         * methods or to override internal properties.
          */
         @Nonnull
         public Builder setCustomProperty(@Nonnull String key, @Nonnull String value) {
