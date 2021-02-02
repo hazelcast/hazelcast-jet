@@ -1,0 +1,267 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Call gRPC Service · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="How to call unary or bidirectional streaming gRPC service from a pipeline."/><meta name="docsearch:version" content="4.3"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Call gRPC Service · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="How to call unary or bidirectional streaming gRPC service from a pipeline."/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.3</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/4.3/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>How-To Guides</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/kafka">Process Events from Apache Kafka</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/error-handling">Error Handling Strategies</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/4.3/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/014-batchstage-sort">014 -- BatchStage.sort()</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/013-system-time-watermarks">013 - Resolving Sparse Events Issue with System-Time Watermarks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/012-improved-job-resilience">012 - Improved Resilience of Fault-Tolerant Streaming Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/how-tos/grpc.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Call gRPC Service</h1></header><article><div><span><p>The <a href="/docs/4.3/api/stateless-transforms#mapusingservice">Stateless
+Transforms</a> section
+shows how to use external services to transform items in a Jet pipeline.
+One way to expose a remote service is using <a href="https://grpc.io/">gRPC</a>
+— an open-source universal RPC framework available for many
+platforms and languages.</p>
+<p>The <code>hazelcast-jet-grpc</code> module makes it easy to perform calls to a gRPC
+service. We support two kinds of <a href="https://grpc.io/docs/guides/concepts/">gRPC service
+methods</a>:</p>
+<ul>
+<li>unary RPC</li>
+<li>bidirectional streaming RPC</li>
+</ul>
+<p>Here we'll show you how to use these services in your pipeline.</p>
+<h2><a class="anchor" aria-hidden="true" id="dependencies"></a><a href="#dependencies" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Dependencies</h2>
+<p>Add this dependency to your Java project:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-412-tab-413" class="nav-link active" data-group="group_412" data-tab="tab-group-412-content-413">Gradle</div><div id="tab-group-412-tab-414" class="nav-link" data-group="group_412" data-tab="tab-group-412-content-414">Maven</div></div><div class="tab-content"><div id="tab-group-412-content-413" class="tab-pane active" data-group="group_412" tabindex="-1"><div><span><pre><code class="hljs css language-groovy">compile <span class="hljs-string">'com.hazelcast.jet:hazelcast-jet-grpc:4.3'</span><br /></code></pre>
+</span></div></div><div id="tab-group-412-content-414" class="tab-pane" data-group="group_412" tabindex="-1"><div><span><pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.hazelcast.jet<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>hazelcast-jet-grpc<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>4.3<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br /></code></pre>
+</span></div></div></div></div>
+<p>The Hazelcast Jet cluster must also have this module on the classpath.
+It is in the <code>opt</code> directory of the distribution package so you can just
+move it to the <code>lib</code> directory and restart the cluster.</p>
+<h2><a class="anchor" aria-hidden="true" id="unary-rpc"></a><a href="#unary-rpc" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Unary RPC</h2>
+<p>The classical request-response RPC pattern is what gRPC calls &quot;unary
+RPC&quot;. You send a single request message and get a single response
+message back, just like a plain function call.</p>
+<p>Let's use this protobuf definition as an example:</p>
+<pre><code class="hljs css language-proto"><span class="hljs-class"><span class="hljs-keyword">service</span> <span class="hljs-title">ProductService</span> </span>{
+  <span class="hljs-function"><span class="hljs-keyword">rpc</span> ProductInfo (ProductInfoRequest)
+      <span class="hljs-keyword">returns</span> (ProductInfoReply) {}
+}
+
+message ProductInfoRequest {
+  int32 id = 1</span>;
+}
+
+<span class="hljs-class"><span class="hljs-keyword">message</span> <span class="hljs-title">ProductInfoReply</span> </span>{
+  <span class="hljs-built_in">string</span> productName = <span class="hljs-number">1</span>;
+}
+</code></pre>
+<p>To call this service, use <code>GrpcServices.unaryService()</code>:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">ServiceFactory</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span><span class="token punctuation">,</span> <span class="token operator">?</span> <span class="token keyword">extends</span> <span class="token class-name">GrpcService</span><span class="token punctuation">&lt;</span><span class="token class-name">ProductInfoRequest</span><span class="token punctuation">,</span> <span class="token class-name">ProductInfoReply</span><span class="token punctuation">></span><span class="token punctuation">></span></span>
+productService <span class="token operator">=</span> <span class="token function">unaryService</span><span class="token punctuation">(</span>
+    <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token class-name">ManagedChannelBuilder</span><span class="token punctuation">.</span><span class="token function">forAddress</span><span class="token punctuation">(</span><span class="token string">"localhost"</span><span class="token punctuation">,</span> PORT<span class="token punctuation">)</span> <span class="token punctuation">.</span><span class="token function">usePlaintext</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    channel <span class="token operator">-></span> <span class="token class-name">ProductServiceGrpc</span><span class="token punctuation">.</span><span class="token function">newStub</span><span class="token punctuation">(</span>channel<span class="token punctuation">)</span><span class="token operator">::</span><span class="token function">productInfo</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>The first parameter is a factory function that returns a channel
+builder. Modify the builder settings as required, as an example we
+could have enabled TLS via
+<code>io.grpc.ManagedChannelBuilder.useTransportSecurity()</code>.</p>
+<p>The second parameter is a function which, given a gRPC network channel,
+creates a client-side stub and returns a reference to its method that
+invokes the service. The stub code is auto-generated by the protobuf
+compiler.</p>
+<p>Returning a method reference isn't a requirement, though, you can
+also modify the stub, the input item or anything else you need. The
+functional type you must comply with is as follows (wildcards omitted
+for clarity):</p>
+<pre><code class="hljs css language-java"><span class="token class-name">FunctionEx</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ManagedChannel</span><span class="token punctuation">,</span> <span class="token class-name">BiConsumerEx</span><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">,</span> <span class="token class-name">StreamObserver</span><span class="token punctuation">&lt;</span><span class="token class-name">R</span><span class="token punctuation">></span><span class="token punctuation">></span><span class="token punctuation">></span></span> callStubFn
+</code></pre>
+<p>Here, <code>BiConsumerEx&lt;T, StreamObserver&lt;R&gt;&gt;</code> corresponds to the signature
+of the generated gRPC method: it is a function that takes an input item
+and the gRPC result observer, and ensures that the observer eventually
+receives the gRPC invocation result.</p>
+<p>Now you can use the service factory in any of the<code>mapUsingService*Async</code>
+methods:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">StreamStage</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Trade</span><span class="token punctuation">></span></span> trades <span class="token operator">=</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+trades<span class="token punctuation">.</span><span class="token function">mapUsingServiceAsync</span><span class="token punctuation">(</span>productService<span class="token punctuation">,</span>
+<span class="token punctuation">(</span>service<span class="token punctuation">,</span> trade<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+    <span class="token class-name">ProductInfoRequest</span> request <span class="token operator">=</span> <span class="token class-name">ProductInfoRequest</span><span class="token punctuation">.</span><span class="token function">newBuilder</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">setId</span><span class="token punctuation">(</span>trade<span class="token punctuation">.</span><span class="token function">productId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> service<span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span>request<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">thenApply</span><span class="token punctuation">(</span>productReply <span class="token operator">-></span>
+            <span class="token function">tuple2</span><span class="token punctuation">(</span>trade<span class="token punctuation">,</span> productReply<span class="token punctuation">.</span><span class="token function">getProductName</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="bidirectional-streaming-rpc"></a><a href="#bidirectional-streaming-rpc" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Bidirectional Streaming RPC</h2>
+<p>Bidirectional streaming RPC is an extension of the classic RPC paradigm
+to streaming. You make a single RPC call, within which you can send any
+number of messages to the server, and it can send any number of messages
+to you. Since we are using gRPC to transform Jet pipeline items, this
+general protocol is constrained: the response stream must match
+one-for-one with the request stream.</p>
+<p>This constraint makes the streaming communication very similar to unary
+RPC, but it eliminates some of the overheads. Sending messages within a
+single established call is cheaper than creating a new call from
+scratch. Our benchmarks show 1.5x to 3x improvement, depending on
+various factors.</p>
+<p>This is an example of a bidirectional streaming RPC definition:</p>
+<pre><code class="hljs css language-proto"><span class="hljs-symbol">service</span> <span class="hljs-keyword">BrokerService </span>{
+  rpc <span class="hljs-keyword">BrokerInfo </span>(<span class="hljs-keyword">stream </span><span class="hljs-keyword">BrokerInfoRequest)
+</span>      returns (<span class="hljs-keyword">stream </span><span class="hljs-keyword">BrokerInfoReply) </span>{}
+}
+
+<span class="hljs-symbol">message</span> <span class="hljs-keyword">BrokerInfoRequest </span>{
+  int32 id = <span class="hljs-number">1</span><span class="hljs-comment">;</span>
+}
+
+<span class="hljs-symbol">message</span> <span class="hljs-keyword">BrokerInfoReply </span>{
+  <span class="hljs-keyword">string </span><span class="hljs-keyword">brokerName </span>= <span class="hljs-number">1</span><span class="hljs-comment">;</span>
+}
+</code></pre>
+<p>Note the <code>stream</code> keyword appearing both in the request and the response.</p>
+<p>We can create the following service factory using
+<code>GrpcServices.bidirectionalStreamingService()</code> method:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">ServiceFactory</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span><span class="token punctuation">,</span> <span class="token operator">?</span> <span class="token keyword">extends</span> <span class="token class-name">GrpcService</span><span class="token punctuation">&lt;</span><span class="token class-name">BrokerInfoRequest</span><span class="token punctuation">,</span> <span class="token class-name">BrokerInfoReply</span><span class="token punctuation">></span><span class="token punctuation">></span></span>
+brokerService <span class="token operator">=</span> <span class="token function">bidirectionalStreamingService</span><span class="token punctuation">(</span>
+    <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token class-name">ManagedChannelBuilder</span><span class="token punctuation">.</span><span class="token function">forAddress</span><span class="token punctuation">(</span><span class="token string">"localhost"</span><span class="token punctuation">,</span> PORT<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">usePlaintext</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    channel <span class="token operator">-></span> <span class="token class-name">BrokerServiceGrpc</span><span class="token punctuation">.</span><span class="token function">newStub</span><span class="token punctuation">(</span>channel<span class="token punctuation">)</span><span class="token operator">::</span><span class="token function">brokerInfo</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>As with the unary service, the first parameter is a supplier returning
+a channel builder.</p>
+<p>The full type of the second parameter is as follows (with wildcards
+omitted):</p>
+<pre><code class="hljs css language-java"><span class="token class-name">FunctionEx</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ManagedChannel</span><span class="token punctuation">,</span> <span class="token class-name">FunctionEx</span><span class="token punctuation">&lt;</span><span class="token class-name">StreamObserver</span><span class="token punctuation">&lt;</span><span class="token class-name">R</span><span class="token punctuation">></span><span class="token punctuation">,</span> <span class="token class-name">StreamObserver</span><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span><span class="token punctuation">></span><span class="token punctuation">></span></span> callStubFn
+</code></pre>
+<p>The service method is now a function with the signature</p>
+<pre><code class="hljs css language-java"><span class="token class-name">StreamObserver</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">R</span><span class="token punctuation">></span></span> <span class="token operator">-></span> <span class="token class-name">StreamObserver</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>This may look a bit confusing since the parameter is an observer of the
+output and the return type is an observer of the input, but it makes
+sense if you pause to think about it. Jet provides its observer of the
+output (same as in the unary RPC), and this function returns an object
+where Jet will push the input items.</p>
+<p>Now the service factory can be used in any of the <code>mapUsingService*</code>
+methods, preferably the <code>mapUsingServiceAsync</code>.</p>
+<pre><code class="hljs css language-java"><span class="token class-name">StreamStage</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Tuple2</span><span class="token punctuation">&lt;</span><span class="token class-name">Trade</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span><span class="token punctuation">></span></span> tradeAndProducts <span class="token operator">=</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+tradeAndProducts<span class="token punctuation">.</span><span class="token function">mapUsingServiceAsync</span><span class="token punctuation">(</span>brokerService<span class="token punctuation">,</span>
+    <span class="token punctuation">(</span>service<span class="token punctuation">,</span> t<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+        <span class="token class-name">BrokerInfoRequest</span> request <span class="token operator">=</span> <span class="token class-name">BrokerInfoRequest</span>
+            <span class="token punctuation">.</span><span class="token function">newBuilder</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">setId</span><span class="token punctuation">(</span>t<span class="token punctuation">.</span><span class="token function">f0</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">brokerId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> service
+            <span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span>request<span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">thenApply</span><span class="token punctuation">(</span>brokerReply <span class="token operator">-></span>
+                <span class="token function">tuple3</span><span class="token punctuation">(</span>t<span class="token punctuation">.</span><span class="token function">f0</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> t<span class="token punctuation">.</span><span class="token function">f1</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> brokerReply<span class="token punctuation">.</span><span class="token function">getBrokerName</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="improve-throughput-with-batching"></a><a href="#improve-throughput-with-batching" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Improve Throughput with Batching</h2>
+<p>If your gRPC service's throughput capacity is very high, and the gRPC
+link is the bottleneck, you can significantly improve the throughput by
+applying batching. For example, you can use a protobuf definition like
+this one (note the <code>repeated</code> keyword):</p>
+<pre><code class="hljs css language-proto"><span class="hljs-attr">service</span> <span class="hljs-string">Greeter {</span>
+  <span class="hljs-attr">rpc</span> <span class="hljs-string">SayHelloListBidirectional (stream HelloRequestList)</span>
+      <span class="hljs-attr">returns</span> <span class="hljs-string">(stream HelloReplyList) {}</span>
+<span class="hljs-attr">}</span>
+<span class="hljs-attr">message</span> <span class="hljs-string">HelloRequestList {</span>
+  <span class="hljs-attr">repeated</span> <span class="hljs-string">string name = 1;</span>
+<span class="hljs-attr">}</span>
+<span class="hljs-attr">message</span> <span class="hljs-string">HelloReplyList {</span>
+  <span class="hljs-attr">repeated</span> <span class="hljs-string">string message = 1;</span>
+<span class="hljs-attr">}</span>
+</code></pre>
+<p>Create the service in a way similar to previous example:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">ServiceFactory</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span><span class="token punctuation">,</span> <span class="token operator">?</span> <span class="token keyword">extends</span> <span class="token class-name">GrpcService</span><span class="token punctuation">&lt;</span><span class="token class-name">HelloRequestList</span><span class="token punctuation">,</span> <span class="token class-name">HelloReplyList</span><span class="token punctuation">></span><span class="token punctuation">></span></span> bidiService <span class="token operator">=</span>
+<span class="token function">bidirectionalStreamingService</span><span class="token punctuation">(</span>
+    <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token class-name">ManagedChannelBuilder</span><span class="token punctuation">.</span><span class="token function">forAddress</span><span class="token punctuation">(</span>host<span class="token punctuation">,</span> port<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">usePlaintext</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    channel <span class="token operator">-></span> <span class="token class-name">GreeterGrpc</span><span class="token punctuation">.</span><span class="token function">newStub</span><span class="token punctuation">(</span>channel<span class="token punctuation">)</span><span class="token operator">::</span><span class="token function">sayHelloListBidirectional</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>In the Jet pipeline, use the specialized <code>mapUsingServiceAsyncBatched</code>
+transform:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">StreamStage</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> stage <span class="token operator">=</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+stage<span class="token punctuation">.</span><span class="token function">mapUsingServiceAsyncBatched</span><span class="token punctuation">(</span>bidiService<span class="token punctuation">,</span>
+    <span class="token number">1024</span><span class="token punctuation">,</span>
+    <span class="token punctuation">(</span>service<span class="token punctuation">,</span> itemList<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+        <span class="token class-name">CompletableFuture</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">HelloReplyList</span><span class="token punctuation">></span></span> future <span class="token operator">=</span>
+            service<span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token class-name">HelloRequestList</span><span class="token punctuation">.</span><span class="token function">newBuilder</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">addAllName</span><span class="token punctuation">(</span>itemList<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> future<span class="token punctuation">.</span><span class="token function">thenApply</span><span class="token punctuation">(</span><span class="token class-name">HelloReplyList</span><span class="token operator">::</span><span class="token function">getMessageList</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+</code></pre>
+<p>If your batch takes more than ~0.8 seconds (including the network
+overhead), you should increase the value of the following properties
+so that the clean shutdown succeeds:</p>
+<pre><code class="hljs css language-text">jet.grpc.destroy.timeout.seconds
+jet.grpc.shutdown.timeout.seconds
+</code></pre>
+<p>The <a href="/javadoc/4.3/com/hazelcast/jet/grpc/GrpcProperties.html">GrpcProperties</a>
+JavaDoc provides more details about these properties.</p>
+<p>See the <a href="https://github.com/hazelcast/hazelcast-jet/tree/master/examples/grpc">grpc example</a>
+module for a complete code example.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/4.3/how-tos/xa"><span class="arrow-prev">← </span><span>Compatibility of XA Support</span></a><a class="docs-next button" href="/docs/4.3/operations/installation"><span>Installation</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#dependencies">Dependencies</a></li><li><a href="#unary-rpc">Unary RPC</a></li><li><a href="#bidirectional-streaming-rpc">Bidirectional Streaming RPC</a></li><li><a href="#improve-throughput-with-batching">Improve Throughput with Batching</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2021 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.3"]}
+              });
+            </script></body></html>

@@ -1,0 +1,333 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>015 - Mqtt Connector · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Mqtt Connector (source and sink)"/><meta name="docsearch:version" content="4.4"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="015 - Mqtt Connector · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="Mqtt Connector (source and sink)"/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.4</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Design Documents</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/tutorials/kafka">Connect to Apache Kafka</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/kinesis">Connect to Amazon Kinesis</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/api/error-handling">Error Handling Strategies</a></li><li class="navListItem"><a class="navItem" href="/docs/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">SQL<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/sql/intro">Hazelcast Jet SQL</a></li><li class="navListItem"><a class="navItem" href="/docs/sql/basic-commands">SQL Statements</a></li><li class="navListItem"><a class="navItem" href="/docs/sql/ddl">DDL Statements</a></li><li class="navListItem"><a class="navItem" href="/docs/sql/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/sql/imap-connector">IMap Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/sql/file-connector">File Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/sql/kafka-connector">Apache Kafka Connector</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem"><a class="navItem" href="/docs/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem"><a class="navItem" href="/docs/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem"><a class="navItem" href="/docs/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/design-docs/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/018-kinesis-connectors">018 - Kinesis Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/017-file-data-ingestion">017 - File Data Ingestion</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/016-event-reordering">016 - Avoiding Event Reordering Effects</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/design-docs/015-mqtt-connector">015 - Mqtt Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/014-batchstage-sort">014 - BatchStage.sort()</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/013-system-time-watermarks">013 - Resolving Sparse Events Issue with System-Time Watermarks</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/012-improved-job-resilience">012 - Improved Resilience of Fault-Tolerant Streaming Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/design-docs/015-mqtt-connector.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">015 - Mqtt Connector</h1></header><article><div><span><p><em>Since</em>: 4.4</p>
+<h2><a class="anchor" aria-hidden="true" id="background"></a><a href="#background" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Background</h2>
+<p>MQTT is a machine-to-machine (M2M)/”Internet of Things” connectivity
+protocol. It was designed as an extremely lightweight publish/subscribe
+messaging transport.</p>
+<h2><a class="anchor" aria-hidden="true" id="mqtt-protocol"></a><a href="#mqtt-protocol" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MQTT Protocol</h2>
+<h3><a class="anchor" aria-hidden="true" id="publish"></a><a href="#publish" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Publish</h3>
+<p>MQTT utilizes subject-based(topics) filtering of the messages on the
+broker. Each message contains a topic name, payload (binary format),
+QoS (Quality of Service Level), identifier and retain-flag.</p>
+<p>Topic Name: a simple string that is hierarchically structured with
+'/' as delimiters. For example, “myhome/livingroom/temperature”.</p>
+<p>Payload: the actual content of the message in binary format.</p>
+<p>QoS: a number indicates the delivery guarantee of the message.</p>
+<ul>
+<li>0, fire and forget</li>
+<li>1, at least once (using acknowledgement)</li>
+<li>2, exactly once (using 2-phase acknowledgement)</li>
+</ul>
+<p>Identifier: a short number that uniquely identifies the messages
+between the client and broker. This is relevant only for QoS levels
+greater than 0. The identifier is not unique between all clients.
+Once the message flow is complete, the client can reuse the identifier.</p>
+<p>Retain Flag: flag that defines whether the message is saved by the
+broker as the last known good value for the specified topic. When a new
+client subscribes to a topic, it receives the last message that is
+retained on that topic.</p>
+<p>Publishing means sending a message for a specific topic. The broker
+reads, acknowledges (according to QoS) and processes the message.
+Processing means determining the clients subscribed to the specified
+topic and sending the message to them. The publishing client does not
+know anything about the processing.</p>
+<h3><a class="anchor" aria-hidden="true" id="subscribe"></a><a href="#subscribe" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Subscribe</h3>
+<p>To receive messages on topics of interest, the client sends a
+<code>SUBSCRIBE</code> message to the broker. The message contains a list of
+subscriptions which consists of a topic and a QoS level. The topic can
+contain wildcards that make it possible to subscribe to a topic pattern
+rather than a specific topic.</p>
+<p>The broker sends back a return code indicating the QoS level granted
+for each of the subscriptions. Messages published at a lower QoS will be
+received at the published QoS. Messages published at a higher quality
+of service will be received using the QoS specified on the subscription.
+If the broker refuses a subscription, the return code indicates the
+failure rather than QoS. For example, the client may have insufficient
+permission to subscribe to the topic, or the topic may be malformed.</p>
+<p>All messages sent with QoS 1 and 2 are queued for offline clients until
+the client is available again. However, this queuing is only possible
+if the client has a persistent session.</p>
+<h2><a class="anchor" aria-hidden="true" id="mqtt-clients"></a><a href="#mqtt-clients" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MQTT Clients</h2>
+<p>We need to pick a java MQTT client for source and sink to connect to
+the broker. There are several options out there:</p>
+<h3><a class="anchor" aria-hidden="true" id="paho-java-client"></a><a href="#paho-java-client" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Paho Java Client</h3>
+<p>The Eclipse Paho project provides open-source client implementations of
+MQTT protocols for various languages and <a href="https://www.eclipse.org/paho/clients/java/">Paho Java Client</a>
+is one of them. The client offers synchronous and asynchronous APIs.
+The sync one is a wrapper to the asynchronous one. Paho Java Client
+does not support MQTT 5.0 protocol yet. It is a work in progress.</p>
+<p>If not configured explicitly, the client will try to connect to the
+broker using MQTT 3.1.1 protocol. If it fails to connect, the client
+falls back to MQTT 3.0 protocol.</p>
+<p>The client supports:</p>
+<ul>
+<li>LWT: Last will and testament</li>
+<li>SSL/TLS: secure connection</li>
+<li>Message persistence: Client persists messages in case of an
+application crash</li>
+<li>Automatic reconnect: Automatically reconnects</li>
+<li>Offline buffering: Client buffers messages whilst offline to send
+when reconnects.</li>
+<li>WebSocket: Client can connect to brokers that support WebSockets</li>
+<li>High Availability: You can configure multiple brokers and in case of
+a failure, the client tries other brokers.</li>
+</ul>
+<p>It is lightweight(240 KB) and a single jar without any dependencies.
+We can say that it is one of the most popular clients.</p>
+<h3><a class="anchor" aria-hidden="true" id="hivemq-client"></a><a href="#hivemq-client" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>HiveMQ Client</h3>
+<p>HiveMQ Client uses <code>Netty</code> for handling networking and <code>RxJava</code> for
+handling the asynchronous streaming of messages. The client provides
+three distinct flavours of API: blocking, asynchronous and reactive.
+HiveMQ Client supports MQTT 5.0 protocol as well as 3.1.1.</p>
+<p>The client supports:</p>
+<ul>
+<li>LWT: Last will and testament</li>
+<li>SSL/TLS: secure connection</li>
+<li>Automatic reconnect: Automatically reconnects</li>
+<li>Offline buffering: Client buffers messages whilst offline to send
+when reconnects.</li>
+<li>WebSocket: Client can connect to brokers that support WebSockets</li>
+<li>Backpressure handling: ask the producers to throttle their output
+back (MQTT 5.0 feature, broker needs to have/enabled the feature)</li>
+</ul>
+<p>HiveMQ Client is not lightweight compared to Paho Java client, 1.1 MB.
+It has also <code>netty</code> and <code>rxjava</code> dependencies.</p>
+<h2><a class="anchor" aria-hidden="true" id="mqtt-versions"></a><a href="#mqtt-versions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MQTT Versions</h2>
+<ul>
+<li>1999 MQTT invention</li>
+<li>2010 MQTT 3.1 Royalty-free release</li>
+<li>2014 MQTT 3.1.1 OASIS standard</li>
+<li>2016 MQTT 3.1.1 ISO standard</li>
+<li>2018 MQTT 5 Initial release</li>
+<li>2019 MQTT 5 OASIS standard</li>
+</ul>
+<p>MQTT 5 brings new features like <code>Shared subscriptions</code> and <code>Time to live</code> for messages and client sessions and many more. While these new
+features look promising, I couldn't find any information regarding the
+adoption rate of MQTT 5. The only java client supporting MQTT 5 is
+<code>HiveMQ Client</code> and for other languages, I've found only a single
+library or none at all.</p>
+<h2><a class="anchor" aria-hidden="true" id="mqtt-connector"></a><a href="#mqtt-connector" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MQTT Connector</h2>
+<p>We chose <code>Paho Java Client</code> over <code>HiveMQ Client</code> since it is
+lightweight and without dependencies. <code>Paho Java Client</code> does not
+support MQTT 5, but the adoption rate of MQTT 5 is questionable.</p>
+<h3><a class="anchor" aria-hidden="true" id="source"></a><a href="#source" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Source</h3>
+<p>We use our <code>SourceBuilder</code> to create a streaming source for MQTT
+messages. The source is not distributed, it creates a client on one of
+the members and subscribes to the topics.</p>
+<p>The subscription mechanism is push-based. We set a callback to the
+client, and it is called as the messages arrive. Since our
+<code>SourceBuilder</code> is designed for pull-based systems, we buffer the
+messages to a blocking queue and drain them in the <code>fillBufferFn</code>. We
+apply the given mapping function to the binary message and keep the
+mapped item in the queue.</p>
+<h4><a class="anchor" aria-hidden="true" id="api"></a><a href="#api" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>API</h4>
+<p>Since there are several configuration options for the source, we
+created a <code>MqttSourceBuilder</code> to configure and build the source. We've
+also introduced a class named <code>Subscription</code> which consists of the
+topic and quality of service for that topic.</p>
+<p>Below is a usage example of the source builder with all the
+configuration options:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">MqttSources</span><span class="token punctuation">.</span><span class="token function">builder</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">clientId</span><span class="token punctuation">(</span><span class="token string">"consumer"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">broker</span><span class="token punctuation">(</span><span class="token string">"tcp://localhost:1883"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">auth</span><span class="token punctuation">(</span><span class="token string">"username"</span><span class="token punctuation">,</span> <span class="token string">"password"</span><span class="token punctuation">.</span><span class="token function">toCharArray</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">topic</span><span class="token punctuation">(</span><span class="token string">"topic"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">qualityOfService</span><span class="token punctuation">(</span><span class="token class-name">QualityOfService</span><span class="token punctuation">.</span>EXACTLY_ONCE<span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">autoReconnect</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">keepSession</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">mapToItemFn</span><span class="token punctuation">(</span><span class="token punctuation">(</span>topic<span class="token punctuation">,</span> message<span class="token punctuation">)</span> <span class="token operator">-></span> message<span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>You can also subscribe to multiple topics and provide a
+<code>MqttConnectOptions</code> function instead of configuring the options one by
+one:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">MqttSources</span><span class="token punctuation">.</span><span class="token function">builder</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">clientId</span><span class="token punctuation">(</span><span class="token string">"consumer"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">broker</span><span class="token punctuation">(</span><span class="token string">"tcp://localhost:1883"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">subscriptions</span><span class="token punctuation">(</span><span class="token class-name">Subscription</span><span class="token punctuation">.</span><span class="token function">of</span><span class="token punctuation">(</span><span class="token string">"topic1"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">Subscription</span><span class="token punctuation">.</span><span class="token function">of</span><span class="token punctuation">(</span><span class="token string">"topic2"</span><span class="token punctuation">,</span> <span class="token class-name">QualityOfService</span><span class="token punctuation">.</span>EXACTLY_ONCE<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">connectOptionsFn</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+            <span class="token class-name">MqttConnectOptions</span> options <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">MqttConnectOptions</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            options<span class="token punctuation">.</span><span class="token function">setCleanSession</span><span class="token punctuation">(</span><span class="token boolean">false</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            options<span class="token punctuation">.</span><span class="token function">setAutomaticReconnect</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            options<span class="token punctuation">.</span><span class="token function">setUserName</span><span class="token punctuation">(</span><span class="token string">"username"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            options<span class="token punctuation">.</span><span class="token function">setPassword</span><span class="token punctuation">(</span><span class="token string">"password"</span><span class="token punctuation">.</span><span class="token function">toCharArray</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            options<span class="token punctuation">.</span><span class="token function">setMaxInflight</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> options<span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">mapToItemFn</span><span class="token punctuation">(</span><span class="token punctuation">(</span>topic<span class="token punctuation">,</span> message<span class="token punctuation">)</span> <span class="token operator">-></span> message<span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="fault-tolerance"></a><a href="#fault-tolerance" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fault Tolerance</h4>
+<p>To support fault tolerance for a source, Jet needs the remote system to
+support one of these:</p>
+<ul>
+<li><p>provide an offset. After a failure, we'll use that offset and replay
+the messages</p></li>
+<li><p>support manual acknowledgement. Jet will ack the messages in the
+second phase of the snapshot</p></li>
+</ul>
+<p>MQTT provides acknowledgements, however, the Paho client we use
+acknowledges the messages automatically. There are other clients that
+support manual acknowledgements, however the whole MQTT protocol is
+designed for IoT and small resource usage. Many brokers (for example
+Mosquitto) limit the number of non-acknowledged messages to a low value
+(100 in case of Mosquitto). Therefore we can't really rely on this
+feature.</p>
+<p>We've also considered an option where Jet itself would save the messages
+received since the last snapshot. We cannot save it to the snapshot
+because the snapshot stores state created <em>before</em> the snapshot is
+taken, but we need to save messages received <em>after</em> the snapshot. We
+could save them to an IMap and maybe we could provide a persistence
+implementation for Paho that we'll be able to &quot;roll back&quot;. However, we
+didn't implement a PoC for this option. We decided to not support any
+fault tolerance for the MQTT source. It can be implemented in the future
+if there's demand. Currently, if a fault-tolerant job fails, the source
+will simply start where it left off and the messages acked since the
+last snapshot will be lost.</p>
+<p>If a client subscribes to a topic with quality of service <code>AT_LEAST_ONCE</code>
+or <code>EXACTLY_ONCE</code> and connects to the broker with <code>cleanSession=false</code>,
+then the broker keeps the messages in case of a disconnection. The broker
+serves these buffered messages once the client is re-connected. You
+need to use a unique identifier for the client.</p>
+<p>Paho client has an <code>autoReconnect</code> option, in case of a disconnect, the
+client tries to reconnect to the broker. After the reconnection, source
+re-subscribes to the topics.</p>
+<h3><a class="anchor" aria-hidden="true" id="sink"></a><a href="#sink" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Sink</h3>
+<p>We use <code>SinkBuilder</code> to create a sink for MQTT messages. The sink
+creates a client for each processor and publishes messages to the
+specified topic. We append the global processor index to the specified
+clientId for uniqueness, e.g <code>producer-1</code>, <code>producer-2</code>...</p>
+<h4><a class="anchor" aria-hidden="true" id="api-1"></a><a href="#api-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>API</h4>
+<p>Since there are several configuration options for the sink, we created
+a <code>MqttSinkBuilder</code> to configure and build the sink.</p>
+<p>Below is a usage example of the sink builder with all the configuration
+options:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">MqttSinks</span><span class="token punctuation">.</span><span class="token function">builder</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">clientId</span><span class="token punctuation">(</span><span class="token string">"producer"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">broker</span><span class="token punctuation">(</span><span class="token string">"tcp://localhost:1883"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">auth</span><span class="token punctuation">(</span><span class="token string">"username"</span><span class="token punctuation">,</span> <span class="token string">"password"</span><span class="token punctuation">.</span><span class="token function">toCharArray</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">topic</span><span class="token punctuation">(</span><span class="token string">"topic"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">autoReconnect</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">keepSession</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">retryStrategy</span><span class="token punctuation">(</span><span class="token class-name">RetryStrategies</span><span class="token punctuation">.</span><span class="token function">indefinitely</span><span class="token punctuation">(</span><span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">messageFn</span><span class="token punctuation">(</span>item <span class="token operator">-></span> <span class="token punctuation">{</span>
+            <span class="token class-name">MqttMessage</span> message <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">MqttMessage</span><span class="token punctuation">(</span>item<span class="token punctuation">.</span><span class="token function">getBytes</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            message<span class="token punctuation">.</span><span class="token function">setQos</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> message<span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>You can provide a <code>MqttConnectOptions</code> function instead of configuring
+the options one by one.</p>
+<pre><code class="hljs css language-java"><span class="token class-name">MqttSinks</span><span class="token punctuation">.</span><span class="token function">builder</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">clientId</span><span class="token punctuation">(</span><span class="token string">"producer"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">broker</span><span class="token punctuation">(</span><span class="token string">"tcp://localhost:1883"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">connectOptionsFn</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+            <span class="token class-name">MqttConnectOptions</span> options <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">MqttConnectOptions</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            options<span class="token punctuation">.</span><span class="token function">setCleanSession</span><span class="token punctuation">(</span><span class="token boolean">false</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            options<span class="token punctuation">.</span><span class="token function">setAutomaticReconnect</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            options<span class="token punctuation">.</span><span class="token function">setUserName</span><span class="token punctuation">(</span><span class="token string">"username"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            options<span class="token punctuation">.</span><span class="token function">setPassword</span><span class="token punctuation">(</span><span class="token string">"password"</span><span class="token punctuation">.</span><span class="token function">toCharArray</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            options<span class="token punctuation">.</span><span class="token function">setMaxInflight</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> options<span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">retryStrategy</span><span class="token punctuation">(</span><span class="token class-name">RetryStrategies</span><span class="token punctuation">.</span><span class="token function">indefinitely</span><span class="token punctuation">(</span><span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">topic</span><span class="token punctuation">(</span><span class="token string">"topic"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">messageFn</span><span class="token punctuation">(</span>item <span class="token operator">-></span> <span class="token punctuation">{</span>
+            <span class="token class-name">MqttMessage</span> message <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">MqttMessage</span><span class="token punctuation">(</span>item<span class="token punctuation">.</span><span class="token function">getBytes</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            message<span class="token punctuation">.</span><span class="token function">setQos</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> message<span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="fault-tolerance-1"></a><a href="#fault-tolerance-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fault Tolerance</h4>
+<p>The MQTT sink provides at-least-once guarantee - it sends the messages
+synchronously. If a job fails and restarts, the same messages will be
+sent again.</p>
+<h4><a class="anchor" aria-hidden="true" id="error-handling"></a><a href="#error-handling" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Error handling</h4>
+<p>The sink uses sync client to publish the messages. Any error/exception
+encountered while publishing the messages will fail the job. User can
+configure the retrying of the messages by providing a retry-strategy.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/design-docs/016-event-reordering"><span class="arrow-prev">← </span><span>016 - Avoiding Event Reordering Effects</span></a><a class="docs-next button" href="/docs/design-docs/014-batchstage-sort"><span class="function-name-prevnext">014 - BatchStage.sort()</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#background">Background</a></li><li><a href="#mqtt-protocol">MQTT Protocol</a><ul class="toc-headings"><li><a href="#publish">Publish</a></li><li><a href="#subscribe">Subscribe</a></li></ul></li><li><a href="#mqtt-clients">MQTT Clients</a><ul class="toc-headings"><li><a href="#paho-java-client">Paho Java Client</a></li><li><a href="#hivemq-client">HiveMQ Client</a></li></ul></li><li><a href="#mqtt-versions">MQTT Versions</a></li><li><a href="#mqtt-connector">MQTT Connector</a><ul class="toc-headings"><li><a href="#source">Source</a></li><li><a href="#sink">Sink</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2021 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.4"]}
+              });
+            </script></body></html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>016 - Avoiding Event Reordering Effects · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Avoid event reordering in unexpected cases"/><meta name="docsearch:version" content="4.4"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="016 - Avoiding Event Reordering Effects · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="Avoid event reordering in unexpected cases"/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.4</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Design Documents</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/tutorials/kafka">Connect to Apache Kafka</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/kinesis">Connect to Amazon Kinesis</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/api/error-handling">Error Handling Strategies</a></li><li class="navListItem"><a class="navItem" href="/docs/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">SQL<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/sql/intro">Hazelcast Jet SQL</a></li><li class="navListItem"><a class="navItem" href="/docs/sql/basic-commands">SQL Statements</a></li><li class="navListItem"><a class="navItem" href="/docs/sql/ddl">DDL Statements</a></li><li class="navListItem"><a class="navItem" href="/docs/sql/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/sql/imap-connector">IMap Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/sql/file-connector">File Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/sql/kafka-connector">Apache Kafka Connector</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem"><a class="navItem" href="/docs/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem"><a class="navItem" href="/docs/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem"><a class="navItem" href="/docs/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/design-docs/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/018-kinesis-connectors">018 - Kinesis Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/017-file-data-ingestion">017 - File Data Ingestion</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/design-docs/016-event-reordering">016 - Avoiding Event Reordering Effects</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/015-mqtt-connector">015 - Mqtt Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/014-batchstage-sort">014 - BatchStage.sort()</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/013-system-time-watermarks">013 - Resolving Sparse Events Issue with System-Time Watermarks</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/012-improved-job-resilience">012 - Improved Resilience of Fault-Tolerant Streaming Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/design-docs/016-event-reordering.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">016 - Avoiding Event Reordering Effects</h1></header><article><div><span><p><em>Since</em>: 4.4</p>
+<h2><a class="anchor" aria-hidden="true" id="goal"></a><a href="#goal" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Goal</h2>
+<p>Avoid non-intuitive event reordering in Jet pipelines.</p>
+<h2><a class="anchor" aria-hidden="true" id="problem-statement"></a><a href="#problem-statement" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Problem statement</h2>
+<p>Jet processes events in parallel, therefore a total order of events
+doesn't exist. However, in some use cases, users expect the order of
+events with the same key to be preserved, to be able to apply stateful
+processing logic on them.</p>
+<p>So far, Jet's default has been to use a round-robin strategy to balance
+the traffic across parallel processors. Typically, the pipeline starts
+out with a source that has low parallelism, and the round-robin edge
+spreads out the data to downstream transforms with full parallelism.</p>
+<p>It is also possible to spread out the data using a partitioning scheme
+so that all events with the same key go to the same downstream
+processor. This is less flexible and may suffer from data bias, where a
+handful of keys dominate the traffic volume. On the other hand, its
+advantage over round-robin is preserving the order among the same-keyed
+events.</p>
+<p>Jet already uses partitioning by key, but only on edges towards stages
+that explicitly use a grouping key, such as <code>aggregate</code>. The aggregating
+processor must observe all the events with a given key, but it is not
+ordering-sensitive.</p>
+<p>Jet also has the <code>mapStateful</code> transform, which is more general than
+<code>aggregate</code> and can contain arbitrary stateful logic. This logic is
+often order-sensitive, so it breaks down under event reordering.</p>
+<p><img src="/docs/assets/events_getting_reordered.svg" alt="Events Getting Reordered"></p>
+<p>In this document, we describe ways to avoid the usage of round-robin
+edges and still preserve the performance potential of the previous
+implementation.</p>
+<h2><a class="anchor" aria-hidden="true" id="design-ideas"></a><a href="#design-ideas" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Design Ideas</h2>
+<p>There are two basic ways to remove event reordering:</p>
+<ul>
+<li>Prevent it from happening in the first place</li>
+<li>Restore it before encountering an order-sensitive transform (stage)</li>
+</ul>
+<p>These approaches have different effects on the performance: the first
+one constrains our freedom to balance the traffic, while the second one
+introduces a sorting overhead.</p>
+<p>The second approach is not feasible most of the time because we don't
+have a good enough sorting key. The obvious choice, event timestamp, is
+not good enough because nothing is stopping two events from occurring
+within the same millisecond.</p>
+<p>Therefore we're focusing on the first approach: keep maintaining the
+original event order at every stage. Let us analyze the situation at
+each stage, starting from the source. There are two kinds of data
+sources:</p>
+<ol>
+<li>single-point source (no parallelism)</li>
+<li>partitioned source (parallelized by a grouping key)</li>
+</ol>
+<p>If we start out from a single-point source and there's no grouping key
+we can extract and parallelize on, we have no choice but to process all
+the data without parallelism. There is no technical challenge to solve
+here, so we'll focus on the cases where we do have a
+grouping/partitioning key.</p>
+<h2><a class="anchor" aria-hidden="true" id="keep-the-order-of-a-partitioned-source"></a><a href="#keep-the-order-of-a-partitioned-source" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Keep the Order of a Partitioned Source</h2>
+<p>A partitioned source is both parallel and order-preserving, it preserves
+the order of the keyed substreams. The current situation in Jet is such
+that it loses this order in stateless transform stages, through
+round-robin edges. Also, Jet doesn't automatically capture the
+partitioning key and propagate it through the pipeline.</p>
+<h3><a class="anchor" aria-hidden="true" id="keep-it-without-the-key"></a><a href="#keep-it-without-the-key" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Keep it Without the Key</h3>
+<p>We can even without the partitioning key, simply by keeping the
+partitions isolated throughout the pipeline. This seems to allow us a
+level of parallelism equal to the number of partitions in the source.
+However, it is pretty inflexible:</p>
+<ol>
+<li>Jet's symmetrical execution model means that the source parallelism
+must be a multiple of the size of the cluster</li>
+<li>Jet cluster may change in size, affecting the parallelism of the
+source</li>
+<li>Number of partitions in the source is not intended to drive Jet's
+parallelism</li>
+</ol>
+<h3><a class="anchor" aria-hidden="true" id="keep-it-using-the-key"></a><a href="#keep-it-using-the-key" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Keep it Using the Key</h3>
+<p>In streaming pipelines we already wrap every event object into a
+<code>JetEvent</code> that holds the metadata. We can add the partitioning key (or
+just the partition ID, an integer) there and then apply a partitioned
+edge whenever we used to apply the round-robin one. We can apply an
+optimization as well, by using the cheaper <code>isolated</code> edge when
+connecting transforms with the same local parallelism.</p>
+<p>This approach is more intrusive because it affects the pipelines without
+windowed aggregation, which currently don't need the wrapping
+<code>JetEvent</code>.</p>
+<h2><a class="anchor" aria-hidden="true" id="decision-keep-the-order-without-the-key"></a><a href="#decision-keep-the-order-without-the-key" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Decision: Keep the Order Without the Key</h2>
+<p>This discussion was more relevant before we decided on this
+<code>preserveOrder</code> as property to globally activate/deactivate on the
+pipeline. For now, since the user activates this property in the
+pipeline, the decision to protect or not protect the order in pipelines
+that do not contain these keys is set there.</p>
+<h2><a class="anchor" aria-hidden="true" id="implementation-of-the-preserve-order-approach"></a><a href="#implementation-of-the-preserve-order-approach" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Implementation of the Preserve Order Approach</h2>
+<p>We added a setter/getter methods to <code>Pipeline</code> to activate/deactivate
+this approach on the pipeline. The default value for this property is
+<code>false</code> that means that do not preserve the order of events. User can
+set this property as follows:</p>
+<pre><code class="hljs css language-java">pipeline<span class="token punctuation">.</span><span class="token function">setPreserveOrder</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>and get the value of this property by:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">boolean</span> value <span class="token operator">=</span> pipeline<span class="token punctuation">.</span><span class="token function">isPreserveOrder</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Enabling this property hints the Jet to keep the event order the same.
+It affects the code in the <code>Planner</code>. If the incoming edge we would
+attach to the transform is a round-robin one (<code>unicast</code>), then Jet:</p>
+<ul>
+<li><p>Ensure that the local parallelism (LP) of the input vertex of the
+transform is equal to the PlannerVertex of the upstream transform.</p></li>
+<li><p>Connect these transform vertices with isolated edges.</p></li>
+</ul>
+<p>Otherwise, if it's a partitioned edge, do nothing.</p>
+<p>We applied the policy to enforce equal local parallelism during the
+pipeline-to-DAG conversion stage, <code>Pipeline.toDag()</code>. We also inspected
+and adjusted the code in each of the <code>Transform.addToDag()</code>
+implementations, switching to the <code>isolated</code> edge where needed. Here is
+the summary of changes that shows how transforms behave when this global
+preserve order property is activated:</p>
+<table>
+<thead>
+<tr><th>Transform or Operator</th><th>The summary of changes</th></tr>
+</thead>
+<tbody>
+<tr><td>Map/Filter/FlatMap</td><td>Enforce parallelism equal to the upstream, apply the <code>isolated</code> edge.</td></tr>
+<tr><td>Custom (Core API) Transform</td><td>Enforce parallelism equal to the upstream, apply the <code>isolated</code> edge.</td></tr>
+<tr><td>Partitioned Custom Transform</td><td>No changes, it already uses a partitioned edge.</td></tr>
+<tr><td>Aggregation</td><td>Enforce parallelism equal to the upstream, apply the <code>isolated</code> edge in two stage aggregations without keys so that it can process non-commutative and non-associative aggregations</td></tr>
+<tr><td>Distinct</td><td>No changes. We don't guarantee to emit the very first distinct item.</td></tr>
+<tr><td>Sorting</td><td>To allow stable sorting, enforce parallelism equal to the upstream, apply the <code>isolated</code> edge.</td></tr>
+<tr><td>HashJoinTransform</td><td>Edge-0 (carrying the stream to be enriched): Enforce parallelism equal to the upstream, apply the <code>isolated</code> edge.</td></tr>
+<tr><td>Stateful Mapping</td><td>No changes, stateful mapping already preserves the order of the upstream stage.</td></tr>
+<tr><td>MergeTransform</td><td>Enforce parallelism equal to the minimum of its upstreams, apply the updated version of isolated edge.</td></tr>
+<tr><td>TimestampTransform</td><td>No changes, this transform already uses the <code>isolated</code> edge.</td></tr>
+<tr><td>PeekTransform</td><td>No changes.</td></tr>
+<tr><td>Sources</td><td>No changes.</td></tr>
+<tr><td>Sinks</td><td>No changes.</td></tr>
+</tbody>
+</table>
+<h2><a class="anchor" aria-hidden="true" id="not-implementing-now-smart-job-planning-abandoned"></a><a href="#not-implementing-now-smart-job-planning-abandoned" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Not Implementing Now: Smart Job Planning (Abandoned)</h2>
+<p>Since it requires marking pipeline stages as order sensitive or not, we
+have abandoned using it in this first implementation. In other words,
+this approach requires the user to know which stages of the pipeline are
+order-sensitive or not. I leave this section in the TDD as this approach
+can be used for fine-grained optimizations. You can also find the
+implementation we deleted
+<a href="https://github.com/hazelcast/hazelcast-jet/pull/2522/commits/a745b678f5fa05ee54400750bcb69117bcf37f1f#diff-e841e6cd817336dba2e28b8598d91ba0105f513b9ad56ddbbe79513c4bf63613L210-L231">here</a>.</p>
+<p>We classified the transforms as order-sensitive and order-insensitive.
+This allows us to analyze the graph of the pipeline and identify which
+parts of it need the ordering restrictions. We must protect the order
+only on a path going from an order-creating stage to a stateful mapping
+stage. We also classified the transforms into order-propagating and
+order-creating. Sources create the order, as well as sorting and
+aggregating stages. For example, if a pipeline contains stateful mapping
+downstream of an aggregating stage, only that part must preserve the
+order.</p>
+<p>The algorithm to find these order-sensitive subgraphs requires us to
+traverse the <code>Transform</code> DAG in reverse topological order. This way, at
+each stage, we know whether somewhere in its downstream there's an
+order-sensitive stage. Here's the algorithm we use:</p>
+<ol>
+<li>Traverse to DAG in the reverse topological order.</li>
+<li>When visiting an order-sensitive transform, activate the ordering
+prevention logic for this and future transforms until visiting an
+order-creator transform.</li>
+<li>After visiting an order-creator transform, deactivate the
+ordering prevention logic for the future transforms until visiting an
+order-sensitive node.</li>
+<li>Follow this procedure to visit all nodes.</li>
+</ol>
+<h2><a class="anchor" aria-hidden="true" id="not-implementing-now-sorting-events-between-consecutive-watermarks"></a><a href="#not-implementing-now-sorting-events-between-consecutive-watermarks" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Not Implementing Now: Sorting Events Between Consecutive Watermarks</h2>
+<p>Jet already offers support for watermarking. If we have a sorting key
+for events, we can sort the events between the two consecutive watermark
+according to the sorting key so we can put the events in their initial
+order. Users will not explicitly define the window. The user will only
+add stateful mapping (or any order-sensitive stage) to his pipeline and
+we will add such an intermediate sorting stage during planning.</p>
+<p>As the cost of this work, sorting events requires an extra computation,
+and we have to wait for the closing watermark to arrive. This increases
+the latency with watermarkPeriod/2 on average. The issue of sparse
+events can also occur in this approach.</p>
+<p>To use this solution, we need a sorting key such as more precise
+timestamp or mark like a SequenceId for events- Our timestamp precision
+is low, resulting in overlapping events with the same timestamp, and it
+is not easy to add this SequenceId (sorting key) to events in a reliable
+way especially when the total parallelism of the source is greater than
+one. I just put this approach to be seen.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/design-docs/017-file-data-ingestion"><span class="arrow-prev">← </span><span>017 - File Data Ingestion</span></a><a class="docs-next button" href="/docs/design-docs/015-mqtt-connector"><span>015 - Mqtt Connector</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#goal">Goal</a></li><li><a href="#problem-statement">Problem statement</a></li><li><a href="#design-ideas">Design Ideas</a></li><li><a href="#keep-the-order-of-a-partitioned-source">Keep the Order of a Partitioned Source</a><ul class="toc-headings"><li><a href="#keep-it-without-the-key">Keep it Without the Key</a></li><li><a href="#keep-it-using-the-key">Keep it Using the Key</a></li></ul></li><li><a href="#decision-keep-the-order-without-the-key">Decision: Keep the Order Without the Key</a></li><li><a href="#implementation-of-the-preserve-order-approach">Implementation of the Preserve Order Approach</a></li><li><a href="#not-implementing-now-smart-job-planning-abandoned">Not Implementing Now: Smart Job Planning (Abandoned)</a></li><li><a href="#not-implementing-now-sorting-events-between-consecutive-watermarks">Not Implementing Now: Sorting Events Between Consecutive Watermarks</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2021 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.4"]}
+              });
+            </script></body></html>

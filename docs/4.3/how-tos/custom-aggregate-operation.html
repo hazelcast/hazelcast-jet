@@ -1,0 +1,319 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Build a Custom Aggregate Operation · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="How to create a custom aggregation operation using Jet"/><meta name="docsearch:version" content="4.3"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Build a Custom Aggregate Operation · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="How to create a custom aggregation operation using Jet"/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.3</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/4.3/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>How-To Guides</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/kafka">Process Events from Apache Kafka</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/error-handling">Error Handling Strategies</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/4.3/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/014-batchstage-sort">014 -- BatchStage.sort()</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/013-system-time-watermarks">013 - Resolving Sparse Events Issue with System-Time Watermarks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/012-improved-job-resilience">012 - Improved Resilience of Fault-Tolerant Streaming Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/how-tos/custom-aggregate-operation.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Build a Custom Aggregate Operation</h1></header><article><div><span><p>One of the most important kinds of processing Jet does is aggregation. In
+general it is a transformation of a set of input values into a single
+output value. The function that does this transformation is called the
+<em>aggregate function</em>. A basic example is <code>sum</code> applied to a set of
+integer numbers, but the result can also be a complex value, for example
+a list of all the input items.</p>
+<p>Jet's library contains a range of <a href="/javadoc/4.3/com/hazelcast/jet/aggregate/AggregateOperations.html">predefined aggregate
+functions</a>,
+but it also exposes an abstraction, called
+<a href="/javadoc/4.3/com/hazelcast/jet/aggregate/AggregateOperation.html"><code>AggregateOperation</code></a>,
+that allows you to plug in your own. Since Jet does the aggregation in a
+parallelized and distributed way, you can't simply supply a piece of
+Java code that implements the aggregate function; we need you to break
+it down into several smaller pieces that fit into Jet's processing
+engine.</p>
+<h2><a class="anchor" aria-hidden="true" id="characteristics-of-distributed-aggregation"></a><a href="#characteristics-of-distributed-aggregation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Characteristics of Distributed Aggregation</h2>
+<p>The ability to compute the aggregate function in parallel comes at a
+cost: Jet must be able to give a slice of the total data set to each
+processing unit and then combine the partial results from all the units.
+The combining step is crucial: it will only make sense if we're
+combining the partial results of a <em>commutative associative</em> function
+(CA for short). On the example of <code>sum</code> this is trivial: we know from
+elementary school that <code>+</code> is a CA operation. If you have a stream of
+numbers: <code>{17, 37, 5, 11, 42}</code>, you can sum up <code>{17, 5}</code> separately from
+<code>{42, 11, 37}</code> and then combine the partial sums (also note the
+reordering of the elements).</p>
+<p>If you need something more complex, like <code>average</code>, it doesn't by itself
+have this property; however if you add one more ingredient, the <code>finish</code>
+function, you can express it easily. Jet allows you to first compute
+some CA function, whose partial results can be combined, and then at the
+very end apply the <code>finish</code> function on the fully combined result. To
+compute the average, your CA function will output the pair <code>(sum, count)</code>. Two such pairs are trivial to combine by summing each
+component. The <code>finish</code> function will be <code>sum / count</code>.</p>
+<p>In addition to the mathematical side, there is also the practical one:
+you have to provide Jet with a specific mutable object, called the
+<code>accumulator</code>, which will keep the <code>running score</code> of the operation in
+progress. For the <code>average</code> example, it would be something like</p>
+<pre><code class="hljs css language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">AvgAccumulator</span> <span class="token punctuation">{</span>
+
+    <span class="token keyword">private</span> <span class="token keyword">long</span> sum<span class="token punctuation">;</span>
+    <span class="token keyword">private</span> <span class="token keyword">long</span> count<span class="token punctuation">;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">accumulate</span><span class="token punctuation">(</span><span class="token keyword">long</span> value<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        sum <span class="token operator">+=</span> value<span class="token punctuation">;</span>
+        count<span class="token operator">++</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">combine</span><span class="token punctuation">(</span><span class="token class-name">AvgAccumulator</span> that<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>sum <span class="token operator">+=</span> that<span class="token punctuation">.</span>sum<span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>count <span class="token operator">+=</span> that<span class="token punctuation">.</span>sum<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">double</span> <span class="token function">finish</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token punctuation">(</span><span class="token keyword">double</span><span class="token punctuation">)</span> sum <span class="token operator">/</span> count<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>This object will also have to be <a href="../api/serialization">serializable</a>,
+and preferably with Hazelcast's serialization instead of Java's because
+in a group-and-aggregate operation there's one accumulator per each key
+and all of them have to be sent across the network to be combined and
+finished.</p>
+<h2><a class="anchor" aria-hidden="true" id="the-building-blocks"></a><a href="#the-building-blocks" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>The Building Blocks</h2>
+<p>Instead of requiring you to write a complete class from scratch, Jet
+separates the concern of holding the accumulated state from that of the
+computation performed on it. This means that you just need one
+accumulator class for each kind of structure that holds the accumulated
+data, as opposed to one for each aggregate operation. Jet's library
+offers in the
+<a href="/javadoc/4.3/com/hazelcast/jet/accumulator/package-summary.html"><code>com.hazelcast.jet.accumulator</code></a>
+package several such classes, one of them being
+<a href="/javadoc/4.3/com/hazelcast/jet/accumulator/LongLongAccumulator.html"><code>LongLongAccumulator</code></a>,
+which is a match for our <code>average</code> function. You'll just have to supply
+the logic on top of it.</p>
+<p>Specifically, you have to provide a set of six functions (we call them
+&quot;<code>primitives</code>&quot;):</p>
+<ul>
+<li><code>create</code> a new accumulator object.</li>
+<li><code>accumulate</code> the data of an item by mutating the accumulator's state.</li>
+<li><code>combine</code> the contents of the right-hand accumulator into the
+left-hand one.</li>
+<li><code>deduct</code> the contents of the right-hand accumulator from the left-hand
+one (undo the effects of <code>combine</code>).</li>
+<li><code>finish</code> accumulation by transforming the accumulator object into the
+final result.</li>
+<li><code>export</code> the result of aggregation in a way that's not destructive for
+the accumulator (used in rolling aggregations).</li>
+</ul>
+<p>We already mentioned most of these above. The <code>deduct</code> primitive is
+optional and Jet can manage without it, but if you are computing a
+sliding window over an infinite stream, this primitive can give a
+significant performance boost because it allows Jet to reuse the results
+of the previous calculations.</p>
+<p>In a similar fashion Jet discerns between the <code>export</code> and <code>finish</code>
+primitives for optimization purposes. Every function that works as the
+<code>export</code> primitive will also work as <code>finish</code>, but you can specify a
+different <code>finish</code> that reuses the state already allocated in the
+accumulator. Jet applies <code>finish</code> only if it will never again use that
+accumulator.</p>
+<p>If you happen to have a deeper familiarity with JDK's <code>java.util.stream</code>
+API, you'll find <code>AggregateOperation</code> quite similar to
+<code>java.util.stream.Collector</code>, which is also a holder of several
+functional primitives. Jet's definitions are slightly different, though,
+and there are the additional optimizing primitives we just mentioned.</p>
+<p>Let's see how this works with our <code>average</code> function. Using
+<code>LongLongAccumulator</code> we can express our <code>accumulate</code> primitive as</p>
+<pre><code class="hljs css language-java"><span class="token punctuation">(</span>acc<span class="token punctuation">,</span> n<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+    acc<span class="token punctuation">.</span><span class="token function">set1</span><span class="token punctuation">(</span>acc<span class="token punctuation">.</span><span class="token function">get1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> n<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    acc<span class="token punctuation">.</span><span class="token function">set2</span><span class="token punctuation">(</span>acc<span class="token punctuation">.</span><span class="token function">get2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>The <code>export</code>/<code>finish</code> primitive will be</p>
+<pre><code class="hljs css language-java">acc <span class="token operator">-></span> <span class="token punctuation">(</span><span class="token keyword">double</span><span class="token punctuation">)</span> acc<span class="token punctuation">.</span><span class="token function">get1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">/</span> acc<span class="token punctuation">.</span><span class="token function">get2</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p>Now we have to define the other three primitives to match our main
+logic. For <code>create</code> we just refer to the constructor:
+<code>LongLongAccumulator::new</code>. The <code>combine</code> primitive expects you to
+update the left-hand accumulator with the contents of the right-hand
+one, so:</p>
+<pre><code class="hljs css language-java"><span class="token punctuation">(</span>left<span class="token punctuation">,</span> right<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+    left<span class="token punctuation">.</span><span class="token function">set1</span><span class="token punctuation">(</span>left<span class="token punctuation">.</span><span class="token function">get1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> right<span class="token punctuation">.</span><span class="token function">get1</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    left<span class="token punctuation">.</span><span class="token function">set2</span><span class="token punctuation">(</span>left<span class="token punctuation">.</span><span class="token function">get2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> right<span class="token punctuation">.</span><span class="token function">get2</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Deducting must undo the effect of a previous <code>combine</code>:</p>
+<pre><code class="hljs css language-java"><span class="token punctuation">(</span>left<span class="token punctuation">,</span> right<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+    left<span class="token punctuation">.</span><span class="token function">set1</span><span class="token punctuation">(</span>left<span class="token punctuation">.</span><span class="token function">get1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> right<span class="token punctuation">.</span><span class="token function">get1</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    left<span class="token punctuation">.</span><span class="token function">set2</span><span class="token punctuation">(</span>left<span class="token punctuation">.</span><span class="token function">get2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> right<span class="token punctuation">.</span><span class="token function">get2</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>All put together, we can define our averaging operation as follows:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">AggregateOperation1</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Long</span><span class="token punctuation">,</span> <span class="token class-name">LongLongAccumulator</span><span class="token punctuation">,</span> <span class="token class-name">Double</span><span class="token punctuation">></span></span> aggrOp <span class="token operator">=</span> <span class="token class-name">AggregateOperation</span>
+    <span class="token punctuation">.</span><span class="token function">withCreate</span><span class="token punctuation">(</span><span class="token class-name">LongLongAccumulator</span><span class="token operator">::</span><span class="token keyword">new</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Long</span><span class="token punctuation">></span></span><span class="token function">andAccumulate</span><span class="token punctuation">(</span><span class="token punctuation">(</span>acc<span class="token punctuation">,</span> n<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+        acc<span class="token punctuation">.</span><span class="token function">set1</span><span class="token punctuation">(</span>acc<span class="token punctuation">.</span><span class="token function">get1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> n<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        acc<span class="token punctuation">.</span><span class="token function">set2</span><span class="token punctuation">(</span>acc<span class="token punctuation">.</span><span class="token function">get2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">andCombine</span><span class="token punctuation">(</span><span class="token punctuation">(</span>left<span class="token punctuation">,</span> right<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+        left<span class="token punctuation">.</span><span class="token function">set1</span><span class="token punctuation">(</span>left<span class="token punctuation">.</span><span class="token function">get1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> right<span class="token punctuation">.</span><span class="token function">get1</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        left<span class="token punctuation">.</span><span class="token function">set2</span><span class="token punctuation">(</span>left<span class="token punctuation">.</span><span class="token function">get2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> right<span class="token punctuation">.</span><span class="token function">get2</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">andDeduct</span><span class="token punctuation">(</span><span class="token punctuation">(</span>left<span class="token punctuation">,</span> right<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+        left<span class="token punctuation">.</span><span class="token function">set1</span><span class="token punctuation">(</span>left<span class="token punctuation">.</span><span class="token function">get1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> right<span class="token punctuation">.</span><span class="token function">get1</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        left<span class="token punctuation">.</span><span class="token function">set2</span><span class="token punctuation">(</span>left<span class="token punctuation">.</span><span class="token function">get2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> right<span class="token punctuation">.</span><span class="token function">get2</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">andExportFinish</span><span class="token punctuation">(</span>acc <span class="token operator">-></span> <span class="token punctuation">(</span><span class="token keyword">double</span><span class="token punctuation">)</span> acc<span class="token punctuation">.</span><span class="token function">get1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">/</span> acc<span class="token punctuation">.</span><span class="token function">get2</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Let's stop for a second to look at the type we got:
+<code>AggregateOperation1&lt;Long, LongLongAccumulator, Double&gt;</code>. Its type
+parameters are:</p>
+<ol>
+<li><code>Long</code>: the type of the input item</li>
+<li><code>LongLongAccumulator</code>: the type of the accumulator</li>
+<li><code>Double</code>: the type of the result</li>
+</ol>
+<p>Specifically note the <code>1</code> at the end of the type's name: it signifies
+that it's the specialization of the general <code>AggregateOperation</code> to
+exactly one input stream. In Hazelcast Jet you can also perform a
+<a href="../api/stateful-transforms#co-group--join">co-aggregating</a>
+operation, aggregating several input streams together. Since the number
+of input types is variable, the general <code>AggregateOperation</code> type cannot
+statically capture them and we need separate subtypes. We decided to
+statically support up to three input types; if you need more, you'll
+have to resort to the less type-safe, general <code>AggregateOperation</code>.</p>
+<h2><a class="anchor" aria-hidden="true" id="aggregating-over-multiple-inputs"></a><a href="#aggregating-over-multiple-inputs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Aggregating Over Multiple Inputs</h2>
+<p>Hazelcast Jet can join several streams and simultaneously perform
+aggregation on all of them. You specify a separate aggregate operation
+for each input stream and have the opportunity to combine their results
+when done. You can use aggregate operations <a href="/javadoc/4.3/com/hazelcast/jet/aggregate/AggregateOperations.html">provided in the
+library</a>
+(see the section on
+<a href="../api/stateful-transforms#co-group--join">co-aggregating</a> for an
+example).</p>
+<p>If you cannot express your aggregation logic using this approach, you
+can also specify a custom multi-input aggregate operation that can
+combine the items into the accumulator immediately as it receives them.</p>
+<p>We'll present a simple example on how to build a custom multi-input
+aggregate operation. Note that the same logic can also be expressed
+using separate single-input operations; the point of the example is
+introducing the API.</p>
+<p>Say we are interested in the behavior of users in an online shop
+application and want to gather the following statistics for each user:</p>
+<ol>
+<li>total load time of the visited product pages</li>
+<li>quantity of items added to the shopping cart</li>
+<li>amount paid for bought items</li>
+</ol>
+<p>This data is dispersed among separate datasets: <code>PageVisit</code>, <code>AddToCart</code>
+and <code>Payment</code>. Note that in each case we're dealing with a simple <code>sum</code>
+applied to a field in the input item. We can perform a
+cogroup-and-aggregate transform with the following aggregate operation:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">BatchStage</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">PageVisit</span><span class="token punctuation">></span></span> pageVisit <span class="token operator">=</span> p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">Sources</span><span class="token punctuation">.</span><span class="token function">list</span><span class="token punctuation">(</span><span class="token string">"pageVisit"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">BatchStage</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">AddToCart</span><span class="token punctuation">></span></span> addToCart <span class="token operator">=</span> p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">Sources</span><span class="token punctuation">.</span><span class="token function">list</span><span class="token punctuation">(</span><span class="token string">"addToCart"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">BatchStage</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Payment</span><span class="token punctuation">></span></span> payment <span class="token operator">=</span> p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">Sources</span><span class="token punctuation">.</span><span class="token function">list</span><span class="token punctuation">(</span><span class="token string">"payment"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">AggregateOperation3</span><span class="token operator">&lt;</span><span class="token class-name">PageVisit</span><span class="token punctuation">,</span> <span class="token class-name">AddToCart</span><span class="token punctuation">,</span> <span class="token class-name">Payment</span><span class="token punctuation">,</span> <span class="token class-name">LongAccumulator</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token keyword">long</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">></span>
+    aggrOp <span class="token operator">=</span> <span class="token class-name">AggregateOperation</span>
+        <span class="token punctuation">.</span><span class="token function">withCreate</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token keyword">new</span> <span class="token class-name">LongAccumulator</span><span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token punctuation">{</span>
+            <span class="token keyword">new</span> <span class="token class-name">LongAccumulator</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            <span class="token keyword">new</span> <span class="token class-name">LongAccumulator</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            <span class="token keyword">new</span> <span class="token class-name">LongAccumulator</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">PageVisit</span><span class="token punctuation">></span></span><span class="token function">andAccumulate0</span><span class="token punctuation">(</span><span class="token punctuation">(</span>accs<span class="token punctuation">,</span> pv<span class="token punctuation">)</span> <span class="token operator">-></span> accs<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>pv<span class="token punctuation">.</span><span class="token function">loadTime</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">AddToCart</span><span class="token punctuation">></span></span><span class="token function">andAccumulate1</span><span class="token punctuation">(</span><span class="token punctuation">(</span>accs<span class="token punctuation">,</span> atc<span class="token punctuation">)</span> <span class="token operator">-></span> accs<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>atc<span class="token punctuation">.</span><span class="token function">quantity</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Payment</span><span class="token punctuation">></span></span><span class="token function">andAccumulate2</span><span class="token punctuation">(</span><span class="token punctuation">(</span>accs<span class="token punctuation">,</span> pm<span class="token punctuation">)</span> <span class="token operator">-></span> accs<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>pm<span class="token punctuation">.</span><span class="token function">amount</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">andCombine</span><span class="token punctuation">(</span><span class="token punctuation">(</span>accs1<span class="token punctuation">,</span> accs2<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+            accs1<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>accs2<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            accs1<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>accs2<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            accs1<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>accs2<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">andExportFinish</span><span class="token punctuation">(</span>accs <span class="token operator">-></span> <span class="token keyword">new</span> <span class="token keyword">long</span><span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token punctuation">{</span>
+            accs<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            accs<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            accs<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">BatchStage</span><span class="token operator">&lt;</span><span class="token class-name">Entry</span><span class="token operator">&lt;</span><span class="token class-name">Integer</span><span class="token punctuation">,</span> <span class="token keyword">long</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">>></span> coGrouped <span class="token operator">=</span>
+    pageVisit<span class="token punctuation">.</span><span class="token function">groupingKey</span><span class="token punctuation">(</span><span class="token class-name">PageVisit</span><span class="token operator">::</span><span class="token function">userId</span><span class="token punctuation">)</span>
+             <span class="token punctuation">.</span><span class="token function">aggregate3</span><span class="token punctuation">(</span>
+                addToCart<span class="token punctuation">.</span><span class="token function">groupingKey</span><span class="token punctuation">(</span><span class="token class-name">AddToCart</span><span class="token operator">::</span><span class="token function">userId</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                payment<span class="token punctuation">.</span><span class="token function">groupingKey</span><span class="token punctuation">(</span><span class="token class-name">Payment</span><span class="token operator">::</span><span class="token function">userId</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                aggrOp
+             <span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Note how we got an <code>AggregateOperation3</code> and how it captured each input
+type. When we use it as an argument to a cogroup-and-aggregate
+transform, the compiler will ensure that the <code>ComputeStage</code>s we attach
+to it have the correct type and are in the correct order.</p>
+<p>On the other hand, if you use the co-aggregation
+builder object, you'll construct the aggregate operation by calling
+<code>andAccumulate(tag, accFn)</code> with all the tags you got from the
+co-aggregation builder, and the static type will be just
+<code>AggregateOperation</code>. The compiler won't be able to match up the inputs
+to their treatment in the aggregate operation.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/4.3/how-tos/custom-sink"><span class="arrow-prev">← </span><span>Create a Sink</span></a><a class="docs-next button" href="/docs/4.3/how-tos/operator"><span>Install Kubernetes Operator</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#characteristics-of-distributed-aggregation">Characteristics of Distributed Aggregation</a></li><li><a href="#the-building-blocks">The Building Blocks</a></li><li><a href="#aggregating-over-multiple-inputs">Aggregating Over Multiple Inputs</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2021 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.3"]}
+              });
+            </script></body></html>

@@ -1,0 +1,644 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Join Change Data Capture Records · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="How to maintain a joined image of Change Data Capture data from multiple tables."/><meta name="docsearch:version" content="4.3"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Join Change Data Capture Records · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="How to maintain a joined image of Change Data Capture data from multiple tables."/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.3</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/4.3/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Change Data Capture</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/kafka">Process Events from Apache Kafka</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/4.3/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/error-handling">Error Handling Strategies</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/014-batchstage-sort">014 -- BatchStage.sort()</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/013-system-time-watermarks">013 - Resolving Sparse Events Issue with System-Time Watermarks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/012-improved-job-resilience">012 - Improved Resilience of Fault-Tolerant Streaming Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/tutorials/cdc-join.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Join Change Data Capture Records</h1></header><article><div><span><p><strong>Change Data Capture</strong> (CDC) refers to the process of <strong>observing
+changes made to a database</strong> and extracting them in a form usable by
+other systems, for the purposes of replication, analysis and many more.
+Basically anything that requires keeping multiple heterogeneous
+datastores in sync.</p>
+<p>CDC is especially important to Jet, because it makes possible the
+streaming of changes from databases, in a form efficiently processable
+by Jet. Jet's implementation is based on <a href="https://debezium.io/">Debezium</a>,
+which is an open source distributed platform for change data capture.</p>
+<p>In our previous tutorials on how to extract change event data from
+<a href="/docs/4.3/tutorials/cdc">MySQL</a> and <a href="/docs/4.3/tutorials/cdc-postgres">Postgres</a> databases, we've seen
+how to monitor single database tables and how to maintain up-to-date
+images of those tables in memory, in the form of maps.</p>
+<p>Here we will examine how to make our map hold enriched data, combined
+(joined, if you will) from multiple tables. Let's, for example, make
+each of our enriched data objects hold information about one customer
+and all the orders belonging to them.</p>
+<h2><a class="anchor" aria-hidden="true" id="1-install-docker"></a><a href="#1-install-docker" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>1. Install Docker</h2>
+<p>This tutorial uses <a href="https://www.docker.com/">Docker</a> to simplify the
+setup of databases, which you can freely experiment on.</p>
+<ol>
+<li>Follow Docker's <a href="https://www.docker.com/get-started">Get Started</a>
+instructions and install it on your system.</li>
+<li>Test that it works:
+<ul>
+<li>Run <code>docker version</code> to check that you have the latest release
+installed.</li>
+<li>Run <code>docker run hello-world</code> to verify that Docker is pulling
+images and running as expected.</li>
+</ul></li>
+</ol>
+<h2><a class="anchor" aria-hidden="true" id="2-start-database"></a><a href="#2-start-database" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>2. Start Database</h2>
+<p>Exact instructions for starting the supported databases are as follows:</p>
+<ul>
+<li><a href="/docs/4.3/tutorials/cdc#2-start-mysql-database">MySQL</a></li>
+<li><a href="/docs/4.3/tutorials/cdc-postgres#2-start-postgresql-database">Postgres</a>.</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="3-start-command-line-client"></a><a href="#3-start-command-line-client" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>3. Start Command Line Client</h2>
+<p>Exact instructions for starting the specific command line client of the
+supported databases are as follows:</p>
+<ul>
+<li><a href="/docs/4.3/tutorials/cdc#3-start-mysql-command-line-client">MySQL</a></li>
+<li><a href="/docs/4.3/tutorials/cdc-postgres#3-start-postgresql-command-line-client">Postgres</a></li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="4-create-a-new-java-project"></a><a href="#4-create-a-new-java-project" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>4. Create a New Java Project</h2>
+<p>We'll assume you're using an IDE. Create a blank Java project named
+<code>cdc-tutorial</code> and copy the provided Gradle or Maven file into it.
+They differ slightly depending on which database you use:</p>
+<ul>
+<li><a href="/docs/4.3/tutorials/cdc#5-create-a-new-java-project">MySQL</a></li>
+<li><a href="/docs/4.3/tutorials/cdc-postgres#5-create-a-new-java-project">Postgres</a></li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="5-define-jet-job"></a><a href="#5-define-jet-job" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>5. Define Jet Job</h2>
+<p>Let's write the Jet code for the processing we want to accomplish:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">package</span> <span class="token namespace">org<span class="token punctuation">.</span>example</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span></span><span class="token class-name">Jet</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>cdc<span class="token punctuation">.</span></span><span class="token class-name">ChangeRecord</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>cdc<span class="token punctuation">.</span>mysql<span class="token punctuation">.</span></span><span class="token class-name">MySqlCdcSources</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>config<span class="token punctuation">.</span></span><span class="token class-name">JobConfig</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>pipeline<span class="token punctuation">.</span></span><span class="token class-name">Pipeline</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>pipeline<span class="token punctuation">.</span></span><span class="token class-name">Sinks</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>pipeline<span class="token punctuation">.</span></span><span class="token class-name">StreamSource</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>pipeline<span class="token punctuation">.</span></span><span class="token class-name">StreamStage</span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">JetJob</span> <span class="token punctuation">{</span>
+
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token keyword">int</span> MAX_CONCURRENT_OPERATIONS <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token class-name">StreamSource</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ChangeRecord</span><span class="token punctuation">></span></span> source <span class="token operator">=</span> <span class="token class-name">MySqlCdcSources</span><span class="token punctuation">.</span><span class="token function">mysql</span><span class="token punctuation">(</span><span class="token string">"source"</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">setDatabaseAddress</span><span class="token punctuation">(</span><span class="token string">"127.0.0.1"</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">setDatabasePort</span><span class="token punctuation">(</span><span class="token number">3306</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">setDatabaseUser</span><span class="token punctuation">(</span><span class="token string">"debezium"</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">setDatabasePassword</span><span class="token punctuation">(</span><span class="token string">"dbz"</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">setClusterName</span><span class="token punctuation">(</span><span class="token string">"dbserver1"</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">setDatabaseWhitelist</span><span class="token punctuation">(</span><span class="token string">"inventory"</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">setTableWhitelist</span><span class="token punctuation">(</span><span class="token string">"inventory.customers"</span><span class="token punctuation">,</span> <span class="token string">"inventory.orders"</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">Pipeline</span> pipeline <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">StreamStage</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ChangeRecord</span><span class="token punctuation">></span></span> allRecords <span class="token operator">=</span> pipeline<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span>source<span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">withNativeTimestamps</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        allRecords<span class="token punctuation">.</span><span class="token function">filter</span><span class="token punctuation">(</span>r <span class="token operator">-></span> r<span class="token punctuation">.</span><span class="token function">table</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span><span class="token string">"customers"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">apply</span><span class="token punctuation">(</span><span class="token class-name">Ordering</span><span class="token operator">::</span><span class="token function">fix</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">peek</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">mapWithEntryProcessor</span><span class="token punctuation">(</span>MAX_CONCURRENT_OPERATIONS<span class="token punctuation">,</span> <span class="token string">"cache"</span><span class="token punctuation">,</span>
+                        <span class="token keyword">record</span> <span class="token operator">-></span> <span class="token punctuation">(</span><span class="token class-name">Integer</span><span class="token punctuation">)</span> <span class="token keyword">record</span><span class="token punctuation">.</span><span class="token function">key</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toMap</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">"id"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                        <span class="token class-name">CustomerEntryProcessor</span><span class="token operator">::</span><span class="token keyword">new</span>
+                <span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        allRecords<span class="token punctuation">.</span><span class="token function">filter</span><span class="token punctuation">(</span>r <span class="token operator">-></span> r<span class="token punctuation">.</span><span class="token function">table</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span><span class="token string">"orders"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">apply</span><span class="token punctuation">(</span><span class="token class-name">Ordering</span><span class="token operator">::</span><span class="token function">fix</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">peek</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">mapWithEntryProcessor</span><span class="token punctuation">(</span>MAX_CONCURRENT_OPERATIONS<span class="token punctuation">,</span> <span class="token string">"cache"</span><span class="token punctuation">,</span>
+                        <span class="token keyword">record</span> <span class="token operator">-></span> <span class="token punctuation">(</span><span class="token class-name">Integer</span><span class="token punctuation">)</span> <span class="token keyword">record</span><span class="token punctuation">.</span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toMap</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">"purchaser"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                        <span class="token class-name">OrderEntryProcessor</span><span class="token operator">::</span><span class="token keyword">new</span>
+                <span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">JobConfig</span> cfg <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">JobConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">setName</span><span class="token punctuation">(</span><span class="token string">"monitor"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">bootstrappedInstance</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">newJob</span><span class="token punctuation">(</span>pipeline<span class="token punctuation">,</span> cfg<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+<span class="token punctuation">}</span>
+</code></pre>
+<p>If using Postgres, only the source would need to change, like this:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">StreamSource</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ChangeRecord</span><span class="token punctuation">></span></span> source <span class="token operator">=</span> <span class="token class-name">PostgresCdcSources</span><span class="token punctuation">.</span><span class="token function">postgres</span><span class="token punctuation">(</span><span class="token string">"source"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setDatabaseAddress</span><span class="token punctuation">(</span><span class="token string">"127.0.0.1"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setDatabasePort</span><span class="token punctuation">(</span><span class="token number">5432</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setDatabaseUser</span><span class="token punctuation">(</span><span class="token string">"postgres"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setDatabasePassword</span><span class="token punctuation">(</span><span class="token string">"postgres"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setDatabaseName</span><span class="token punctuation">(</span><span class="token string">"postgres"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setTableWhitelist</span><span class="token punctuation">(</span><span class="token string">"inventory.customers"</span><span class="token punctuation">,</span> <span class="token string">"inventory.orders"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>As we can see from the pipeline code, our <code>Sink</code> is <code>EntryProcessor</code>
+based. The two <code>EntryProcessors</code> we use are:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">package</span> <span class="token namespace">org<span class="token punctuation">.</span>example</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>cdc<span class="token punctuation">.</span></span><span class="token class-name">ChangeRecord</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>cdc<span class="token punctuation">.</span></span><span class="token class-name">Operation</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>cdc<span class="token punctuation">.</span></span><span class="token class-name">ParsingException</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>map<span class="token punctuation">.</span></span><span class="token class-name">EntryProcessor</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Map</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token keyword">static</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>impl<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">ExceptionUtil</span><span class="token punctuation">.</span>rethrow<span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">CustomerEntryProcessor</span> <span class="token keyword">implements</span> <span class="token class-name">EntryProcessor</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Integer</span><span class="token punctuation">,</span> <span class="token class-name">OrdersOfCustomer</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">></span></span> <span class="token punctuation">{</span>
+
+    <span class="token keyword">private</span> <span class="token keyword">final</span> <span class="token class-name">Customer</span> customer<span class="token punctuation">;</span>
+
+    <span class="token keyword">public</span> <span class="token class-name">CustomerEntryProcessor</span><span class="token punctuation">(</span><span class="token class-name">ChangeRecord</span> <span class="token keyword">record</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">try</span> <span class="token punctuation">{</span>
+            <span class="token keyword">this</span><span class="token punctuation">.</span>customer <span class="token operator">=</span> <span class="token class-name">Operation</span><span class="token punctuation">.</span>DELETE<span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span><span class="token keyword">record</span><span class="token punctuation">.</span><span class="token function">operation</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">?</span> <span class="token keyword">null</span> <span class="token operator">:</span>
+                    <span class="token keyword">record</span><span class="token punctuation">.</span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toObject</span><span class="token punctuation">(</span><span class="token class-name">Customer</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">ParsingException</span> e<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">throw</span> <span class="token function">rethrow</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token class-name">Object</span> <span class="token function">process</span><span class="token punctuation">(</span><span class="token class-name">Map<span class="token punctuation">.</span>Entry</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Integer</span><span class="token punctuation">,</span> <span class="token class-name">OrdersOfCustomer</span><span class="token punctuation">></span></span> entry<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token class-name">OrdersOfCustomer</span> value <span class="token operator">=</span> entry<span class="token punctuation">.</span><span class="token function">getValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>customer <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>value <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                value<span class="token punctuation">.</span><span class="token function">setCustomer</span><span class="token punctuation">(</span><span class="token keyword">null</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>value <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                value <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">OrdersOfCustomer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+            value<span class="token punctuation">.</span><span class="token function">setCustomer</span><span class="token punctuation">(</span>customer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        entry<span class="token punctuation">.</span><span class="token function">setValue</span><span class="token punctuation">(</span>value<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<pre><code class="hljs css language-java"><span class="token keyword">package</span> <span class="token namespace">org<span class="token punctuation">.</span>example</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>cdc<span class="token punctuation">.</span></span><span class="token class-name">ChangeRecord</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>cdc<span class="token punctuation">.</span></span><span class="token class-name">Operation</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>cdc<span class="token punctuation">.</span></span><span class="token class-name">ParsingException</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>map<span class="token punctuation">.</span></span><span class="token class-name">EntryProcessor</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Map</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token keyword">static</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>impl<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">ExceptionUtil</span><span class="token punctuation">.</span>rethrow<span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">OrderEntryProcessor</span> <span class="token keyword">implements</span> <span class="token class-name">EntryProcessor</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Integer</span><span class="token punctuation">,</span> <span class="token class-name">OrdersOfCustomer</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">></span></span> <span class="token punctuation">{</span>
+
+    <span class="token keyword">private</span> <span class="token keyword">final</span> <span class="token class-name">Operation</span> operation<span class="token punctuation">;</span>
+    <span class="token keyword">private</span> <span class="token keyword">final</span> <span class="token class-name">Order</span> order<span class="token punctuation">;</span>
+
+    <span class="token keyword">public</span> <span class="token class-name">OrderEntryProcessor</span><span class="token punctuation">(</span><span class="token class-name">ChangeRecord</span> <span class="token keyword">record</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">try</span> <span class="token punctuation">{</span>
+            <span class="token keyword">this</span><span class="token punctuation">.</span>order <span class="token operator">=</span> <span class="token keyword">record</span><span class="token punctuation">.</span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toObject</span><span class="token punctuation">(</span><span class="token class-name">Order</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">this</span><span class="token punctuation">.</span>operation <span class="token operator">=</span> <span class="token keyword">record</span><span class="token punctuation">.</span><span class="token function">operation</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">ParsingException</span> e<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">throw</span> <span class="token function">rethrow</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token class-name">Object</span> <span class="token function">process</span><span class="token punctuation">(</span><span class="token class-name">Map<span class="token punctuation">.</span>Entry</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Integer</span><span class="token punctuation">,</span> <span class="token class-name">OrdersOfCustomer</span><span class="token punctuation">></span></span> entry<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token class-name">OrdersOfCustomer</span> value <span class="token operator">=</span> entry<span class="token punctuation">.</span><span class="token function">getValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token class-name">Operation</span><span class="token punctuation">.</span>DELETE<span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>operation<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>value <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                value<span class="token punctuation">.</span><span class="token function">deleteOrder</span><span class="token punctuation">(</span>order<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>value <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                value <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">OrdersOfCustomer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+            value<span class="token punctuation">.</span><span class="token function">addOrUpdateOrder</span><span class="token punctuation">(</span>order<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        entry<span class="token punctuation">.</span><span class="token function">setValue</span><span class="token punctuation">(</span>value<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>In them we use the <code>Customer</code> and the <code>Order</code> classes to achieve
+convenient data parsing with the help of data to object
+mapping.</p>
+<pre><code class="hljs css language-java"><span class="token keyword">package</span> <span class="token namespace">org<span class="token punctuation">.</span>example</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>fasterxml<span class="token punctuation">.</span>jackson<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">JsonProperty</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>io<span class="token punctuation">.</span></span><span class="token class-name">Serializable</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Objects</span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Customer</span> <span class="token keyword">implements</span> <span class="token class-name">Serializable</span> <span class="token punctuation">{</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"id"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token keyword">int</span> id<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"first_name"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token class-name">String</span> firstName<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"last_name"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token class-name">String</span> lastName<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"email"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token class-name">String</span> email<span class="token punctuation">;</span>
+
+    <span class="token class-name">Customer</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">int</span> <span class="token function">hashCode</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">hash</span><span class="token punctuation">(</span>email<span class="token punctuation">,</span> firstName<span class="token punctuation">,</span> id<span class="token punctuation">,</span> lastName<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">boolean</span> <span class="token function">equals</span><span class="token punctuation">(</span><span class="token class-name">Object</span> obj<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span> <span class="token operator">==</span> obj<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>obj <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">||</span> <span class="token function">getClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> obj<span class="token punctuation">.</span><span class="token function">getClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token class-name">Customer</span> other <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token class-name">Customer</span><span class="token punctuation">)</span> obj<span class="token punctuation">;</span>
+        <span class="token keyword">return</span> id <span class="token operator">==</span> other<span class="token punctuation">.</span>id
+                <span class="token operator">&amp;&amp;</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>firstName<span class="token punctuation">,</span> other<span class="token punctuation">.</span>firstName<span class="token punctuation">)</span>
+                <span class="token operator">&amp;&amp;</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>lastName<span class="token punctuation">,</span> other<span class="token punctuation">.</span>lastName<span class="token punctuation">)</span>
+                <span class="token operator">&amp;&amp;</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>email<span class="token punctuation">,</span> other<span class="token punctuation">.</span>email<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token class-name">String</span> <span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token string">"Customer {id="</span> <span class="token operator">+</span> id <span class="token operator">+</span> <span class="token string">", firstName="</span> <span class="token operator">+</span> firstName <span class="token operator">+</span> <span class="token string">", lastName="</span> <span class="token operator">+</span> lastName <span class="token operator">+</span> <span class="token string">", email="</span> <span class="token operator">+</span> email <span class="token operator">+</span> <span class="token string">'}'</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<pre><code class="hljs css language-java"><span class="token keyword">package</span> <span class="token namespace">org<span class="token punctuation">.</span>example</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>fasterxml<span class="token punctuation">.</span>jackson<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">JsonProperty</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>io<span class="token punctuation">.</span></span><span class="token class-name">Serializable</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Date</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Objects</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span>concurrent<span class="token punctuation">.</span></span><span class="token class-name">TimeUnit</span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Order</span> <span class="token keyword">implements</span> <span class="token class-name">Serializable</span> <span class="token punctuation">{</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"order_number"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token keyword">int</span> orderNumber<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"order_date"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token class-name">Date</span> orderDate<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"purchaser"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token keyword">int</span> purchaser<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"quantity"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token keyword">int</span> quantity<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"product_id"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token keyword">int</span> productId<span class="token punctuation">;</span>
+
+    <span class="token class-name">Order</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">setOrderDate</span><span class="token punctuation">(</span><span class="token class-name">Date</span> orderDate<span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token comment">//used by object mapping</span>
+        <span class="token keyword">long</span> days <span class="token operator">=</span> orderDate<span class="token punctuation">.</span><span class="token function">getTime</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>orderDate <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Date</span><span class="token punctuation">(</span><span class="token class-name">TimeUnit</span><span class="token punctuation">.</span>DAYS<span class="token punctuation">.</span><span class="token function">toMillis</span><span class="token punctuation">(</span>days<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">int</span> <span class="token function">getOrderNumber</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> orderNumber<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">int</span> <span class="token function">hashCode</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">hash</span><span class="token punctuation">(</span>orderNumber<span class="token punctuation">,</span> orderDate<span class="token punctuation">,</span> purchaser<span class="token punctuation">,</span> quantity<span class="token punctuation">,</span> productId<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">boolean</span> <span class="token function">equals</span><span class="token punctuation">(</span><span class="token class-name">Object</span> obj<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span> <span class="token operator">==</span> obj<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>obj <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">||</span> <span class="token function">getClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> obj<span class="token punctuation">.</span><span class="token function">getClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token class-name">Order</span> other <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token class-name">Order</span><span class="token punctuation">)</span> obj<span class="token punctuation">;</span>
+        <span class="token keyword">return</span> orderNumber <span class="token operator">==</span> other<span class="token punctuation">.</span>orderNumber
+                <span class="token operator">&amp;&amp;</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>orderDate<span class="token punctuation">,</span> other<span class="token punctuation">.</span>orderDate<span class="token punctuation">)</span>
+                <span class="token operator">&amp;&amp;</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>purchaser<span class="token punctuation">,</span> other<span class="token punctuation">.</span>purchaser<span class="token punctuation">)</span>
+                <span class="token operator">&amp;&amp;</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>quantity<span class="token punctuation">,</span> other<span class="token punctuation">.</span>quantity<span class="token punctuation">)</span>
+                <span class="token operator">&amp;&amp;</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>productId<span class="token punctuation">,</span> other<span class="token punctuation">.</span>productId<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token class-name">String</span> <span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token string">"Order {orderNumber="</span> <span class="token operator">+</span> orderNumber <span class="token operator">+</span> <span class="token string">", orderDate="</span> <span class="token operator">+</span> orderDate <span class="token operator">+</span> <span class="token string">", purchaser="</span> <span class="token operator">+</span> purchaser <span class="token operator">+</span>
+                <span class="token string">", quantity="</span> <span class="token operator">+</span> quantity <span class="token operator">+</span> <span class="token string">", productId="</span> <span class="token operator">+</span> productId <span class="token operator">+</span> <span class="token string">'}'</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Watch out, in the Postgres database the order number column has a
+different name, <code>id</code>, so the first field in <code>Order</code> needs to be changed
+to:</p>
+<pre><code class="hljs css language-java"><span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"id"</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">int</span> orderNumber<span class="token punctuation">;</span>
+</code></pre>
+<p>Besides these two data classes we also need to define our enriched
+structure, called <code>OrdersOfCustomers</code>, which will be stored in the
+target <code>IMap</code>:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">package</span> <span class="token namespace">org<span class="token punctuation">.</span>example</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>io<span class="token punctuation">.</span></span><span class="token class-name">Serializable</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">HashMap</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Map</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Objects</span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">OrdersOfCustomer</span> <span class="token keyword">implements</span> <span class="token class-name">Serializable</span> <span class="token punctuation">{</span>
+
+    <span class="token keyword">private</span> <span class="token keyword">final</span> <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Integer</span><span class="token punctuation">,</span> <span class="token class-name">Order</span><span class="token punctuation">></span></span> orders<span class="token punctuation">;</span>
+    <span class="token keyword">private</span> <span class="token class-name">Customer</span> customer<span class="token punctuation">;</span>
+
+    <span class="token keyword">public</span> <span class="token class-name">OrdersOfCustomer</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>customer <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>orders <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">setCustomer</span><span class="token punctuation">(</span><span class="token class-name">Customer</span> customer<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>customer <span class="token operator">=</span> customer<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">deleteOrder</span><span class="token punctuation">(</span><span class="token class-name">Order</span> order<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        orders<span class="token punctuation">.</span><span class="token function">remove</span><span class="token punctuation">(</span>order<span class="token punctuation">.</span><span class="token function">getOrderNumber</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">addOrUpdateOrder</span><span class="token punctuation">(</span><span class="token class-name">Order</span> order<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        orders<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span>order<span class="token punctuation">.</span><span class="token function">getOrderNumber</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> order<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">int</span> <span class="token function">hashCode</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">hash</span><span class="token punctuation">(</span>customer<span class="token punctuation">,</span> orders<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">boolean</span> <span class="token function">equals</span><span class="token punctuation">(</span><span class="token class-name">Object</span> obj<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span> <span class="token operator">==</span> obj<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>obj <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">||</span> <span class="token function">getClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> obj<span class="token punctuation">.</span><span class="token function">getClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token class-name">OrdersOfCustomer</span> other <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token class-name">OrdersOfCustomer</span><span class="token punctuation">)</span> obj<span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>customer<span class="token punctuation">,</span> other<span class="token punctuation">.</span>customer<span class="token punctuation">)</span>
+                <span class="token operator">&amp;&amp;</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>orders<span class="token punctuation">,</span> other<span class="token punctuation">.</span>orders<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token class-name">String</span> <span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"Customer: %s, Orders: %s"</span><span class="token punctuation">,</span> customer<span class="token punctuation">,</span> orders<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>There is also another element in the pipeline, an extra processing stage
+which handles and fixes event reordering that might happen due to
+parallel processing. It's based on sequence numbers specific to CDC
+sources and so can be used only for these kinds of pipelines. Hopefully
+a future version of Jet will introduce a generic solution for the
+reoreding problem.</p>
+<pre><code class="hljs css language-java"><span class="token keyword">package</span> <span class="token namespace">org<span class="token punctuation">.</span>example</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>accumulator<span class="token punctuation">.</span></span><span class="token class-name">LongAccumulator</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>cdc<span class="token punctuation">.</span></span><span class="token class-name">ChangeRecord</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>cdc<span class="token punctuation">.</span></span><span class="token class-name">RecordPart</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>cdc<span class="token punctuation">.</span>impl<span class="token punctuation">.</span></span><span class="token class-name">ChangeRecordImpl</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>function<span class="token punctuation">.</span></span><span class="token class-name">TriFunction</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>pipeline<span class="token punctuation">.</span></span><span class="token class-name">StreamStage</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span>concurrent<span class="token punctuation">.</span></span><span class="token class-name">TimeUnit</span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Ordering</span> <span class="token punctuation">{</span>
+
+    <span class="token keyword">static</span> <span class="token class-name">StreamStage</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ChangeRecord</span><span class="token punctuation">></span></span> <span class="token function">fix</span><span class="token punctuation">(</span><span class="token class-name">StreamStage</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ChangeRecord</span><span class="token punctuation">></span></span> input<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> input
+                <span class="token punctuation">.</span><span class="token function">groupingKey</span><span class="token punctuation">(</span><span class="token class-name">ChangeRecord</span><span class="token operator">::</span><span class="token function">key</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">mapStateful</span><span class="token punctuation">(</span>
+                        <span class="token class-name">TimeUnit</span><span class="token punctuation">.</span>SECONDS<span class="token punctuation">.</span><span class="token function">toMillis</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                        <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token keyword">new</span> <span class="token class-name">LongAccumulator</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                        <span class="token punctuation">(</span>lastSequence<span class="token punctuation">,</span> key<span class="token punctuation">,</span> <span class="token keyword">record</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+                            <span class="token keyword">long</span> sequence <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">ChangeRecordImpl</span><span class="token punctuation">)</span> <span class="token keyword">record</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getSequenceValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                            <span class="token keyword">if</span> <span class="token punctuation">(</span>lastSequence<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> sequence<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                                lastSequence<span class="token punctuation">.</span><span class="token function">set</span><span class="token punctuation">(</span>sequence<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                                <span class="token keyword">return</span> <span class="token keyword">record</span><span class="token punctuation">;</span>
+                            <span class="token punctuation">}</span>
+                            <span class="token keyword">return</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+                        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+                        <span class="token punctuation">(</span><span class="token class-name">TriFunction</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">LongAccumulator</span><span class="token punctuation">,</span> <span class="token class-name">RecordPart</span><span class="token punctuation">,</span> <span class="token class-name">Long</span><span class="token punctuation">,</span> <span class="token class-name">ChangeRecord</span><span class="token punctuation">></span></span><span class="token punctuation">)</span> <span class="token punctuation">(</span>sequence<span class="token punctuation">,</span> recordPart<span class="token punctuation">,</span> aLong<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token keyword">null</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+<span class="token punctuation">}</span>
+</code></pre>
+<p>To make it evident that our pipeline serves the purpose of building an
+up-to-date cache of &quot;orders of customers&quot;, which can be interrogated at
+any time, let's add one more class. This code can be executed at will in
+your IDE and prints the current content of the cache.</p>
+<pre><code class="hljs css language-java"><span class="token keyword">package</span> <span class="token namespace">org<span class="token punctuation">.</span>example</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span></span><span class="token class-name">Jet</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span></span><span class="token class-name">JetInstance</span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">CacheRead</span> <span class="token punctuation">{</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token class-name">JetInstance</span> instance <span class="token operator">=</span> <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">newJetClient</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"Currently there are following customers in the cache:"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        instance<span class="token punctuation">.</span><span class="token function">getMap</span><span class="token punctuation">(</span><span class="token string">"cache"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">values</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span>c <span class="token operator">-></span> <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"\t"</span> <span class="token operator">+</span> c<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        instance<span class="token punctuation">.</span><span class="token function">shutdown</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+<span class="token punctuation">}</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="6-package"></a><a href="#6-package" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>6. Package</h2>
+<p>Now that we have defined all the pieces, we need to submit the
+pipeline to Jet for execution. Since Jet runs on our machine as a
+standalone cluster in a standalone process we need to make it aware of
+all the code that we have written.</p>
+<p>For this reason we create a jar containing everything we need. All we
+need to do is to run the build command:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-421-tab-422" class="nav-link active" data-group="group_421" data-tab="tab-group-421-content-422">Gradle</div><div id="tab-group-421-tab-423" class="nav-link" data-group="group_421" data-tab="tab-group-421-content-423">Maven</div></div><div class="tab-content"><div id="tab-group-421-content-422" class="tab-pane active" data-group="group_421" tabindex="-1"><div><span><pre><code class="hljs css language-bash">gradle build<br /></code></pre>
+<p>This will produce a jar file called <code>cdc-tutorial-1.0-SNAPSHOT.jar</code>
+in the <code>build/libs</code> folder of our project.</p>
+</span></div></div><div id="tab-group-421-content-423" class="tab-pane" data-group="group_421" tabindex="-1"><div><span><pre><code class="hljs css language-bash">mvn package<br /></code></pre>
+<p>This will produce a jar file called <code>cdc-tutorial-1.0-SNAPSHOT.jar</code>
+in the <code>target</code> folder or our project.</p>
+</span></div></div></div></div>
+<h2><a class="anchor" aria-hidden="true" id="7-start-hazelcast-jet"></a><a href="#7-start-hazelcast-jet" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>7. Start Hazelcast Jet</h2>
+<ol>
+<li>Download Hazelcast Jet</li>
+</ol>
+<pre><code class="hljs css language-bash">wget https://github.com/hazelcast/hazelcast-jet/releases/download/v4.3/hazelcast-jet-4.3.tar.gz
+tar zxvf hazelcast-jet-4.3.tar.gz &amp;&amp; <span class="hljs-built_in">cd</span> hazelcast-jet-4.3
+</code></pre>
+<ol start="2">
+<li>Activate the CDC plugin for the database you're using:</li>
+</ol>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-424-tab-425" class="nav-link active" data-group="group_424" data-tab="tab-group-424-content-425">MySQL</div><div id="tab-group-424-tab-426" class="nav-link" data-group="group_424" data-tab="tab-group-424-content-426">Postgres</div></div><div class="tab-content"><div id="tab-group-424-content-425" class="tab-pane active" data-group="group_424" tabindex="-1"><div><span><pre><code class="hljs css language-bash">mv opt/hazelcast-jet-cdc-debezium-4.3.jar lib; \<br />mv opt/hazelcast-jet-cdc-mysql-4.3.jar lib<br /></code></pre>
+</span></div></div><div id="tab-group-424-content-426" class="tab-pane" data-group="group_424" tabindex="-1"><div><span><pre><code class="hljs css language-bash">mv opt/hazelcast-jet-cdc-debezium-4.3.jar lib; \<br />mv opt/hazelcast-jet-cdc-postgres-4.3.jar lib<br /></code></pre>
+</span></div></div></div></div>
+<ol start="3">
+<li>Enable user code deployment:</li>
+</ol>
+<p>Due to the type of sink we are using in our pipeline we need to make
+some extra changes in order for the IMDG cluster (which Jet sits
+on top of) be aware of the custom classes we have defined.</p>
+<p>Please append following config lines to the <code>config/hazelcast.yaml</code>
+file, at the end of the <code>hazelcast</code> block:</p>
+<pre><code class="hljs css language-yaml">  <span class="hljs-attr">user-code-deployment:</span>
+    <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+    <span class="hljs-attr">provider-mode:</span> <span class="hljs-string">LOCAL_AND_CACHED_CLASSES</span>
+</code></pre>
+<p>Also add these config lines to the <code>config/hazelcast-client.yaml</code> file,
+at the end of the <code>hazelcast-client</code> block:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-427-tab-428" class="nav-link active" data-group="group_427" data-tab="tab-group-427-content-428">Gradle</div><div id="tab-group-427-tab-429" class="nav-link" data-group="group_427" data-tab="tab-group-427-content-429">Maven</div></div><div class="tab-content"><div id="tab-group-427-content-428" class="tab-pane active" data-group="group_427" tabindex="-1"><div><span><pre><code class="hljs css language-yaml">  <span class="hljs-attr">user-code-deployment:</span><br />    <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span><br />    <span class="hljs-attr">jarPaths:</span><br />      <span class="hljs-bullet">-</span> <span class="hljs-string">&lt;path_to_project&gt;/build/libs/cdc-tutorial-1.0-SNAPSHOT.jar</span><br /></code></pre>
+</span></div></div><div id="tab-group-427-content-429" class="tab-pane" data-group="group_427" tabindex="-1"><div><span><pre><code class="hljs css language-yaml">  <span class="hljs-attr">user-code-deployment:</span><br />    <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span><br />    <span class="hljs-attr">jarPaths:</span><br />      <span class="hljs-bullet">-</span> <span class="hljs-string">&lt;path_to_project&gt;/target/cdc-tutorial-1.0-SNAPSHOT.jar</span><br /></code></pre>
+</span></div></div></div></div>
+<p>Make sure to replace <code>&lt;path_to_project&gt;</code> with the absolute path to where
+you created the project for this tutorial.</p>
+<ol start="4">
+<li>Start Jet:</li>
+</ol>
+<pre><code class="hljs css language-bash">bin/jet-start
+</code></pre>
+<ol start="5">
+<li>When you see output like this, Jet is up:</li>
+</ol>
+<pre><code class="hljs css language-text">Members {size:1, ver:1} [
+    Member [192.168.1.5]:5701 - e7c26f7c-df9e-4994-a41d-203a1c63480e this
+]
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="8-submit-for-execution"></a><a href="#8-submit-for-execution" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>8. Submit for Execution</h2>
+<p>Assuming our cluster is <a href="#7-start-hazelcast-jet">running</a> and the
+database <a href="#2-start-database">is up</a>, all we need to issue is
+following command:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-430-tab-431" class="nav-link active" data-group="group_430" data-tab="tab-group-430-content-431">Gradle</div><div id="tab-group-430-tab-432" class="nav-link" data-group="group_430" data-tab="tab-group-430-content-432">Maven</div></div><div class="tab-content"><div id="tab-group-430-content-431" class="tab-pane active" data-group="group_430" tabindex="-1"><div><span><pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet submit build/libs/cdc-tutorial-1.0-SNAPSHOT.jar<br /></code></pre>
+</span></div></div><div id="tab-group-430-content-432" class="tab-pane" data-group="group_430" tabindex="-1"><div><span><pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet submit target/cdc-tutorial-1.0-SNAPSHOT.jar<br /></code></pre>
+</span></div></div></div></div>
+<p>The output in the Jet member's log should look something like this (we
+see these lines due to the <code>peek()</code> stages we've inserted):</p>
+<pre><code class="hljs css language-text">........
+... Output to ordinal 0: key:{{"order_number":10002}}, value:{{"order_number":10002,"order_date":16817,"purchaser":1002,"quantity":2,"product_id":105,"__op":"c","__db":"inventory","__table":"orders","__ts_ms":1593681751174,"__deleted":"false"}} (eventTime=12:22:31.174)
+... Output to ordinal 0: key:{{"order_number":10003}}, value:{{"order_number":10003,"order_date":16850,"purchaser":1002,"quantity":2,"product_id":106,"__op":"c","__db":"inventory","__table":"orders","__ts_ms":1593681751174,"__deleted":"false"}} (eventTime=12:22:31.174)
+... Output to ordinal 0: key:{{"id":1003}}, value:{{"id":1003,"first_name":"Edward","last_name":"Walker","email":"ed@walker.com","__op":"c","__db":"inventory","__table":"customers","__ts_ms":1593681751161,"__deleted":"false"}} (eventTime=12:22:31.161)
+........
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="9-track-updates"></a><a href="#9-track-updates" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>9. Track Updates</h2>
+<p>Let's see how our cache looks like at this time. If we execute the
+<code>CacheRead</code> code <a href="#5-define-jet-job">defined above</a>, we'll get:</p>
+<pre><code class="hljs css language-text">Currently there are following customers in the cache:
+    Customer: Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}, Orders: {10002=Order {orderNumber=10002, orderDate=Sun Jan 17 02:00:00 EET 2016, purchaser=1002, quantity=2, productId=105}, 10003=Order {orderNumber=10003, orderDate=Fri Feb 19 02:00:00 EET 2016, purchaser=1002, quantity=2, productId=106}}
+    Customer: Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}, Orders: {10004=Order {orderNumber=10004, orderDate=Sun Feb 21 02:00:00 EET 2016, purchaser=1003, quantity=1, productId=107}}
+    Customer: Customer {id=1004, firstName=Anne, lastName=Kretchmar, email=annek@noanswer.org}, Orders: {}
+    Customer: Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}, Orders: {10001=Order {orderNumber=10001, orderDate=Sat Jan 16 02:00:00 EET 2016, purchaser=1001, quantity=1, productId=102}}
+</code></pre>
+<p>Let's do some updates in our database. Go to the database CLI
+<a href="#3-start-command-line-client">we've started earlier</a> and run
+following commands:</p>
+<pre><code class="hljs css language-bash">INSERT INTO inventory.customers VALUES (1005, <span class="hljs-string">'Jason'</span>, <span class="hljs-string">'Bourne'</span>, <span class="hljs-string">'jason@bourne.org'</span>);
+DELETE FROM inventory.orders WHERE order_number=10002;
+</code></pre>
+<p>If we check the cache with <code>CacheRead</code> we get:</p>
+<pre><code class="hljs css language-text">Currently there are following customers in the cache:
+    Customer: Customer {id=1005, firstName=Jason, lastName=Bourne, email=jason@bourne.org}, Orders: {}
+    Customer: Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}, Orders: {10003=Order {orderNumber=10003, orderDate=Fri Feb 19 02:00:00 EET 2016, purchaser=1002, quantity=2, productId=106}}
+    Customer: Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}, Orders: {10004=Order {orderNumber=10004, orderDate=Sun Feb 21 02:00:00 EET 2016, purchaser=1003, quantity=1, productId=107}}
+    Customer: Customer {id=1004, firstName=Anne, lastName=Kretchmar, email=annek@noanswer.org}, Orders: {}
+    Customer: Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}, Orders: {10001=Order {orderNumber=10001, orderDate=Sat Jan 16 02:00:00 EET 2016, purchaser=1001, quantity=1, productId=102}}
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="10-clean-up"></a><a href="#10-clean-up" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>10. Clean up</h2>
+<p>Let's clean-up after ourselves. First we cancel our Jet job:</p>
+<pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet cancel monitor
+</code></pre>
+<p>Then we shut down our Jet member/cluster:</p>
+<pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet-stop
+</code></pre>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-433-tab-434" class="nav-link active" data-group="group_433" data-tab="tab-group-433-content-434">MySQL</div><div id="tab-group-433-tab-435" class="nav-link" data-group="group_433" data-tab="tab-group-433-content-435">Postgres</div></div><div class="tab-content"><div id="tab-group-433-content-434" class="tab-pane active" data-group="group_433" tabindex="-1"><div><span><p>You can use Docker to stop all running containers:</p>
+<pre><code class="hljs css language-bash">docker stop mysqlterm mysql<br /></code></pre>
+</span></div></div><div id="tab-group-433-content-435" class="tab-pane" data-group="group_433" tabindex="-1"><div><span><p>You can use Docker to stop the running container (this will kill the
+command-line client too, since it's running in the same container):</p>
+<pre><code class="hljs css language-bash">docker stop postgres<br /></code></pre>
+</span></div></div></div></div>
+<p>Again, since we've used the <code>--rm</code> flag when starting the connectors,
+Docker should remove them right after we stop them.
+We can verify that all processes are stopped and removed with following
+command:</p>
+<pre><code class="hljs css language-bash">docker ps -a
+</code></pre>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/4.3/tutorials/cdc-postgres"><span class="arrow-prev">← </span><span class="function-name-prevnext">PostgreSQL</span></a><a class="docs-next button" href="/docs/4.3/tutorials/map-join"><span>Enrich Your Stream</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#1-install-docker">1. Install Docker</a></li><li><a href="#2-start-database">2. Start Database</a></li><li><a href="#3-start-command-line-client">3. Start Command Line Client</a></li><li><a href="#4-create-a-new-java-project">4. Create a New Java Project</a></li><li><a href="#5-define-jet-job">5. Define Jet Job</a></li><li><a href="#6-package">6. Package</a></li><li><a href="#7-start-hazelcast-jet">7. Start Hazelcast Jet</a></li><li><a href="#8-submit-for-execution">8. Submit for Execution</a></li><li><a href="#9-track-updates">9. Track Updates</a></li><li><a href="#10-clean-up">10. Clean up</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2021 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.3"]}
+              });
+            </script></body></html>
