@@ -192,7 +192,7 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
     private void reconnect(RuntimeException re) {
         if (reconnectTracker.shouldTryAgain()) {
             logger.warning("Connection to database lost, will attempt to reconnect and retry operations from " +
-                    "scratch" + getCause(re));
+                    "scratch" + getCause(re), re);
 
             close();
             reconnectTracker.reset();
