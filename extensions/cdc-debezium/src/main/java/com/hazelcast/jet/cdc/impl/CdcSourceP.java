@@ -127,6 +127,11 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
     }
 
     @Override
+    public boolean isCooperative() {
+        return false;
+    }
+
+    @Override
     public boolean complete() {
         if (reconnectTracker.needsToWait()) {
             return false;
