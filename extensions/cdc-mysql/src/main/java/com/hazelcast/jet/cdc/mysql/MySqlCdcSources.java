@@ -69,7 +69,7 @@ public final class MySqlCdcSources {
      * database snapshotting should not be repeated and streaming the binlog
      * should resume at the position where it left off. If the state is reset,
      * then the source will behave as on its initial start, so will do a
-     * database snapshot and will start trailing the binlog where it syncs with
+     * database snapshot and will start tailing the binlog where it syncs with
      * the database snapshot's end.
      *
      * @param name name of this source, needs to be unique, will be passed to
@@ -340,7 +340,7 @@ public final class MySqlCdcSources {
          * database snapshotting should not be repeated and streaming the binlog
          * should resume at the position where it left off. If the state is
          * reset, then the source will behave as if it were its initial start,
-         * so will do a database snapshot and will start trailing the binlog
+         * so will do a database snapshot and will start tailing the binlog
          * where it syncs with the database snapshot's end.
          */
         @Nonnull
