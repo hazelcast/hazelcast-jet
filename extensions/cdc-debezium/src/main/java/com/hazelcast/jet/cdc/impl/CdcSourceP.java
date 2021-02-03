@@ -113,17 +113,17 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
         this.logger = context.logger();
 
         RetryStrategy retryStrategy = getRetryStrategy(properties);
-        log(retryStrategy, "retry strategy", name, logger);
+        log(logger, name, "retry strategy", retryStrategy);
         this.reconnectTracker = new RetryTracker(retryStrategy);
 
         this.commitPeriod = getCommitPeriod(properties);
-        log(commitPeriod, "commit period", name, logger);
+        log(logger, name, "commit period", commitPeriod);
         if (commitPeriod > 0) {
             lastCommitTime = System.nanoTime();
         }
 
         this.clearStateOnReconnect = getClearStateOnReconnect(properties);
-        log(clearStateOnReconnect, "clear state on reconnect", name, logger);
+        log(logger, name, "clear state on reconnect", clearStateOnReconnect);
     }
 
     @Override
@@ -177,8 +177,7 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
                     .flatMap(record -> {
                         T t = map(record);
                         return t == null ? Traversers.empty() :
-                                eventTimeMapper.flatMapEvent(t, 0, extractTimestamp(record)
-                                );
+                                eventTimeMapper.flatMapEvent(t, 0, extractTimestamp(record));
                     });
             emitFromTraverser(traverser);
         } catch (InterruptedException ie) {
@@ -348,10 +347,10 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
     private static String getCause(Exception e) {
         StringBuilder sb = new StringBuilder();
         if (e.getMessage() != null) {
-            sb.append(" : ").append(e.getMessage());
+            sb.append(": ").append(e.getMessage());
         }
         if (e.getCause() != null && e.getCause().getMessage() != null) {
-            sb.append(" : ").append(e.getCause().getMessage());
+            sb.append(": ").append(e.getCause().getMessage());
         }
         return sb.toString();
     }
@@ -394,7 +393,7 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
         return Boolean.parseBoolean(s);
     }
 
-    private static void log(Object value, String property, String name, ILogger logger) {
+    private static void log(ILogger logger, String name, String property, Object value) {
         if (logger.isInfoEnabled()) {
             logger.info(name + " has '" + property + "' set to '" + value + '\'');
         }
