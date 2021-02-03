@@ -58,6 +58,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.core.EventTimeMapper.NO_NATIVE_TIME;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
@@ -90,6 +91,7 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
     private boolean clearStateOnReconnect;
     private Traverser<Object> traverser = Traversers.empty();
     private Traverser<Map.Entry<BroadcastKey<String>, State>> snapshotTraverser;
+    private boolean snapshotting;
     private long lastCommitTime;
     private long commitPeriod;
     private boolean snapshotInProgress;
@@ -117,10 +119,13 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
         log(logger, name, "retry strategy", retryStrategy);
         this.reconnectTracker = new RetryTracker(retryStrategy);
 
-        this.commitPeriod = getCommitPeriod(properties);
-        log(logger, name, "commit period", commitPeriod);
-        if (commitPeriod > 0) {
-            lastCommitTime = System.nanoTime();
+        snapshotting = !NONE.equals(context.processingGuarantee());
+        if (!snapshotting) {
+            this.commitPeriod = getCommitPeriod(properties);
+            log(logger, name, "commit period", commitPeriod);
+            if (commitPeriod > 0) {
+                lastCommitTime = System.nanoTime();
+            }
         }
 
         this.clearStateOnReconnect = getClearStateOnReconnect(properties);
@@ -148,7 +153,7 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
         }
 
         try {
-            if (commitPeriod > 0) {
+            if (!snapshotting && commitPeriod > 0) {
                 long currentTime = System.nanoTime();
                 if (currentTime - lastCommitTime > commitPeriod) {
                     task.commit();
@@ -170,7 +175,7 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
                 task.commitRecord(record);
             }
 
-            if (commitPeriod == 0) {
+            if (!snapshotting && commitPeriod == 0) {
                 task.commit();
             }
 

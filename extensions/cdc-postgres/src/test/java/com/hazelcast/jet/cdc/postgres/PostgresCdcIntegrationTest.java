@@ -147,7 +147,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
     public void restart_withProcessingGuarantee() throws Exception {
         restart(
                 new JobConfig().setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE),
-                -1L,
+                Long.MAX_VALUE,
                 Arrays.asList(
                         "1004/1:UPDATE:Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, " +
                                 "email=annek@noanswer.org}",

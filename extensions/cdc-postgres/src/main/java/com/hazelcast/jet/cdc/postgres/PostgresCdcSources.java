@@ -24,6 +24,7 @@ import com.hazelcast.jet.cdc.impl.ChangeRecordCdcSourceP;
 import com.hazelcast.jet.cdc.impl.DebeziumConfig;
 import com.hazelcast.jet.cdc.impl.PropertyRules;
 import com.hazelcast.jet.cdc.postgres.impl.PostgresSequenceExtractor;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.pipeline.Sources;
@@ -62,8 +63,8 @@ public final class PostgresCdcSources {
      * made, will result in the source initiating reconnects to the database.
      * <p>
      * There is a further setting influencing reconnect behavior, specified via
-     * the {@code setShouldStateBeResetOnReconnect()}. The boolean flag passed
-     * in specifies what should happen to the connector's state on reconnect,
+     * {@code setShouldStateBeResetOnReconnect()}. The boolean flag passed in
+     * specifies what should happen to the connector's state on reconnect,
      * whether it should be kept or reset. If the state is kept, then
      * database snapshotting should not be repeated and streaming the WAL should
      * resume at the position where it left off. If the state is reset, then the
@@ -72,13 +73,17 @@ public final class PostgresCdcSources {
      * snapshot's end.
      * <p>
      * You can also configure how often the source will send feedback about
-     * processed change record offsets to the backing database. The replication
-     * slots of the database will clean up their internal data structures based
-     * on this feedback. Defaults to {@link CdcSourceP#DEFAULT_COMMIT_PERIOD_MS}.
-     * If the job driving this source has a processing guarantee set, the
-     * source also commits these processed offsets whenever it's saving a state
-     * snapshot. If this is the case, then the periodic saving can be disabled
-     * completely by setting it to a negative value.
+     * processed change record offsets to the backing database via
+     * {@code setCommitPeriod()}. The replication slots of the database will
+     * clean up their internal data structures based on this feedback. A commit
+     * period of {@code 0} means that the source will commit offsets after every
+     * batch of change records. Also, important to note that periodic commits
+     * happen only in the case of jobs without processing guarantees. For jobs
+     * offering processing guarantees, the source will ignore this setting and
+     * commit offsets as part of the state snapshotting process. So the setting
+     * governing them will be
+     * {@linkplain JobConfig#setSnapshotIntervalMillis(long)
+     * JobConfig.setSnapshotIntervalMillis}.
      *
      * @param name name of this source, needs to be unique, will be passed to
      *             the underlying Kafka Connect source
@@ -415,31 +420,38 @@ public final class PostgresCdcSources {
 
         /**
          * Specifies how often the connector should confirm processed offsets
-         * to the Postgres database's replication slot.
+         * to the Postgres database's replication slot (if the job doesn't
+         * offer a processing guarantee).
          * <p>
-         * If set to <em>zero</em>, then the connector will commit the latest
+         * If set to <em>zero</em>, the connector will commit the latest
          * processed offset of each batch of change records immediately after
          * finishing the batch's processing.
-         * <p>
-         * If set to a <em>negative</em> value, then the connector will never
-         * do the periodic offset commit. This setting makes sense when used
-         * in jobs with a processing guarantee. When used in such jobs, the
-         * source commits the offsets whenever the state snapshot is saved.
          * <p>
          * If set to a <em>non-zero, positive</em> value, then the commits
          * will be done periodically, after as many milliseconds as specified
          * in the value.
          * <p>
-         * Periodic commits, if not disabled, are done regardless of the
-         * processing guarantee of the job.
-         *
+         * <em>Negative</em> values are not allowed.
          * <p>
          * Defaults to {@link CdcSourceP#DEFAULT_COMMIT_PERIOD_MS}.
+         * <p>
+         * As hinted at above, the source does periodic commits only if the
+         * job doesn't offer processing guarantees. If it does, then this
+         * setting will be ignored, and the source will do offset committing as
+         * part of the state snapshotting process. So the setting governing the
+         * period becomes
+         * {@linkplain JobConfig#setSnapshotIntervalMillis(long)
+         * JobConfig.setSnapshotIntervalMillis}.
+         *
+         *
          *
          * @since 4.4.1
          */
         @Nonnull
         public Builder setCommitPeriod(long milliseconds) {
+            if (milliseconds < 0) {
+                throw new IllegalArgumentException("Negative commit period not allowed");
+            }
             config.setProperty(CdcSourceP.COMMIT_PERIOD_MILLIS_PROPERTY, milliseconds);
             return this;
         }
