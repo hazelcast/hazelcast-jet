@@ -158,7 +158,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
     }
 
     @Test
-    //category intentionally left out, we want this one test to run in standard test suits
+    //category intentionally left out, we want this one test to run in standard test suites
     public void restart_noProcessingGuarantee() throws Exception {
         restart(
                 new JobConfig(),

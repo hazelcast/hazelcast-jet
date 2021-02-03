@@ -139,6 +139,9 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
+        if (!emitFromTraverser(traverser)) {
+            return false;
+        }
         if (reconnectTracker.needsToWait()) {
             return false;
         }
@@ -146,9 +149,6 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
             return false;
         }
         if (snapshotInProgress) {
-            return false;
-        }
-        if (!emitFromTraverser(traverser)) {
             return false;
         }
 
@@ -172,7 +172,9 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
                 Map<String, ?> partition = record.sourcePartition();
                 Map<String, ?> offset = record.sourceOffset();
                 state.setOffset(partition, offset);
-                task.commitRecord(record);
+                if (!snapshotting) {
+                    task.commitRecord(record);
+                }
             }
 
             if (!snapshotting && commitPeriod == 0) {
@@ -270,7 +272,7 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
     }
 
     @Override
-    public boolean snapshotCommitPrepare() {
+    public boolean saveToSnapshot() {
         if (!emitFromTraverser(traverser)) {
             return false;
         }

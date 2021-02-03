@@ -419,31 +419,20 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * Specifies how often the connector should confirm processed offsets
-         * to the Postgres database's replication slot (if the job doesn't
-         * offer a processing guarantee).
+         * Specifies how often the connector should confirm processed offsets to
+         * the Postgres database's replication slot. For jobs with a processing
+         * guarantee this option is ignored, the source confirms the offsets after
+         * each state snapshot.
          * <p>
-         * If set to <em>zero</em>, the connector will commit the latest
-         * processed offset of each batch of change records immediately after
-         * finishing the batch's processing.
+         * If set to <em>zero</em>, the connector will commit the offsets after
+         * each batch of change records.
          * <p>
-         * If set to a <em>non-zero, positive</em> value, then the commits
-         * will be done periodically, after as many milliseconds as specified
-         * in the value.
+         * If set to a <em>positive</em> value, the commits will be done in the
+         * given period.
          * <p>
          * <em>Negative</em> values are not allowed.
          * <p>
          * Defaults to {@link CdcSourceP#DEFAULT_COMMIT_PERIOD_MS}.
-         * <p>
-         * As hinted at above, the source does periodic commits only if the
-         * job doesn't offer processing guarantees. If it does, then this
-         * setting will be ignored, and the source will do offset committing as
-         * part of the state snapshotting process. So the setting governing the
-         * period becomes
-         * {@linkplain JobConfig#setSnapshotIntervalMillis(long)
-         * JobConfig.setSnapshotIntervalMillis}.
-         *
-         *
          *
          * @since 4.4.1
          */
