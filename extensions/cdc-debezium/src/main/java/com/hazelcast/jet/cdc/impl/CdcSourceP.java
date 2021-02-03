@@ -288,11 +288,9 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
                 logger.warning("Interrupted while committing");
                 Thread.currentThread().interrupt();
             }
-            snapshotInProgress = false;
-            return true;
-        } else {
-            return false;
         }
+        snapshotInProgress = false;
+        return true;
     }
 
     @Override
