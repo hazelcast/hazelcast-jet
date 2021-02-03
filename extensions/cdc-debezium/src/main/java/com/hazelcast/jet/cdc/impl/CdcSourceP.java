@@ -269,9 +269,7 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
             snapshotTraverser = Traversers.singleton(entry(SNAPSHOT_KEY, state))
                     .onFirstNull(() -> {
                         snapshotTraverser = null;
-                        if (getLogger().isFinestEnabled()) {
-                            getLogger().finest("Finished saving snapshot.");
-                        }
+                        getLogger().finest("Finished saving snapshot.");
                     });
         }
         return emitFromTraverserToSnapshot(snapshotTraverser);
