@@ -136,13 +136,12 @@ sql〉
 <p>We're currently very focused on bringing more features to our SQL, so
 stay tuned!</p>
 <h2><a class="anchor" aria-hidden="true" id="file-connector"></a><a href="#file-connector" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>File Connector</h2>
-<p>The <a href="https://jet-start.sh/docs/api/sources-sinks">Unified File Connector
-API</a> gives you a simple way
-to read files, unified across different storage systems. Using the same
-API you can read files from the local filesystem, Hadoop FS, Amazon S3,
-Google Cloud Storage, and Azure Blob Storage. At the same time, the
-connector supports a variety of encoding formats: text files, CSV, JSON,
-Avro, etc., equally for all storage systems.</p>
+<p>The <a href="/docs/api/sources-sinks">Unified File Connector API</a> gives you a
+simple way to read files, unified across different storage systems.
+Using the same API you can read files from the local filesystem, Hadoop
+FS, Amazon S3, Google Cloud Storage, and Azure Blob Storage. At the same
+time, the connector supports a variety of encoding formats: text files,
+CSV, JSON, Avro, etc., equally for all storage systems.</p>
 <p>Here's how the Java syntax looks:</p>
 <pre><code class="hljs css language-java"><span class="token class-name">BatchSource</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> source <span class="token operator">=</span> <span class="token class-name">FileSources</span>
     <span class="token punctuation">.</span><span class="token function">files</span><span class="token punctuation">(</span><span class="token string">"/path/to/my/directory"</span><span class="token punctuation">)</span>
@@ -160,8 +159,7 @@ access S3:</p>
     <span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token class-name">FileFormat</span><span class="token punctuation">.</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">User</span><span class="token punctuation">></span></span><span class="token function">avro</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
     <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
-<p>Read more in the <a href="https://jet-start.sh/docs/api/sources-sinks">Programming
-Guide</a>.</p>
+<p>Read more in the <a href="/docs/api/sources-sinks">Programming Guide</a>.</p>
 <h2><a class="anchor" aria-hidden="true" id="enforce-strict-event-order"></a><a href="#enforce-strict-event-order" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Enforce Strict Event Order</h2>
 <p>Hazelcast Jet's primary focus is to leverage all opportunities to
 improve the throughput and latency of its computation. One example is
@@ -200,7 +198,7 @@ Dockerfile that combines it with the extensions, like this:</p>
 <span class="hljs-comment"># ... more ADD statements ...</span>
 </code></pre>
 <p>See the
-<a href="http://localhost:3000/docs/operations/docker#build-a-custom-image-from-the-slim-image">instructions</a>
+<a href="/docs/operations/docker#build-a-custom-image-from-the-slim-image">instructions</a>
 in our docs for more details.</p>
 <h2><a class="anchor" aria-hidden="true" id="full-release-notes"></a><a href="#full-release-notes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Full Release Notes</h2>
 <p>Hazelcast Jet 4.4 is based on IMDG version 4.1.1. Check out its Release
