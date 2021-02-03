@@ -59,6 +59,7 @@ import java.util.function.Consumer;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
+import static com.hazelcast.jet.core.EventTimeMapper.NO_NATIVE_TIME;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
 public abstract class CdcSourceP<T> extends AbstractProcessor {
@@ -399,10 +400,10 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
 
     private static long extractTimestamp(SourceRecord record) {
         if (record.valueSchema().field("ts_ms") == null) {
-            return 0L;
-        } else {
-            return ((Struct) record.value()).getInt64("ts_ms");
+            return NO_NATIVE_TIME;
         }
+        Long timestamp = ((Struct) record.value()).getInt64("ts_ms");
+        return timestamp == null ? NO_NATIVE_TIME : timestamp;
     }
 
     private static class JetConnectorContext implements ConnectorContext {
