@@ -288,7 +288,8 @@ so have to be put on the classpath together with the `cdc-debezium` jar.
 
 The above mentioned jars will take care of all external dependencies
 too, no need to explicitly deal with Debezium connector jars or anything
-else.
+else. Just take care that these jars aren't included in the slim
+distribution of Jet, only the fat one.
 
 ## Serialization
 

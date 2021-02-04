@@ -225,3 +225,7 @@ compile 'com.hazelcast.jet:hazelcast-jet-kafka:{jet-version}'
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
+
+If you're using the distribution package make sure use the fat one,
+because the `hazelcast-jet-kafka-{jet-version}.jar` you need is not
+contained in the slim one.

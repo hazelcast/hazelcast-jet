@@ -54,8 +54,10 @@ wget https://github.com/hazelcast/hazelcast-jet/releases/download/v4.4/hazelcast
 tar zxvf hazelcast-jet-4.4.tar.gz && cd hazelcast-jet-4.4
 ```
 
-If you already have Jet and you skipped the above steps, make sure to
-follow from here on.
+If you already have Jet, and you skipped the above steps, make sure to
+follow from here on (just check that `hazelcast-jet-python-4.4.jar` is
+in the `lib/` folder of your distribution, because you might have
+the slim distribution).
 
 2. Start Jet:
 

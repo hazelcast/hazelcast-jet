@@ -108,8 +108,8 @@ BatchSource<String> source = FileSources.files("/path/to/my/directory")
 
 Avro format allows to read data from _Avro Object Container File_
 format. To use the Avro format you additionally need the
-`hazelcast-jet-avro` module, located in the distribution in the `lib`
-folder, or available as a dependency:
+`hazelcast-jet-avro` module, located in the fat distribution in the
+`lib` folder, or available as a dependency:
 
 <!--DOCUSAURUS_CODE_TABS-->
 
