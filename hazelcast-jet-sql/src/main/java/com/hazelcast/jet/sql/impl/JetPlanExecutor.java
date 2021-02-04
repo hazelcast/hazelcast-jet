@@ -186,7 +186,7 @@ class JetPlanExecutor {
     }
 
     public SqlResult execute(ShowStatementPlan plan) {
-        SqlRowMetadata metadata = new SqlRowMetadata(singletonList(new SqlColumnMetadata("name", SqlColumnType.VARCHAR)));
+        SqlRowMetadata metadata = new SqlRowMetadata(singletonList(new SqlColumnMetadata("name", SqlColumnType.VARCHAR, false)));
         Stream<String> rows;
         if (plan.getShowTarget() == ShowStatementTarget.MAPPINGS) {
             rows = catalog.getMappingNames().stream();

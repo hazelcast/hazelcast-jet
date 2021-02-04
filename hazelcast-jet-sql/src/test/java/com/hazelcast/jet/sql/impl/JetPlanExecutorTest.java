@@ -153,6 +153,6 @@ public class JetPlanExecutorTest {
     }
 
     private static SqlRowMetadata rowMetadata() {
-        return new SqlRowMetadata(singletonList(new SqlColumnMetadata("field", SqlColumnType.OBJECT)));
+        return new SqlRowMetadata(singletonList(new SqlColumnMetadata("field", SqlColumnType.OBJECT, true)));
     }
 }
