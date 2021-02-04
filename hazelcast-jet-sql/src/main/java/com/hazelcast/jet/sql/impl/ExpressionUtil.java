@@ -18,6 +18,7 @@ package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
+import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
 import com.hazelcast.sql.impl.row.HeapRow;
@@ -31,8 +32,16 @@ import java.util.List;
 
 public final class ExpressionUtil {
 
-    public static final ExpressionEvalContext ZERO_ARGUMENTS_CONTEXT = index -> {
-        throw new IndexOutOfBoundsException("" + index);
+    public static final ExpressionEvalContext ZERO_ARGUMENTS_CONTEXT = new ExpressionEvalContext() {
+        @Override
+        public Object getArgument(int index) {
+            throw new IndexOutOfBoundsException("" + index);
+        }
+
+        @Override
+        public InternalSerializationService getSerializationService() {
+            throw new UnsupportedOperationException();
+        }
     };
 
     private ExpressionUtil() {
