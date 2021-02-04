@@ -48,10 +48,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.lang.String.format;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -147,7 +149,17 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
 
     @Test
     @Category(NightlyTest.class)
-    public void restart_withProcessingGuarantee() throws Exception {
+    public void stressTest_exactlyOnce_forcefulRestart() throws Exception {
+        stressTest_exactlyOnce(false);
+    }
+
+    @Test
+    @Category(NightlyTest.class)
+    public void stressTest_exactlyOnce_gracefulRestart() throws Exception {
+        stressTest_exactlyOnce(true);
+    }
+
+    public void stressTest_exactlyOnce(boolean graceful) throws Exception {
         int updates = 1000;
         int restarts = 10;
         int snapshotIntervalMs = 100;
@@ -155,10 +167,9 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
         Pipeline pipeline = customersPipeline(Long.MAX_VALUE);
 
         JobConfig config = new JobConfig()
-                .setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE)
+                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
                 .setSnapshotIntervalMillis(snapshotIntervalMs);
 
-        // when
         JetInstance jet = createJetMembers(2)[0];
         Job job = jet.newJob(pipeline, config);
         JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
@@ -166,29 +177,21 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
 
         String lsnFlushedBeforeRestart = getConfirmedFlushLsn();
 
-        new Thread(() -> {
-            try {
-                for (int i = 1; i <= updates; i++) {
-                    executeBatch("UPDATE customers SET first_name='Anne" + i + "' WHERE id=1004");
-                }
-            } catch (SQLException e) {
-                fail("Sending updates failed: " + e.getMessage());
+        Future<?> dbChangesFuture = spawn(() -> uncheckRun(() -> {
+            for (int i = 1; i <= updates; i++) {
+                executeBatch("UPDATE customers SET first_name='Anne" + i + "' WHERE id=1004");
             }
-        }).start();
+        }));
 
-        //then
         for (int i = 0; i < restarts; i++) {
-            boolean graceful = ThreadLocalRandom.current().nextBoolean();
             ((JobProxy) job).restart(graceful);
             assertJobStatusEventually(job, RUNNING);
 
             Thread.sleep(ThreadLocalRandom.current().nextInt(snapshotIntervalMs * 2));
         }
 
-        //when
         JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
 
-        //then
         try {
             List<String> expectedPatterns = new ArrayList<>(Arrays.asList(
                     "1001/00000:SYNC:Customer \\{id=1001, firstName=Sally, lastName=Thomas, "
@@ -209,6 +212,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
         } finally {
             job.cancel();
             assertJobStatusEventually(job, JobStatus.FAILED);
+            dbChangesFuture.get();
         }
     }
 

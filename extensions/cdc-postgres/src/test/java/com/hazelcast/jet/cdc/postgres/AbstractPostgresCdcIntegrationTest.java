@@ -70,13 +70,13 @@ public abstract class AbstractPostgresCdcIntegrationTest extends AbstractCdcInte
         }
     }
 
-    protected final void executeBatch(String... batch) throws SQLException {
+    protected final void executeBatch(String... sqlCommands) throws SQLException {
         try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
                 postgres.getPassword())) {
             connection.setSchema(SCHEMA);
             Statement statement = connection.createStatement();
-            for (String b : batch) {
-                statement.addBatch(b);
+            for (String sql : sqlCommands) {
+                statement.addBatch(sql);
             }
             statement.executeBatch();
         }
