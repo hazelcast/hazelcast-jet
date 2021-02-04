@@ -4,13 +4,16 @@ description: Introduction to Hazelcast Jet SQL
 ---
 
 With Hazelcast Jet you can write SQL to process real-time event streams
-as well as data at rest. The data can be stored inside a Hazelcast
-cluster (including the Jet cluster itself) or in an external storage
-system.
+as well as data at rest. You can pull the data from a Hazelcast cluster
+(currently only the Jet cluster itself) or from external systems like
+Kafka or S3. You can see the results directly as well as send them to
+one of those systems. Jet SQL also has an extension that allows you to
+create a long-running background job that continuously takes the
+real-time data, processes it, and pushes it to the target system.
 
 **Note:** _The service is in beta state and supports only a very limited
 subset of the planned functionality. The behavior, API, and binary
-formats will probably change in future releases._
+formats may change in future releases._
 
 ## Quick Start
 
@@ -32,7 +35,8 @@ containers talk to each other, using the container name as the hostname.
 
 The `-v` option maps the current directory to `/csv-dir` inside the
 container, stay in the same directory when you create the file in the
-CSV example below.
+CSV example below. On Windows, due to limitations of Docker, switch to
+some subdirectory of `c:\Users` before executing the above commands.
 
 <!--Tarball-->
 Prerequisite is Java.
@@ -82,28 +86,40 @@ sql〉
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-You are now ready to write some SQL. Try this:
+----
+
+You are now ready to write some SQL. Try these:
 
 ```sql
-sql〉 SELECT * FROM TABLE(generate_series(1,5));
+sql〉 SELECT * FROM TABLE(generate_series(1,3));
 +------------+
 |           v|
 +------------+
 |           1|
 |           2|
 |           3|
-|           4|
-|           5|
 +------------+
-5 row(s) selected
-sql〉 SELECT sum(v) FROM TABLE(generate_series(1,5));
+3 row(s) selected
+sql〉 SELECT sum(v) as total FROM TABLE(generate_series(0, 9));
 +--------------------+
-|              EXPR$0|
+|               total|
 +--------------------+
-|                  15|
+|                  45|
 +--------------------+
 1 row(s) selected
-sql〉
+sql〉 SELECT key, sum(key) as total FROM (
+          SELECT v/2 as key FROM TABLE(generate_series(0, 9))
+      ) GROUP BY key;
++--------------------+--------------------+
+|                 key|               total|
++--------------------+--------------------+
+|                   1|                   2|
+|                   2|                   4|
+|                   3|                   6|
+|                   4|                   8|
+|                   0|                   0|
++--------------------+--------------------+
+5 row(s) selected
 ```
 
 Here are two more examples with streaming SQL. Streaming queries never
@@ -138,11 +154,11 @@ sql〉
 ```
 
 `generate_stream()` generates an infinite stream of values. It emits
-`bigint`'s starting from zero at the rate you indicate with the argument
+`bigint`s starting from zero at the rate you indicate with the argument
 (in events per second). For Jet SQL, a stream is like a table with
 infinitely many rows which you can only access sequentially and thus
-never reach the end. For example, you get a syntax error if you try to
-aggregate across a whole stream:
+never reach the end. For example, you get an error if you try to
+aggregate the whole stream:
 
 ```sql
 sql〉 SELECT sum(v) FROM TABLE(generate_stream(10));
@@ -158,20 +174,21 @@ to apply a windowing function. This is an upcoming feature of Jet SQL.
 In this beta release, you can use these:
 
 - [SELECT and WHERE
-expressions](https://docs.hazelcast.org/docs/{imdg-version}/manual/html-single/index.html#expressions)
+expressions](https://docs.hazelcast.org/docs/{imdg-minor-version}/manual/html-single/index.html#expressions)
 - FROM [Apache Kafka topics](kafka-connector.md) and
 [files (local and remote)](file-connector.md)
 - JOIN with an IMap inside the Jet cluster (enrichment)
 - [INSERT/SINK INTO](basic-commands#insertsink-statement) a Kafka topic
   or an IMap inside the cluster
-- [aggregate functions](basic-commands#aggregate-functions) (doesn't
-  yet support streaming sources like Kafka)
+- [GROUP BY and aggregate functions](basic-commands#aggregate-functions)
+  on bounded data (non-streaming)
 
 These are some of the features on our roadmap:
 
-- Joins with arbitrary external data sources
+- GROUP BY for IMap
 - Windowed aggregation of streaming data
-- JDBC
+- JOIN with any data source
+- JDBC driver
 
 ## CREATE EXTERNAL MAPPING
 
@@ -179,26 +196,24 @@ There is no native storage system in Jet SQL, instead it works with
 _external mappings_ to access various resources as if they were tables.
 This includes its own internal IMaps.
 
-This is how you can create a mapping to a Kafka topic `trades` with
-JSON messages:
+This is how you can create a mapping for a Hazelcast IMap `myMap` with
+JSON values:
 
 ```sql
-sql〉 CREATE MAPPING trades (
-    id BIGINT,
-    ticker VARCHAR,
-    price DECIMAL,
-    amount BIGINT)
-TYPE Kafka
+sql〉 CREATE EXTERNAL MAPPING myMap (
+    id BIGINT EXTERNAL NAME "__key",
+    name VARCHAR,
+    age INT)
+TYPE IMap
 OPTIONS (
-    'valueFormat' = 'json',
-    'bootstrap.servers' = 'kafka:9092'
-);
+    'keyFormat'='bigint',
+    'valueFormat'='json');
 OK
 sql〉 SHOW MAPPINGS;
 +--------------------+
 |name                |
 +--------------------+
-|trades              |
+|myMap               |
 +--------------------+
 1 row(s) selected
 sql〉
@@ -209,16 +224,16 @@ The [DDL](ddl) section has more details.
 ## Query a CSV File
 
 Make sure you are in the same directory from which you started Jet.
-
-Create a sample CSV file named `trades.csv`:
+Create a sample CSV file named `likes.csv`:
 
 ```bash
-$ vi trades.csv
+$ vi likes.csv
 
-id,name
-1,Jerry
-2,Greg
-3,Mary
+id,name,likes
+1,Jerry,13
+2,Greg,108
+3,Mary,73
+4,Jerry,88
 ```
 
 Now you can write the SQL:
@@ -226,43 +241,45 @@ Now you can write the SQL:
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Docker-->
 ```sql
-sql〉 CREATE MAPPING csv_trades (id TINYINT, name VARCHAR)
+sql〉 CREATE MAPPING csv_likes (id INT, name VARCHAR, likes INT)
 TYPE File
 OPTIONS ('format'='csv',
-    'path'='/csv-dir', 'glob'='trades.csv');
+    'path'='/csv-dir', 'glob'='likes.csv');
 OK
-sql〉 SELECT * FROM csv_trades;
-+----+--------------------+
-|  id|name                |
-+----+--------------------+
-|   1|Jerry               |
-|   2|Greg                |
-|   3|Mary                |
-+----+--------------------+
-2 row(s) selected
-sql〉
 ```
 
 <!--Tarball-->
 ```sql
-sql〉 CREATE MAPPING csv_trades (id TINYINT, name VARCHAR)
+sql〉 CREATE MAPPING csv_likes (id INT, name VARCHAR, likes INT)
 TYPE File
 OPTIONS ('format'='csv',
-    'path'='/path/to/curr-dir', 'glob'='trades.csv');
+    'path'='/path/to/curr-dir', 'glob'='likes.csv');
 OK
-sql〉 SELECT * FROM csv_trades;
-+----+--------------------+
-|  id|name                |
-+----+--------------------+
-|   1|Jerry               |
-|   2|Greg                |
-|   3|Mary                |
-+----+--------------------+
-2 row(s) selected
-sql〉
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
+
+```sql
+sql〉 SELECT * FROM csv_likes;
++------------+--------------------+------------+
+|          id|name                |       likes|
++------------+--------------------+------------+
+|           1|Jerry               |          13|
+|           2|Greg                |         108|
+|           3|Mary                |          73|
+|           4|Jerry               |          88|
++------------+--------------------+------------+
+4 row(s) selected
+sql〉 SELECT name, sum(likes) as total_likes FROM csv_likes GROUP BY name;
++--------------------+--------------------+
+|name                |         total_likes|
++--------------------+--------------------+
+|Greg                |                 108|
+|Jerry               |                 101|
+|Mary                |                  73|
++--------------------+--------------------+
+3 row(s) selected
+```
 
 See the [File Connector](file-connector) page for more details.
 
@@ -287,7 +304,7 @@ cd kafka_2.13-2.7.0
 
 Now start ZooKeeper, then Kafka:
 
-```bash
+```text
 $ bin/zookeeper-server-start.sh config/zookeeper.properties
 ...
 [2021-01-20 12:44:04,863] INFO Created server with tickTime 3000
@@ -319,6 +336,8 @@ You are now ready to query Kafka. We'll use JSON messages like this one:
 First write a streaming query that filters and transforms the trade
 events it gets from Kafka:
 
+<!--DOCUSAURUS_CODE_TABS-->
+<!--Docker-->
 ```sql
 sql〉 CREATE MAPPING trades (
     id BIGINT,
@@ -331,6 +350,26 @@ OPTIONS (
     'bootstrap.servers' = 'kafka:9092'
 );
 OK
+```
+
+<!--Tarball-->
+```sql
+sql〉 CREATE MAPPING trades (
+    id BIGINT,
+    ticker VARCHAR,
+    price DECIMAL,
+    amount BIGINT)
+TYPE Kafka
+OPTIONS (
+    'valueFormat' = 'json',
+    'bootstrap.servers' = '127.0.0.1:9092'
+);
+OK
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+```sql
 sql〉 SELECT ticker, ROUND(price * 100) AS price_cents, amount
   FROM trades
   WHERE price * amount > 100;
@@ -339,8 +378,9 @@ sql〉 SELECT ticker, ROUND(price * 100) AS price_cents, amount
 +------------+----------------------+-------------------+
 ```
 
-The query is now running, ready to receive messages from Kafka. You can
-interrupt it with `Ctrl+C`, but leave it running for now.
+The Kafka topic is infinite, so this query is a _streaming query_. It is
+now running, ready to receive messages from Kafka. You can interrupt it
+with `Ctrl+C`, but leave it running for now.
 
 Now start another terminal window and push some messages to Kafka:
 
@@ -361,7 +401,9 @@ a result row has appeared:
 |EFGH             |                  1400|                 20|
 ```
 
-See the [Kafka Connector](kafka-connector) page for more details.
+You see only one of the two rows you inserted, the other one was
+eliminated by the `WHERE` clause. See the [Kafka
+Connector](kafka-connector) page for more details.
 
 ## Store Query Results in an IMap
 
@@ -369,12 +411,12 @@ You can send the query results to an IMap using the `SINK INTO` clause.
 `SINK INTO` is similar to the standard `INSERT INTO`, [see
 here](basic-commands#insertsink-statement) for the full details.
 
-This creates a map named `tradeMap` with an integer key and the JSON
-trade event as the value, and then stores an entry in it:
+This creates a map named `tradeMap` with a `Long` key and the JSON trade
+event as the value, and then stores an entry in it:
 
 ```sql
 sql〉 CREATE MAPPING tradeMap (
-    id BIGINT EXTERNAL NAME "__key",
+    __key BIGINT,
     ticker VARCHAR,
     price DECIMAL,
     amount BIGINT)
@@ -386,11 +428,11 @@ OK
 sql〉 SINK INTO tradeMap VALUES (1, 'hazl', 10, 1);
 OK
 sql〉 SELECT * FROM tradeMap;
-+----+----------+--------+--------+
-|  id|ticker    |   price|  amount|
-+----+----------+--------+--------+
-|   1|hazl      |10.0000…|       1|
-+----+----------+--------+--------+
++-----+----------+--------+--------+
+|__key|ticker    |   price|  amount|
++-----+----------+--------+--------+
+|    1|hazl      |10.0000…|       1|
++-----+----------+--------+--------+
 1 row(s) selected
 sql〉
 ```
@@ -402,7 +444,7 @@ from the Kafka topic into the IMap:
 
 ```sql
 sql〉 CREATE JOB ingest_trades AS
-  SINK INTO tradeMap(id, ticker, price, amount)
+  SINK INTO tradeMap
   SELECT id, ticker, price, amount
   FROM trades;
 OK
@@ -417,7 +459,7 @@ sql〉 SHOW JOBS;
 
 As we already saw, a streaming query never completes on its own and its
 lifecycle is coupled to the shell, but normally you want to create a
-long-running query that lives on independently. We achieved this with
+long-running query that lives independently. We achieved this with
 `CREATE JOB`.
 
 Let's try it out by publishing some events to the Kafka topic and
@@ -510,5 +552,5 @@ can't execute the statement, try the Jet backend.
 This documentation summarizes the additional SQL features of Hazelcast
 Jet. For a summary of the default SQL engine features, supported data
 types and the built-in functions and operators, please see the [chapter
-on SQL](https://docs.hazelcast.org/docs/{imdg-version}/manual/html-single/index.html#sql)
+on SQL](https://docs.hazelcast.org/docs/{imdg-minor-version}/manual/html-single/index.html#sql)
 in the Hazelcast IMDG reference manual.
