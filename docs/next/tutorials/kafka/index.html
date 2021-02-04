@@ -79,18 +79,15 @@ instructions</a> (you need just steps
 tar zxvf hazelcast-jet-4.5-SNAPSHOT.tar.gz &amp;&amp; <span class="hljs-built_in">cd</span> hazelcast-jet-4.5-SNAPSHOT
 </code></pre>
 <p>If you already have Jet, and you skipped the above steps, make sure to
-follow from here on.</p>
+follow from here on (just check that
+<code>hazelcast-jet-kafka-4.5-SNAPSHOT.jar</code> is in the <code>lib/</code> folder of your
+distribution, because you might have the slim distribution).</p>
 <ol start="2">
-<li>Activate the Apache Kafka Connector plugin:</li>
-</ol>
-<pre><code class="hljs css language-bash">mv opt/hazelcast-jet-kafka-4.5-SNAPSHOT.jar lib/
-</code></pre>
-<ol start="3">
 <li>Start Jet:</li>
 </ol>
 <pre><code class="hljs css language-bash">bin/jet-start
 </code></pre>
-<ol start="4">
+<ol start="3">
 <li>When you see output like this, Hazelcast Jet is up:</li>
 </ol>
 <pre><code class="hljs css language-text">Members {size:1, ver:1} [

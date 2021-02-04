@@ -143,8 +143,8 @@ to read the whole file as a single String using <code>FileFormat.text()</code>:<
 <h4><a class="anchor" aria-hidden="true" id="avro"></a><a href="#avro" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Avro</h4>
 <p>Avro format allows to read data from <em>Avro Object Container File</em>
 format. To use the Avro format you additionally need the
-<code>hazelcast-jet-avro</code> module, located in the distribution in the <code>opt</code>
-folder, or available as a dependency:</p>
+<code>hazelcast-jet-avro</code> module, located in the fat distribution in the
+<code>lib</code> folder, or available as a dependency:</p>
 <div class="tabs"><div class="nav-tabs"><div id="tab-group-166-tab-167" class="nav-link active" data-group="group_166" data-tab="tab-group-166-content-167">Gradle</div><div id="tab-group-166-tab-168" class="nav-link" data-group="group_166" data-tab="tab-group-166-content-168">Maven</div></div><div class="tab-content"><div id="tab-group-166-content-167" class="tab-pane active" data-group="group_166" tabindex="-1"><div><span><pre><code class="hljs css language-groovy">compile <span class="hljs-string">'com.hazelcast.jet:hazelcast-jet-avro:4.4'</span><br /></code></pre>
 </span></div></div><div id="tab-group-166-content-168" class="tab-pane" data-group="group_166" tabindex="-1"><div><span><pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.hazelcast.jet<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>hazelcast-jet-avro<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>4.4<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br /></code></pre>
 </span></div></div></div></div>
@@ -302,10 +302,10 @@ fs.adl.oauth2.credential
 <h3><a class="anchor" aria-hidden="true" id="hadoop-with-custom-classpath"></a><a href="#hadoop-with-custom-classpath" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Hadoop with Custom Classpath</h3>
 <p>Alternatively to using one of the modules with all the dependencies
 included, you may use <code>hazelcast-jet-hadoop</code> module and configure the
-classpath manually.</p>
-<p>Enable the module by moving the jar
-<code>opt/hazelcast-jet-hadoop-4.4.jar</code> to <code>lib/</code> directory and
-configure the classpath in the following way, using the
+classpath manually. The module is enabled by default (the
+<code>hazelcast-jet-hadoop-{jet-version}.jar</code> is in the <code>lib/</code> directory
+).</p>
+<p>Configure the classpath in the following way, using the
 <code>hadoop classpath</code> command:</p>
 <pre><code class="hljs css language-bash"><span class="hljs-built_in">export</span> CLASSPATH=$(<span class="hljs-variable">$HADOOP_HOME</span>/bin/hadoop classpath)
 </code></pre>
