@@ -29,6 +29,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.jet.impl.JobProxy;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
@@ -50,6 +51,8 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.JobStatus.RUNNING;
+import static java.lang.String.format;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.fail;
@@ -61,13 +64,13 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
     public void customers() throws Exception {
         // given
         List<String> expectedRecords = Arrays.asList(
-                "1001/0:SYNC:" + new Customer(1001, "Sally", "Thomas", "sally.thomas@acme.com"),
-                "1002/0:SYNC:" + new Customer(1002, "George", "Bailey", "gbailey@foobar.com"),
-                "1003/0:SYNC:" + new Customer(1003, "Edward", "Walker", "ed@walker.com"),
-                "1004/0:SYNC:" + new Customer(1004, "Anne", "Kretchmar", "annek@noanswer.org"),
-                "1004/1:UPDATE:" + new Customer(1004, "Anne Marie", "Kretchmar", "annek@noanswer.org"),
-                "1005/0:INSERT:" + new Customer(1005, "Jason", "Bourne", "jason@bourne.org"),
-                "1005/1:DELETE:" + new Customer(1005, "Jason", "Bourne", "jason@bourne.org")
+                "1001/00000:SYNC:" + new Customer(1001, "Sally", "Thomas", "sally.thomas@acme.com"),
+                "1002/00000:SYNC:" + new Customer(1002, "George", "Bailey", "gbailey@foobar.com"),
+                "1003/00000:SYNC:" + new Customer(1003, "Edward", "Walker", "ed@walker.com"),
+                "1004/00000:SYNC:" + new Customer(1004, "Anne", "Kretchmar", "annek@noanswer.org"),
+                "1004/00001:UPDATE:" + new Customer(1004, "Anne Marie", "Kretchmar", "annek@noanswer.org"),
+                "1005/00000:INSERT:" + new Customer(1005, "Jason", "Bourne", "jason@bourne.org"),
+                "1005/00001:DELETE:" + new Customer(1005, "Jason", "Bourne", "jason@bourne.org")
         );
 
         Pipeline pipeline = customersPipeline(null);
@@ -145,48 +148,78 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
     @Test
     @Category(NightlyTest.class)
     public void restart_withProcessingGuarantee() throws Exception {
-        restart(
-                new JobConfig().setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE),
-                Long.MAX_VALUE,
-                Arrays.asList(
-                        "1004/1:UPDATE:Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, " +
-                                "email=annek@noanswer.org}",
-                        "1005/1:DELETE:Customer {id=1005, firstName=Jason, lastName=Bourne, email=jason@bourne.org}"
-                ),
-                0
-        );
+        int updates = 1000;
+        int restarts = 10;
+        int snapshotIntervalMs = 100;
+
+        Pipeline pipeline = customersPipeline(Long.MAX_VALUE);
+
+        JobConfig config = new JobConfig()
+                .setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE)
+                .setSnapshotIntervalMillis(snapshotIntervalMs);
+
+        // when
+        JetInstance jet = createJetMembers(2)[0];
+        Job job = jet.newJob(pipeline, config);
+        JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
+        assertEqualsEventually(() -> jet.getMap("results").size(), 4);
+
+        String lsnFlushedBeforeRestart = getConfirmedFlushLsn();
+
+        new Thread(() -> {
+            try {
+                for (int i = 1; i <= updates; i++) {
+                    executeBatch("UPDATE customers SET first_name='Anne" + i + "' WHERE id=1004");
+                }
+            } catch (SQLException e) {
+                fail("Sending updates failed: " + e.getMessage());
+            }
+        }).start();
+
+        //then
+        for (int i = 0; i < restarts; i++) {
+            boolean graceful = ThreadLocalRandom.current().nextBoolean();
+            ((JobProxy) job).restart(graceful);
+            assertJobStatusEventually(job, RUNNING);
+
+            Thread.sleep(ThreadLocalRandom.current().nextInt(snapshotIntervalMs * 2));
+        }
+
+        //when
+        JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
+
+        //then
+        try {
+            List<String> expectedPatterns = new ArrayList<>(Arrays.asList(
+                    "1001/00000:SYNC:Customer \\{id=1001, firstName=Sally, lastName=Thomas, "
+                            + "email=sally.thomas@acme.com\\}",
+                    "1002/00000:SYNC:Customer \\{id=1002, firstName=George, lastName=Bailey, "
+                            + "email=gbailey@foobar.com\\}",
+                    "1003/00000:SYNC:Customer \\{id=1003, firstName=Edward, lastName=Walker, "
+                            + "email=ed@walker.com\\}",
+                    "1004/00000:SYNC:Customer \\{id=1004, firstName=Anne, lastName=Kretchmar, "
+                            + "email=annek@noanswer.org\\}"
+            ));
+            for (int i = 1; i <= updates; i++) {
+                expectedPatterns.add("1004/" + format("%05d", i) + ":UPDATE:Customer \\{id=1004, firstName=Anne" + i +
+                        ", lastName=Kretchmar, email=annek@noanswer.org\\}");
+            }
+            assertTrueEventually(() -> assertMatch(expectedPatterns, mapResultsToSortedList(jet.getMap("results"))));
+            assertTrueEventually(() -> assertNotEquals(lsnFlushedBeforeRestart, getConfirmedFlushLsn()));
+        } finally {
+            job.cancel();
+            assertJobStatusEventually(job, JobStatus.FAILED);
+        }
     }
 
     @Test
     //category intentionally left out, we want this one test to run in standard test suites
     public void restart_noProcessingGuarantee() throws Exception {
-        restart(
-                new JobConfig(),
-                250L,
-                Arrays.asList(
-                        "1001/0:SYNC:" + new Customer(1001, "Sally", "Thomas", "sally.thomas@acme.com"),
-                        "1002/0:SYNC:" + new Customer(1002, "George", "Bailey", "gbailey@foobar.com"),
-                        "1003/0:SYNC:" + new Customer(1003, "Edward", "Walker", "ed@walker.com"),
-                        "1004/0:SYNC:" + new Customer(1004, "Anne", "Kretchmar", "annek@noanswer.org"),
-                        "1004/1:UPDATE:" + new Customer(1004, "Anne Marie", "Kretchmar", "annek@noanswer.org"),
-                        "1005/0:SYNC:" + new Customer(1005, "Jason", "Bourne", "jason@bourne.org"),
-                        "1005/1:DELETE:" + new Customer(1005, "Jason", "Bourne", "jason@bourne.org")
-                ),
-                5
-        );
-    }
-
-    private void restart(
-            JobConfig jobConfig,
-            Long commitPeriod,
-            List<String> expectedRecords,
-            int postRestartSnapshotLength
-    ) throws SQLException {
-        Pipeline pipeline = customersPipeline(commitPeriod);
+        Pipeline pipeline = customersPipeline(250L);
 
         // when
         JetInstance jet = createJetMembers(2)[0];
-        Job job = jet.newJob(pipeline, jobConfig);
+        Job job = jet.newJob(pipeline, new JobConfig());
         JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
         assertEqualsEventually(() -> jet.getMap("results").size(), 4);
 
@@ -209,7 +242,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
 
         //when
         JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
-        assertEqualsEventually(() -> jet.getMap("results").size(), postRestartSnapshotLength);
+        assertEqualsEventually(() -> jet.getMap("results").size(), 5);
 
         //then update a record
         executeBatch(
@@ -219,7 +252,16 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
 
         //then
         try {
-            assertEqualsEventually(() -> mapResultsToSortedList(jet.getMap("results")), expectedRecords);
+            assertEqualsEventually(() -> mapResultsToSortedList(jet.getMap("results")),
+                    Arrays.asList(
+                            "1001/00000:SYNC:" + new Customer(1001, "Sally", "Thomas", "sally.thomas@acme.com"),
+                            "1002/00000:SYNC:" + new Customer(1002, "George", "Bailey", "gbailey@foobar.com"),
+                            "1003/00000:SYNC:" + new Customer(1003, "Edward", "Walker", "ed@walker.com"),
+                            "1004/00000:SYNC:" + new Customer(1004, "Anne", "Kretchmar", "annek@noanswer.org"),
+                            "1004/00001:UPDATE:" + new Customer(1004, "Anne Marie", "Kretchmar", "annek@noanswer.org"),
+                            "1005/00000:SYNC:" + new Customer(1005, "Jason", "Bourne", "jason@bourne.org"),
+                            "1005/00001:DELETE:" + new Customer(1005, "Jason", "Bourne", "jason@bourne.org")
+                    ));
             assertTrueEventually(() -> assertNotEquals(lsnFlushedBeforeRestart, getConfirmedFlushLsn()));
         } finally {
             job.cancel();
@@ -235,18 +277,18 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
 
         // given
         List<String> expectedRecords = new ArrayList<>(Arrays.asList(
-                "1001/0:(SYNC|INSERT):Customer \\{id=1001, firstName=Sally, lastName=Thomas, "
+                "1001/00000:(SYNC|INSERT):Customer \\{id=1001, firstName=Sally, lastName=Thomas, "
                         + "email=sally.thomas@acme.com\\}",
-                "1002/0:(SYNC|INSERT):Customer \\{id=1002, firstName=George, lastName=Bailey, "
+                "1002/00000:(SYNC|INSERT):Customer \\{id=1002, firstName=George, lastName=Bailey, "
                         + "email=gbailey@foobar.com\\}",
-                "1003/0:(SYNC|INSERT):Customer \\{id=1003, firstName=Edward, lastName=Walker, "
+                "1003/00000:(SYNC|INSERT):Customer \\{id=1003, firstName=Edward, lastName=Walker, "
                         + "email=ed@walker.com\\}",
-                "1004/0:(SYNC|INSERT):Customer \\{id=1004, firstName=Anne, lastName=Kretchmar, "
+                "1004/00000:(SYNC|INSERT):Customer \\{id=1004, firstName=Anne, lastName=Kretchmar, "
                         + "email=annek@noanswer.org\\}"
         ));
         for (int i = offset; i < offset + length; i++) {
-            expectedRecords.add(i + "/0:(SYNC|INSERT):Customer \\{id=" + i + ", firstName=first" + i + ", lastName=last"
-                    + i + ", email=" + i + "@google.com\\}");
+            expectedRecords.add(i + "/00000:(SYNC|INSERT):Customer \\{id=" + i + ", firstName=first" + i +
+                    ", lastName=last" + i + ", email=" + i + "@google.com\\}");
         }
         expectedRecords.sort(String::compareTo);
 
@@ -292,7 +334,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
                 .mapStateful(
                         LongAccumulator::new,
                         (accumulator, customerId, record) -> {
-                            long count = accumulator.get();
+                            String count = format("%05d", accumulator.get());
                             accumulator.add(1);
                             Operation operation = record.operation();
                             RecordPart value = record.value();

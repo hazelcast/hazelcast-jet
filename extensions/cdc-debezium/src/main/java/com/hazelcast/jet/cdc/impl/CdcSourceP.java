@@ -172,9 +172,7 @@ public abstract class CdcSourceP<T> extends AbstractProcessor {
                 Map<String, ?> partition = record.sourcePartition();
                 Map<String, ?> offset = record.sourceOffset();
                 state.setOffset(partition, offset);
-                if (!snapshotting) {
-                    task.commitRecord(record);
-                }
+                task.commitRecord(record);
             }
 
             if (!snapshotting && commitPeriod == 0) {
