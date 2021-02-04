@@ -65,19 +65,13 @@ tar zxvf hazelcast-jet-{jet-version}.tar.gz && cd hazelcast-jet-{jet-version}
 If you already have Jet, and you skipped the above steps, make sure to
 follow from here on.
 
-2. Activate the Amazon Kinesis Connector plugin:
-
-```bash
-mv opt/hazelcast-jet-kinesis-{jet-version}.jar lib/
-```
-
-3. Start Jet:
+2. Start Jet:
 
 ```bash
 bin/jet-start
 ```
 
-4. When you see output like this, Hazelcast Jet is up:
+3. When you see output like this, Hazelcast Jet is up:
 
 ```text
 Members {size:1, ver:1} [
