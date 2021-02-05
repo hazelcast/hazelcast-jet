@@ -113,7 +113,7 @@ public class SqlAggregateTest_TypeCoercion extends SqlTestSupport {
 
     @Test
     public void test_sum_integerOverflow() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", singletonList("a"), singletonList(QueryDataType.BIGINT),
+        TestBatchSqlConnector.create(sqlService, "t", singletonList("a"), singletonList(QueryDataType.BIGINT),
                 asList(
                         new String[]{"" + Long.MAX_VALUE},
                         new String[]{"" + Long.MAX_VALUE}));
@@ -169,7 +169,7 @@ public class SqlAggregateTest_TypeCoercion extends SqlTestSupport {
 
     @Test
     public void test_avg_integerOverflow() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", singletonList("a"), singletonList(QueryDataType.BIGINT),
+        TestBatchSqlConnector.create(sqlService, "t", singletonList("a"), singletonList(QueryDataType.BIGINT),
                 asList(
                         new String[]{"" + Long.MAX_VALUE},
                         new String[]{"" + Long.MAX_VALUE}));

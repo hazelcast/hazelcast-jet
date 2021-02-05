@@ -982,7 +982,6 @@ public class SqlAggregateTest extends SqlTestSupport {
     private String createTable(String[]... values) {
         String name = randomName();
         TestBatchSqlConnector.create(
-                logger,
                 sqlService,
                 name,
                 asList("name", "distance"),

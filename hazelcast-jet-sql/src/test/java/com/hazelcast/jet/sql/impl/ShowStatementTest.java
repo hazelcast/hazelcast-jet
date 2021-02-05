@@ -65,7 +65,7 @@ public class ShowStatementTest extends SqlTestSupport {
     public void test_showMapping() {
         List<String> mappingNames = IntStream.range(0, 5).mapToObj(i -> "t" + i).collect(toList());
         for (String mappingName : mappingNames) {
-            TestBatchSqlConnector.create(logger, sqlService, mappingName, 1);
+            TestBatchSqlConnector.create(sqlService, mappingName, 1);
         }
 
         assertRowsOrdered("show mappings", Util.toList(mappingNames, Row::new));
@@ -73,7 +73,7 @@ public class ShowStatementTest extends SqlTestSupport {
 
     @Test
     public void test_withOptionalExternalKeyword() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 1);
+        TestBatchSqlConnector.create(sqlService, "t", 1);
         assertRowsOrdered("show external mappings", singletonList(new Row("t")));
     }
 
@@ -102,7 +102,7 @@ public class ShowStatementTest extends SqlTestSupport {
 
     @Test
     public void when_jobCompleted_then_notShown() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 1);
+        TestBatchSqlConnector.create(sqlService, "t", 1);
         sqlService.execute(javaSerializableMapDdl("m", Integer.class, Integer.class));
         sqlService.execute("create job testJob as " +
                 "sink into m " +

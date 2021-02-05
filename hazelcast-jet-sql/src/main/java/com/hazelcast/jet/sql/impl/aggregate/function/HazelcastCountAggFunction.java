@@ -42,7 +42,6 @@ public class HazelcastCountAggFunction extends HazelcastAggFunction {
         super(
                 "COUNT",
                 SqlKind.COUNT,
-                // TODO [viliam] How to use BIGINT(64)? Currently, BIGINT(63) is used
                 opBinding -> HazelcastIntegerType.create(64, false),
                 new IgnoreCountStarOperandTypeInference(new ReplaceUnknownOperandTypeInference(BIGINT)),
                 null,
@@ -63,7 +62,6 @@ public class HazelcastCountAggFunction extends HazelcastAggFunction {
             SqlValidatorScope scope,
             SqlCall call
     ) {
-        // Check for COUNT(*) function. If it is, we don't want to try and derive the "*"
         return HazelcastIntegerType.create(64, false);
     }
 

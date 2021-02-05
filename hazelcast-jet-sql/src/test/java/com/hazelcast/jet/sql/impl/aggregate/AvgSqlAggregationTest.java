@@ -111,6 +111,6 @@ public class AvgSqlAggregationTest {
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
         AvgSqlAggregation serialized = ss.toObject(ss.toData(original));
 
-        assertThat(serialized).isEqualTo(original);
+        assertThat(serialized).isEqualToComparingFieldByField(original);
     }
 }

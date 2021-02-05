@@ -85,6 +85,6 @@ public class SqlAggregationsTest {
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
         ValueSqlAggregation serialized = ss.toObject(ss.toData(original));
 
-        assertThat(serialized).isEqualTo(original);
+        assertThat(serialized).isEqualToComparingFieldByField(original);
     }
 }

@@ -41,8 +41,8 @@ public class HazelcastRowOperator extends HazelcastSpecialOperator {
                 MDX_PRECEDENCE,
                 false,
                 opBinding -> {
-                    // The type of a ROW(e1,e2) expression is a record with the types
-                    // {e1type,e2type}.  According to the standard, field names are
+                    // The type of a ROW(e1, e2) expression is a record with the types
+                    // {e1type, e2type}.  According to the standard, field names are
                     // implementation-defined.
                     return opBinding.getTypeFactory().createStructType(
                             new AbstractList<Entry<String, RelDataType>>() {

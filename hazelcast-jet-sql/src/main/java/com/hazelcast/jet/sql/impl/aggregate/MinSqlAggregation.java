@@ -23,7 +23,6 @@ import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
-import java.util.Objects;
 
 @NotThreadSafe
 public class MinSqlAggregation extends SqlAggregation {
@@ -98,23 +97,5 @@ public class MinSqlAggregation extends SqlAggregation {
     public void readData(ObjectDataInput in) throws IOException {
         operandType = in.readObject();
         value = in.readObject();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        MinSqlAggregation that = (MinSqlAggregation) o;
-        return Objects.equals(operandType, that.operandType) &&
-                Objects.equals(value, that.value);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(operandType, value);
     }
 }

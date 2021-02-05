@@ -22,11 +22,10 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
+import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
-import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlService;
 import com.hazelcast.sql.impl.QueryException;
@@ -72,15 +71,14 @@ public class TestBatchSqlConnector implements SqlConnector {
      * Creates a table with single column named "v" with INT type.
      * The rows contain the sequence {@code 0 .. itemCount}.
      */
-    public static void create(ILogger logger, SqlService sqlService, String tableName, int itemCount) {
+    public static void create(SqlService sqlService, String tableName, int itemCount) {
         List<String[]> values = IntStream.range(0, itemCount)
                                          .mapToObj(i -> new String[]{String.valueOf(i)})
                                          .collect(toList());
-        create(logger, sqlService, tableName, singletonList("v"), singletonList(QueryDataType.INT), values);
+        create(sqlService, tableName, singletonList("v"), singletonList(QueryDataType.INT), values);
     }
 
     public static void create(
-            ILogger logger,
             SqlService sqlService,
             String tableName,
             List<String> names,
@@ -112,7 +110,7 @@ public class TestBatchSqlConnector implements SqlConnector {
                 + ", '" + OPTION_TYPES + "'='" + typesStringified + "'"
                 + ", '" + OPTION_VALUES + "'='" + valuesStringified + "'"
                 + ")";
-        logger.info(sql);
+        System.out.println(sql);
         sqlService.execute(sql).updateCount();
     }
 

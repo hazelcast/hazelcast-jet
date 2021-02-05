@@ -22,7 +22,6 @@ import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
-import java.util.Objects;
 
 /**
  * Special-case aggregation that aggregates multiple instances of the same
@@ -83,23 +82,5 @@ public class ValueSqlAggregation extends SqlAggregation {
     public void readData(ObjectDataInput in) throws IOException {
         operandType = in.readObject();
         value = in.readObject();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        ValueSqlAggregation that = (ValueSqlAggregation) o;
-        return Objects.equals(operandType, that.operandType) &&
-                Objects.equals(value, that.value);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(operandType, value);
     }
 }

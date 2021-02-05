@@ -33,7 +33,7 @@ public class JetSqlResultImplTest extends JetTestSupport {
     // test for https://github.com/hazelcast/hazelcast-jet/issues/2697
     public void when_closed_then_iteratorFails() {
         JetInstance inst = createJetMember();
-        TestBatchSqlConnector.create(logger, inst.getSql(), "m", 1);
+        TestBatchSqlConnector.create(inst.getSql(), "m", 1);
         SqlResult sqlResult = inst.getSql().execute("select * from m");
         Iterator<SqlRow> iterator = sqlResult.iterator();
         sqlResult.close();

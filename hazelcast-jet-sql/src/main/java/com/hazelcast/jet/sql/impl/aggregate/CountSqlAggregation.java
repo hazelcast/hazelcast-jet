@@ -22,7 +22,6 @@ import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
-import java.util.Objects;
 
 @NotThreadSafe
 public class CountSqlAggregation extends SqlAggregation {
@@ -71,22 +70,5 @@ public class CountSqlAggregation extends SqlAggregation {
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         value = in.readLong();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        CountSqlAggregation that = (CountSqlAggregation) o;
-        return value == that.value;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(value);
     }
 }

@@ -26,7 +26,6 @@ import com.hazelcast.sql.impl.type.converter.Converter;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.Objects;
 
 import static com.hazelcast.sql.impl.expression.math.ExpressionMath.DECIMAL_MATH_CONTEXT;
 
@@ -122,23 +121,5 @@ public class SumSqlAggregation extends SqlAggregation {
         operandType = in.readObject();
         operandType = in.readObject();
         value = in.readObject();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        SumSqlAggregation that = (SumSqlAggregation) o;
-        return Objects.equals(operandType, that.operandType) &&
-                Objects.equals(value, that.value);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(operandType, operandType, value);
     }
 }

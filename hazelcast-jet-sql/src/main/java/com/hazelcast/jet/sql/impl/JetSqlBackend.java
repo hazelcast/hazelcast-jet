@@ -346,7 +346,6 @@ class JetSqlBackend implements SqlBackend {
 
         List<SqlColumnMetadata> columns = new ArrayList<>(columnNames.size());
         for (int i = 0; i < columnNames.size(); i++) {
-            // TODO are columns nullable?
             SqlColumnMetadata column = QueryUtils.getColumnMetadata(columnNames.get(i), columnTypes.get(i), true);
             columns.add(column);
         }

@@ -51,7 +51,7 @@ public class SqlClientTest extends SqlTestSupport {
 
         int itemCount = 10_000;
 
-        TestBatchSqlConnector.create(logger, sqlService, "t", itemCount);
+        TestBatchSqlConnector.create(sqlService, "t", itemCount);
 
         SqlResult result = sqlService.execute("SELECT v FROM t");
         BitSet seenValues = new BitSet(itemCount);

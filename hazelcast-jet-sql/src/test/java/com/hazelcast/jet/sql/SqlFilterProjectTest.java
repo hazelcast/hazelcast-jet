@@ -118,7 +118,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectWithoutInputReferences() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 2);
+        TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsAnyOrder(
                 "SELECT '喷气式飞机' FROM t",
@@ -131,7 +131,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_starProject() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 2);
+        TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsAnyOrder(
                 "SELECT * FROM t",
@@ -144,7 +144,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_starProjectProject() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 2);
+        TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsAnyOrder(
                 "SELECT * FROM (SELECT * FROM t)",
@@ -157,7 +157,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_starProjectFilterProjectFilter() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 2);
+        TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsAnyOrder(
                 "SELECT * FROM (SELECT * FROM t WHERE 0 = 0) WHERE 1 = 1",
@@ -170,7 +170,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_starProjectFilterExpressionProjectFilter() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 2);
+        TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsAnyOrder(
                 "SELECT * FROM (SELECT * FROM t WHERE 0 = 0) WHERE 2 - 1 = 1",
@@ -183,7 +183,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_project() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 2);
+        TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsAnyOrder(
                 "SELECT v, v FROM t",
@@ -196,7 +196,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectProject() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 2);
+        TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsAnyOrder(
                 "SELECT f2, f1 FROM (SELECT v f1, v f2 FROM t)",
@@ -209,7 +209,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectExpression() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 2);
+        TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsAnyOrder(
                 "SELECT v + 1, v * v FROM t",
@@ -222,7 +222,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectFilter() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT v, v FROM t WHERE v = 1 OR v = 2",
@@ -235,7 +235,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectFilterExpression() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT v, v FROM t WHERE v + v > 1",
@@ -248,7 +248,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectExpressionFilter() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT v + 1, v + v FROM t WHERE v >= 1",
@@ -261,7 +261,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectExpressionFilterExpression() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT v + 1, v + v FROM t WHERE v + v > 1",
@@ -274,7 +274,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectProjectExpression() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 2);
+        TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsAnyOrder(
                 "SELECT f2, f1 FROM (SELECT v f1, v + v f2 FROM t)",
@@ -287,7 +287,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectExpressionProject() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 2);
+        TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsAnyOrder(
                 "SELECT f1 + f2 FROM (SELECT v f1, v f2 FROM t)",
@@ -300,7 +300,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectExpressionProjectExpression() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 2);
+        TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsAnyOrder(
                 "SELECT f1 + f2 FROM (SELECT v f1, v + v f2 FROM t)",
@@ -313,7 +313,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectProjectFilter() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT f2, f1 FROM (SELECT v f1, v f2 FROM t WHERE v >= 1)",
@@ -326,7 +326,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectProjectFilterExpression() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT f2, f1 FROM (SELECT v f1, v f2 FROM t WHERE v + v > 1)",
@@ -339,7 +339,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectProjectExpressionFilter() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT f2, f1 FROM (SELECT v f1, v + v f2 FROM t WHERE v >= 1)",
@@ -352,7 +352,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectProjectExpressionFilterExpression() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT f2, f1 FROM (SELECT v f1, v + v f2 FROM t WHERE v + v > 1)",
@@ -365,7 +365,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectExpressionProjectFilter() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT f1 + f2 FROM (SELECT v f1, v f2 FROM t WHERE v >= 1)",
@@ -378,7 +378,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectExpressionProjectFilterExpression() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT f1 + f2 FROM (SELECT v f1, v f2 FROM t WHERE v + v > 1)",
@@ -391,7 +391,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectExpressionProjectExpressionFilter() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT f1 + f2 FROM (SELECT v f1, v + v f2 FROM t WHERE v >= 1)",
@@ -404,7 +404,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectExpressionProjectExpressionFilterExpression() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT f1 + f2 FROM (SELECT v f1, v + v f2 FROM t WHERE v + v > 1)",
@@ -417,7 +417,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectFilterProject() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT f2, f1 FROM (SELECT v f1, v f2 FROM t) WHERE f2 >= 1",
@@ -430,7 +430,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectFilterExpressionProject() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT f2, f1 FROM (SELECT v f1, v f2 FROM t) WHERE f1 + f2 > 1",
@@ -443,7 +443,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectFilterProjectExpression() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT f2, f1 FROM (SELECT v f1, v + v f2 FROM t) WHERE f1 >= 1",
@@ -456,7 +456,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectFilterExpressionProjectExpression() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT f2, f1 FROM (SELECT v f1, v + v f2 FROM t) WHERE f1 + f2 > 2",
@@ -469,7 +469,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectExpressionFilterProject() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT f1 + f2 FROM (SELECT v f1, v f2 FROM t) WHERE f2 >= 1",
@@ -482,7 +482,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectExpressionFilterExpressionProject() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT f1 + f2 FROM (SELECT v f1, v f2 FROM t) WHERE f1 + f2 > 1",
@@ -495,7 +495,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectExpressionFilterProjectExpression() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT f1 + f2 FROM (SELECT v f1, v + v f2 FROM t) WHERE f1 >= 1",
@@ -508,7 +508,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectExpressionFilterExpressionProjectExpression() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 3);
+        TestBatchSqlConnector.create(sqlService, "t", 3);
 
         assertRowsAnyOrder(
                 "SELECT f1 + f2 FROM (SELECT v f1, v + v f2 FROM t) WHERE f1 + f2 > 1",
@@ -521,7 +521,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectFilterProjectFilter() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 4);
+        TestBatchSqlConnector.create(sqlService, "t", 4);
 
         assertRowsAnyOrder(
                 "SELECT f2, f1 FROM (SELECT v f1, v f2 FROM t WHERE v >= 1) WHERE f2 < 3",
@@ -534,7 +534,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectFilterProjectExpressionFilter() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 4);
+        TestBatchSqlConnector.create(sqlService, "t", 4);
 
         assertRowsAnyOrder(
                 "SELECT f1 FROM (SELECT v f1, v + v f2 FROM t WHERE v >= 1) WHERE f2 < 6",
@@ -547,7 +547,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectExpressionFilterProjectFilter() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 4);
+        TestBatchSqlConnector.create(sqlService, "t", 4);
 
         assertRowsAnyOrder(
                 "SELECT f1 + f2 FROM (SELECT v f1, v f2 FROM t WHERE v >= 1) WHERE f2 < 3",
@@ -560,7 +560,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectExpressionFilterProjectExpressionFilter() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 4);
+        TestBatchSqlConnector.create(sqlService, "t", 4);
 
         assertRowsAnyOrder(
                 "SELECT f1 + f2 FROM (SELECT v f1, v + v f2 FROM t WHERE v >= 1) WHERE f2 < 6",
@@ -573,7 +573,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
     @Test
     public void test_projectExpressionFilterExpressionProjectExpressionFilterExpression() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 4);
+        TestBatchSqlConnector.create(sqlService, "t", 4);
 
         assertRowsAnyOrder(
                 "SELECT f1 + f2 FROM (SELECT v f1, v + v f2 FROM t WHERE v + v > 1) WHERE f1 + f2 < 9",

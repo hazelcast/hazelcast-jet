@@ -102,24 +102,4 @@ public class AvgSqlAggregation extends SqlAggregation {
         sum = in.readObject();
         count = in.readObject();
     }
-
-    // TODO [viliam] can we remove these?
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        AvgSqlAggregation that = (AvgSqlAggregation) o;
-        return Objects.equals(operandType, that.operandType) &&
-                Objects.equals(sum, that.sum) &&
-                Objects.equals(count, that.count);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(operandType, sum, count);
-    }
 }

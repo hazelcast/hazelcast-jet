@@ -58,6 +58,7 @@ public class HazelcastAvgAggFunction extends HazelcastAggFunction {
             }
         }
 
+        // we'll use DECIMAL for exact types (integers and DECIMAL) and DOUBLE for inexact types
         RelDataType resultType = isNumericIntegerType(operandType) || operandType.getSqlTypeName() == DECIMAL
                 ? HazelcastTypeFactory.INSTANCE.createSqlType(DECIMAL)
                 : HazelcastTypeFactory.INSTANCE.createSqlType(DOUBLE);

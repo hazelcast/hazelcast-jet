@@ -31,6 +31,7 @@ import org.apache.calcite.util.Optionality;
 import static org.apache.calcite.sql.type.SqlTypeName.BIGINT;
 import static org.apache.calcite.sql.type.SqlTypeName.DECIMAL;
 import static org.apache.calcite.sql.type.SqlTypeName.DOUBLE;
+import static org.apache.calcite.sql.type.SqlTypeName.REAL;
 
 public class HazelcastSumAggFunction extends HazelcastAggFunction {
 
@@ -60,9 +61,10 @@ public class HazelcastSumAggFunction extends HazelcastAggFunction {
         RelDataType resultType;
         if (HazelcastTypeUtils.isNumericIntegerType(operandType)) {
             resultType = HazelcastTypeFactory.INSTANCE.createSqlType(BIGINT);
-        } else if (operandType.getSqlTypeName().equals(DECIMAL)) {
+        } else if (operandType.getSqlTypeName() == DECIMAL) {
             resultType = HazelcastTypeFactory.INSTANCE.createSqlType(DECIMAL);
         } else {
+            assert operandType.getSqlTypeName() == DOUBLE || operandType.getSqlTypeName() == REAL;
             resultType = HazelcastTypeFactory.INSTANCE.createSqlType(DOUBLE);
         }
 

@@ -133,4 +133,4 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
     ) {
         super.lookupOperatorOverloads(name, category, syntax, operators, SqlNameMatchers.withCaseSensitive(false));
     }
-        }
+}

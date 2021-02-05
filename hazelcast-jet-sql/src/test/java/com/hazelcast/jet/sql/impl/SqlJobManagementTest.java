@@ -194,10 +194,10 @@ public class SqlJobManagementTest extends SimpleTestInClusterSupport {
         JetInstance client = factory().newClient();
         SqlService sqlService = client.getSql();
 
-        sqlService.execute("CREATE MAPPING src TYPE TestStream").updateCount();
-        sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class)).updateCount();
+        sqlService.execute("CREATE MAPPING src TYPE TestStream");
+        sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
-        sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src").updateCount();
+        sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src");
         Job job = instance().getJob("testJob");
         assertNotNull(job);
         assertJobStatusEventually(job, RUNNING);
@@ -307,7 +307,7 @@ public class SqlJobManagementTest extends SimpleTestInClusterSupport {
     }
 
     private void createCompletedJob() {
-        TestBatchSqlConnector.create(logger, sqlService, "t", 1);
+        TestBatchSqlConnector.create(sqlService, "t", 1);
         sqlService.execute(javaSerializableMapDdl("m", Integer.class, Integer.class));
         sqlService.execute("create job " + COMPLETED_JOB_NAME + " as sink into m select v, v from t");
         Job job = instance().getJob(COMPLETED_JOB_NAME);

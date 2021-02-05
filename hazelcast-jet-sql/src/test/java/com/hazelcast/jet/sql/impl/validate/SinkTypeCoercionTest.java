@@ -64,7 +64,7 @@ import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
 @UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
-public class TypeCoercionTest extends SqlTestSupport {
+public class SinkTypeCoercionTest extends SqlTestSupport {
 
     @Parameter
     public TestParams testParams;
@@ -575,7 +575,7 @@ public class TypeCoercionTest extends SqlTestSupport {
         assumeFalse(testParams.srcType == OBJECT);
 
         Class<?> targetClass = javaClassForType(testParams.targetType);
-        TestBatchSqlConnector.create(logger, sqlService, "src", singletonList("v"),
+        TestBatchSqlConnector.create(sqlService, "src", singletonList("v"),
                 singletonList(resolveTypeForTypeFamily(testParams.srcType)),
                 singletonList(new String[]{testParams.valueTestSource}));
 
@@ -629,7 +629,7 @@ public class TypeCoercionTest extends SqlTestSupport {
         assumeFalse(testParams.targetType == TIMESTAMP || testParams.targetType == TIMESTAMP_WITH_TIME_ZONE);
 
         Class<?> targetClass = javaClassForType(testParams.targetType);
-        TestBatchSqlConnector.create(logger, sqlService, "src", 1);
+        TestBatchSqlConnector.create(sqlService, "src", 1);
 
         String sql = "CREATE MAPPING target TYPE IMap " +
                 "OPTIONS(" +

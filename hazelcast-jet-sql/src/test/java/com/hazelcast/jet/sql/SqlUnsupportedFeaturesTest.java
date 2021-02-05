@@ -36,7 +36,7 @@ public class SqlUnsupportedFeaturesTest extends SqlTestSupport {
 
     @Test
     public void test_rightJoin() {
-        TestBatchSqlConnector.create(logger, sqlService, "b", 0);
+        TestBatchSqlConnector.create(sqlService, "b", 0);
 
         assertThatThrownBy(() -> sqlService.execute("SELECT 1 FROM b AS b1 RIGHT JOIN b AS b2 ON b1.v = b2.v"))
                 .hasCauseInstanceOf(QueryException.class)
@@ -49,7 +49,7 @@ public class SqlUnsupportedFeaturesTest extends SqlTestSupport {
 
     @Test
     public void test_fullJoin() {
-        TestBatchSqlConnector.create(logger, sqlService, "b", 0);
+        TestBatchSqlConnector.create(sqlService, "b", 0);
 
         assertThatThrownBy(() -> sqlService.execute("SELECT 1 FROM b AS b1 FULL JOIN b AS b2 ON b1.v = b2.v"))
                 .hasCauseInstanceOf(QueryException.class)
@@ -62,7 +62,7 @@ public class SqlUnsupportedFeaturesTest extends SqlTestSupport {
 
     @Test
     public void test_semiJoin() {
-        TestBatchSqlConnector.create(logger, sqlService, "b", 0);
+        TestBatchSqlConnector.create(sqlService, "b", 0);
 
         assertThatThrownBy(() -> sqlService.execute(
                     "SELECT 1 FROM b WHERE EXISTS (SELECT 1 FROM b AS b2 WHERE b.v = b2.v)"))
@@ -72,7 +72,7 @@ public class SqlUnsupportedFeaturesTest extends SqlTestSupport {
 
     @Test
     public void test_antiJoin() {
-        TestBatchSqlConnector.create(logger, sqlService, "b", 0);
+        TestBatchSqlConnector.create(sqlService, "b", 0);
 
         assertThatThrownBy(() -> sqlService.execute(
                     "SELECT 1 FROM b WHERE NOT EXISTS (SELECT 1 FROM b AS b2 WHERE b.v = b2.v)"))
@@ -82,7 +82,7 @@ public class SqlUnsupportedFeaturesTest extends SqlTestSupport {
 
     @Test
     public void test_dynamicParams() {
-        TestBatchSqlConnector.create(logger, sqlService, "b", 0);
+        TestBatchSqlConnector.create(sqlService, "b", 0);
 
         assertThatThrownBy(() -> sqlService.execute(
                 "SELECT * FROM b WHERE v=?", 0))

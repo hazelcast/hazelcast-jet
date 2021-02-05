@@ -82,6 +82,6 @@ public class CountSqlAggregationTest {
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
         CountSqlAggregation serialized = ss.toObject(ss.toData(original));
 
-        assertThat(serialized).isEqualTo(original);
+        assertThat(serialized).isEqualToComparingFieldByField(original);
     }
 }
