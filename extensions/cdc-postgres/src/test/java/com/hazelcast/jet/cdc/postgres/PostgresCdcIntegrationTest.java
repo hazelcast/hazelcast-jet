@@ -30,6 +30,7 @@ import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.JobProxy;
+import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
@@ -174,6 +175,12 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
         Job job = jet.newJob(pipeline, config);
         JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
         assertEqualsEventually(() -> jet.getMap("results").size(), 4);
+
+        //make sure the job stores a Postgres WAL offset so that it won't trigger database snapshots after any restart
+        //multiple snapshots are a problem for this test, because it is updating the same row, so subsequent snapshots
+        //will return different images
+        JobRepository jr = new JobRepository(jet);
+        waitForNextSnapshot(jr, job.getId(), 20, false);
 
         String lsnFlushedBeforeRestart = getConfirmedFlushLsn();
 
