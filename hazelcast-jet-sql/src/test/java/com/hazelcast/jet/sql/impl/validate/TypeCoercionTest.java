@@ -131,19 +131,27 @@ public class TypeCoercionTest extends SqlTestSupport {
                         "Cannot assign to target field 'this' of type DOUBLE from source field '.+' of type VARCHAR"),
                 TestParams.failingCase(1120, VARCHAR, DOUBLE, "'foo'", "foo",
                         "Cannot assign to target field 'this' of type DOUBLE from source field '.+' of type VARCHAR"),
-                TestParams.passingCase(1121, VARCHAR, TIME, "'01:42:01'", "01:42:01", LocalTime.of(1, 42, 1)),
+                TestParams.passingCase(1121, VARCHAR, TIME, "'01:42:01'", "01:42:01", LocalTime.of(1, 42, 1))
+                        .setExpectedFailureNonLiteral("Cannot assign to target field 'this' of type TIME from source field 'v' of type VARCHAR"),
                 TestParams.failingCase(1122, VARCHAR, TIME, "'foo'", "foo",
-                        "Cannot parse VARCHAR value to TIME"),
-                TestParams.passingCase(1123, VARCHAR, DATE, "'2020-12-30'", "2020-12-30", LocalDate.of(2020, 12, 30)),
+                        "Cannot parse VARCHAR value to TIME")
+                        .setExpectedFailureNonLiteral("Cannot assign to target field 'this' of type TIME from source field 'v' of type VARCHAR"),
+                TestParams.passingCase(1123, VARCHAR, DATE, "'2020-12-30'", "2020-12-30", LocalDate.of(2020, 12, 30))
+                        .setExpectedFailureNonLiteral("Cannot assign to target field 'this' of type DATE from source field 'v' of type VARCHAR"),
                 TestParams.failingCase(1124, VARCHAR, DATE, "'foo'", "foo",
-                        "Cannot parse VARCHAR value to DATE"),
-                TestParams.passingCase(1125, VARCHAR, TIMESTAMP, "'2020-12-30T01:42:00'", "2020-12-30T01:42:00", LocalDateTime.of(2020, 12, 30, 1, 42)),
+                        "Cannot parse VARCHAR value to DATE")
+                        .setExpectedFailureNonLiteral("Cannot assign to target field 'this' of type DATE from source field 'v' of type VARCHAR"),
+                TestParams.passingCase(1125, VARCHAR, TIMESTAMP, "'2020-12-30T01:42:00'", "2020-12-30T01:42:00", LocalDateTime.of(2020, 12, 30, 1, 42))
+                        .setExpectedFailureNonLiteral("Cannot assign to target field 'this' of type TIMESTAMP from source field 'v' of type VARCHAR"),
                 TestParams.failingCase(1126, VARCHAR, TIMESTAMP, "'foo'", "foo",
-                        "Cannot parse VARCHAR value to TIMESTAMP"),
+                        "Cannot parse VARCHAR value to TIMESTAMP")
+                        .setExpectedFailureNonLiteral("Cannot assign to target field 'this' of type TIMESTAMP from source field 'v' of type VARCHAR"),
                 TestParams.passingCase(1127, VARCHAR, TIMESTAMP_WITH_TIME_ZONE, "'2020-12-30T01:42:00-05:00'", "2020-12-30T01:42:00-05:00",
-                        OffsetDateTime.of(2020, 12, 30, 1, 42, 0, 0, ZoneOffset.ofHours(-5))),
+                        OffsetDateTime.of(2020, 12, 30, 1, 42, 0, 0, ZoneOffset.ofHours(-5)))
+                        .setExpectedFailureNonLiteral("Cannot assign to target field 'this' of type TIMESTAMP_WITH_TIME_ZONE from source field 'v' of type VARCHAR"),
                 TestParams.failingCase(1128, VARCHAR, TIMESTAMP_WITH_TIME_ZONE, "'foo'", "foo",
-                        "Cannot parse VARCHAR value to TIMESTAMP_WITH_TIME_ZONE"),
+                        "Cannot parse VARCHAR value to TIMESTAMP_WITH_TIME_ZONE")
+                        .setExpectedFailureNonLiteral("Cannot assign to target field 'this' of type TIMESTAMP_WITH_TIME_ZONE from source field 'v' of type VARCHAR"),
                 TestParams.failingCase(1129, VARCHAR, OBJECT, "'foo'", "foo",
                         "Writing to top-level fields of type OBJECT not supported"),
 
@@ -545,7 +553,7 @@ public class TypeCoercionTest extends SqlTestSupport {
                 throw e;
             }
             if (!testParams.exceptionMatches(e)) {
-                throw new AssertionError("\n'" + e.getMessage() + "'\ndidn't find the regexp \n'"
+                throw new AssertionError("\n'" + e.getMessage() + "'\ndidn't contain the regexp \n'"
                         + testParams.expectedFailureRegex + "'", e);
             } else {
                 logger.info("Caught expected exception", e);
@@ -584,22 +592,29 @@ public class TypeCoercionTest extends SqlTestSupport {
             sql = "SINK INTO target SELECT 0, v FROM src";
             logger.info(sql);
             sqlService.execute(sql);
+            if (testParams.expectedFailureNonLiteral != null) {
+                fail("Expected to fail with \"" + testParams.expectedFailureNonLiteral + "\", but no exception was thrown");
+            }
             if (testParams.expectedFailureRegex != null) {
                 fail("Expected to fail with \"" + testParams.expectedFailureRegex + "\", but no exception was thrown");
             }
+            Object actualValue = instance().getMap("target").get(0);
+            assertEquals(testParams.targetValue, actualValue);
         } catch (Exception e) {
-            if (testParams.expectedFailureRegex == null) {
-                throw e;
+            if (testParams.expectedFailureRegex == null && testParams.expectedFailureNonLiteral == null) {
+                throw new AssertionError("The query failed unexpectedly: " + e, e);
             }
-            if (!testParams.exceptionMatches(e)) {
-                throw new AssertionError("\n'" + e.getMessage() + "'\ndidn't find the regexp \n'"
+            if (testParams.expectedFailureNonLiteral != null) {
+                if (!e.toString().contains(testParams.expectedFailureNonLiteral)) {
+                    throw new AssertionError("\n'" + e.getMessage() + "'\ndidn't contain \n'"
+                            + testParams.expectedFailureNonLiteral + "'", e);
+                }
+            } else if (!testParams.exceptionMatches(e)) {
+                throw new AssertionError("\n'" + e.getMessage() + "'\ndidn't contain the regexp \n'"
                         + testParams.expectedFailureRegex + "'", e);
-            } else {
-                logger.info("Caught expected exception", e);
             }
+            logger.info("Caught expected exception", e);
         }
-        Object actualValue = instance().getMap("target").get(0);
-        assertEquals(testParams.targetValue, actualValue);
     }
 
     @Test
@@ -637,7 +652,7 @@ public class TypeCoercionTest extends SqlTestSupport {
                 throw e;
             }
             if (!testParams.exceptionMatches(e)) {
-                throw new AssertionError("\n'" + e.getMessage() + "'\ndidn't find the regexp \n'"
+                throw new AssertionError("\n'" + e.getMessage() + "'\ndidn't contain the regexp \n'"
                         + testParams.expectedFailureRegex + "'", e);
             } else {
                 logger.info("Caught expected exception", e);
@@ -664,6 +679,7 @@ public class TypeCoercionTest extends SqlTestSupport {
         private final String valueTestSource;
         private final Object targetValue;
         private final Pattern expectedFailureRegex;
+        private String expectedFailureNonLiteral;
 
         private TestParams(int testId, QueryDataTypeFamily srcType, QueryDataTypeFamily targetType, String valueLiteral, String valueTestSource, Object targetValue, String expectedFailureRegex) {
             this.testId = testId;
@@ -681,6 +697,19 @@ public class TypeCoercionTest extends SqlTestSupport {
 
         static TestParams failingCase(int testId, QueryDataTypeFamily srcType, QueryDataTypeFamily targetType, String valueLiteral, String valueTestSource, String errorMsg) {
             return new TestParams(testId, srcType, targetType, valueLiteral, valueTestSource, null, errorMsg);
+        }
+
+        /**
+         * This test case is expected to fail only if the source is a column, not a
+         * literal (the {@link #test_insertSelect()} method). Useful for coercion
+         * which is allowed for literals, but not for expressions or columns
+         * otherwise. For example, you can assign a VARCHAR literal to a DATE
+         * column, but you can't assign VARCHAR column or expression to a date
+         * column.
+         */
+        TestParams setExpectedFailureNonLiteral(String failureText) {
+            expectedFailureNonLiteral = failureText;
+            return this;
         }
 
         @Override
