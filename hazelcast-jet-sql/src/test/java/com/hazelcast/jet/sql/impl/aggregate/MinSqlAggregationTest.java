@@ -81,6 +81,6 @@ public class MinSqlAggregationTest {
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
         MinSqlAggregation serialized = ss.toObject(ss.toData(original));
 
-        assertThat(serialized).isEqualToComparingFieldByField(original);
+        assertThat(serialized).isEqualToIgnoringGivenFields(original, "ignoreNulls", "index");
     }
 }

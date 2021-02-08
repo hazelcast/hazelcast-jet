@@ -63,6 +63,6 @@ public class ValueSqlAggregationTest {
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
         ValueSqlAggregation serialized = ss.toObject(ss.toData(original));
 
-        assertThat(serialized).isEqualTo(original);
+        assertThat(serialized).isEqualToIgnoringGivenFields(original, "index", "ignoreNulls");
     }
 }

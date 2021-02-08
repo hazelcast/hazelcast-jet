@@ -81,6 +81,6 @@ public class MaxSqlAggregationTest {
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
         MaxSqlAggregation serialized = ss.toObject(ss.toData(original));
 
-        assertThat(serialized).isEqualToComparingFieldByField(original);
+        assertThat(serialized).isEqualToIgnoringGivenFields(original, "ignoreNulls", "index");
     }
 }

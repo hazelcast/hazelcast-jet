@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.sql.impl.ExpressionUtil.NOT_IMPLEMENTED_ARGUMENTS_CONTEXT;
 import static com.hazelcast.sql.impl.type.QueryDataTypeUtils.resolveTypeForTypeFamily;
 import static java.lang.String.join;
 import static java.util.Collections.singletonList;
@@ -205,7 +206,7 @@ public class TestBatchSqlConnector implements SqlConnector {
     ) {
         List<Object[]> items = ((TestValuesTable) table).rows
                 .stream()
-                .map(row -> ExpressionUtil.evaluate(predicate, projection, row))
+                .map(row -> ExpressionUtil.evaluate(predicate, projection, row, NOT_IMPLEMENTED_ARGUMENTS_CONTEXT))
                 .filter(Objects::nonNull)
                 .collect(toList());
         BatchSource<Object[]> source = TestSources.itemsDistributed(items);

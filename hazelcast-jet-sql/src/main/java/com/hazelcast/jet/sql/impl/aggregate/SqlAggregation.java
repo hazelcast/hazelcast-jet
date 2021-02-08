@@ -27,14 +27,16 @@ import java.util.Set;
  */
 public abstract class SqlAggregation implements DataSerializable {
 
-    private int index;
-    private boolean ignoreNulls;
-    private Set<Object> values;
+    // the value -2 indicates that the default constructor was called, which means
+    private transient int index = -2;
+    private transient boolean ignoreNulls;
+    private transient Set<Object> values;
 
     protected SqlAggregation() {
     }
 
     protected SqlAggregation(int index, boolean ignoreNulls, boolean distinct) {
+        assert index >= -1;
         this.index = index;
         this.ignoreNulls = ignoreNulls;
         this.values = distinct ? new HashSet<>() : null;
@@ -46,6 +48,8 @@ public abstract class SqlAggregation implements DataSerializable {
      * Accumulate a value from a single row into this instance.
      */
     public final void accumulate(Object[] row) {
+        assert index >= -1 : "object was deserialized and transient fields were lost";
+
         Object value = index > -1 ? row[index] : null;
 
         if (value == null && ignoreNulls) {

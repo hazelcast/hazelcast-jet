@@ -43,6 +43,8 @@ import org.apache.calcite.tools.RelBuilderFactory;
 import java.util.List;
 
 import static com.hazelcast.jet.impl.util.Util.toList;
+import static com.hazelcast.jet.sql.impl.ExpressionUtil.NOT_IMPLEMENTED_ARGUMENTS_CONTEXT;
+import static com.hazelcast.jet.sql.impl.ExpressionUtil.hasParamsOrColumns;
 
 abstract class ValuesReduceRule extends RelOptRule {
 
@@ -104,6 +106,12 @@ abstract class ValuesReduceRule extends RelOptRule {
             Values values
     ) {
         PlanNodeSchema schema = OptUtils.schema(values.getRowType());
+        if (filter != null && hasParamsOrColumns(filter.getCondition())
+                || project != null && project.getProjects().stream().anyMatch(ExpressionUtil::hasParamsOrColumns)) {
+            // cannot apply the rule at planning time
+            return;
+        }
+
         RexVisitor<Expression<?>> converter = OptUtils.createRexToExpressionVisitor(schema);
 
         RelDataType rowType = null;
@@ -121,7 +129,8 @@ abstract class ValuesReduceRule extends RelOptRule {
 
         assert rowType != null;
 
-        List<Object[]> rows = ExpressionUtil.evaluate(predicate, projection, OptUtils.convert(values));
+        List<Object[]> rows = ExpressionUtil.evaluate(predicate, projection, OptUtils.convert(values),
+                NOT_IMPLEMENTED_ARGUMENTS_CONTEXT);
         ImmutableList<ImmutableList<RexLiteral>> tuples = toTuples(rows, rowType.getFieldList(), values.getCluster());
 
         LogicalValues rel = LogicalValues.create(

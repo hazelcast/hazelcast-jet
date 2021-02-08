@@ -21,6 +21,7 @@ import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuil
 import com.hazelcast.sql.impl.type.QueryDataType;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
+import org.assertj.core.api.recursive.comparison.RecursiveComparisonConfiguration;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -111,6 +112,10 @@ public class AvgSqlAggregationTest {
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
         AvgSqlAggregation serialized = ss.toObject(ss.toData(original));
 
-        assertThat(serialized).isEqualToComparingFieldByField(original);
+        RecursiveComparisonConfiguration config = new RecursiveComparisonConfiguration();
+        config.ignoreFields("ignoreNulls", "index", "values", "sum.ignoreNulls", "sum.index");
+        assertThat(serialized)
+                .usingRecursiveComparison(config)
+                .isEqualTo(original);
     }
 }

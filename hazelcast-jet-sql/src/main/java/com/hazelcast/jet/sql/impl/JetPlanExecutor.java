@@ -173,7 +173,7 @@ class JetPlanExecutor {
                 Job job = jetInstance.newJob(jobId, plan.getDag(), new JobConfig());
                 job.getFuture().whenComplete((r, t) -> {
                     if (t != null) {
-                        queryResultProducer.onError(QueryException.error(t.toString()));
+                        queryResultProducer.onError(QueryException.error(t.toString(), t));
                     }
                 });
             } catch (Throwable e) {

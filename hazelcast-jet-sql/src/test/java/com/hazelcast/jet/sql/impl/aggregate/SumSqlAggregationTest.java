@@ -113,6 +113,6 @@ public class SumSqlAggregationTest {
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
         SumSqlAggregation serialized = ss.toObject(ss.toData(original));
 
-        assertThat(serialized).isEqualTo(original);
+        assertThat(serialized).isEqualToIgnoringGivenFields(original, "ignoreNulls", "index");
     }
 }

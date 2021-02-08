@@ -42,7 +42,6 @@ import com.hazelcast.jet.sql.impl.parse.SqlDropJob;
 import com.hazelcast.jet.sql.impl.parse.SqlDropMapping;
 import com.hazelcast.jet.sql.impl.parse.SqlDropSnapshot;
 import com.hazelcast.jet.sql.impl.parse.SqlShowStatement;
-import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.schema.Mapping;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.jet.sql.impl.validate.JetSqlValidator;
@@ -72,7 +71,6 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.prepare.Prepare.CatalogReader;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelShuttleImpl;
-import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.sql.SqlNode;
@@ -173,7 +171,7 @@ class JetSqlBackend implements SqlBackend {
             return toShowStatementPlan((SqlShowStatement) node);
         } else {
             QueryConvertResult convertResult = context.convert(parseResult);
-            return toPlan(convertResult.getRel(), convertResult.getFieldNames(), context);
+            return toPlan(convertResult.getRel(), convertResult.getFieldNames(), context, parseResult.isInfiniteRows());
         }
     }
 
@@ -206,9 +204,10 @@ class JetSqlBackend implements SqlBackend {
         SqlNode source = sqlCreateJob.dmlStatement();
 
         QueryParseResult dmlParseResult =
-                new QueryParseResult(source, parseResult.getParameterMetadata(), parseResult.getValidator(), this);
+                new QueryParseResult(source, parseResult.getParameterMetadata(), parseResult.getValidator(), this, false);
         QueryConvertResult dmlConvertedResult = context.convert(dmlParseResult);
-        SelectOrSinkPlan dmlPlan = toPlan(dmlConvertedResult.getRel(), dmlConvertedResult.getFieldNames(), context);
+        SelectOrSinkPlan dmlPlan = toPlan(dmlConvertedResult.getRel(), dmlConvertedResult.getFieldNames(), context,
+                dmlParseResult.isInfiniteRows());
         assert dmlPlan.isInsert();
 
         return new CreateJobPlan(
@@ -240,24 +239,23 @@ class JetSqlBackend implements SqlBackend {
         return new ShowStatementPlan(sqlNode.getTarget(), planExecutor);
     }
 
-    private SelectOrSinkPlan toPlan(RelNode rel, List<String> fieldNames, OptimizerContext context) {
+    private SelectOrSinkPlan toPlan(RelNode rel, List<String> fieldNames, OptimizerContext context, boolean isInfiniteRows) {
         logger.fine("Before logical opt:\n" + RelOptUtil.toString(rel));
         LogicalRel logicalRel = optimizeLogical(context, rel);
         logger.fine("After logical opt:\n" + RelOptUtil.toString(logicalRel));
         PhysicalRel physicalRel = optimizePhysical(context, logicalRel);
         logger.fine("After physical opt:\n" + RelOptUtil.toString(physicalRel));
 
-        boolean isStreaming = containsStreamSource(rel);
         boolean isInsert = physicalRel instanceof TableModify;
 
         List<Permission> permissions = extractPermissions(physicalRel);
         if (isInsert) {
             DAG dag = createDag(physicalRel);
-            return new SelectOrSinkPlan(dag, isStreaming, true, null, planExecutor, permissions);
+            return new SelectOrSinkPlan(dag, isInfiniteRows, true, null, planExecutor, permissions);
         } else {
             DAG dag = createDag(new JetRootRel(physicalRel, nodeEngine.getThisAddress()));
             SqlRowMetadata rowMetadata = createRowMetadata(fieldNames, physicalRel.schema().getTypes());
-            return new SelectOrSinkPlan(dag, isStreaming, false, rowMetadata, planExecutor, permissions);
+            return new SelectOrSinkPlan(dag, isInfiniteRows, false, rowMetadata, planExecutor, permissions);
         }
     }
 
@@ -319,26 +317,6 @@ class JetSqlBackend implements SqlBackend {
                 PhysicalRules.getRuleSet(),
                 OptUtils.toPhysicalConvention(rel.getTraitSet())
         );
-    }
-
-    /**
-     * Goes over all tables of the rel and returns true if any of it is a stream source.
-     */
-    private boolean containsStreamSource(RelNode rel) {
-        boolean[] containsStreamSource = {false};
-        RelVisitor findStreamSourceVisitor = new RelVisitor() {
-            @Override
-            public void visit(RelNode node, int ordinal, RelNode parent) {
-                if (node instanceof TableScan) {
-                    JetTable jetTable = node.getTable().unwrap(JetTable.class);
-                    if (jetTable != null && jetTable.isStream()) {
-                        containsStreamSource[0] = true;
-                    }
-                }
-            }
-        };
-        findStreamSourceVisitor.go(rel);
-        return containsStreamSource[0];
     }
 
     private SqlRowMetadata createRowMetadata(List<String> columnNames, List<QueryDataType> columnTypes) {

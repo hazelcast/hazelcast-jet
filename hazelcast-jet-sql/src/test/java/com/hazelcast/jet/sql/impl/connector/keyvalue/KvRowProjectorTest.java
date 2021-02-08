@@ -31,6 +31,7 @@ import com.hazelcast.sql.impl.type.QueryDataType;
 import org.junit.Test;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.sql.impl.ExpressionUtil.NOT_IMPLEMENTED_ARGUMENTS_CONTEXT;
 import static com.hazelcast.sql.impl.type.QueryDataType.BOOLEAN;
 import static com.hazelcast.sql.impl.type.QueryDataType.INT;
 import static java.util.Arrays.asList;
@@ -50,7 +51,8 @@ public class KvRowProjectorTest {
                 asList(
                         MultiplyFunction.create(ColumnExpression.create(0, INT), ConstantExpression.create(2, INT), INT),
                         DivideFunction.create(ColumnExpression.create(1, INT), ConstantExpression.create(2, INT), INT)
-                )
+                ),
+                NOT_IMPLEMENTED_ARGUMENTS_CONTEXT
         );
 
         Object[] row = projector.project(entry(1, 8));
@@ -67,7 +69,8 @@ public class KvRowProjectorTest {
                 new IdentityTarget(),
                 new IdentityTarget(),
                 (Expression<Boolean>) ConstantExpression.create(Boolean.FALSE, BOOLEAN),
-                emptyList()
+                emptyList(),
+                NOT_IMPLEMENTED_ARGUMENTS_CONTEXT
         );
 
         Object[] row = projector.project(entry(1, 8));

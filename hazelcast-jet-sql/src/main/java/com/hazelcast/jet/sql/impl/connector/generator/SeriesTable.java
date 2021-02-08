@@ -33,6 +33,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.sql.impl.ExpressionUtil.NOT_IMPLEMENTED_ARGUMENTS_CONTEXT;
+
 class SeriesTable extends JetTable {
 
     private final int start;
@@ -77,15 +79,11 @@ class SeriesTable extends JetTable {
 
     private static final class SeriesGenerator implements Iterable<Object[]>, Serializable {
 
-        private int start;
-        private int stop;
-        private int step;
-        private Expression<Boolean> predicate;
-        private List<Expression<?>> projections;
-
-        @SuppressWarnings("unused")
-        private SeriesGenerator() {
-        }
+        private final int start;
+        private final int stop;
+        private final int step;
+        private final Expression<Boolean> predicate;
+        private final List<Expression<?>> projections;
 
         private SeriesGenerator(
                 int start,
@@ -106,7 +104,8 @@ class SeriesTable extends JetTable {
         public Iterator<Object[]> iterator() {
             return IntStream.iterate(start, i -> i + step)
                             .limit(numberOfItems(start, stop, step))
-                            .mapToObj(i -> ExpressionUtil.evaluate(predicate, projections, new Object[]{i}))
+                            .mapToObj(i -> ExpressionUtil.evaluate(predicate, projections, new Object[]{i},
+                                    NOT_IMPLEMENTED_ARGUMENTS_CONTEXT))
                             .filter(Objects::nonNull)
                             .iterator();
         }

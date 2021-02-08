@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector;
 
+import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.sql.impl.expression.ColumnExpression;
 import com.hazelcast.sql.impl.expression.ConstantExpression;
 import com.hazelcast.sql.impl.expression.Expression;
@@ -30,6 +31,7 @@ import static com.hazelcast.sql.impl.type.QueryDataType.INT;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 public class RowProjectorTest {
 
@@ -42,7 +44,8 @@ public class RowProjectorTest {
                 null,
                 singletonList(
                         MultiplyFunction.create(ColumnExpression.create(0, INT), ConstantExpression.create(2, INT), INT)
-                )
+                ),
+                mock(InternalSerializationService.class)
         );
 
         Object[] row = projector.project(1);
@@ -58,7 +61,8 @@ public class RowProjectorTest {
                 new QueryDataType[]{INT},
                 new IdentityTarget(),
                 (Expression<Boolean>) ConstantExpression.create(Boolean.FALSE, BOOLEAN),
-                emptyList()
+                emptyList(),
+                mock(InternalSerializationService.class)
         );
 
         Object[] row = projector.project(1);
