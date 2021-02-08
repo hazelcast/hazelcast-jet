@@ -19,8 +19,10 @@ package com.hazelcast.jet.sql.impl.aggregate;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 
+@NotThreadSafe
 class IgnoreNullsSqlAggregation implements SqlAggregation {
 
     private SqlAggregation delegate;
