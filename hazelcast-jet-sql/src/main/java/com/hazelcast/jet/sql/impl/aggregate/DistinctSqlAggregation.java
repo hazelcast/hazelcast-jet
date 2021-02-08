@@ -25,14 +25,9 @@ import java.util.Set;
 
 class DistinctSqlAggregation implements SqlAggregation {
 
-    // once aggregation is serialized, accumulate() is never used again
-    private transient Set<Object> values;
+    private final Set<Object> values;
 
-    private SqlAggregation delegate;
-
-    @SuppressWarnings("unused")
-    private DistinctSqlAggregation() {
-    }
+    private final SqlAggregation delegate;
 
     DistinctSqlAggregation(SqlAggregation delegate) {
         this.values = new HashSet<>();
@@ -42,7 +37,7 @@ class DistinctSqlAggregation implements SqlAggregation {
 
     @Override
     public void accumulate(Object value) {
-        if (value != null && values != null && !values.add(value)) {
+        if (value != null && !values.add(value)) {
             return;
         }
 
@@ -63,11 +58,13 @@ class DistinctSqlAggregation implements SqlAggregation {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeObject(delegate);
+        // this class is never serialized - we use it only in single-stage aggregations
+        throw new UnsupportedOperationException("Should not be called");
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        delegate = in.readObject();
+        // this class is never serialized - we use it only in single-stage aggregations
+        throw new UnsupportedOperationException("Should not be called");
     }
 }
