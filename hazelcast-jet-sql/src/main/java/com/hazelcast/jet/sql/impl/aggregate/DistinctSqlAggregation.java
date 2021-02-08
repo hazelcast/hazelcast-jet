@@ -19,49 +19,55 @@ package com.hazelcast.jet.sql.impl.aggregate;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 
-import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
-/**
- * Special-case aggregation that aggregates multiple instances of the same
- * value. The result is the value. Asserts that no non-equal value is
- * accumulated.
- */
-@NotThreadSafe
-public class ValueSqlAggregation implements SqlAggregation {
+class DistinctSqlAggregation implements SqlAggregation {
 
-    private Object value;
+    // once aggregation is serialized, accumulate() is never used again
+    private transient Set<Object> values;
+
+    private SqlAggregation delegate;
+
+    @SuppressWarnings("unused")
+    private DistinctSqlAggregation() {
+    }
+
+    DistinctSqlAggregation(SqlAggregation delegate) {
+        this.values = new HashSet<>();
+
+        this.delegate = delegate;
+    }
 
     @Override
     public void accumulate(Object value) {
-        assert this.value == null || this.value.equals(value);
+        if (value != null && values != null && !values.add(value)) {
+            return;
+        }
 
-        this.value = value;
+        delegate.accumulate(value);
     }
 
     @Override
     public void combine(SqlAggregation other0) {
-        ValueSqlAggregation other = (ValueSqlAggregation) other0;
+        DistinctSqlAggregation other = (DistinctSqlAggregation) other0;
 
-        Object value = other.value;
-
-        assert this.value == null || this.value.equals(value);
-
-        this.value = value;
+        delegate.combine(other.delegate);
     }
 
     @Override
     public Object collect() {
-        return value;
+        return delegate.collect();
     }
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeObject(value);
+        out.writeObject(delegate);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        value = in.readObject();
+        delegate = in.readObject();
     }
 }

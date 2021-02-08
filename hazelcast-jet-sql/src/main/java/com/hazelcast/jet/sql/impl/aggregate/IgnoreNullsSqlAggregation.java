@@ -19,49 +19,48 @@ package com.hazelcast.jet.sql.impl.aggregate;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 
-import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 
-/**
- * Special-case aggregation that aggregates multiple instances of the same
- * value. The result is the value. Asserts that no non-equal value is
- * accumulated.
- */
-@NotThreadSafe
-public class ValueSqlAggregation implements SqlAggregation {
+class IgnoreNullsSqlAggregation implements SqlAggregation {
 
-    private Object value;
+    private SqlAggregation delegate;
+
+    @SuppressWarnings("unused")
+    private IgnoreNullsSqlAggregation() {
+    }
+
+    IgnoreNullsSqlAggregation(SqlAggregation delegate) {
+        this.delegate = delegate;
+    }
 
     @Override
     public void accumulate(Object value) {
-        assert this.value == null || this.value.equals(value);
+        if (value == null) {
+            return;
+        }
 
-        this.value = value;
+        delegate.accumulate(value);
     }
 
     @Override
     public void combine(SqlAggregation other0) {
-        ValueSqlAggregation other = (ValueSqlAggregation) other0;
+        IgnoreNullsSqlAggregation other = (IgnoreNullsSqlAggregation) other0;
 
-        Object value = other.value;
-
-        assert this.value == null || this.value.equals(value);
-
-        this.value = value;
+        delegate.combine(other.delegate);
     }
 
     @Override
     public Object collect() {
-        return value;
+        return delegate.collect();
     }
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeObject(value);
+        out.writeObject(delegate);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        value = in.readObject();
+        delegate = in.readObject();
     }
 }
