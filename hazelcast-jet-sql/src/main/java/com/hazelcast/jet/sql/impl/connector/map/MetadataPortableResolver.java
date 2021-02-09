@@ -17,11 +17,13 @@
 package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadata;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolver;
 import com.hazelcast.jet.sql.impl.inject.PortableUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.nio.serialization.ClassDefinition;
+import com.hazelcast.nio.serialization.ClassDefinitionBuilder;
 import com.hazelcast.nio.serialization.FieldDefinition;
 import com.hazelcast.nio.serialization.FieldType;
 import com.hazelcast.sql.impl.QueryException;
@@ -32,11 +34,10 @@ import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS_ID;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS_VERSION;
@@ -68,7 +69,7 @@ final class MetadataPortableResolver implements KvMetadataResolver {
             Map<String, String> options,
             InternalSerializationService serializationService
     ) {
-        ClassDefinition classDefinition = resolveClassDefinition(isKey, options, serializationService);
+        ClassDefinition classDefinition = lookupClassDefinition(isKey, options, serializationService);
         return resolveFields(isKey, userFields, classDefinition);
     }
 
@@ -77,15 +78,16 @@ final class MetadataPortableResolver implements KvMetadataResolver {
             List<MappingField> userFields,
             ClassDefinition clazz
     ) {
-        Set<Entry<String, FieldType>> fieldsInClass = resolvePortable(clazz).entrySet();
-
-        Map<QueryPath, MappingField> userFieldsByPath = extractFields(userFields, isKey);
-
-        if (!userFields.isEmpty()) {
-            // the user used explicit fields in the DDL, just validate them
-            for (Entry<String, FieldType> classField : fieldsInClass) {
-                QueryPath path = new QueryPath(classField.getKey(), isKey);
-                QueryDataType type = resolvePortableType(classField.getValue());
+        if (clazz == null) {
+            // ClassDefinition does not exist, simply return declared fields
+            Map<QueryPath, MappingField> userFieldsByPath = extractFields(userFields, isKey);
+            return new ArrayList<>(userFieldsByPath.values());
+        } else if (!userFields.isEmpty()) {
+            // user used explicit fields in the DDL, just validate them
+            Map<QueryPath, MappingField> userFieldsByPath = extractFields(userFields, isKey);
+            for (FieldDefinition portableField : resolvePortable(clazz)) {
+                QueryPath path = new QueryPath(portableField.getName(), isKey);
+                QueryDataType type = resolvePortableType(portableField.getType());
 
                 MappingField mappingField = userFieldsByPath.get(path);
                 if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
@@ -95,10 +97,10 @@ final class MetadataPortableResolver implements KvMetadataResolver {
             return new ArrayList<>(userFieldsByPath.values());
         } else {
             List<MappingField> fields = new ArrayList<>();
-            for (Entry<String, FieldType> classField : fieldsInClass) {
-                QueryPath path = new QueryPath(classField.getKey(), isKey);
-                QueryDataType type = resolvePortableType(classField.getValue());
-                String name = classField.getKey();
+            for (FieldDefinition portableField : resolvePortable(clazz)) {
+                QueryPath path = new QueryPath(portableField.getName(), isKey);
+                QueryDataType type = resolvePortableType(portableField.getType());
+                String name = portableField.getName();
 
                 fields.add(new MappingField(name, type, path.toString()));
             }
@@ -106,11 +108,10 @@ final class MetadataPortableResolver implements KvMetadataResolver {
         }
     }
 
-    private static Map<String, FieldType> resolvePortable(ClassDefinition classDefinition) {
-        Map<String, FieldType> fields = new LinkedHashMap<>();
+    private static List<FieldDefinition> resolvePortable(ClassDefinition classDefinition) {
+        List<FieldDefinition> fields = new ArrayList<>();
         for (int i = 0; i < classDefinition.getFieldCount(); i++) {
-            FieldDefinition fieldDefinition = classDefinition.getField(i);
-            fields.putIfAbsent(fieldDefinition.getName(), fieldDefinition.getType());
+            fields.add(classDefinition.getField(i));
         }
         return fields;
     }
@@ -124,10 +125,6 @@ final class MetadataPortableResolver implements KvMetadataResolver {
                 return QueryDataType.TINYINT;
             case SHORT:
                 return QueryDataType.SMALLINT;
-            case CHAR:
-                return QueryDataType.VARCHAR_CHARACTER;
-            case UTF:
-                return QueryDataType.VARCHAR;
             case INT:
                 return QueryDataType.INT;
             case LONG:
@@ -136,6 +133,20 @@ final class MetadataPortableResolver implements KvMetadataResolver {
                 return QueryDataType.REAL;
             case DOUBLE:
                 return QueryDataType.DOUBLE;
+            case DECIMAL:
+                return QueryDataType.DECIMAL;
+            case CHAR:
+                return QueryDataType.VARCHAR_CHARACTER;
+            case UTF:
+                return QueryDataType.VARCHAR;
+            case TIME:
+                return QueryDataType.TIME;
+            case DATE:
+                return QueryDataType.DATE;
+            case TIMESTAMP:
+                return QueryDataType.TIMESTAMP;
+            case TIMESTAMP_WITH_TIMEZONE:
+                return QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME;
             default:
                 return QueryDataType.OBJECT;
         }
@@ -148,8 +159,9 @@ final class MetadataPortableResolver implements KvMetadataResolver {
             Map<String, String> options,
             InternalSerializationService serializationService
     ) {
-        ClassDefinition clazz = resolveClassDefinition(isKey, options, serializationService);
-        return resolveMetadata(isKey, resolvedFields, clazz);
+        Map<QueryPath, MappingField> userFieldsByPath = extractFields(resolvedFields, isKey);
+        ClassDefinition clazz = resolveClassDefinition(isKey, options, userFieldsByPath.values(), serializationService);
+        return resolveMetadata(isKey, resolvedFields, userFieldsByPath, clazz);
     }
 
     KvMetadata resolveMetadata(
@@ -157,33 +169,127 @@ final class MetadataPortableResolver implements KvMetadataResolver {
             List<MappingField> resolvedFields,
             ClassDefinition clazz
     ) {
-        Map<QueryPath, MappingField> externalFieldsByPath = extractFields(resolvedFields, isKey);
+        Map<QueryPath, MappingField> userFieldsByPath = extractFields(resolvedFields, isKey);
+        return resolveMetadata(isKey, resolvedFields, userFieldsByPath, clazz);
+    }
 
+    private KvMetadata resolveMetadata(
+            boolean isKey,
+            List<MappingField> resolvedFields,
+            Map<QueryPath, MappingField> userFieldsByPath,
+            ClassDefinition clazz
+    ) {
         List<TableField> fields = new ArrayList<>();
-        for (Entry<QueryPath, MappingField> entry : externalFieldsByPath.entrySet()) {
+        for (Entry<QueryPath, MappingField> entry : userFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             QueryDataType type = entry.getValue().type();
             String name = entry.getValue().name();
 
             fields.add(new MapTableField(name, type, false, path));
         }
-
         maybeAddDefaultField(isKey, resolvedFields, fields);
+
         return new KvMetadata(
                 fields,
                 GenericQueryTargetDescriptor.DEFAULT,
-                new PortableUpsertTargetDescriptor(
-                        clazz.getFactoryId(),
-                        clazz.getClassId(),
-                        clazz.getVersion()
-                )
+                new PortableUpsertTargetDescriptor(clazz)
         );
     }
 
-    private ClassDefinition resolveClassDefinition(
+    @SuppressWarnings("ConstantConditions")
+    private ClassDefinition lookupClassDefinition(
             boolean isKey,
             Map<String, String> options,
             InternalSerializationService serializationService
+    ) {
+        Tuple3<Integer, Integer, Integer> classDefinitionProperties = resolveClassDefinitionProperties(isKey, options);
+        return serializationService
+                .getPortableContext()
+                .lookupClassDefinition(
+                        classDefinitionProperties.f0(),
+                        classDefinitionProperties.f1(),
+                        classDefinitionProperties.f2()
+                );
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    private ClassDefinition resolveClassDefinition(
+            boolean isKey,
+            Map<String, String> options,
+            Collection<MappingField> userFields,
+            InternalSerializationService serializationService
+    ) {
+        Tuple3<Integer, Integer, Integer> classDefinitionProperties = resolveClassDefinitionProperties(isKey, options);
+        ClassDefinition classDefinition = serializationService
+                .getPortableContext()
+                .lookupClassDefinition(
+                        classDefinitionProperties.f0(),
+                        classDefinitionProperties.f1(),
+                        classDefinitionProperties.f2()
+                );
+        if (classDefinition != null) {
+            return classDefinition;
+        }
+
+        ClassDefinitionBuilder classDefinitionBuilder = new ClassDefinitionBuilder(
+                classDefinitionProperties.f0(),
+                classDefinitionProperties.f1(),
+                classDefinitionProperties.f2()
+        );
+        for (MappingField userField : userFields) {
+            String name = userField.name();
+            QueryDataType type = userField.type();
+            switch (type.getTypeFamily()) {
+                case BOOLEAN:
+                    classDefinitionBuilder.addBooleanField(name);
+                    break;
+                case TINYINT:
+                    classDefinitionBuilder.addByteField(name);
+                    break;
+                case SMALLINT:
+                    classDefinitionBuilder.addShortField(name);
+                    break;
+                case INTEGER:
+                    classDefinitionBuilder.addIntField(name);
+                    break;
+                case BIGINT:
+                    classDefinitionBuilder.addLongField(name);
+                    break;
+                case REAL:
+                    classDefinitionBuilder.addFloatField(name);
+                    break;
+                case DOUBLE:
+                    classDefinitionBuilder.addDoubleField(name);
+                    break;
+                case DECIMAL:
+                    classDefinitionBuilder.addDecimalField(name);
+                    break;
+                case VARCHAR:
+                    classDefinitionBuilder.addStringField(name);
+                    break;
+                case TIME:
+                    classDefinitionBuilder.addTimeField(name);
+                    break;
+                case DATE:
+                    classDefinitionBuilder.addDateField(name);
+                    break;
+                case TIMESTAMP:
+                    classDefinitionBuilder.addTimestampField(name);
+                    break;
+                case TIMESTAMP_WITH_TIME_ZONE:
+                    classDefinitionBuilder.addTimestampWithTimezoneField(name);
+                    break;
+                default:
+                    throw QueryException.error("Can not create class definition."
+                                               + " The type " + type + " is not supported for Portable.");
+            }
+        }
+        return classDefinitionBuilder.build();
+    }
+
+    private Tuple3<Integer, Integer, Integer> resolveClassDefinitionProperties(
+            boolean isKey,
+            Map<String, String> options
     ) {
         String factoryIdProperty = isKey ? OPTION_KEY_FACTORY_ID : OPTION_VALUE_FACTORY_ID;
         String factoryId = options.get(factoryIdProperty);
@@ -195,21 +301,12 @@ final class MetadataPortableResolver implements KvMetadataResolver {
         if (factoryId == null || classId == null || classVersion == null) {
             throw QueryException.error(
                     "Unable to resolve table metadata. Missing ['"
-                            + factoryIdProperty + "'|'"
-                            + classIdProperty + "'|'"
-                            + classVersionProperty
-                            + "'] option(s)");
+                    + factoryIdProperty + "'|'"
+                    + classIdProperty + "'|'"
+                    + classVersionProperty
+                    + "'] option(s)");
         }
 
-        ClassDefinition classDefinition = serializationService
-                .getPortableContext()
-                .lookupClassDefinition(parseInt(factoryId), parseInt(classId), parseInt(classVersion));
-        if (classDefinition == null) {
-            throw QueryException.error(
-                    "Unable to find class definition for factoryId: " + factoryId
-                            + ", classId: " + classId + ", classVersion: " + classVersion
-            );
-        }
-        return classDefinition;
+        return Tuple3.tuple3(parseInt(factoryId), parseInt(classId), parseInt(classVersion));
     }
 }
