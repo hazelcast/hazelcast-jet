@@ -28,9 +28,8 @@ public final class CountSqlAggregations {
     }
 
     public static SqlAggregation from(boolean ignoreNulls, boolean distinct) {
-        SqlAggregation aggregation = new CountSqlAggregation();
-        aggregation = distinct ? new DistinctSqlAggregation(aggregation) : aggregation;
-        return ignoreNulls ? new IgnoreNullsSqlAggregation(aggregation) : aggregation;
+        SqlAggregation aggregation = ignoreNulls ? new CountIgnoreNullsSqlAggregation() : new CountSqlAggregation();
+        return distinct ? new DistinctSqlAggregation(aggregation) : aggregation;
     }
 
     @NotThreadSafe
@@ -46,6 +45,43 @@ public final class CountSqlAggregations {
         @Override
         public void combine(SqlAggregation other0) {
             CountSqlAggregation other = (CountSqlAggregation) other0;
+
+            value += other.value;
+        }
+
+        @Override
+        public Object collect() {
+            return value;
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+            out.writeLong(value);
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
+            value = in.readLong();
+        }
+    }
+
+    @NotThreadSafe
+    private static final class CountIgnoreNullsSqlAggregation implements SqlAggregation {
+
+        private long value;
+
+        @Override
+        public void accumulate(Object value) {
+            if (value == null) {
+                return;
+            }
+
+            this.value++;
+        }
+
+        @Override
+        public void combine(SqlAggregation other0) {
+            CountIgnoreNullsSqlAggregation other = (CountIgnoreNullsSqlAggregation) other0;
 
             value += other.value;
         }
