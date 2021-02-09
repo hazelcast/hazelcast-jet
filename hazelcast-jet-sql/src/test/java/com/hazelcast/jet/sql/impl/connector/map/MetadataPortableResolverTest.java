@@ -286,7 +286,12 @@ public class MetadataPortableResolverTest {
                 new MapTableField("time", QueryDataType.TIME, false, QueryPath.create(prefix + ".time")),
                 new MapTableField("date", QueryDataType.DATE, false, QueryPath.create(prefix + ".date")),
                 new MapTableField("timestamp", QueryDataType.TIMESTAMP, false, QueryPath.create(prefix + ".timestamp")),
-                new MapTableField("timestampTz", QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME, false, QueryPath.create(prefix + ".timestampTz")),
+                new MapTableField(
+                        "timestampTz",
+                        QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME,
+                        false,
+                        QueryPath.create(prefix + ".timestampTz"
+                )),
                 new MapTableField(prefix, QueryDataType.OBJECT, true, QueryPath.create(prefix))
         );
         assertThat(metadata.getQueryTargetDescriptor()).isEqualTo(GenericQueryTargetDescriptor.DEFAULT);

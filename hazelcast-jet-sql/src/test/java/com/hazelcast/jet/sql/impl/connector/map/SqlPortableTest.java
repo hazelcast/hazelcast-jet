@@ -121,8 +121,8 @@ public class SqlPortableTest extends SqlTestSupport {
 
         ClassDefinition allTypesValueClassDefinition =
                 new ClassDefinitionBuilder(ALL_TYPES_FACTORY_ID, ALL_TYPES_CLASS_ID, ALL_TYPES_CLASS_VERSION)
-                        .addStringField("string")
                         .addCharField("character")
+                        .addStringField("string")
                         .addBooleanField("boolean")
                         .addByteField("byte")
                         .addShortField("short")
@@ -404,7 +404,7 @@ public class SqlPortableTest extends SqlTestSupport {
         assertThat(valueRecord.getTimestamp("timestamp"))
                 .isEqualTo(LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000));
         assertThat(valueRecord.getTimestampWithTimezone("timestampTz"))
-                .isEqualTo( OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC));
+                .isEqualTo(OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC));
         assertThat(valueRecord.getGenericRecord("object")).isNull();
 
         assertRowsAnyOrder(
@@ -580,7 +580,7 @@ public class SqlPortableTest extends SqlTestSupport {
         assertThat(valueRecord.getTimestamp("timestamp"))
                 .isEqualTo(LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000));
         assertThat(valueRecord.getTimestampWithTimezone("timestampTz"))
-                .isEqualTo( OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC));
+                .isEqualTo(OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC));
 
         assertRowsAnyOrder(
                 "SELECT * FROM " + to,
