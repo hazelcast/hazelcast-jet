@@ -18,16 +18,17 @@ package com.hazelcast.jet.sql.impl.aggregate;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
+import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
-import org.assertj.core.api.recursive.comparison.RecursiveComparisonConfiguration;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @RunWith(JUnitParamsRunner.class)
 public class AvgSqlAggregationTest {
@@ -35,15 +36,16 @@ public class AvgSqlAggregationTest {
     @SuppressWarnings("unused")
     private Object[] types() {
         return new Object[]{
-                QueryDataType.DECIMAL,
-                QueryDataType.DOUBLE
+                new Object[]{QueryDataType.BIGINT},
+                new Object[]{QueryDataType.DECIMAL},
+                new Object[]{QueryDataType.DOUBLE}
         };
     }
 
     @Test
     @Parameters(method = "types")
     public void test_default(QueryDataType operandType) {
-        AvgSqlAggregation aggregation = new AvgSqlAggregation(0, operandType);
+        SqlAggregation aggregation = AvgSqlAggregations.from(operandType, false);
 
         assertThat(aggregation.collect()).isNull();
     }
@@ -51,53 +53,73 @@ public class AvgSqlAggregationTest {
     @SuppressWarnings("unused")
     private Object[] values() {
         return new Object[]{
+                new Object[]{QueryDataType.BIGINT, 1L, 2L, new BigDecimal("1.5")},
                 new Object[]{QueryDataType.DECIMAL, new BigDecimal(1), new BigDecimal(2),
                         new BigDecimal("1.5")},
                 new Object[]{QueryDataType.DECIMAL, new BigDecimal("9223372036854775808998"),
                         new BigDecimal("9223372036854775808999"), new BigDecimal("9223372036854775808998.5")},
-                new Object[]{QueryDataType.DOUBLE, 1D, 2D, 1.5D}
+                new Object[]{QueryDataType.DOUBLE, 1D, 2D, 1.5D},
+                new Object[]{QueryDataType.BIGINT, 1L, null, new BigDecimal(1)},
+                new Object[]{QueryDataType.BIGINT, null, 1L, new BigDecimal(1)},
+                new Object[]{QueryDataType.BIGINT, null, null, null},
+                new Object[]{QueryDataType.DECIMAL, new BigDecimal(1), null, new BigDecimal(1)},
+                new Object[]{QueryDataType.DECIMAL, null, new BigDecimal(1), new BigDecimal(1)},
+                new Object[]{QueryDataType.DECIMAL, null, null, null},
+                new Object[]{QueryDataType.DOUBLE, 1D, null, 1D},
+                new Object[]{QueryDataType.DOUBLE, null, 1D, 1D},
+                new Object[]{QueryDataType.DOUBLE, null, null, null},
         };
     }
 
     @Test
     @Parameters(method = "values")
     public void test_accumulate(QueryDataType operandType, Object value1, Object value2, Object expected) {
-        AvgSqlAggregation aggregation = new AvgSqlAggregation(0, operandType);
-        aggregation.accumulate(new Object[]{value1});
-        aggregation.accumulate(new Object[]{value2});
+        SqlAggregation aggregation = AvgSqlAggregations.from(operandType, false);
+        aggregation.accumulate(value1);
+        aggregation.accumulate(value2);
 
         assertThat(aggregation.collect()).isEqualTo(expected);
     }
 
     @Test
     public void test_periodicDecimal() {
-        AvgSqlAggregation aggregation = new AvgSqlAggregation(0, QueryDataType.DECIMAL);
-        aggregation.accumulate(new Object[]{BigDecimal.ZERO});
-        aggregation.accumulate(new Object[]{BigDecimal.ONE});
-        aggregation.accumulate(new Object[]{BigDecimal.ONE});
+        SqlAggregation aggregation = AvgSqlAggregations.from(QueryDataType.DECIMAL, false);
+        aggregation.accumulate(BigDecimal.ZERO);
+        aggregation.accumulate(BigDecimal.ONE);
+        aggregation.accumulate(BigDecimal.ONE);
 
         assertThat(aggregation.collect()).isEqualTo(new BigDecimal("0.66666666666666666666666666666666666667"));
     }
 
     @Test
-    public void test_accumulateDistinct() {
-        AvgSqlAggregation aggregation = new AvgSqlAggregation(0, QueryDataType.DOUBLE, true);
-        aggregation.accumulate(new Object[]{null});
-        aggregation.accumulate(new Object[]{1.0});
-        aggregation.accumulate(new Object[]{1.0});
-        aggregation.accumulate(new Object[]{2.0});
+    public void test_accumulateOverflow() {
+        SqlAggregation aggregation = AvgSqlAggregations.from(QueryDataType.BIGINT, false);
+        aggregation.accumulate(Long.MAX_VALUE);
 
-        assertThat(aggregation.collect()).isEqualTo(1.5);
+        assertThatThrownBy(() -> aggregation.accumulate(1L))
+                .isInstanceOf(QueryException.class)
+                .hasMessageContaining("BIGINT overflow");
+    }
+
+    @Test
+    public void test_accumulateDistinct() {
+        SqlAggregation aggregation = AvgSqlAggregations.from(QueryDataType.BIGINT, true);
+        aggregation.accumulate(null);
+        aggregation.accumulate(1L);
+        aggregation.accumulate(1L);
+        aggregation.accumulate(2L);
+
+        assertThat(aggregation.collect()).isEqualTo(new BigDecimal("1.5"));
     }
 
     @Test
     @Parameters(method = "values")
     public void test_combine(QueryDataType operandType, Object value1, Object value2, Object expected) {
-        AvgSqlAggregation left = new AvgSqlAggregation(0, operandType);
-        left.accumulate(new Object[]{value1});
+        SqlAggregation left = AvgSqlAggregations.from(operandType, false);
+        left.accumulate(value1);
 
-        AvgSqlAggregation right = new AvgSqlAggregation(0, operandType);
-        right.accumulate(new Object[]{value2});
+        SqlAggregation right = AvgSqlAggregations.from(operandType, false);
+        right.accumulate(value2);
 
         left.combine(right);
 
@@ -106,16 +128,12 @@ public class AvgSqlAggregationTest {
 
     @Test
     public void test_serialization() {
-        AvgSqlAggregation original = new AvgSqlAggregation(0, QueryDataType.DOUBLE);
-        original.accumulate(new Object[]{1.0});
+        SqlAggregation original = AvgSqlAggregations.from(QueryDataType.BIGINT, false);
+        original.accumulate((byte) 1);
 
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
-        AvgSqlAggregation serialized = ss.toObject(ss.toData(original));
+        SqlAggregation serialized = ss.toObject(ss.toData(original));
 
-        RecursiveComparisonConfiguration config = new RecursiveComparisonConfiguration();
-        config.ignoreFields("ignoreNulls", "index", "values", "sum.ignoreNulls", "sum.index");
-        assertThat(serialized)
-                .usingRecursiveComparison(config)
-                .isEqualTo(original);
+        assertThat(serialized).isEqualToComparingFieldByField(original);
     }
 }

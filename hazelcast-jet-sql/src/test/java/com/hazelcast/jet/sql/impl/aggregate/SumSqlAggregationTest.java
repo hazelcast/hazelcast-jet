@@ -45,7 +45,7 @@ public class SumSqlAggregationTest {
     @Test
     @Parameters(method = "types")
     public void test_default(QueryDataType operandType) {
-        SumSqlAggregation aggregation = new SumSqlAggregation(0, operandType);
+        SqlAggregation aggregation = SumSqlAggregations.from(operandType, false);
 
         assertThat(aggregation.collect()).isNull();
     }
@@ -56,37 +56,46 @@ public class SumSqlAggregationTest {
                 new Object[]{QueryDataType.BIGINT, 1L, 2L, 3L},
                 new Object[]{QueryDataType.DECIMAL, new BigDecimal(1), new BigDecimal(2),
                         new BigDecimal(3)},
-                new Object[]{QueryDataType.DOUBLE, 1D, 2D, 3D}
+                new Object[]{QueryDataType.DOUBLE, 1D, 2D, 3D},
+                new Object[]{QueryDataType.BIGINT, 1L, null, 1L},
+                new Object[]{QueryDataType.BIGINT, null, 1L, 1L},
+                new Object[]{QueryDataType.BIGINT, null, null, null},
+                new Object[]{QueryDataType.DECIMAL, new BigDecimal(1), null, new BigDecimal(1)},
+                new Object[]{QueryDataType.DECIMAL, null, new BigDecimal(1), new BigDecimal(1)},
+                new Object[]{QueryDataType.DECIMAL, null, null, null},
+                new Object[]{QueryDataType.DOUBLE, 1D, null, 1D},
+                new Object[]{QueryDataType.DOUBLE, null, 1D, 1D},
+                new Object[]{QueryDataType.DOUBLE, null, null, null},
         };
     }
 
     @Test
     @Parameters(method = "values")
     public void test_accumulate(QueryDataType operandType, Object value1, Object value2, Object expected) {
-        SumSqlAggregation aggregation = new SumSqlAggregation(0, operandType);
-        aggregation.accumulate(new Object[]{value1});
-        aggregation.accumulate(new Object[]{value2});
+        SqlAggregation aggregation = SumSqlAggregations.from(operandType, false);
+        aggregation.accumulate(value1);
+        aggregation.accumulate(value2);
 
         assertThat(aggregation.collect()).isEqualTo(expected);
     }
 
     @Test
     public void test_accumulateOverflow() {
-        SumSqlAggregation aggregation = new SumSqlAggregation(0, QueryDataType.BIGINT);
-        aggregation.accumulate(new Object[]{Long.MAX_VALUE});
+        SqlAggregation aggregation = SumSqlAggregations.from(QueryDataType.BIGINT, false);
+        aggregation.accumulate(Long.MAX_VALUE);
 
-        assertThatThrownBy(() -> aggregation.accumulate(new Object[]{1L}))
+        assertThatThrownBy(() -> aggregation.accumulate(1L))
                 .isInstanceOf(QueryException.class)
                 .hasMessageContaining("BIGINT overflow");
     }
 
     @Test
     public void test_accumulateDistinct() {
-        SumSqlAggregation aggregation = new SumSqlAggregation(0, QueryDataType.BIGINT, true);
-        aggregation.accumulate(new Object[]{null});
-        aggregation.accumulate(new Object[]{1L});
-        aggregation.accumulate(new Object[]{1L});
-        aggregation.accumulate(new Object[]{2L});
+        SqlAggregation aggregation = SumSqlAggregations.from(QueryDataType.BIGINT, true);
+        aggregation.accumulate(null);
+        aggregation.accumulate(1L);
+        aggregation.accumulate(1L);
+        aggregation.accumulate(2L);
 
         assertThat(aggregation.collect()).isEqualTo(3L);
     }
@@ -94,11 +103,11 @@ public class SumSqlAggregationTest {
     @Test
     @Parameters(method = "values")
     public void test_combine(QueryDataType operandType, Object value1, Object value2, Object expected) {
-        SumSqlAggregation left = new SumSqlAggregation(0, operandType);
-        left.accumulate(new Object[]{value1});
+        SqlAggregation left = SumSqlAggregations.from(operandType, false);
+        left.accumulate(value1);
 
-        SumSqlAggregation right = new SumSqlAggregation(0, operandType);
-        right.accumulate(new Object[]{value2});
+        SqlAggregation right = SumSqlAggregations.from(operandType, false);
+        right.accumulate(value2);
 
         left.combine(right);
 
@@ -107,12 +116,12 @@ public class SumSqlAggregationTest {
 
     @Test
     public void test_serialization() {
-        SumSqlAggregation original = new SumSqlAggregation(0, QueryDataType.BIGINT);
-        original.accumulate(new Object[]{1L});
+        SqlAggregation original = SumSqlAggregations.from(QueryDataType.BIGINT, false);
+        original.accumulate((byte) 1);
 
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
-        SumSqlAggregation serialized = ss.toObject(ss.toData(original));
+        SqlAggregation serialized = ss.toObject(ss.toData(original));
 
-        assertThat(serialized).isEqualToIgnoringGivenFields(original, "ignoreNulls", "index");
+        assertThat(serialized).isEqualToComparingFieldByField(original);
     }
 }
