@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2021, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.aggregate;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
@@ -29,28 +28,12 @@ import java.io.IOException;
  * accumulated.
  */
 @NotThreadSafe
-public class ValueSqlAggregation extends SqlAggregation {
-
-    private QueryDataType operandType;
+public class ValueSqlAggregation implements SqlAggregation {
 
     private Object value;
 
-    @SuppressWarnings("unused")
-    private ValueSqlAggregation() {
-    }
-
-    public ValueSqlAggregation(int index, QueryDataType operandType) {
-        super(index, false, false);
-        this.operandType = operandType;
-    }
-
     @Override
-    public QueryDataType resultType() {
-        return operandType;
-    }
-
-    @Override
-    protected void accumulate(Object value) {
+    public void accumulate(Object value) {
         assert this.value == null || this.value.equals(value);
 
         this.value = value;
@@ -74,13 +57,11 @@ public class ValueSqlAggregation extends SqlAggregation {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeObject(operandType);
         out.writeObject(value);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        operandType = in.readObject();
         value = in.readObject();
     }
 }

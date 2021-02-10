@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2021, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,34 +19,21 @@ package com.hazelcast.jet.sql.impl.aggregate;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.sql.impl.QueryException;
-import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 
 @NotThreadSafe
-public class MinSqlAggregation extends SqlAggregation {
-
-    private QueryDataType operandType;
+public class MinSqlAggregation implements SqlAggregation {
 
     private Object value;
 
-    @SuppressWarnings("unused")
-    private MinSqlAggregation() {
-    }
-
-    public MinSqlAggregation(int index, QueryDataType operandType) {
-        super(index, true, false);
-        this.operandType = operandType;
-    }
-
     @Override
-    public QueryDataType resultType() {
-        return operandType;
-    }
+    public void accumulate(Object value) {
+        if (value == null) {
+            return;
+        }
 
-    @Override
-    protected void accumulate(Object value) {
         if (this.value == null || compare(this.value, value) > 0) {
             this.value = value;
         }
@@ -89,13 +76,11 @@ public class MinSqlAggregation extends SqlAggregation {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeObject(operandType);
         out.writeObject(value);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        operandType = in.readObject();
         value = in.readObject();
     }
 }

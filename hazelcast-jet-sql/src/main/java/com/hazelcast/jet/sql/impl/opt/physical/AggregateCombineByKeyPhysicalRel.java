@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2021, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.opt.physical;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.sql.impl.aggregate.SqlAggregations;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import org.apache.calcite.plan.RelOptCluster;
@@ -33,7 +32,7 @@ import java.util.List;
 
 public class AggregateCombineByKeyPhysicalRel extends Aggregate implements PhysicalRel {
 
-    private final AggregateOperation<SqlAggregations, Object[]> aggrOp;
+    private final AggregateOperation<?, Object[]> aggrOp;
 
     AggregateCombineByKeyPhysicalRel(
             RelOptCluster cluster,
@@ -42,14 +41,14 @@ public class AggregateCombineByKeyPhysicalRel extends Aggregate implements Physi
             ImmutableBitSet groupSet,
             List<ImmutableBitSet> groupSets,
             List<AggregateCall> aggCalls,
-            AggregateOperation<SqlAggregations, Object[]> aggrOp
+            AggregateOperation<?, Object[]> aggrOp
     ) {
         super(cluster, traits, new ArrayList<>(), input, groupSet, groupSets, aggCalls);
 
         this.aggrOp = aggrOp;
     }
 
-    public AggregateOperation<SqlAggregations, Object[]> aggrOp() {
+    public AggregateOperation<?, Object[]> aggrOp() {
         return aggrOp;
     }
 
