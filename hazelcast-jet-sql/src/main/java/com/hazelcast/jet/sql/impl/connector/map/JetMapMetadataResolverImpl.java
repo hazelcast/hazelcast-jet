@@ -42,7 +42,7 @@ public final class JetMapMetadataResolverImpl implements JetMapMetadataResolver 
 
     @Override
     public Object resolvePortable(ClassDefinition clazz, boolean key) {
-        List<MappingField> mappingFields = MetadataPortableResolver.INSTANCE.resolveFields(key, emptyList(), clazz);
+        List<MappingField> mappingFields = MetadataPortableResolver.INSTANCE.resolveFields(key, clazz);
         KvMetadata metadata = MetadataPortableResolver.INSTANCE.resolveMetadata(key, mappingFields, clazz);
         return metadata.getUpsertTargetDescriptor();
     }

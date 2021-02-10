@@ -513,7 +513,7 @@ public class SqlPortableTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_classDefinitionDerivationFromSchema() throws IOException {
+    public void test_derivesClassDefinitionFromSchema() throws IOException {
         String from = randomName();
         AllTypesSqlConnector.create(sqlService, from);
 
