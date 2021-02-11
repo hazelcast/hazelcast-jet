@@ -176,13 +176,13 @@ public final class ExpressionUtil {
             @Override
             public Void visitDynamicParam(RexDynamicParam dynamicParam) {
                 found = true;
-                return super.visitDynamicParam(dynamicParam);
+                return null;
             }
 
             @Override
             public Void visitInputRef(RexInputRef inputRef) {
                 found = true;
-                return super.visitInputRef(inputRef);
+                return null;
             }
         }
 

@@ -59,7 +59,7 @@ public class AllTypesSqlConnector implements SqlConnector {
 
     public static final String TYPE_NAME = "AllTypes";
 
-    private static final List<MappingField> FIELD_LIST = asList(
+    public static final List<MappingField> FIELD_LIST = asList(
             new MappingField("string", QueryDataType.VARCHAR),
             new MappingField("boolean", QueryDataType.BOOLEAN),
             new MappingField("byte", QueryDataType.TINYINT),
@@ -74,8 +74,8 @@ public class AllTypesSqlConnector implements SqlConnector {
             new MappingField("timestamp", QueryDataType.TIMESTAMP),
             new MappingField("timestampTz", QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME),
             new MappingField("object", QueryDataType.OBJECT)
-
     );
+
     private static final List<TableField> FIELD_LIST2 = toList(FIELD_LIST, f -> new TableField(f.name(), f.type(), false));
 
     private static final Object[] VALUES = new Object[]{

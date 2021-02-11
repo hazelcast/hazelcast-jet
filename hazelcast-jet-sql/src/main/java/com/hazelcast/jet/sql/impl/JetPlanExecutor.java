@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobStateSnapshot;
 import com.hazelcast.jet.config.JobConfig;
@@ -58,11 +57,11 @@ class JetPlanExecutor {
 
     JetPlanExecutor(
             MappingCatalog catalog,
-            JetInstance jetInstance,
+            AbstractJetInstance jetInstance,
             Map<Long, JetQueryResultProducer> resultConsumerRegistry
     ) {
         this.catalog = catalog;
-        this.jetInstance = (AbstractJetInstance) jetInstance;
+        this.jetInstance = jetInstance;
         this.resultConsumerRegistry = resultConsumerRegistry;
     }
 
