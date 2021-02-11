@@ -72,7 +72,7 @@ public class RowProjector implements Row {
     }
 
     public Object[] project(Object object) {
-        target.setTarget(object);
+        target.setTarget(object, null);
 
         if (!Boolean.TRUE.equals(evaluate(predicate, this, context))) {
             return null;

@@ -97,8 +97,8 @@ public class KvRowProjector implements Row {
     }
 
     public Object[] project(Entry<Object, Object> entry) {
-        keyTarget.setTarget(entry.getKey());
-        valueTarget.setTarget(entry.getValue());
+        keyTarget.setTarget(entry.getKey(), null);
+        valueTarget.setTarget(entry.getValue(), null);
 
         if (!Boolean.TRUE.equals(evaluate(predicate, this, context))) {
             return null;
