@@ -59,7 +59,6 @@ import static com.hazelcast.jet.core.test.JetAssert.assertFalse;
 import static com.hazelcast.jet.core.test.JetAssert.assertTrue;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.subtractClamped;
-import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
@@ -820,7 +819,7 @@ public final class TestSupport {
 
         if (isCooperative) {
             if (cooperativeTimeout > 0) {
-                assertTrue(format("call to %s() took %.1fms, it should be <%dms", methodName,
+                assertTrue(String.format("call to %s() took %.1fms, it should be <%dms", methodName,
                         toMillis(elapsed), COOPERATIVE_TIME_LIMIT_MS_FAIL),
                         elapsed < MILLISECONDS.toNanos(COOPERATIVE_TIME_LIMIT_MS_FAIL));
             }

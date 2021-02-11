@@ -23,11 +23,13 @@ import org.apache.calcite.sql.type.ReturnTypes;
 
 public class HazelcastCollectionTableOperator extends HazelcastSpecialOperator {
 
+    public static final int PRECEDENCE = 200;
+
     public HazelcastCollectionTableOperator(String name) {
         super(
                 name,
                 SqlKind.COLLECTION_TABLE,
-                200,
+                PRECEDENCE,
                 true,
                 ReturnTypes.ARG0,
                 null);

@@ -27,11 +27,14 @@ import org.apache.calcite.sql.type.ReturnTypes;
  * org.apache.calcite.sql.fun.SqlArgumentAssignmentOperator}.
  */
 public class HazelcastArgumentAssignmentOperator extends HazelcastSpecialOperator {
+
+    private static final int PRECEDENCE = 20;
+
     public HazelcastArgumentAssignmentOperator() {
         super(
                 "=>",
                 SqlKind.ARGUMENT_ASSIGNMENT,
-                20,
+                PRECEDENCE,
                 true,
                 ReturnTypes.ARG0,
                 InferTypes.RETURN_TYPE);

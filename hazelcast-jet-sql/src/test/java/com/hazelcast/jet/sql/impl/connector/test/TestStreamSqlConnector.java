@@ -104,7 +104,9 @@ public class TestStreamSqlConnector implements SqlConnector {
             @Nonnull List<Expression<?>> projection
     ) {
         StreamSourceTransform<Object[]> source = (StreamSourceTransform<Object[]>) TestSources.itemStream(100,
-                (timestamp, sequence) -> ExpressionUtil.evaluate(predicate, projection, new Object[]{sequence}, NOT_IMPLEMENTED_ARGUMENTS_CONTEXT));
+                (timestamp, sequence) ->
+                        ExpressionUtil.evaluate(predicate, projection, new Object[]{sequence},
+                                NOT_IMPLEMENTED_ARGUMENTS_CONTEXT));
         ProcessorMetaSupplier pms = source.metaSupplierFn.apply(EventTimePolicy.noEventTime());
         return dag.newUniqueVertex("TestStream[" + table.getSchemaName() + "." + table.getSqlName() + ']', pms);
     }
