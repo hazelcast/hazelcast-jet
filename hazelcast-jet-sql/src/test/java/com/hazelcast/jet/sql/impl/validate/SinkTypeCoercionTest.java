@@ -352,7 +352,7 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
 
                 // DOUBLE
                 TestParams.failingCase(1901, DOUBLE, VARCHAR, "cast(42 as double)", "42",
-                        "Cannot assign to target field 'this' of type VARCHAR from source field 'EXPR$1' of type DOUBLE"),
+                        "Cannot assign to target field 'this' of type VARCHAR from source field '.+' of type DOUBLE"),
                 TestParams.failingCase(1902, DOUBLE, BOOLEAN, "cast(42 as double)",
                         "42", "Cannot assign to target field 'this' of type BOOLEAN from source field '.+' of type DOUBLE"),
                 TestParams.passingCase(1903, DOUBLE, TINYINT, "cast(42 as double)", "42", (byte) 42),
