@@ -73,21 +73,21 @@ public class SqlAggregateTest_TypeCoercion extends SqlTestSupport {
     @Test
     public void test_sum_numberTypes() {
         assertRowsAnyOrder("select " +
-                "sum(byte), " +
-                "sum(short), " +
-                "sum(\"int\"), " +
-                "sum(long), " +
-                "sum(\"float\"), " +
-                "sum(\"double\"), " +
-                "sum(\"decimal\")," +
-                "sum(null) " +
-                "from allTypesTable",
+                        "sum(byte), " +
+                        "sum(short), " +
+                        "sum(\"int\"), " +
+                        "sum(long), " +
+                        "sum(\"float\"), " +
+                        "sum(\"double\"), " +
+                        "sum(\"decimal\")," +
+                        "sum(null) " +
+                        "from allTypesTable",
                 Collections.singleton(new Row(
                         127L,
                         32767L,
                         2147483647L,
-                        9223372036854775807L,
-                        (double) 1234567890.1f,
+                        new BigDecimal(9223372036854775807L),
+                        1234567890.1F,
                         123451234567890.1,
                         new BigDecimal("9223372036854775.123"),
                         null)));
@@ -118,12 +118,13 @@ public class SqlAggregateTest_TypeCoercion extends SqlTestSupport {
                         new String[]{"" + Long.MAX_VALUE},
                         new String[]{"" + Long.MAX_VALUE}));
 
-        assertThatThrownBy(() -> sqlService.execute("select sum(a) from t").iterator().hasNext())
-                .hasMessageContaining("BIGINT overflow in 'SUM' function");
+        List<Row> expectedResult = singletonList(new Row(new BigDecimal(Long.MAX_VALUE).multiply(new BigDecimal(2))));
 
-        // casted to DECIMAL should work
-        assertRowsAnyOrder("select sum(cast(a as decimal)) from t",
-                singletonList(new Row(new BigDecimal(Long.MAX_VALUE).multiply(new BigDecimal(2)))));
+        // BIGINT is summed as DECIMAL, therefore it won't overflow
+        assertRowsAnyOrder("select sum(a) from t", expectedResult);
+
+        // explicitly casted to DECIMAL won't overflow too
+        assertRowsAnyOrder("select sum(cast(a as decimal)) from t", expectedResult);
     }
 
     @Test
