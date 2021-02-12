@@ -26,7 +26,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -159,19 +158,6 @@ public class SqlAggregateTest extends SqlTestSupport {
                         new Row("Joey", 4L)
                 )
         );
-    }
-
-    @Test
-    public void test_groupBy_allTypes() {
-        AllTypesSqlConnector.create(sqlService, "t");
-        String allFields = AllTypesSqlConnector.FIELD_LIST.stream()
-                .map(f -> "\"" + f.name() + '"')
-                .collect(Collectors.joining(", "));
-        assertRowsAnyOrder(
-                "SELECT " + allFields + " " +
-                        "FROM t " +
-                        "GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14",
-                singletonList(AllTypesSqlConnector.ALL_TYPES_ROW));
     }
 
     @Test
@@ -401,19 +387,6 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_count_allTypes() {
-        AllTypesSqlConnector.create(sqlService, "t");
-        String allFields = AllTypesSqlConnector.FIELD_LIST.stream()
-                .map(f -> "COUNT(\"" + f.name() + "\")")
-                .collect(Collectors.joining(", "));
-
-        assertRowsAnyOrder(
-                "SELECT " + allFields +
-                        "FROM t",
-                singletonList(new Row(1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 0L)));
-    }
-
-    @Test
     public void test_min() {
         String name = createTable(
                 new String[]{"Alice", "2"},
@@ -519,19 +492,6 @@ public class SqlAggregateTest extends SqlTestSupport {
                         new Row("Bob", 2L)
                 )
         );
-    }
-
-    @Test
-    public void test_min_allTypes() {
-        AllTypesSqlConnector.create(sqlService, "t");
-        String allFields = AllTypesSqlConnector.FIELD_LIST.stream()
-                                                          .map(f -> "MIN(\"" + f.name() + "\")")
-                                                          .collect(Collectors.joining(", "));
-
-        assertRowsAnyOrder(
-                "SELECT " + allFields +
-                        "FROM t",
-                singletonList(AllTypesSqlConnector.ALL_TYPES_ROW));
     }
 
     @Test
@@ -641,19 +601,6 @@ public class SqlAggregateTest extends SqlTestSupport {
                         new Row("Bob", 4L)
                 )
         );
-    }
-
-    @Test
-    public void test_max_allTypes() {
-        AllTypesSqlConnector.create(sqlService, "t");
-        String allFields = AllTypesSqlConnector.FIELD_LIST.stream()
-                                                          .map(f -> "MAX(\"" + f.name() + "\")")
-                                                          .collect(Collectors.joining(", "));
-
-        assertRowsAnyOrder(
-                "SELECT " + allFields +
-                        "FROM t",
-                singletonList(AllTypesSqlConnector.ALL_TYPES_ROW));
     }
 
     @Test
@@ -946,29 +893,6 @@ public class SqlAggregateTest extends SqlTestSupport {
                         new Row("Joey", new BigDecimal("6"))
                 )
         );
-    }
-
-    @Test
-    public void test_avg_allTypes() {
-        AllTypesSqlConnector.create(sqlService, "t");
-        assertRowsAnyOrder(
-                "SELECT " +
-                        "AVG(\"byte\"), " +
-                        "AVG(\"short\"), " +
-                        "AVG(\"int\"), " +
-                        "AVG(\"long\"), " +
-                        "AVG(\"float\"), " +
-                        "AVG(\"double\"), " +
-                        "AVG(\"decimal\")" +
-                        "FROM t",
-                singletonList(new Row(
-                        new BigDecimal(127),
-                        new BigDecimal(32767),
-                        new BigDecimal(2147483647),
-                        new BigDecimal(9223372036854775807L),
-                        (double) 1234567890.1f,
-                        123451234567890.1,
-                        new BigDecimal("9223372036854775.123"))));
     }
 
     @Test

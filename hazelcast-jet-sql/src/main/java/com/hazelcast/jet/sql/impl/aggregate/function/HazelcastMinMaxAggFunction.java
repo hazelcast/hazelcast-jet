@@ -36,7 +36,6 @@ public class HazelcastMinMaxAggFunction extends HazelcastAggFunction {
                 kind.name(),
                 kind,
                 ReturnTypes.ARG0_NULLABLE_IF_EMPTY,
-                // TODO consider fixing MIN(null) case, currently it returns BIGINT, it should return NULL
                 new ReplaceUnknownOperandTypeInference(BIGINT),
                 null,
                 SqlFunctionCategory.SYSTEM,

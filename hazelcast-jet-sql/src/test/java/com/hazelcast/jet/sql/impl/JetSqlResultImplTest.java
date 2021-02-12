@@ -35,8 +35,8 @@ public class JetSqlResultImplTest extends JetTestSupport {
         JetInstance inst = createJetMember();
         TestBatchSqlConnector.create(inst.getSql(), "m", 1);
         SqlResult sqlResult = inst.getSql().execute("select * from m");
-        Iterator<SqlRow> iterator = sqlResult.iterator();
         sqlResult.close();
+        Iterator<SqlRow> iterator = sqlResult.iterator();
         assertThatThrownBy(() -> iterator.hasNext());
     }
 }
