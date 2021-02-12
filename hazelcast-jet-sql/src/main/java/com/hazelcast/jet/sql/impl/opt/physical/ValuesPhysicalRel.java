@@ -18,30 +18,76 @@ package com.hazelcast.jet.sql.impl.opt.physical;
 
 import com.google.common.collect.ImmutableList;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.sql.impl.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
+import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
+import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.AbstractRelNode;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.Values;
+import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexDigestIncludeType;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexVisitor;
+import org.apache.calcite.sql.SqlExplainLevel;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
-public class ValuesPhysicalRel extends Values implements PhysicalRel {
+import static com.hazelcast.jet.impl.util.Util.toList;
+import static com.hazelcast.jet.sql.impl.ExpressionUtil.NOT_IMPLEMENTED_ARGUMENTS_CONTEXT;
+
+public class ValuesPhysicalRel extends AbstractRelNode implements PhysicalRel {
+
+    private final List<RexNode> filters;
+    private final List<List<RexNode>> projects;
+    private final List<ImmutableList<ImmutableList<RexLiteral>>> tuples;
 
     ValuesPhysicalRel(
             RelOptCluster cluster,
             RelTraitSet traits,
             RelDataType rowType,
-            ImmutableList<ImmutableList<RexLiteral>> tuples
+            List<RexNode> filters,
+            List<List<RexNode>> projects,
+            List<ImmutableList<ImmutableList<RexLiteral>>> tuples
     ) {
-        super(cluster, rowType, tuples, traits);
+        super(cluster, traits);
+        this.rowType = rowType;
+
+        this.filters = filters;
+        this.projects = projects;
+        this.tuples = tuples;
     }
 
     public List<Object[]> values() {
-        return OptUtils.convert(this, getRowType());
+        List<Object[]> rows = new ArrayList<>();
+        for (int i = 0; i < filters.size(); i++) {
+            RexNode filter = filters.get(i);
+            List<RexNode> project = projects.get(i);
+            ImmutableList<ImmutableList<RexLiteral>> values = tuples.get(i);
+
+            PlanNodeSchema schema = OptUtils.schema(getRowType());
+            RexVisitor<Expression<?>> converter = OptUtils.createRexToExpressionVisitor(schema);
+
+            Expression<Boolean> predicate = null;
+            if (filter != null) {
+                //noinspection unchecked
+                predicate = (Expression<Boolean>) filter.accept(converter);
+            }
+            List<Expression<?>> projection = null;
+            if (project != null) {
+                projection = toList(project, node -> node.accept(converter));
+            }
+
+            rows.addAll(ExpressionUtil.evaluate(predicate, projection, OptUtils.convert(values), NOT_IMPLEMENTED_ARGUMENTS_CONTEXT));
+        }
+        return rows;
     }
 
     @Override
@@ -56,6 +102,35 @@ public class ValuesPhysicalRel extends Values implements PhysicalRel {
 
     @Override
     public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new ValuesPhysicalRel(getCluster(), traitSet, getRowType(), getTuples());
+        assert traitSet.containsIfApplicable(Convention.NONE);
+        assert inputs.isEmpty();
+
+        return new ValuesPhysicalRel(getCluster(), traitSet, getRowType(), filters, projects, tuples);
+    }
+
+    @Override
+    public RelWriter explainTerms(RelWriter pw) {
+        // A little adapter just to get the tuples to come out
+        // with curly brackets instead of square brackets.  Plus
+        // more whitespace for readability.
+        RelWriter writer = super.explainTerms(pw)
+                // For rel digest, include the row type since a rendered
+                // literal may leave the type ambiguous (e.g. "null").
+                .itemIf("type", rowType, pw.getDetailLevel() == SqlExplainLevel.DIGEST_ATTRIBUTES)
+                .itemIf("type", rowType.getFieldList(), pw.nest());
+        if (pw.nest()) {
+            pw.item("tuples", tuples);
+        } else {
+            pw.item("tuples",
+                    tuples.stream()
+                            .map(row -> row.stream()
+                                    .flatMap(Collection::stream)
+                                    .map(literal -> literal.computeDigest(RexDigestIncludeType.NO_TYPE))
+                                    .collect(Collectors.joining(", ", "{ ", " }")))
+                            .collect(Collectors.joining(", ", "[", "]")));
+        }
+        pw.item("filters", filters);
+        pw.item("projects", projects);
+        return writer;
     }
 }

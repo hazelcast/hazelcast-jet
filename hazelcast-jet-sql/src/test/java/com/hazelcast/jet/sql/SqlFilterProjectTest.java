@@ -26,7 +26,6 @@ import org.junit.Test;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class SqlFilterProjectTest extends SqlTestSupport {
@@ -42,8 +41,8 @@ public class SqlFilterProjectTest extends SqlTestSupport {
     @Test
     public void test_valuesSelect() {
         assertRowsAnyOrder(
-                "SELECT * FROM (VALUES ('a'))",
-                singletonList(new Row("a"))
+                "SELECT * FROM (VALUES ('a'), ('b'))",
+                asList(new Row("a"), new Row("b"))
         );
     }
 

@@ -21,14 +21,15 @@ import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptRuleOperand;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.logical.LogicalUnion;
-import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexNode;
 
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.toList;
+import java.util.ArrayList;
+import java.util.List;
 
 final class ValuesUnionLogicalRule extends RelOptRule {
 
@@ -37,7 +38,7 @@ final class ValuesUnionLogicalRule extends RelOptRule {
     private static final RelOptRuleOperand CHILD_OPERAND;
 
     static {
-        CHILD_OPERAND = operand(LogicalValues.class, none());
+        CHILD_OPERAND = operand(ReducedLogicalValues.class, none());
         INSTANCE = new ValuesUnionLogicalRule();
     }
 
@@ -53,20 +54,25 @@ final class ValuesUnionLogicalRule extends RelOptRule {
     public void onMatch(RelOptRuleCall call) {
         Union union = call.rel(0);
 
-        ImmutableList<ImmutableList<RexLiteral>> tuples = extractTuples(union);
+        List<RexNode> filters = new ArrayList<>();
+        List<List<RexNode>> projects = new ArrayList<>();
+        List<ImmutableList<ImmutableList<RexLiteral>>> tuples = new ArrayList<>();
+        for (RelNode input : union.getInputs()) {
+            ReducedLogicalValues values = OptUtils.findMatchingRel(input, CHILD_OPERAND);
 
-        LogicalValues rel = LogicalValues.create(
+            filters.add(values.filter());
+            projects.add(values.project());
+            tuples.add(values.tuples());
+        }
+
+        RelNode rel = new ValuesLogicalRel(
                 union.getCluster(),
+                OptUtils.toLogicalConvention(union.getTraitSet()),
                 union.getRowType(),
+                filters,
+                projects,
                 tuples
         );
         call.transformTo(rel);
-    }
-
-    private static ImmutableList<ImmutableList<RexLiteral>> extractTuples(Union union) {
-        return union.getInputs().stream()
-                    .map(input -> OptUtils.<LogicalValues>findMatchingRel(input, CHILD_OPERAND))
-                    .flatMap(values -> values.getTuples().stream())
-                    .collect(collectingAndThen(toList(), ImmutableList::copyOf));
     }
 }

@@ -17,28 +17,87 @@
 package com.hazelcast.jet.sql.impl.opt.logical;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.AbstractRelNode;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.Values;
+import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexDigestIncludeType;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlExplainLevel;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
-public class ValuesLogicalRel extends Values implements LogicalRel {
+public class ValuesLogicalRel extends AbstractRelNode implements LogicalRel {
+
+    private final List<RexNode> filters;
+    private final List<List<RexNode>> projects;
+    private final List<ImmutableList<ImmutableList<RexLiteral>>> tuples;
 
     ValuesLogicalRel(
             RelOptCluster cluster,
             RelTraitSet traits,
             RelDataType rowType,
-            ImmutableList<ImmutableList<RexLiteral>> tuples
+            List<RexNode> filters,
+            List<List<RexNode>> projects,
+            List<ImmutableList<ImmutableList<RexLiteral>>> tuples
     ) {
-        super(cluster, rowType, tuples, traits);
+        super(cluster, traits);
+        this.rowType = rowType;
+
+        this.filters = filters;
+        this.projects = projects;
+        this.tuples = tuples;
+    }
+
+    public List<RexNode> filters() {
+        return filters;
+    }
+
+    public List<List<RexNode>> projects() {
+        return projects;
+    }
+
+    public List<ImmutableList<ImmutableList<RexLiteral>>> tuples() {
+        return tuples;
     }
 
     @Override
     public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new ValuesLogicalRel(getCluster(), traitSet, getRowType(), getTuples());
+        assert traitSet.containsIfApplicable(Convention.NONE);
+        assert inputs.isEmpty();
+
+        return new ValuesLogicalRel(getCluster(), traitSet, getRowType(), filters, projects, tuples);
+    }
+
+    @Override
+    public RelWriter explainTerms(RelWriter pw) {
+        // A little adapter just to get the tuples to come out
+        // with curly brackets instead of square brackets.  Plus
+        // more whitespace for readability.
+        RelWriter writer = super.explainTerms(pw)
+                // For rel digest, include the row type since a rendered
+                // literal may leave the type ambiguous (e.g. "null").
+                .itemIf("type", rowType, pw.getDetailLevel() == SqlExplainLevel.DIGEST_ATTRIBUTES)
+                .itemIf("type", rowType.getFieldList(), pw.nest());
+        if (pw.nest()) {
+            pw.item("tuples", tuples);
+        } else {
+            pw.item("tuples",
+                    tuples.stream()
+                            .map(row -> row.stream()
+                                    .flatMap(Collection::stream)
+                                    .map(literal -> literal.computeDigest(RexDigestIncludeType.NO_TYPE))
+                                    .collect(Collectors.joining(", ", "{ ", " }")))
+                            .collect(Collectors.joining(", ", "[", "]")));
+        }
+        pw.item("filters", filters);
+        pw.item("projects", projects);
+        return writer;
     }
 }

@@ -42,7 +42,6 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.prepare.RelOptTableImpl;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -229,9 +228,10 @@ public final class OptUtils {
         return new RexToExpressionVisitor(schema, new QueryParameterMetadata());
     }
 
-    public static List<Object[]> convert(Values values) {
-        List<Object[]> rows = new ArrayList<>(values.getTuples().size());
-        for (List<RexLiteral> tuple : values.getTuples()) {
+    // TODO: test
+    public static List<Object[]> convert(ImmutableList<ImmutableList<RexLiteral>> values) {
+        List<Object[]> rows = new ArrayList<>(values.size());
+        for (List<RexLiteral> tuple : values) {
 
             Object[] result = new Object[tuple.size()];
             for (int i = 0; i < tuple.size(); i++) {
@@ -239,24 +239,6 @@ public final class OptUtils {
                 Expression<?> expression = RexToExpression.convertLiteral(literal);
                 Object value = expression.eval(null, null);
                 result[i] = value;
-            }
-            rows.add(result);
-        }
-        return rows;
-    }
-
-    public static List<Object[]> convert(Values values, RelDataType rowType) {
-        List<QueryDataType> types = extractFieldTypes(rowType);
-
-        List<Object[]> rows = new ArrayList<>(values.getTuples().size());
-        for (List<RexLiteral> tuple : values.getTuples()) {
-
-            Object[] result = new Object[tuple.size()];
-            for (int i = 0; i < tuple.size(); i++) {
-                RexLiteral literal = tuple.get(i);
-                Expression<?> expression = RexToExpression.convertLiteral(literal);
-                Object value = expression.eval(null, null);
-                result[i] = types.get(i).convert(value);
             }
             rows.add(result);
         }

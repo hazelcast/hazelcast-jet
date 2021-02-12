@@ -68,9 +68,9 @@ public final class LogicalRules {
 
                 // Value rules
                 ValuesLogicalRule.INSTANCE,
-//                ValuesReduceRule.FILTER_INSTANCE,
-//                ValuesReduceRule.PROJECT_INSTANCE,
-//                ValuesReduceRule.PROJECT_FILTER_INSTANCE,
+                ValuesReduceRule.FILTER_INSTANCE,
+                ValuesReduceRule.PROJECT_INSTANCE,
+                ValuesReduceRule.PROJECT_FILTER_INSTANCE,
                 ValuesUnionLogicalRule.INSTANCE,
 
                 // Insert rules
