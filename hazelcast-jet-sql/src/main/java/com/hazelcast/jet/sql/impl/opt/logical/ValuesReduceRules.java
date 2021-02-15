@@ -49,6 +49,8 @@ import static org.apache.calcite.plan.RelOptRule.unordered;
 
 final class ValuesReduceRules {
 
+    static final RelOptRuleOperand REDUCED_VALUES_CHILD_OPERAND = operand(ReducedLogicalValues.class, none());
+
     static final RelOptRule FILTER_INSTANCE =
             new RelOptRule(
                     operand(LogicalFilter.class, operand(LogicalValues.class, none())),
@@ -198,8 +200,6 @@ final class ValuesReduceRules {
             return pw.item("id", this.id);
         }
     }
-
-    private static final RelOptRuleOperand REDUCED_VALUES_CHILD_OPERAND = operand(ReducedLogicalValues.class, none());
 
     private ValuesReduceRules() {
     }
