@@ -20,6 +20,7 @@ import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
 import com.hazelcast.sql.SqlService;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -112,9 +113,10 @@ public class SqlAggregateTest_TypeCoercion extends SqlTestSupport {
     }
 
     @Test
+    @Ignore // TODO
     public void test_sum_integerOverflow() {
-        String sql = "select sum(a) from (select " + Integer.MAX_VALUE + " " +
-                "from table(generate_series(0, " + (Integer.MAX_VALUE + 1L) + ")))";
+        String sql = "select sum(" + Integer.MAX_VALUE + ") " +
+                "from table(generate_series(0, " + (Integer.MAX_VALUE + 1L) + "))";
         assertThatThrownBy(() -> sqlService.execute(sql).iterator().hasNext())
                 .hasMessageContaining("BIGINT overflow in 'SUM' function");
 
