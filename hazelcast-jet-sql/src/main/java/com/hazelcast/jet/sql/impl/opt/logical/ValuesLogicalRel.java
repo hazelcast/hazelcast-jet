@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.opt.logical;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.AbstractRelNode;
@@ -33,11 +32,23 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static java.util.Collections.singletonList;
+
 public class ValuesLogicalRel extends AbstractRelNode implements LogicalRel {
 
+    private final RelDataType rowType;
     private final List<RexNode> filters;
     private final List<List<RexNode>> projects;
     private final List<ImmutableList<ImmutableList<RexLiteral>>> tuples;
+
+    ValuesLogicalRel(
+            RelOptCluster cluster,
+            RelTraitSet traits,
+            RelDataType rowType,
+            List<ImmutableList<ImmutableList<RexLiteral>>> tuples
+    ) {
+        this(cluster, traits, rowType, singletonList(null), singletonList(null), tuples);
+    }
 
     ValuesLogicalRel(
             RelOptCluster cluster,
@@ -48,8 +59,8 @@ public class ValuesLogicalRel extends AbstractRelNode implements LogicalRel {
             List<ImmutableList<ImmutableList<RexLiteral>>> tuples
     ) {
         super(cluster, traits);
-        this.rowType = rowType;
 
+        this.rowType = rowType;
         this.filters = filters;
         this.projects = projects;
         this.tuples = tuples;
@@ -68,11 +79,13 @@ public class ValuesLogicalRel extends AbstractRelNode implements LogicalRel {
     }
 
     @Override
-    public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        assert traitSet.containsIfApplicable(Convention.NONE);
-        assert inputs.isEmpty();
+    protected RelDataType deriveRowType() {
+        return rowType;
+    }
 
-        return new ValuesLogicalRel(getCluster(), traitSet, getRowType(), filters, projects, tuples);
+    @Override
+    public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
+        return new ValuesLogicalRel(getCluster(), traitSet, rowType, filters, projects, tuples);
     }
 
     @Override

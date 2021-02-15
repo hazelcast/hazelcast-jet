@@ -35,7 +35,6 @@ import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleOperand;
-import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
@@ -127,7 +126,6 @@ public final class OptUtils {
         JetTable table = hazelcastTable.getTarget();
 
         HazelcastRelOptTable relTable = createRelTable(
-                null,
                 table.getQualifiedName(),
                 hazelcastTable,
                 cluster.getTypeFactory()
@@ -136,7 +134,6 @@ public final class OptUtils {
     }
 
     private static HazelcastRelOptTable createRelTable(
-            RelOptSchema relOptSchema,
             List<String> names,
             HazelcastTable hazelcastTable,
             RelDataTypeFactory typeFactory
@@ -144,7 +141,7 @@ public final class OptUtils {
         RelDataType rowType = hazelcastTable.getRowType(typeFactory);
 
         RelOptTableImpl relTable = RelOptTableImpl.create(
-                relOptSchema,
+                null,
                 rowType,
                 names,
                 hazelcastTable,
@@ -228,7 +225,6 @@ public final class OptUtils {
         return new RexToExpressionVisitor(schema, new QueryParameterMetadata());
     }
 
-    // TODO: test
     public static List<Object[]> convert(ImmutableList<ImmutableList<RexLiteral>> values) {
         List<Object[]> rows = new ArrayList<>(values.size());
         for (List<RexLiteral> tuple : values) {

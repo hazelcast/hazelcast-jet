@@ -110,7 +110,9 @@ public class SqlFilterProjectTest extends SqlTestSupport {
 
         assertMapEventually(
                 "m",
-                "SINK INTO m(__key, this) VALUES (CAST(1 AS INTEGER), CAST(1 + 0 AS INTEGER)), (2, 2)",
+                "SINK INTO m(__key, this) VALUES "
+                        + "(CAST(1 AS INTEGER), CAST(1 + 0 AS INTEGER))"
+                        + ", (CAST(2 AS INTEGER), CAST(2 AS INTEGER))",
                 createMap(1, 1, 2, 2)
         );
     }
@@ -625,7 +627,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
     public void test_sinkMetadata() {
         sqlService.execute(javaSerializableMapDdl("m", Integer.class, Integer.class));
 
-        SqlResult result = sqlService.execute("SINK INTO m(__key, this) VALUES (1, 1), (2, 2)");
+        SqlResult result = sqlService.execute("SINK INTO m(__key, this) VALUES (1, 1)");
 
         assertThat(result.updateCount()).isEqualTo(0);
     }

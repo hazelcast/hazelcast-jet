@@ -45,8 +45,6 @@ final class ValuesLogicalRule extends ConverterRule {
                 values.getCluster(),
                 OptUtils.toLogicalConvention(values.getTraitSet()),
                 values.getRowType(),
-                singletonList(null),
-                singletonList(null),
                 singletonList(values.getTuples())
         );
     }

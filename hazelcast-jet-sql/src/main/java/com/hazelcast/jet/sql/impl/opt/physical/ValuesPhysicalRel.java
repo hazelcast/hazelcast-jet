@@ -22,7 +22,6 @@ import com.hazelcast.jet.sql.impl.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
-import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.AbstractRelNode;
@@ -45,6 +44,7 @@ import static com.hazelcast.jet.sql.impl.ExpressionUtil.NOT_IMPLEMENTED_ARGUMENT
 
 public class ValuesPhysicalRel extends AbstractRelNode implements PhysicalRel {
 
+    private final RelDataType rowType;
     private final List<RexNode> filters;
     private final List<List<RexNode>> projects;
     private final List<ImmutableList<ImmutableList<RexLiteral>>> tuples;
@@ -58,34 +58,29 @@ public class ValuesPhysicalRel extends AbstractRelNode implements PhysicalRel {
             List<ImmutableList<ImmutableList<RexLiteral>>> tuples
     ) {
         super(cluster, traits);
-        this.rowType = rowType;
 
+        this.rowType = rowType;
         this.filters = filters;
         this.projects = projects;
         this.tuples = tuples;
     }
 
+    @SuppressWarnings("unchecked")
     public List<Object[]> values() {
+        PlanNodeSchema schema = OptUtils.schema(getRowType());
+        RexVisitor<Expression<?>> converter = OptUtils.createRexToExpressionVisitor(schema);
+
         List<Object[]> rows = new ArrayList<>();
         for (int i = 0; i < filters.size(); i++) {
             RexNode filter = filters.get(i);
+            Expression<Boolean> predicate = filter == null ? null : (Expression<Boolean>) filter.accept(converter);
+
             List<RexNode> project = projects.get(i);
-            ImmutableList<ImmutableList<RexLiteral>> values = tuples.get(i);
+            List<Expression<?>> projection = project == null ? null : toList(project, node -> node.accept(converter));
 
-            PlanNodeSchema schema = OptUtils.schema(getRowType());
-            RexVisitor<Expression<?>> converter = OptUtils.createRexToExpressionVisitor(schema);
+            List<Object[]> values = OptUtils.convert(tuples.get(i));
 
-            Expression<Boolean> predicate = null;
-            if (filter != null) {
-                //noinspection unchecked
-                predicate = (Expression<Boolean>) filter.accept(converter);
-            }
-            List<Expression<?>> projection = null;
-            if (project != null) {
-                projection = toList(project, node -> node.accept(converter));
-            }
-
-            rows.addAll(ExpressionUtil.evaluate(predicate, projection, OptUtils.convert(values), NOT_IMPLEMENTED_ARGUMENTS_CONTEXT));
+            rows.addAll(ExpressionUtil.evaluate(predicate, projection, values, NOT_IMPLEMENTED_ARGUMENTS_CONTEXT));
         }
         return rows;
     }
@@ -101,11 +96,13 @@ public class ValuesPhysicalRel extends AbstractRelNode implements PhysicalRel {
     }
 
     @Override
-    public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        assert traitSet.containsIfApplicable(Convention.NONE);
-        assert inputs.isEmpty();
+    protected RelDataType deriveRowType() {
+        return rowType;
+    }
 
-        return new ValuesPhysicalRel(getCluster(), traitSet, getRowType(), filters, projects, tuples);
+    @Override
+    public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
+        return new ValuesPhysicalRel(getCluster(), traitSet, rowType, filters, projects, tuples);
     }
 
     @Override
