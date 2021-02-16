@@ -23,10 +23,6 @@ import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
 import com.hazelcast.sql.impl.row.HeapRow;
 import com.hazelcast.sql.impl.row.Row;
-import org.apache.calcite.rex.RexDynamicParam;
-import org.apache.calcite.rex.RexInputRef;
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.rex.RexVisitorImpl;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -156,38 +152,5 @@ public final class ExpressionUtil {
             @Nonnull ExpressionEvalContext context
     ) {
         return expression.eval(row, context);
-    }
-
-    /**
-     * Returns whether a {@link RexNode} contains any {@link RexDynamicParam}
-     * or {@link RexInputRef} element in the tree.
-     * <p>
-     * Useful to check an expression before it is used with {@link
-     * #NOT_IMPLEMENTED_ARGUMENTS_CONTEXT}.
-     */
-    public static boolean hasParamsOrColumns(RexNode node) {
-        class FindParamOrColumnVisitor extends RexVisitorImpl<Void> {
-            private boolean found;
-
-            protected FindParamOrColumnVisitor() {
-                super(true);
-            }
-
-            @Override
-            public Void visitDynamicParam(RexDynamicParam dynamicParam) {
-                found = true;
-                return null;
-            }
-
-            @Override
-            public Void visitInputRef(RexInputRef inputRef) {
-                found = true;
-                return null;
-            }
-        }
-
-        FindParamOrColumnVisitor visitor = new FindParamOrColumnVisitor();
-        node.accept(visitor);
-        return visitor.found;
     }
 }
