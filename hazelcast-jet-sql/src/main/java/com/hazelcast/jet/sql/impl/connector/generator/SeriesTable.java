@@ -30,7 +30,6 @@ import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.TableField;
 
-import java.io.Serializable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -88,7 +87,7 @@ class SeriesTable extends JetTable {
         }
     }
 
-    private static final class DataGenerator implements Serializable {
+    private static final class DataGenerator {
 
         private static final int MAX_BATCH_SIZE = 1024;
 
