@@ -39,6 +39,7 @@ import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryId;
+import com.hazelcast.sql.impl.SqlErrorCode;
 import com.hazelcast.sql.impl.SqlResultImpl;
 import com.hazelcast.sql.impl.row.HeapRow;
 
@@ -147,7 +148,7 @@ class JetPlanExecutor {
             if (plan.isIfExists()) {
                 return SqlResultImpl.createUpdateCountResult(0);
             }
-            throw QueryException.error("The snapshot doesnt exist: " + plan.getSnapshotName());
+            throw QueryException.error("The snapshot doesn't exist: " + plan.getSnapshotName());
         }
         snapshot.destroy();
         return SqlResultImpl.createUpdateCountResult(0);
@@ -172,7 +173,11 @@ class JetPlanExecutor {
                 Job job = jetInstance.newJob(jobId, plan.getDag(), new JobConfig());
                 job.getFuture().whenComplete((r, t) -> {
                     if (t != null) {
-                        queryResultProducer.onError(QueryException.error(t.toString(), t));
+                        int errorCode = t instanceof QueryException
+                                ? ((QueryException) t).getCode()
+                                : SqlErrorCode.GENERIC;
+                        queryResultProducer.onError(
+                                QueryException.error(errorCode, "The Jet SQL job failed: " + t.getMessage(), t));
                     }
                 });
             } catch (Throwable e) {
