@@ -30,7 +30,7 @@ public class JetSqlResultImplTest extends JetTestSupport {
 
     @Test
     // test for https://github.com/hazelcast/hazelcast-jet/issues/2697
-    public void when_closed_then_iteratorFails() throws InterruptedException {
+    public void when_closed_then_iteratorFails() {
         SqlResult sqlResult = createJetMember().getSql().execute("select * from table(generate_stream(1))");
         sqlResult.close();
         Iterator<SqlRow> iterator = sqlResult.iterator();

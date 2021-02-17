@@ -75,8 +75,9 @@ public class JetQueryResultProducer implements QueryResultProducer {
     }
 
     public void ensureNotDone() {
-        if (done.get() != null) {
-            throw new RuntimeException(done.get());
+        Exception exception = done.get();
+        if (exception != null) {
+            throw sneakyThrow(exception);
         }
     }
 
