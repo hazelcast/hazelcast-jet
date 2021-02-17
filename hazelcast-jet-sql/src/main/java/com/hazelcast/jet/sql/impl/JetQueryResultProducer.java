@@ -68,15 +68,16 @@ public class JetQueryResultProducer implements QueryResultProducer {
     }
 
     public void consume(Inbox inbox) {
-        check();
+        ensureNotDone();
         for (Object[] row; (row = (Object[]) inbox.peek()) != null && rows.offer(new HeapRow(row)); ) {
             inbox.remove();
         }
     }
 
-    public void check() {
-        if (done.get() != null) {
-            throw new RuntimeException(done.get());
+    public void ensureNotDone() {
+        Exception exception = done.get();
+        if (exception != null) {
+            throw sneakyThrow(exception);
         }
     }
 
@@ -89,8 +90,8 @@ public class JetQueryResultProducer implements QueryResultProducer {
 
         @Override
         public HasNextResult hasNext(long timeout, TimeUnit timeUnit) {
-            return nextRow != null || (nextRow = rows.poll()) != null ? YES
-                    : isDone() ? DONE
+            return isDone() ? DONE
+                    : hasRows() ? YES
                     : timeout == 0 ? TIMEOUT
                     : hasNextWait(System.nanoTime() + timeUnit.toNanos(timeout));
         }
@@ -115,11 +116,11 @@ public class JetQueryResultProducer implements QueryResultProducer {
         private HasNextResult hasNextWait(long endTimeNanos) {
             long idleCount = 0;
             do {
-                if (nextRow != null || (nextRow = rows.poll()) != null) {
-                    return YES;
-                }
                 if (isDone()) {
                     return DONE;
+                }
+                if (hasRows()) {
+                    return YES;
                 }
                 idler.idle(++idleCount);
             } while (System.nanoTime() < endTimeNanos);
@@ -138,11 +139,15 @@ public class JetQueryResultProducer implements QueryResultProducer {
             if (exception != null) {
                 if (exception instanceof NormalCompletionException) {
                     // finish the rows first
-                    return rows.isEmpty();
+                    return !hasRows();
                 }
                 throw sneakyThrow(exception);
             }
             return false;
+        }
+
+        private boolean hasRows() {
+            return nextRow != null || (nextRow = rows.poll()) != null;
         }
     }
 
