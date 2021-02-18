@@ -627,7 +627,7 @@ public class SqlFilterProjectTest extends SqlTestSupport {
     public void test_sinkMetadata() {
         sqlService.execute(javaSerializableMapDdl("m", Integer.class, Integer.class));
 
-        SqlResult result = sqlService.execute("SINK INTO m(__key, this) VALUES (1, 1)");
+        SqlResult result = sqlService.execute("SINK INTO m(__key, this) VALUES (1, 1), (2, 2)");
 
         assertThat(result.updateCount()).isEqualTo(0);
     }

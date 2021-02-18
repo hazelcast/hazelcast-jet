@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql;
 
-import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
 import com.hazelcast.jet.sql.impl.connector.test.TestBatchSqlConnector;
 import com.hazelcast.jet.sql.impl.connector.test.TestStreamSqlConnector;
 import com.hazelcast.sql.HazelcastSqlException;
@@ -744,29 +743,6 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_sum_allTypes() {
-        AllTypesSqlConnector.create(sqlService, "t");
-        assertRowsAnyOrder(
-                "SELECT " +
-                        "SUM(\"byte\"), " +
-                        "SUM(\"short\"), " +
-                        "SUM(\"int\"), " +
-                        "SUM(\"long\"), " +
-                        "SUM(\"float\"), " +
-                        "SUM(\"double\"), " +
-                        "SUM(\"decimal\")" +
-                        "FROM t",
-                singletonList(new Row(
-                        127L,
-                        32767L,
-                        2147483647L,
-                        new BigDecimal(9223372036854775807L),
-                        1234567890.1f,
-                        123451234567890.1,
-                        new BigDecimal("9223372036854775.123"))));
-    }
-
-    @Test
     public void test_avg() {
         String name = createTable(
                 new String[]{"Alice", "4"},
@@ -1003,7 +979,7 @@ public class SqlAggregateTest extends SqlTestSupport {
                 .hasMessageContaining("Function 'GROUPING SETS' does not exist");
     }
 
-    private String createTable(String[]... values) {
+    private static String createTable(String[]... values) {
         String name = randomName();
         TestBatchSqlConnector.create(
                 sqlService,

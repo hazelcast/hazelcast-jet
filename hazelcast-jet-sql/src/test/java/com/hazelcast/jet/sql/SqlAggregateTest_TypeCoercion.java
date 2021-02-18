@@ -20,7 +20,6 @@ import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
 import com.hazelcast.sql.SqlService;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -110,19 +109,6 @@ public class SqlAggregateTest_TypeCoercion extends SqlTestSupport {
                 .hasMessageContaining("Cannot apply 'SUM' function to [TIMESTAMP_WITH_TIME_ZONE]");
         assertThatThrownBy(() -> sqlService.execute("select sum(\"object\") from allTypesTable"))
                 .hasMessageContaining("Cannot apply 'SUM' function to [OBJECT]");
-    }
-
-    @Test
-    @Ignore // TODO
-    public void test_sum_integerOverflow() {
-        String sql = "select sum(" + Integer.MAX_VALUE + ") " +
-                "from table(generate_series(0, " + (Integer.MAX_VALUE + 1L) + "))";
-        assertThatThrownBy(() -> sqlService.execute(sql).iterator().hasNext())
-                .hasMessageContaining("BIGINT overflow in 'SUM' function");
-
-        // casted to DECIMAL should work
-        assertRowsAnyOrder("select sum(cast(a as decimal)) from t",
-                singletonList(new Row(new BigDecimal(Long.MAX_VALUE).multiply(new BigDecimal(2)))));
     }
 
     @Test

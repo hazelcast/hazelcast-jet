@@ -45,7 +45,6 @@ import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.DATE;
 import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.DECIMAL;
 import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.DOUBLE;
 import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.INTEGER;
-import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.NULL;
 import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.OBJECT;
 import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.REAL;
 import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.SMALLINT;
@@ -60,7 +59,6 @@ import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.fail;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeFalse;
-import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
 @UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
@@ -76,21 +74,21 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
     public static Object[] parameters() {
         return new Object[]{
                 // NULL
-//                TestParams.passingCase(1001, NULL, VARCHAR, "null", "null", null),
-//                TestParams.passingCase(1002, NULL, BOOLEAN, "null", "null", null),
-//                TestParams.passingCase(1003, NULL, TINYINT, "null", "null", null),
-//                TestParams.passingCase(1004, NULL, SMALLINT, "null", "null", null),
-//                TestParams.passingCase(1005, NULL, INTEGER, "null", "null", null),
-//                TestParams.passingCase(1006, NULL, BIGINT, "null", "null", null),
-//                TestParams.passingCase(1007, NULL, DECIMAL, "null", "null", null),
-//                TestParams.passingCase(1008, NULL, REAL, "null", "null", null),
-//                TestParams.passingCase(1009, NULL, DOUBLE, "null", "null", null),
-//                TestParams.passingCase(1010, NULL, TIME, "null", "null", null),
-//                TestParams.passingCase(1011, NULL, DATE, "null", "null", null),
-//                TestParams.passingCase(1012, NULL, TIMESTAMP, "null", "null", null),
-//                TestParams.passingCase(1013, NULL, TIMESTAMP_WITH_TIME_ZONE, "null", "null", null),
-//                TestParams.failingCase(1014, NULL, OBJECT, "null",
-//                        "null", "Writing to top-level fields of type OBJECT not supported"),
+//                TestParams.passingCase(1001, NULL, VARCHAR, "null", null, null),
+//                TestParams.passingCase(1002, NULL, BOOLEAN, "null", null, null),
+//                TestParams.passingCase(1003, NULL, TINYINT, "null", null, null),
+//                TestParams.passingCase(1004, NULL, SMALLINT, "null", null, null),
+//                TestParams.passingCase(1005, NULL, INTEGER, "null", null, null),
+//                TestParams.passingCase(1006, NULL, BIGINT, "null", null, null),
+//                TestParams.passingCase(1007, NULL, DECIMAL, "null", null, null),
+//                TestParams.passingCase(1008, NULL, REAL, "null", null, null),
+//                TestParams.passingCase(1009, NULL, DOUBLE, "null", null, null),
+//                TestParams.passingCase(1010, NULL, TIME, "null", null, null),
+//                TestParams.passingCase(1011, NULL, DATE, "null", null, null),
+//                TestParams.passingCase(1012, NULL, TIMESTAMP, "null", null, null),
+//                TestParams.passingCase(1013, NULL, TIMESTAMP_WITH_TIME_ZONE, null, "null", null),
+//                TestParams.failingCase(1014, NULL, OBJECT, "null", null,
+//                        "Writing to top-level fields of type OBJECT not supported"),
 
                 // VARCHAR
                 TestParams.passingCase(1101, VARCHAR, VARCHAR, "'foo'", "foo", "foo"),
@@ -582,8 +580,6 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
         //  Calcite converts these to `CASE WHEN bool THEN 0 ELSE 1 END`, we don't support CASE yet.
         assumeFalse(testParams.srcType == BOOLEAN && testParams.targetType.isNumeric());
 
-        assumeTrue(testParams.srcType != NULL && testParams.targetType != NULL);
-
         // the TestBatchSource doesn't support OBJECT type
         assumeFalse(testParams.srcType == OBJECT);
 
@@ -636,8 +632,6 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
         // TODO remove this assume after https://github.com/hazelcast/hazelcast/pull/18067 is merged.
         //  Calcite converts these to `CASE WHEN bool THEN 0 ELSE 1 END`, we don't support CASE yet.
         assumeFalse(testParams.srcType == BOOLEAN && testParams.targetType.isNumeric());
-
-        assumeTrue(testParams.srcType != NULL && testParams.targetType != NULL);
 
         // TODO remove this once we support the TIMESTAMP and TIMESTAMP_WITH_TIME_ZONE literals
         assumeFalse(testParams.targetType == TIMESTAMP || testParams.targetType == TIMESTAMP_WITH_TIME_ZONE);
