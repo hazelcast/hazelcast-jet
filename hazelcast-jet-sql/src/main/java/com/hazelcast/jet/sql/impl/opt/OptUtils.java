@@ -35,14 +35,12 @@ import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleOperand;
-import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.prepare.RelOptTableImpl;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -128,7 +126,6 @@ public final class OptUtils {
         JetTable table = hazelcastTable.getTarget();
 
         HazelcastRelOptTable relTable = createRelTable(
-                null,
                 table.getQualifiedName(),
                 hazelcastTable,
                 cluster.getTypeFactory()
@@ -137,7 +134,6 @@ public final class OptUtils {
     }
 
     private static HazelcastRelOptTable createRelTable(
-            RelOptSchema relOptSchema,
             List<String> names,
             HazelcastTable hazelcastTable,
             RelDataTypeFactory typeFactory
@@ -145,7 +141,7 @@ public final class OptUtils {
         RelDataType rowType = hazelcastTable.getRowType(typeFactory);
 
         RelOptTableImpl relTable = RelOptTableImpl.create(
-                relOptSchema,
+                null,
                 rowType,
                 names,
                 hazelcastTable,
@@ -229,9 +225,9 @@ public final class OptUtils {
         return new RexToExpressionVisitor(schema, new QueryParameterMetadata());
     }
 
-    public static List<Object[]> convert(Values values) {
-        List<Object[]> rows = new ArrayList<>(values.getTuples().size());
-        for (List<RexLiteral> tuple : values.getTuples()) {
+    public static List<Object[]> convert(ImmutableList<ImmutableList<RexLiteral>> values) {
+        List<Object[]> rows = new ArrayList<>(values.size());
+        for (List<RexLiteral> tuple : values) {
 
             Object[] result = new Object[tuple.size()];
             for (int i = 0; i < tuple.size(); i++) {
@@ -245,22 +241,20 @@ public final class OptUtils {
         return rows;
     }
 
-    public static List<Object[]> convert(Values values, RelDataType rowType) {
-        List<QueryDataType> types = extractFieldTypes(rowType);
+    /**
+     * Converts a {@link TableField} to {@link RelDataType}.
+     */
+    public static RelDataType convert(TableField field, RelDataTypeFactory typeFactory) {
+        QueryDataType fieldType = field.getType();
 
-        List<Object[]> rows = new ArrayList<>(values.getTuples().size());
-        for (List<RexLiteral> tuple : values.getTuples()) {
+        SqlTypeName sqlTypeName = HazelcastTypeUtils.toCalciteType(fieldType);
 
-            Object[] result = new Object[tuple.size()];
-            for (int i = 0; i < tuple.size(); i++) {
-                RexLiteral literal = tuple.get(i);
-                Expression<?> expression = RexToExpression.convertLiteral(literal);
-                Object value = expression.eval(null, null);
-                result[i] = types.get(i).convert(value);
-            }
-            rows.add(result);
+        if (sqlTypeName == null) {
+            throw new IllegalStateException("Unexpected type family: " + fieldType);
         }
-        return rows;
+
+        RelDataType relType = typeFactory.createSqlType(sqlTypeName);
+        return typeFactory.createTypeWithNullability(relType, true);
     }
 
     /**

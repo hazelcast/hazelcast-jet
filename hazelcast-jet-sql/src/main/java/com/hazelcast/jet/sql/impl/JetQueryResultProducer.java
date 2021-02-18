@@ -30,6 +30,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.sql.impl.ResultIterator.HasNextResult.DONE;
 import static com.hazelcast.sql.impl.ResultIterator.HasNextResult.TIMEOUT;
 import static com.hazelcast.sql.impl.ResultIterator.HasNextResult.YES;
@@ -67,15 +68,16 @@ public class JetQueryResultProducer implements QueryResultProducer {
     }
 
     public void consume(Inbox inbox) {
-        check();
+        ensureNotDone();
         for (Object[] row; (row = (Object[]) inbox.peek()) != null && rows.offer(new HeapRow(row)); ) {
             inbox.remove();
         }
     }
 
-    public void check() {
-        if (done.get() != null) {
-            throw new RuntimeException(done.get());
+    public void ensureNotDone() {
+        Exception exception = done.get();
+        if (exception != null) {
+            throw sneakyThrow(exception);
         }
     }
 
@@ -139,7 +141,7 @@ public class JetQueryResultProducer implements QueryResultProducer {
                     // finish the rows first
                     return rows.isEmpty();
                 }
-                throw new RuntimeException("The Jet SQL job failed: " + exception.getMessage(), exception);
+                throw sneakyThrow(exception);
             }
             return false;
         }

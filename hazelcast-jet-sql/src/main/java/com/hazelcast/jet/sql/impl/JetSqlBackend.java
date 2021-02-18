@@ -148,11 +148,11 @@ class JetSqlBackend implements SqlBackend {
             OptimizerContext context
     ) {
         SqlNode node = parseResult.getNode();
-        
+
         if (parseResult.getParameterMetadata() != null && parseResult.getParameterMetadata().getParameterCount() != 0) {
             throw QueryException.error("Query parameters not yet supported");
         }
-        
+
         if (node instanceof SqlCreateMapping) {
             return toCreateMappingPlan((SqlCreateMapping) node);
         } else if (node instanceof SqlDropMapping) {
@@ -239,7 +239,12 @@ class JetSqlBackend implements SqlBackend {
         return new ShowStatementPlan(sqlNode.getTarget(), planExecutor);
     }
 
-    private SelectOrSinkPlan toPlan(RelNode rel, List<String> fieldNames, OptimizerContext context, boolean isInfiniteRows) {
+    private SelectOrSinkPlan toPlan(
+            RelNode rel,
+            List<String> fieldNames,
+            OptimizerContext context,
+            boolean isInfiniteRows
+    ) {
         logger.fine("Before logical opt:\n" + RelOptUtil.toString(rel));
         LogicalRel logicalRel = optimizeLogical(context, rel);
         logger.fine("After logical opt:\n" + RelOptUtil.toString(logicalRel));

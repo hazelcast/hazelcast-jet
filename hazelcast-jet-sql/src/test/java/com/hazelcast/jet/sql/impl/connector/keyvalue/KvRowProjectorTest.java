@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector.keyvalue;
 
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.sql.impl.expression.ColumnExpression;
@@ -105,7 +106,8 @@ public class KvRowProjectorTest {
         }
 
         @Override
-        public void setTarget(Object value) {
+        public void setTarget(Object value, Data valueData) {
+            assert valueData == null;
             this.value = value;
         }
 

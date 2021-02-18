@@ -62,7 +62,7 @@ public class CreateDagVisitor {
     }
 
     public Vertex onValues(ValuesPhysicalRel rel) {
-        List<Object[]> values = rel.values();
+        List<Object[]> values = rel.tuples();
 
         return dag.newUniqueVertex("Values", convenientSourceP(
                 pCtx -> null,

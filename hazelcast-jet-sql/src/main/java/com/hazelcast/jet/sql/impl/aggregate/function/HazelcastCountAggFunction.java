@@ -42,7 +42,7 @@ public class HazelcastCountAggFunction extends HazelcastAggFunction {
         super(
                 "COUNT",
                 SqlKind.COUNT,
-                opBinding -> HazelcastIntegerType.create(64, false),
+                opBinding -> HazelcastIntegerType.create(Long.SIZE, false),
                 new IgnoreCountStarOperandTypeInference(new ReplaceUnknownOperandTypeInference(BIGINT)),
                 null,
                 SqlFunctionCategory.NUMERIC,
@@ -62,7 +62,7 @@ public class HazelcastCountAggFunction extends HazelcastAggFunction {
             SqlValidatorScope scope,
             SqlCall call
     ) {
-        return HazelcastIntegerType.create(64, false);
+        return HazelcastIntegerType.create(Long.SIZE, false);
     }
 
     protected boolean checkOperandTypes(HazelcastCallBinding binding, boolean throwOnFailure) {
@@ -83,7 +83,7 @@ public class HazelcastCountAggFunction extends HazelcastAggFunction {
     private static class IgnoreCountStarOperandTypeInference implements SqlOperandTypeInference {
         private final SqlOperandTypeInference delegate;
 
-        public IgnoreCountStarOperandTypeInference(SqlOperandTypeInference delegate) {
+        IgnoreCountStarOperandTypeInference(SqlOperandTypeInference delegate) {
             this.delegate = delegate;
         }
 

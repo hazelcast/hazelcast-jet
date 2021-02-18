@@ -44,6 +44,8 @@ public final class SumSqlAggregations {
                 return new SumLongSqlAggregation();
             case DECIMAL:
                 return new SumDecimalSqlAggregation();
+            case REAL:
+                return new SumRealSqlAggregation();
             case DOUBLE:
                 return new SumDoubleSqlAggregation();
             default:
@@ -64,7 +66,7 @@ public final class SumSqlAggregations {
             }
 
             try {
-                sum = Math.addExact(sum, ((Number) value).longValue());
+                sum = Math.addExact(sum, (long) value);
             } catch (ArithmeticException e) {
                 throw QueryException.dataException(QueryDataTypeFamily.BIGINT + " overflow in 'SUM' function " +
                                                    "(consider adding explicit CAST to DECIMAL)");
@@ -141,6 +143,49 @@ public final class SumSqlAggregations {
     }
 
     @NotThreadSafe
+    private static final class SumRealSqlAggregation implements SqlAggregation {
+
+        private float sum;
+        private boolean initialized;
+
+        @Override
+        public void accumulate(Object value) {
+            if (value == null) {
+                return;
+            }
+
+            sum += (float) value;
+            initialized = true;
+        }
+
+        @Override
+        public void combine(SqlAggregation other0) {
+            SumRealSqlAggregation other = (SumRealSqlAggregation) other0;
+
+            if (other.initialized) {
+                accumulate(other.sum);
+            }
+        }
+
+        @Override
+        public Object collect() {
+            return initialized ? sum : null;
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+            out.writeFloat(sum);
+            out.writeBoolean(initialized);
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
+            sum = in.readFloat();
+            initialized = in.readBoolean();
+        }
+    }
+
+    @NotThreadSafe
     private static final class SumDoubleSqlAggregation implements SqlAggregation {
 
         private double sum;
@@ -152,7 +197,7 @@ public final class SumSqlAggregations {
                 return;
             }
 
-            sum += ((Number) value).doubleValue();
+            sum += (double) value;
             initialized = true;
         }
 

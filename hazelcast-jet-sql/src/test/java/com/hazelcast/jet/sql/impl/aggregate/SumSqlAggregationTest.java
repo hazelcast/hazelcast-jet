@@ -56,6 +56,7 @@ public class SumSqlAggregationTest {
                 new Object[]{QueryDataType.BIGINT, 1L, 2L, 3L},
                 new Object[]{QueryDataType.DECIMAL, new BigDecimal(1), new BigDecimal(2),
                         new BigDecimal(3)},
+                new Object[]{QueryDataType.REAL, 1F, 2F, 3F},
                 new Object[]{QueryDataType.DOUBLE, 1D, 2D, 3D},
                 new Object[]{QueryDataType.BIGINT, 1L, null, 1L},
                 new Object[]{QueryDataType.BIGINT, null, 1L, 1L},
@@ -63,6 +64,9 @@ public class SumSqlAggregationTest {
                 new Object[]{QueryDataType.DECIMAL, new BigDecimal(1), null, new BigDecimal(1)},
                 new Object[]{QueryDataType.DECIMAL, null, new BigDecimal(1), new BigDecimal(1)},
                 new Object[]{QueryDataType.DECIMAL, null, null, null},
+                new Object[]{QueryDataType.REAL, 1F, null, 1F},
+                new Object[]{QueryDataType.REAL, null, 1F, 1F},
+                new Object[]{QueryDataType.REAL, null, null, null},
                 new Object[]{QueryDataType.DOUBLE, 1D, null, 1D},
                 new Object[]{QueryDataType.DOUBLE, null, 1D, 1D},
                 new Object[]{QueryDataType.DOUBLE, null, null, null},
@@ -117,7 +121,7 @@ public class SumSqlAggregationTest {
     @Test
     public void test_serialization() {
         SqlAggregation original = SumSqlAggregations.from(QueryDataType.BIGINT, false);
-        original.accumulate((byte) 1);
+        original.accumulate(1L);
 
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
         SqlAggregation serialized = ss.toObject(ss.toData(original));

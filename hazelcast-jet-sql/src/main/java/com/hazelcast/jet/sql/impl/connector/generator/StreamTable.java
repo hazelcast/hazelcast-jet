@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector.generator;
 
+import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.SourceBuilder.SourceBuffer;
@@ -59,7 +60,8 @@ class StreamTable extends JetTable {
         int rate = this.rate;
         return SourceBuilder
                 .stream("stream", ctx -> {
-                    SimpleExpressionEvalContext context = new SimpleExpressionEvalContext(((ProcSupplierCtx) ctx).serializationService());
+                    InternalSerializationService serializationService = ((ProcSupplierCtx) ctx).serializationService();
+                    SimpleExpressionEvalContext context = new SimpleExpressionEvalContext(serializationService);
                     return new StreamGenerator(rate, predicate, projections, context);
                 })
                 .fillBufferFn(StreamGenerator::fillBuffer)

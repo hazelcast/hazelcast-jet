@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobStateSnapshot;
 import com.hazelcast.jet.config.JobConfig;
@@ -40,6 +39,7 @@ import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryId;
+import com.hazelcast.sql.impl.SqlErrorCode;
 import com.hazelcast.sql.impl.SqlResultImpl;
 import com.hazelcast.sql.impl.row.HeapRow;
 
@@ -58,11 +58,11 @@ class JetPlanExecutor {
 
     JetPlanExecutor(
             MappingCatalog catalog,
-            JetInstance jetInstance,
+            AbstractJetInstance jetInstance,
             Map<Long, JetQueryResultProducer> resultConsumerRegistry
     ) {
         this.catalog = catalog;
-        this.jetInstance = (AbstractJetInstance) jetInstance;
+        this.jetInstance = jetInstance;
         this.resultConsumerRegistry = resultConsumerRegistry;
     }
 
@@ -148,7 +148,7 @@ class JetPlanExecutor {
             if (plan.isIfExists()) {
                 return SqlResultImpl.createUpdateCountResult(0);
             }
-            throw QueryException.error("The snapshot doesnt exist: " + plan.getSnapshotName());
+            throw QueryException.error("The snapshot doesn't exist: " + plan.getSnapshotName());
         }
         snapshot.destroy();
         return SqlResultImpl.createUpdateCountResult(0);
@@ -173,7 +173,11 @@ class JetPlanExecutor {
                 Job job = jetInstance.newJob(jobId, plan.getDag(), new JobConfig());
                 job.getFuture().whenComplete((r, t) -> {
                     if (t != null) {
-                        queryResultProducer.onError(QueryException.error(t.toString(), t));
+                        int errorCode = t instanceof QueryException
+                                ? ((QueryException) t).getCode()
+                                : SqlErrorCode.GENERIC;
+                        queryResultProducer.onError(
+                                QueryException.error(errorCode, "The Jet SQL job failed: " + t.getMessage(), t));
                     }
                 });
             } catch (Throwable e) {
@@ -186,7 +190,8 @@ class JetPlanExecutor {
     }
 
     public SqlResult execute(ShowStatementPlan plan) {
-        SqlRowMetadata metadata = new SqlRowMetadata(singletonList(new SqlColumnMetadata("name", SqlColumnType.VARCHAR, false)));
+        SqlRowMetadata metadata = new SqlRowMetadata(
+                singletonList(new SqlColumnMetadata("name", SqlColumnType.VARCHAR, false)));
         Stream<String> rows;
         if (plan.getShowTarget() == ShowStatementTarget.MAPPINGS) {
             rows = catalog.getMappingNames().stream();

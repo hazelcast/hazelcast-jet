@@ -118,8 +118,8 @@ final class JoinByEquiJoinProcessorSupplier implements ProcessorSupplier, DataSe
                     : new PartitionIdSet(partitionCount, this.partitions);
             QueryPath[] rightPaths = rightRowProjectorSupplier.paths();
             KvRowProjector rightProjector = rightRowProjectorSupplier.get(serializationService, extractors);
-            Processor processor =
-                    new TransformP<Object[], Object[]>(joinFn(joinInfo, map, partitions, rightPaths, rightProjector, evalContext)
+            Processor processor = new TransformP<Object[], Object[]>(
+                            joinFn(joinInfo, map, partitions, rightPaths, rightProjector, evalContext)
                     ) {
                         @Override
                         public boolean isCooperative() {

@@ -45,7 +45,6 @@ import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.DATE;
 import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.DECIMAL;
 import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.DOUBLE;
 import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.INTEGER;
-import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.NULL;
 import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.OBJECT;
 import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.REAL;
 import static com.hazelcast.sql.impl.type.QueryDataTypeFamily.SMALLINT;
@@ -60,7 +59,6 @@ import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.fail;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeFalse;
-import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
 @UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
@@ -71,25 +69,26 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
 
     private final SqlService sqlService = instance().getSql();
 
-    @Parameters(name="{0}")
+    @SuppressWarnings({"checkstyle:LineLength", "checkstyle:MethodLength"})
+    @Parameters(name = "{0}")
     public static Object[] parameters() {
         return new Object[]{
                 // NULL
-//                TestParams.passingCase(1001, NULL, VARCHAR, "null", "null", null),
-//                TestParams.passingCase(1002, NULL, BOOLEAN, "null", "null", null),
-//                TestParams.passingCase(1003, NULL, TINYINT, "null", "null", null),
-//                TestParams.passingCase(1004, NULL, SMALLINT, "null", "null", null),
-//                TestParams.passingCase(1005, NULL, INTEGER, "null", "null", null),
-//                TestParams.passingCase(1006, NULL, BIGINT, "null", "null", null),
-//                TestParams.passingCase(1007, NULL, DECIMAL, "null", "null", null),
-//                TestParams.passingCase(1008, NULL, REAL, "null", "null", null),
-//                TestParams.passingCase(1009, NULL, DOUBLE, "null", "null", null),
-//                TestParams.passingCase(1010, NULL, TIME, "null", "null", null),
-//                TestParams.passingCase(1011, NULL, DATE, "null", "null", null),
-//                TestParams.passingCase(1012, NULL, TIMESTAMP, "null", "null", null),
-//                TestParams.passingCase(1013, NULL, TIMESTAMP_WITH_TIME_ZONE, "null", "null", null),
-//                TestParams.failingCase(1014, NULL, OBJECT, "null",
-//                        "null", "Writing to top-level fields of type OBJECT not supported"),
+//                TestParams.passingCase(1001, NULL, VARCHAR, "null", null, null),
+//                TestParams.passingCase(1002, NULL, BOOLEAN, "null", null, null),
+//                TestParams.passingCase(1003, NULL, TINYINT, "null", null, null),
+//                TestParams.passingCase(1004, NULL, SMALLINT, "null", null, null),
+//                TestParams.passingCase(1005, NULL, INTEGER, "null", null, null),
+//                TestParams.passingCase(1006, NULL, BIGINT, "null", null, null),
+//                TestParams.passingCase(1007, NULL, DECIMAL, "null", null, null),
+//                TestParams.passingCase(1008, NULL, REAL, "null", null, null),
+//                TestParams.passingCase(1009, NULL, DOUBLE, "null", null, null),
+//                TestParams.passingCase(1010, NULL, TIME, "null", null, null),
+//                TestParams.passingCase(1011, NULL, DATE, "null", null, null),
+//                TestParams.passingCase(1012, NULL, TIMESTAMP, "null", null, null),
+//                TestParams.passingCase(1013, NULL, TIMESTAMP_WITH_TIME_ZONE, null, "null", null),
+//                TestParams.failingCase(1014, NULL, OBJECT, "null", null,
+//                        "Writing to top-level fields of type OBJECT not supported"),
 
                 // VARCHAR
                 TestParams.passingCase(1101, VARCHAR, VARCHAR, "'foo'", "foo", "foo"),
@@ -141,13 +140,14 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
                 TestParams.failingCase(1124, VARCHAR, DATE, "'foo'", "foo",
                         "Cannot parse VARCHAR value to DATE")
                         .setExpectedFailureNonLiteral("Cannot assign to target field 'this' of type DATE from source field 'v' of type VARCHAR"),
-                TestParams.passingCase(1125, VARCHAR, TIMESTAMP, "'2020-12-30T01:42:00'", "2020-12-30T01:42:00", LocalDateTime.of(2020, 12, 30, 1, 42))
+                TestParams.passingCase(1125, VARCHAR, TIMESTAMP, "'2020-12-30T01:42:00'", "2020-12-30T01:42:00",
+                        LocalDateTime.of(2020, 12, 30, 1, 42))
                         .setExpectedFailureNonLiteral("Cannot assign to target field 'this' of type TIMESTAMP from source field 'v' of type VARCHAR"),
                 TestParams.failingCase(1126, VARCHAR, TIMESTAMP, "'foo'", "foo",
                         "Cannot parse VARCHAR value to TIMESTAMP")
                         .setExpectedFailureNonLiteral("Cannot assign to target field 'this' of type TIMESTAMP from source field 'v' of type VARCHAR"),
-                TestParams.passingCase(1127, VARCHAR, TIMESTAMP_WITH_TIME_ZONE, "'2020-12-30T01:42:00-05:00'", "2020-12-30T01:42:00-05:00",
-                        OffsetDateTime.of(2020, 12, 30, 1, 42, 0, 0, ZoneOffset.ofHours(-5)))
+                TestParams.passingCase(1127, VARCHAR, TIMESTAMP_WITH_TIME_ZONE, "'2020-12-30T01:42:00-05:00'",
+                        "2020-12-30T01:42:00-05:00", OffsetDateTime.of(2020, 12, 30, 1, 42, 0, 0, ZoneOffset.ofHours(-5)))
                         .setExpectedFailureNonLiteral("Cannot assign to target field 'this' of type TIMESTAMP_WITH_TIME_ZONE from source field 'v' of type VARCHAR"),
                 TestParams.failingCase(1128, VARCHAR, TIMESTAMP_WITH_TIME_ZONE, "'foo'", "foo",
                         "Cannot parse VARCHAR value to TIMESTAMP_WITH_TIME_ZONE")
@@ -352,7 +352,7 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
 
                 // DOUBLE
                 TestParams.failingCase(1901, DOUBLE, VARCHAR, "cast(42 as double)", "42",
-                        "Cannot assign to target field 'this' of type VARCHAR from source field 'EXPR$1' of type DOUBLE"),
+                        "Cannot assign to target field 'this' of type VARCHAR from source field '.+' of type DOUBLE"),
                 TestParams.failingCase(1902, DOUBLE, BOOLEAN, "cast(42 as double)",
                         "42", "Cannot assign to target field 'this' of type BOOLEAN from source field '.+' of type DOUBLE"),
                 TestParams.passingCase(1903, DOUBLE, TINYINT, "cast(42 as double)", "42", (byte) 42),
@@ -437,7 +437,8 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
                         "2020-12-30", "Cannot assign to target field 'this' of type DOUBLE from source field '.+' of type DATE"),
                 TestParams.failingCase(2110, DATE, TIME, "cast('2020-12-30' as date)",
                         "2020-12-30", "Cannot assign to target field 'this' of type TIME from source field '.+' of type DATE"),
-                TestParams.passingCase(2111, DATE, DATE, "cast('2020-12-30' as date)", "2020-12-30", LocalDate.of(2020, 12, 30)),
+                TestParams.passingCase(2111, DATE, DATE, "cast('2020-12-30' as date)", "2020-12-30",
+                        LocalDate.of(2020, 12, 30)),
                 TestParams.passingCase(2112, DATE, TIMESTAMP, "cast('2020-12-30' as date)", "2020-12-30",
                         LocalDateTime.of(2020, 12, 30, 0, 0)),
                 TestParams.passingCase(2113, DATE, TIMESTAMP_WITH_TIME_ZONE, "cast('2020-12-30' as date)", "2020-12-30",
@@ -470,14 +471,14 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
                         LocalDate.of(2020, 12, 30)),
                 TestParams.passingCase(2212, TIMESTAMP, TIMESTAMP, "cast('2020-12-30T01:42:00' as timestamp)", "2020-12-30T01:42:00",
                         LocalDateTime.of(2020, 12, 30, 1, 42)),
-                TestParams.passingCase(2213, TIMESTAMP, TIMESTAMP_WITH_TIME_ZONE, "cast('2020-12-30T01:42:00' as timestamp)", "2020-12-30T01:42:00",
-                        ZonedDateTime.of(2020, 12, 30, 1, 42, 0, 0, DEFAULT_ZONE).toOffsetDateTime()),
+                TestParams.passingCase(2213, TIMESTAMP, TIMESTAMP_WITH_TIME_ZONE, "cast('2020-12-30T01:42:00' as timestamp)",
+                        "2020-12-30T01:42:00", ZonedDateTime.of(2020, 12, 30, 1, 42, 0, 0, DEFAULT_ZONE).toOffsetDateTime()),
                 TestParams.failingCase(2214, TIMESTAMP, OBJECT, "cast('2020-12-30T01:42:00' as timestamp)",
                         "2020-12-30T01:42:00", "Writing to top-level fields of type OBJECT not supported"),
 
                 // TIMESTAMP WITH TIME ZONE
-                TestParams.failingCase(2301, TIMESTAMP_WITH_TIME_ZONE, VARCHAR, "cast('2020-12-30T01:42:00-05:00' as timestamp with local time zone)", "2020-12-30T01:42:00-05:00",
-                        "Cannot assign to target field 'this' of type VARCHAR from source field '.+' of type TIMESTAMP_WITH_TIME_ZONE"),
+                TestParams.failingCase(2301, TIMESTAMP_WITH_TIME_ZONE, VARCHAR, "cast('2020-12-30T01:42:00-05:00' as timestamp with local time zone)",
+                        "2020-12-30T01:42:00-05:00", "Cannot assign to target field 'this' of type VARCHAR from source field '.+' of type TIMESTAMP_WITH_TIME_ZONE"),
                 TestParams.failingCase(2302, TIMESTAMP_WITH_TIME_ZONE, BOOLEAN, "cast('2020-12-30T01:42:00-05:00' as timestamp with local time zone)",
                         "2020-12-30T01:42:00-05:00", "Cannot assign to target field 'this' of type BOOLEAN from source field '.+' of type TIMESTAMP_WITH_TIME_ZONE"),
                 TestParams.failingCase(2303, TIMESTAMP_WITH_TIME_ZONE, TINYINT, "cast('2020-12-30T01:42:00-05:00' as timestamp with local time zone)",
@@ -494,9 +495,12 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
                         "2020-12-30T01:42:00-05:00", "Cannot assign to target field 'this' of type REAL from source field '.+' of type TIMESTAMP_WITH_TIME_ZONE"),
                 TestParams.failingCase(2309, TIMESTAMP_WITH_TIME_ZONE, DOUBLE, "cast('2020-12-30T01:42:00-05:00' as timestamp with local time zone)",
                         "2020-12-30T01:42:00-05:00", "Cannot assign to target field 'this' of type DOUBLE from source field '.+' of type TIMESTAMP_WITH_TIME_ZONE"),
-                TestParams.passingCase(2310, TIMESTAMP_WITH_TIME_ZONE, TIME, "cast('2020-12-30T01:42:00-05:00' as timestamp with local time zone)", "2020-12-30T01:42:00-05:00", LocalTime.of(1, 42)),
-                TestParams.passingCase(2311, TIMESTAMP_WITH_TIME_ZONE, DATE, "cast('2020-12-30T01:42:00-05:00' as timestamp with local time zone)", "2020-12-30T01:42:00-05:00", LocalDate.of(2020, 12, 30)),
-                TestParams.passingCase(2312, TIMESTAMP_WITH_TIME_ZONE, TIMESTAMP, "cast('2020-12-30T01:42:00-05:00' as timestamp with local time zone)", "2020-12-30T01:42:00-05:00", LocalDateTime.of(2020, 12, 30, 1, 42)),
+                TestParams.passingCase(2310, TIMESTAMP_WITH_TIME_ZONE, TIME, "cast('2020-12-30T01:42:00-05:00' as timestamp with local time zone)",
+                        "2020-12-30T01:42:00-05:00", LocalTime.of(1, 42)),
+                TestParams.passingCase(2311, TIMESTAMP_WITH_TIME_ZONE, DATE, "cast('2020-12-30T01:42:00-05:00' as timestamp with local time zone)",
+                        "2020-12-30T01:42:00-05:00", LocalDate.of(2020, 12, 30)),
+                TestParams.passingCase(2312, TIMESTAMP_WITH_TIME_ZONE, TIMESTAMP, "cast('2020-12-30T01:42:00-05:00' as timestamp with local time zone)",
+                        "2020-12-30T01:42:00-05:00", LocalDateTime.of(2020, 12, 30, 1, 42)),
                 TestParams.passingCase(2313, TIMESTAMP_WITH_TIME_ZONE, TIMESTAMP_WITH_TIME_ZONE, "cast('2020-12-30T01:42:00-05:00' as timestamp with local time zone)",
                         "2020-12-30T01:42:00-05:00", OffsetDateTime.of(2020, 12, 30, 1, 42, 0, 0, ZoneOffset.ofHours(-5))),
                 TestParams.failingCase(2314, TIMESTAMP_WITH_TIME_ZONE, OBJECT, "cast('2020-12-30T01:42:00-05:00' as timestamp with local time zone)",
@@ -513,9 +517,12 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
                 TestParams.passingCase(2408, OBJECT, REAL, "cast(cast(1.5 as real) as object)", null, 1.5f),
                 TestParams.passingCase(2409, OBJECT, DOUBLE, "cast(cast(1.5 as double) as object)", null, 1.5d),
                 TestParams.passingCase(2410, OBJECT, TIME, "cast(cast('01:42:00' as time) as object)", null, LocalTime.of(1, 42)),
-                TestParams.passingCase(2411, OBJECT, DATE, "cast(cast('2020-12-30' as date) as object)", null, LocalDate.of(2020, 12, 30)),
-                TestParams.passingCase(2412, OBJECT, TIMESTAMP, "cast(cast('2020-12-30T01:42:00' as timestamp) as object)", null, LocalDateTime.of(2020, 12, 30, 1, 42)),
-                TestParams.passingCase(2413, OBJECT, TIMESTAMP_WITH_TIME_ZONE, "cast(cast('2020-12-30T01:42:00-05:00' as timestamp with local time zone) as object)",
+                TestParams.passingCase(2411, OBJECT, DATE, "cast(cast('2020-12-30' as date) as object)", null,
+                        LocalDate.of(2020, 12, 30)),
+                TestParams.passingCase(2412, OBJECT, TIMESTAMP, "cast(cast('2020-12-30T01:42:00' as timestamp) as object)", null,
+                        LocalDateTime.of(2020, 12, 30, 1, 42)),
+                TestParams.passingCase(2413, OBJECT, TIMESTAMP_WITH_TIME_ZONE,
+                        "cast(cast('2020-12-30T01:42:00-05:00' as timestamp with local time zone) as object)",
                         null, OffsetDateTime.of(2020, 12, 30, 1, 42, 0, 0, ZoneOffset.ofHours(-5))),
                 TestParams.failingCase(2414, OBJECT, OBJECT, "cast('2020-12-30T01:42:00-05:00' as object)",
                         null, "Writing to top-level fields of type OBJECT not supported"),
@@ -531,6 +538,10 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
     public void test_insertValues() {
         // TODO remove this once we support the TIMESTAMP and TIMESTAMP_WITH_TIME_ZONE literals
         assumeFalse(testParams.targetType == TIMESTAMP || testParams.targetType == TIMESTAMP_WITH_TIME_ZONE);
+
+        // these fail due to a calcite issue that converts temporal literals casted to OBJECT to INT
+        // or BIGINT casted to OBJECT
+        assumeFalse(testParams.srcType == OBJECT && testParams.targetType.isTemporal());
 
         Class<?> targetClass = javaClassForType(testParams.targetType);
         String sql = "CREATE MAPPING m type IMap " +
@@ -569,8 +580,6 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
         //  Calcite converts these to `CASE WHEN bool THEN 0 ELSE 1 END`, we don't support CASE yet.
         assumeFalse(testParams.srcType == BOOLEAN && testParams.targetType.isNumeric());
 
-        assumeTrue(testParams.srcType != NULL && testParams.targetType != NULL);
-
         // the TestBatchSource doesn't support OBJECT type
         assumeFalse(testParams.srcType == OBJECT);
 
@@ -593,7 +602,8 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
             logger.info(sql);
             sqlService.execute(sql);
             if (testParams.expectedFailureNonLiteral != null) {
-                fail("Expected to fail with \"" + testParams.expectedFailureNonLiteral + "\", but no exception was thrown");
+                fail("Expected to fail with \"" + testParams.expectedFailureNonLiteral
+                        + "\", but no exception was thrown");
             }
             if (testParams.expectedFailureRegex != null) {
                 fail("Expected to fail with \"" + testParams.expectedFailureRegex + "\", but no exception was thrown");
@@ -623,10 +633,12 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
         //  Calcite converts these to `CASE WHEN bool THEN 0 ELSE 1 END`, we don't support CASE yet.
         assumeFalse(testParams.srcType == BOOLEAN && testParams.targetType.isNumeric());
 
-        assumeTrue(testParams.srcType != NULL && testParams.targetType != NULL);
-
         // TODO remove this once we support the TIMESTAMP and TIMESTAMP_WITH_TIME_ZONE literals
         assumeFalse(testParams.targetType == TIMESTAMP || testParams.targetType == TIMESTAMP_WITH_TIME_ZONE);
+
+        // these fail due to a calcite issue that converts temporal literals casted to OBJECT to INT
+        // or BIGINT casted to OBJECT
+        assumeFalse(testParams.srcType == OBJECT && testParams.targetType.isTemporal());
 
         Class<?> targetClass = javaClassForType(testParams.targetType);
         TestBatchSqlConnector.create(sqlService, "src", 1);
@@ -671,7 +683,7 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
                          .getNormalizedValueClass();
     }
 
-    private static class TestParams {
+    private static final class TestParams {
         private final int testId;
         private final QueryDataTypeFamily srcType;
         private final QueryDataTypeFamily targetType;
@@ -681,7 +693,8 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
         private final Pattern expectedFailureRegex;
         private String expectedFailureNonLiteral;
 
-        private TestParams(int testId, QueryDataTypeFamily srcType, QueryDataTypeFamily targetType, String valueLiteral, String valueTestSource, Object targetValue, String expectedFailureRegex) {
+        private TestParams(int testId, QueryDataTypeFamily srcType, QueryDataTypeFamily targetType, String valueLiteral,
+                           String valueTestSource, Object targetValue, String expectedFailureRegex) {
             this.testId = testId;
             this.srcType = srcType;
             this.targetType = targetType;
@@ -691,11 +704,13 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
             this.expectedFailureRegex = expectedFailureRegex != null ? Pattern.compile(expectedFailureRegex) : null;
         }
 
-        static TestParams passingCase(int testId, QueryDataTypeFamily srcType, QueryDataTypeFamily targetType, String valueLiteral, String valueTestSource, Object targetValue) {
+        static TestParams passingCase(int testId, QueryDataTypeFamily srcType, QueryDataTypeFamily targetType,
+                                      String valueLiteral, String valueTestSource, Object targetValue) {
             return new TestParams(testId, srcType, targetType, valueLiteral, valueTestSource, targetValue, null);
         }
 
-        static TestParams failingCase(int testId, QueryDataTypeFamily srcType, QueryDataTypeFamily targetType, String valueLiteral, String valueTestSource, String errorMsg) {
+        static TestParams failingCase(int testId, QueryDataTypeFamily srcType, QueryDataTypeFamily targetType,
+                                      String valueLiteral, String valueTestSource, String errorMsg) {
             return new TestParams(testId, srcType, targetType, valueLiteral, valueTestSource, null, errorMsg);
         }
 

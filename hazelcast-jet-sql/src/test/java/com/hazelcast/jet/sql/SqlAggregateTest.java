@@ -699,8 +699,8 @@ public class SqlAggregateTest extends SqlTestSupport {
         assertRowsAnyOrder(
                 "SELECT name, SUM(distance * 2) FROM " + name + " GROUP BY name",
                 asList(
-                        new Row("Alice", 6L),
-                        new Row("Bob", 2L)
+                        new Row("Alice", new BigDecimal(6)),
+                        new Row("Bob", new BigDecimal(2))
                 )
         );
     }
@@ -736,8 +736,8 @@ public class SqlAggregateTest extends SqlTestSupport {
         assertRowsAnyOrder(
                 "SELECT name, SUM(distance * 2) s FROM " + name + " GROUP BY name HAVING s > 4",
                 asList(
-                        new Row("Alice", 6L),
-                        new Row("Joey", 6L)
+                        new Row("Alice", new BigDecimal(6)),
+                        new Row("Joey", new BigDecimal(6))
                 )
         );
     }

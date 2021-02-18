@@ -17,19 +17,15 @@
 package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
-import com.hazelcast.jet.sql.impl.connector.test.TestBatchSqlConnector;
 import com.hazelcast.sql.SqlService;
-import com.hazelcast.sql.impl.type.QueryDataType;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.util.Collections;
-import java.util.List;
+import java.util.stream.Collectors;
 
-import static com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector.ALL_TYPES_ROW;
-import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -39,7 +35,7 @@ public class SqlAggregateTest_TypeCoercion extends SqlTestSupport {
 
     @BeforeClass
     public static void beforeClass() {
-        initialize(2, null);
+        initialize(1, null);
         sqlService = instance().getSql();
     }
 
@@ -49,23 +45,27 @@ public class SqlAggregateTest_TypeCoercion extends SqlTestSupport {
     }
 
     @Test
+    public void test_groupBy() {
+        AllTypesSqlConnector.create(sqlService, "t");
+        String allFields = AllTypesSqlConnector.FIELD_LIST.stream()
+                                                          .map(f -> "\"" + f.name() + '"')
+                                                          .collect(Collectors.joining(", "));
+        assertRowsAnyOrder(
+                "SELECT " + allFields + " " +
+                        "FROM t " +
+                        "GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14",
+                singletonList(AllTypesSqlConnector.ALL_TYPES_ROW));
+    }
+
+    @Test
     public void test_count() {
+        String allFields = AllTypesSqlConnector.FIELD_LIST.stream()
+                                                          .map(f -> "COUNT(\"" + f.name() + "\")")
+                                                          .collect(Collectors.joining(", "));
+
         assertRowsAnyOrder("select " +
-                        "count(string), " +
-                        "count(\"boolean\"), " +
-                        "count(byte), " +
-                        "count(short), " +
-                        "count(\"int\"), " +
-                        "count(long), " +
-                        "count(\"float\"), " +
-                        "count(\"double\"), " +
-                        "count(\"decimal\")," +
-                        "count(\"time\")," +
-                        "count(\"date\")," +
-                        "count(\"timestamp\")," +
-                        "count(\"timestampTz\")," +
-                        "count(\"object\")," +
-                        "count(null) " +
+                        allFields +
+                        ", count(null) " +
                         "from allTypesTable",
                 Collections.singleton(new Row(1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 0L, 0L)));
     }
@@ -86,8 +86,8 @@ public class SqlAggregateTest_TypeCoercion extends SqlTestSupport {
                         127L,
                         32767L,
                         2147483647L,
-                        9223372036854775807L,
-                        (double) 1234567890.1f,
+                        new BigDecimal(9223372036854775807L),
+                        1234567890.1f,
                         123451234567890.1,
                         new BigDecimal("9223372036854775.123"),
                         null)));
@@ -109,21 +109,6 @@ public class SqlAggregateTest_TypeCoercion extends SqlTestSupport {
                 .hasMessageContaining("Cannot apply 'SUM' function to [TIMESTAMP_WITH_TIME_ZONE]");
         assertThatThrownBy(() -> sqlService.execute("select sum(\"object\") from allTypesTable"))
                 .hasMessageContaining("Cannot apply 'SUM' function to [OBJECT]");
-    }
-
-    @Test
-    public void test_sum_integerOverflow() {
-        TestBatchSqlConnector.create(sqlService, "t", singletonList("a"), singletonList(QueryDataType.BIGINT),
-                asList(
-                        new String[]{"" + Long.MAX_VALUE},
-                        new String[]{"" + Long.MAX_VALUE}));
-
-        assertThatThrownBy(() -> sqlService.execute("select sum(a) from t").iterator().hasNext())
-                .hasMessageContaining("BIGINT overflow in 'SUM' function");
-
-        // casted to DECIMAL should work
-        assertRowsAnyOrder("select sum(cast(a as decimal)) from t",
-                singletonList(new Row(new BigDecimal(Long.MAX_VALUE).multiply(new BigDecimal(2)))));
     }
 
     @Test
@@ -168,63 +153,27 @@ public class SqlAggregateTest_TypeCoercion extends SqlTestSupport {
     }
 
     @Test
-    public void test_avg_integerOverflow() {
-        TestBatchSqlConnector.create(sqlService, "t", singletonList("a"), singletonList(QueryDataType.BIGINT),
-                asList(
-                        new String[]{"" + Long.MAX_VALUE},
-                        new String[]{"" + Long.MAX_VALUE}));
-
-        List<Row> expectedResult = singletonList(new Row(new BigDecimal(Long.MAX_VALUE)));
-
-        // we don't have AVG(bigint), only AVG(decimal), therefore it won't overflow
-        assertRowsAnyOrder("select avg(a) from t", expectedResult);
-
-        // explicitly casted to DECIMAL won't overflow too
-        assertRowsAnyOrder("select avg(cast(a as decimal)) from t", expectedResult);
-    }
-
-    @Test
     public void test_min() {
-        assertRowsAnyOrder("select " +
-                        "min(string), " +
-                        "min(\"boolean\"), " +
-                        "min(byte), " +
-                        "min(short), " +
-                        "min(\"int\"), " +
-                        "min(long), " +
-                        "min(\"float\"), " +
-                        "min(\"double\"), " +
-                        "min(\"decimal\")," +
-                        "min(\"time\")," +
-                        "min(\"date\")," +
-                        "min(\"timestamp\")," +
-                        "min(\"timestampTz\")," +
-                        "min(\"object\") " +
-                        "from allTypesTable",
-                Collections.singleton(ALL_TYPES_ROW));
+        AllTypesSqlConnector.create(sqlService, "t");
+        String allFields = AllTypesSqlConnector.FIELD_LIST.stream()
+                                                          .map(f -> "MIN(\"" + f.name() + "\")")
+                                                          .collect(Collectors.joining(", "));
+
+        assertRowsAnyOrder("SELECT " + allFields + "FROM t",
+                singletonList(AllTypesSqlConnector.ALL_TYPES_ROW));
 
         assertRowsAnyOrder("select min(null) from allTypesTable", singletonList(new Row((Object) null)));
     }
 
     @Test
     public void test_max() {
-        assertRowsAnyOrder("select " +
-                        "max(string), " +
-                        "max(\"boolean\"), " +
-                        "max(byte), " +
-                        "max(short), " +
-                        "max(\"int\"), " +
-                        "max(long), " +
-                        "max(\"float\"), " +
-                        "max(\"double\"), " +
-                        "max(\"decimal\")," +
-                        "max(\"time\")," +
-                        "max(\"date\")," +
-                        "max(\"timestamp\")," +
-                        "max(\"timestampTz\")," +
-                        "max(\"object\") " +
-                        "from allTypesTable",
-                Collections.singleton(ALL_TYPES_ROW));
+        AllTypesSqlConnector.create(sqlService, "t");
+        String allFields = AllTypesSqlConnector.FIELD_LIST.stream()
+                                                          .map(f -> "MAX(\"" + f.name() + "\")")
+                                                          .collect(Collectors.joining(", "));
+
+        assertRowsAnyOrder("SELECT " + allFields + "FROM t",
+                singletonList(AllTypesSqlConnector.ALL_TYPES_ROW));
 
         assertRowsAnyOrder("select max(null) from allTypesTable", singletonList(new Row((Object) null)));
     }

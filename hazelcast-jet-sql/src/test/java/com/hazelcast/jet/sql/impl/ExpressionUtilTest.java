@@ -116,7 +116,8 @@ public class ExpressionUtilTest {
         MultiplyFunction<?> projection =
                 MultiplyFunction.create(ColumnExpression.create(0, INT), ConstantExpression.create(2, INT), INT);
 
-        List<Object[]> evaluated = ExpressionUtil.evaluate(null, singletonList(projection), rows, NOT_IMPLEMENTED_ARGUMENTS_CONTEXT);
+        List<Object[]> evaluated = ExpressionUtil.evaluate(null, singletonList(projection), rows,
+                NOT_IMPLEMENTED_ARGUMENTS_CONTEXT);
 
         assertThat(evaluated).containsExactly(new Object[]{0}, new Object[]{2}, new Object[]{4});
     }
@@ -132,7 +133,8 @@ public class ExpressionUtilTest {
         MultiplyFunction<?> projection =
                 MultiplyFunction.create(ColumnExpression.create(0, INT), ConstantExpression.create(2, INT), INT);
 
-        List<Object[]> evaluated = ExpressionUtil.evaluate(predicate, singletonList(projection), rows, NOT_IMPLEMENTED_ARGUMENTS_CONTEXT);
+        List<Object[]> evaluated = ExpressionUtil.evaluate(predicate, singletonList(projection), rows,
+                NOT_IMPLEMENTED_ARGUMENTS_CONTEXT);
 
         assertThat(evaluated).containsExactly(new Object[]{0}, new Object[]{4});
     }
