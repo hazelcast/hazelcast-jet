@@ -152,6 +152,8 @@ public class PortableUpsertTargetTest {
                 new Object[]{new ClassDefinitionBuilder(1, 2, 3).addDoubleArrayField("object").build(), new double[0]},
                 new Object[]{new ClassDefinitionBuilder(1, 2, 3).addDecimalArrayField("object").build(), null},
                 new Object[]{new ClassDefinitionBuilder(1, 2, 3).addDecimalArrayField("object").build(), new BigDecimal[0]},
+                new Object[]{new ClassDefinitionBuilder(1, 2, 3).addStringArrayField("object").build(), null},
+                new Object[]{new ClassDefinitionBuilder(1, 2, 3).addStringArrayField("object").build(), new String[0]},
                 new Object[]{new ClassDefinitionBuilder(1, 2, 3).addTimeArrayField("object").build(), null},
                 new Object[]{new ClassDefinitionBuilder(1, 2, 3).addTimeArrayField("object").build(), new LocalTime[0]},
                 new Object[]{new ClassDefinitionBuilder(1, 2, 3).addDateArrayField("object").build(), null},
@@ -160,8 +162,6 @@ public class PortableUpsertTargetTest {
                 new Object[]{new ClassDefinitionBuilder(1, 2, 3).addTimestampArrayField("object").build(), new LocalDateTime[0]},
                 new Object[]{new ClassDefinitionBuilder(1, 2, 3).addTimestampWithTimezoneArrayField("object").build(), null},
                 new Object[]{new ClassDefinitionBuilder(1, 2, 3).addTimestampWithTimezoneArrayField("object").build(), new OffsetDateTime[0]},
-                new Object[]{new ClassDefinitionBuilder(1, 2, 3).addStringArrayField("object").build(), null},
-                new Object[]{new ClassDefinitionBuilder(1, 2, 3).addStringArrayField("object").build(), new String[0]},
                 new Object[]{new ClassDefinitionBuilder(1, 2, 3).addPortableArrayField("object", innerClassDefinition).build(), null},
                 new Object[]{new ClassDefinitionBuilder(1, 2, 3).addPortableArrayField("object", innerClassDefinition).build(), new GenericRecord[0]},
         };

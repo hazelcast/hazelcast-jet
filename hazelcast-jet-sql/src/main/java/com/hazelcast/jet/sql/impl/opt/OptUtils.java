@@ -257,22 +257,6 @@ public final class OptUtils {
         return typeFactory.createTypeWithNullability(relType, true);
     }
 
-    /**
-     * Converts a {@link TableField} to {@link RelDataType}.
-     */
-    public static RelDataType convert(TableField field, RelDataTypeFactory typeFactory) {
-        QueryDataType fieldType = field.getType();
-
-        SqlTypeName sqlTypeName = HazelcastTypeUtils.toCalciteType(fieldType);
-
-        if (sqlTypeName == null) {
-            throw new IllegalStateException("Unexpected type family: " + fieldType);
-        }
-
-        RelDataType relType = typeFactory.createSqlType(sqlTypeName);
-        return typeFactory.createTypeWithNullability(relType, true);
-    }
-
     private static List<QueryDataType> extractFieldTypes(RelDataType rowType) {
         return Util.toList(rowType.getFieldList(),
                 f -> HazelcastTypeUtils.toHazelcastType(f.getType().getSqlTypeName()));

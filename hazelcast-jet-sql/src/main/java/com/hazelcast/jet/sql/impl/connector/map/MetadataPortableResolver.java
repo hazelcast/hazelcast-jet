@@ -263,8 +263,7 @@ final class MetadataPortableResolver implements KvMetadataResolver {
                     classDefinitionBuilder.addTimestampWithTimezoneField(name);
                     break;
                 default:
-                    throw QueryException.error("Can not create class definition."
-                                               + " The type " + type + " is not supported for Portable.");
+                    throw QueryException.error("Type " + type + " is not supported for Portable.");
             }
         }
         return classDefinitionBuilder.build();

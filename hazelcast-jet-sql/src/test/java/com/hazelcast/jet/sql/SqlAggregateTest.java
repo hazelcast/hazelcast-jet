@@ -979,7 +979,7 @@ public class SqlAggregateTest extends SqlTestSupport {
                 .hasMessageContaining("Function 'GROUPING SETS' does not exist");
     }
 
-    private String createTable(String[]... values) {
+    private static String createTable(String[]... values) {
         String name = randomName();
         TestBatchSqlConnector.create(
                 sqlService,
