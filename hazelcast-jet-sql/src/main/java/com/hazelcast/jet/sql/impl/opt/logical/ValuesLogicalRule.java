@@ -24,7 +24,6 @@ import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.logical.LogicalValues;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
-import static java.util.Collections.singletonList;
 
 final class ValuesLogicalRule extends ConverterRule {
 
@@ -45,7 +44,7 @@ final class ValuesLogicalRule extends ConverterRule {
                 values.getCluster(),
                 OptUtils.toLogicalConvention(values.getTraitSet()),
                 values.getRowType(),
-                singletonList(values.getTuples())
+                OptUtils.convert(values.getTuples())
         );
     }
 }

@@ -17,7 +17,10 @@
 package com.hazelcast.jet.sql.impl.opt.logical;
 
 import com.google.common.collect.ImmutableList;
+import com.hazelcast.jet.sql.impl.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
+import com.hazelcast.sql.impl.expression.Expression;
+import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptRule;
@@ -39,10 +42,13 @@ import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexVisitor;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.hazelcast.jet.impl.util.Util.toList;
+import static com.hazelcast.jet.sql.impl.ExpressionUtil.NOT_IMPLEMENTED_ARGUMENTS_CONTEXT;
 import static org.apache.calcite.plan.RelOptRule.none;
 import static org.apache.calcite.plan.RelOptRule.operand;
 import static org.apache.calcite.plan.RelOptRule.unordered;
@@ -125,27 +131,41 @@ final class ValuesReduceRules {
                     ValuesReduceRules.class.getSimpleName() + "(Union)"
             ) {
                 @Override
+                @SuppressWarnings("unchecked")
                 public void onMatch(RelOptRuleCall call) {
                     Union union = call.rel(0);
 
-                    List<RexNode> filters = new ArrayList<>();
-                    List<List<RexNode>> projects = new ArrayList<>();
-                    List<ImmutableList<ImmutableList<RexLiteral>>> tuples = new ArrayList<>();
+                    PlanNodeSchema schema = OptUtils.schema(union.getRowType());
+                    RexVisitor<Expression<?>> converter = OptUtils.createRexToExpressionVisitor(schema);
+
+                    List<Object[]> rows = new ArrayList<>();
                     for (RelNode input : union.getInputs()) {
                         ReducedLogicalValues values = OptUtils.findMatchingRel(input, REDUCED_VALUES_CHILD_OPERAND);
 
-                        filters.add(values.filter());
-                        projects.add(values.project());
-                        tuples.add(values.tuples());
+                        RexNode filter = values.filter();
+                        Expression<Boolean> predicate = filter == null
+                                ? null
+                                : (Expression<Boolean>) filter.accept(converter);
+
+                        List<RexNode> project = values.project();
+                        List<Expression<?>> projection = project == null
+                                ? null
+                                : toList(project, node -> node.accept(converter));
+
+                        List<Object[]> row = ExpressionUtil.evaluate(
+                                predicate,
+                                projection,
+                                OptUtils.convert(values.tuples()),
+                                NOT_IMPLEMENTED_ARGUMENTS_CONTEXT
+                        );
+                        rows.addAll(row);
                     }
 
                     RelNode rel = new ValuesLogicalRel(
                             union.getCluster(),
                             OptUtils.toLogicalConvention(union.getTraitSet()),
                             union.getRowType(),
-                            filters,
-                            projects,
-                            tuples
+                            rows
                     );
                     call.transformTo(rel);
                 }
