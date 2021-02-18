@@ -73,23 +73,6 @@ public class SinkTypeCoercionTest extends SqlTestSupport {
     @Parameters(name = "{0}")
     public static Object[] parameters() {
         return new Object[]{
-                // NULL
-//                TestParams.passingCase(1001, NULL, VARCHAR, "null", null, null),
-//                TestParams.passingCase(1002, NULL, BOOLEAN, "null", null, null),
-//                TestParams.passingCase(1003, NULL, TINYINT, "null", null, null),
-//                TestParams.passingCase(1004, NULL, SMALLINT, "null", null, null),
-//                TestParams.passingCase(1005, NULL, INTEGER, "null", null, null),
-//                TestParams.passingCase(1006, NULL, BIGINT, "null", null, null),
-//                TestParams.passingCase(1007, NULL, DECIMAL, "null", null, null),
-//                TestParams.passingCase(1008, NULL, REAL, "null", null, null),
-//                TestParams.passingCase(1009, NULL, DOUBLE, "null", null, null),
-//                TestParams.passingCase(1010, NULL, TIME, "null", null, null),
-//                TestParams.passingCase(1011, NULL, DATE, "null", null, null),
-//                TestParams.passingCase(1012, NULL, TIMESTAMP, "null", null, null),
-//                TestParams.passingCase(1013, NULL, TIMESTAMP_WITH_TIME_ZONE, null, "null", null),
-//                TestParams.failingCase(1014, NULL, OBJECT, "null", null,
-//                        "Writing to top-level fields of type OBJECT not supported"),
-
                 // VARCHAR
                 TestParams.passingCase(1101, VARCHAR, VARCHAR, "'foo'", "foo", "foo"),
                 TestParams.failingCase(1102, VARCHAR, BOOLEAN, "'true'", "true",
