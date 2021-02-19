@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector.kafka;
 
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
-import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers;
+import com.hazelcast.jet.sql.impl.connector.keyvalue.JavaClassNameResolver;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -26,7 +26,6 @@ import java.util.Properties;
 import java.util.Set;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
@@ -77,8 +76,6 @@ final class PropertiesResolver {
     }
 
     static Properties resolveConsumerProperties(Map<String, String> options) {
-        options = KvMetadataResolvers.preprocessOptions(options, true);
-        options = KvMetadataResolvers.preprocessOptions(options, false);
         Properties properties = from(options);
 
         withSerdeConsumerProperties(true, options, properties);
@@ -88,8 +85,6 @@ final class PropertiesResolver {
     }
 
     static Properties resolveProducerProperties(Map<String, String> options) {
-        options = KvMetadataResolvers.preprocessOptions(options, true);
-        options = KvMetadataResolvers.preprocessOptions(options, false);
         Properties properties = from(options);
 
         withSerdeProducerProperties(true, options, properties);
@@ -121,8 +116,15 @@ final class PropertiesResolver {
         String format = options.get(isKey ? OPTION_KEY_FORMAT : OPTION_VALUE_FORMAT);
         if (format == null && isKey) {
             properties.putIfAbsent(deserializer, BYTE_ARRAY_DESERIALIZER);
-        } else if (JAVA_FORMAT.equals(format)) {
-            String clazz = options.get(isKey ? SqlConnector.OPTION_KEY_CLASS : SqlConnector.OPTION_VALUE_CLASS);
+        } else if (AVRO_FORMAT.equals(format)) {
+            properties.putIfAbsent(deserializer, AVRO_DESERIALIZER);
+        } else if (JSON_FORMAT.equals(format)) {
+            properties.putIfAbsent(deserializer, BYTE_ARRAY_DESERIALIZER);
+        } else {
+            String clazz = JavaClassNameResolver.resolveClassName(
+                    format,
+                    options.get(isKey ? SqlConnector.OPTION_KEY_CLASS : SqlConnector.OPTION_VALUE_CLASS)
+            );
             if (Short.class.getName().equals(clazz) || short.class.getName().equals(clazz)) {
                 properties.putIfAbsent(deserializer, SHORT_DESERIALIZER);
             } else if (Integer.class.getName().equals(clazz) || int.class.getName().equals(clazz)) {
@@ -136,10 +138,6 @@ final class PropertiesResolver {
             } else if (String.class.getName().equals(clazz)) {
                 properties.putIfAbsent(deserializer, STRING_DESERIALIZER);
             }
-        } else if (AVRO_FORMAT.equals(format)) {
-            properties.putIfAbsent(deserializer, AVRO_DESERIALIZER);
-        } else if (JSON_FORMAT.equals(format)) {
-            properties.putIfAbsent(deserializer, BYTE_ARRAY_DESERIALIZER);
         }
     }
 
@@ -153,8 +151,15 @@ final class PropertiesResolver {
         String format = options.get(isKey ? OPTION_KEY_FORMAT : OPTION_VALUE_FORMAT);
         if (format == null && isKey) {
             properties.putIfAbsent(serializer, BYTE_ARRAY_SERIALIZER);
-        } else if (JAVA_FORMAT.equals(format)) {
-            String clazz = options.get(isKey ? SqlConnector.OPTION_KEY_CLASS : SqlConnector.OPTION_VALUE_CLASS);
+        } else if (AVRO_FORMAT.equals(format)) {
+            properties.putIfAbsent(serializer, AVRO_SERIALIZER);
+        } else if (JSON_FORMAT.equals(format)) {
+            properties.putIfAbsent(serializer, BYTE_ARRAY_SERIALIZER);
+        } else {
+            String clazz = JavaClassNameResolver.resolveClassName(
+                    format,
+                    options.get(isKey ? SqlConnector.OPTION_KEY_CLASS : SqlConnector.OPTION_VALUE_CLASS)
+            );
             if (Short.class.getName().equals(clazz) || short.class.getName().equals(clazz)) {
                 properties.putIfAbsent(serializer, SHORT_SERIALIZER);
             } else if (Integer.class.getName().equals(clazz) || int.class.getName().equals(clazz)) {
@@ -168,10 +173,6 @@ final class PropertiesResolver {
             } else if (String.class.getName().equals(clazz)) {
                 properties.putIfAbsent(serializer, STRING_SERIALIZER);
             }
-        } else if (AVRO_FORMAT.equals(format)) {
-            properties.putIfAbsent(serializer, AVRO_SERIALIZER);
-        } else if (JSON_FORMAT.equals(format)) {
-            properties.putIfAbsent(serializer, BYTE_ARRAY_SERIALIZER);
         }
     }
 }

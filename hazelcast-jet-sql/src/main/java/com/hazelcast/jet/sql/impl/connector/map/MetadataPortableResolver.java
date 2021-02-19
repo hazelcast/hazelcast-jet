@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS_ID;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS_VERSION;
@@ -57,8 +58,8 @@ final class MetadataPortableResolver implements KvMetadataResolver {
     }
 
     @Override
-    public String supportedFormat() {
-        return PORTABLE_FORMAT;
+    public Stream<String> supportedFormats() {
+        return Stream.of(PORTABLE_FORMAT);
     }
 
     @Override
