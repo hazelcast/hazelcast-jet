@@ -26,6 +26,7 @@ import java.util.Properties;
 import java.util.Set;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
@@ -120,24 +121,42 @@ final class PropertiesResolver {
             properties.putIfAbsent(deserializer, AVRO_DESERIALIZER);
         } else if (JSON_FORMAT.equals(format)) {
             properties.putIfAbsent(deserializer, BYTE_ARRAY_DESERIALIZER);
-        } else {
-            String clazz = JavaClassNameResolver.resolveClassName(
-                    format,
-                    options.get(isKey ? SqlConnector.OPTION_KEY_CLASS : SqlConnector.OPTION_VALUE_CLASS)
-            );
-            if (Short.class.getName().equals(clazz) || short.class.getName().equals(clazz)) {
-                properties.putIfAbsent(deserializer, SHORT_DESERIALIZER);
-            } else if (Integer.class.getName().equals(clazz) || int.class.getName().equals(clazz)) {
-                properties.putIfAbsent(deserializer, INT_DESERIALIZER);
-            } else if (Long.class.getName().equals(clazz) || long.class.getName().equals(clazz)) {
-                properties.putIfAbsent(deserializer, LONG_DESERIALIZER);
-            } else if (Float.class.getName().equals(clazz) || float.class.getName().equals(clazz)) {
-                properties.putIfAbsent(deserializer, FLOAT_DESERIALIZER);
-            } else if (Double.class.getName().equals(clazz) || double.class.getName().equals(clazz)) {
-                properties.putIfAbsent(deserializer, DOUBLE_DESERIALIZER);
-            } else if (String.class.getName().equals(clazz)) {
-                properties.putIfAbsent(deserializer, STRING_DESERIALIZER);
+        } else if (JAVA_FORMAT.equals(format)) {
+            String clazz = options.get(isKey ? SqlConnector.OPTION_KEY_CLASS : SqlConnector.OPTION_VALUE_CLASS);
+            String deserializerClass = resolveDeserializer(clazz);
+            if (deserializerClass != null) {
+                properties.putIfAbsent(deserializer, deserializerClass);
             }
+        } else {
+            String resolvedClass = JavaClassNameResolver.resolveClassName(format);
+            if (resolvedClass != null) {
+                String declaredClass =
+                        options.get(isKey ? SqlConnector.OPTION_KEY_CLASS : SqlConnector.OPTION_VALUE_CLASS);
+                if (declaredClass == null || declaredClass.equals(resolvedClass)) {
+                    String deserializerClass = resolveDeserializer(resolvedClass);
+                    if (deserializerClass != null) {
+                        properties.putIfAbsent(deserializer, deserializerClass);
+                    }
+                }
+            }
+        }
+    }
+
+    private static String resolveDeserializer(String clazz) {
+        if (Short.class.getName().equals(clazz) || short.class.getName().equals(clazz)) {
+            return SHORT_DESERIALIZER;
+        } else if (Integer.class.getName().equals(clazz) || int.class.getName().equals(clazz)) {
+            return INT_DESERIALIZER;
+        } else if (Long.class.getName().equals(clazz) || long.class.getName().equals(clazz)) {
+            return LONG_DESERIALIZER;
+        } else if (Float.class.getName().equals(clazz) || float.class.getName().equals(clazz)) {
+            return FLOAT_DESERIALIZER;
+        } else if (Double.class.getName().equals(clazz) || double.class.getName().equals(clazz)) {
+            return DOUBLE_DESERIALIZER;
+        } else if (String.class.getName().equals(clazz)) {
+            return STRING_DESERIALIZER;
+        } else {
+            return null;
         }
     }
 
@@ -155,24 +174,42 @@ final class PropertiesResolver {
             properties.putIfAbsent(serializer, AVRO_SERIALIZER);
         } else if (JSON_FORMAT.equals(format)) {
             properties.putIfAbsent(serializer, BYTE_ARRAY_SERIALIZER);
-        } else {
-            String clazz = JavaClassNameResolver.resolveClassName(
-                    format,
-                    options.get(isKey ? SqlConnector.OPTION_KEY_CLASS : SqlConnector.OPTION_VALUE_CLASS)
-            );
-            if (Short.class.getName().equals(clazz) || short.class.getName().equals(clazz)) {
-                properties.putIfAbsent(serializer, SHORT_SERIALIZER);
-            } else if (Integer.class.getName().equals(clazz) || int.class.getName().equals(clazz)) {
-                properties.putIfAbsent(serializer, INT_SERIALIZER);
-            } else if (Long.class.getName().equals(clazz) || long.class.getName().equals(clazz)) {
-                properties.putIfAbsent(serializer, LONG_SERIALIZER);
-            } else if (Float.class.getName().equals(clazz) || float.class.getName().equals(clazz)) {
-                properties.putIfAbsent(serializer, FLOAT_SERIALIZER);
-            } else if (Double.class.getName().equals(clazz) || double.class.getName().equals(clazz)) {
-                properties.putIfAbsent(serializer, DOUBLE_SERIALIZER);
-            } else if (String.class.getName().equals(clazz)) {
-                properties.putIfAbsent(serializer, STRING_SERIALIZER);
+        } else if (JAVA_FORMAT.equals(format)) {
+            String clazz = options.get(isKey ? SqlConnector.OPTION_KEY_CLASS : SqlConnector.OPTION_VALUE_CLASS);
+            String serializerClass = resolveSerializer(clazz);
+            if (serializerClass != null) {
+                properties.putIfAbsent(serializer, serializerClass);
             }
+        } else {
+            String resolvedClass = JavaClassNameResolver.resolveClassName(format);
+            if (resolvedClass != null) {
+                String declaredClass =
+                        options.get(isKey ? SqlConnector.OPTION_KEY_CLASS : SqlConnector.OPTION_VALUE_CLASS);
+                if (declaredClass == null || declaredClass.equals(resolvedClass)) {
+                    String serializerClass = resolveSerializer(resolvedClass);
+                    if (serializerClass != null) {
+                        properties.putIfAbsent(serializer, serializerClass);
+                    }
+                }
+            }
+        }
+    }
+
+    private static String resolveSerializer(String clazz) {
+        if (Short.class.getName().equals(clazz) || short.class.getName().equals(clazz)) {
+            return SHORT_SERIALIZER;
+        } else if (Integer.class.getName().equals(clazz) || int.class.getName().equals(clazz)) {
+            return INT_SERIALIZER;
+        } else if (Long.class.getName().equals(clazz) || long.class.getName().equals(clazz)) {
+            return LONG_SERIALIZER;
+        } else if (Float.class.getName().equals(clazz) || float.class.getName().equals(clazz)) {
+            return FLOAT_SERIALIZER;
+        } else if (Double.class.getName().equals(clazz) || double.class.getName().equals(clazz)) {
+            return DOUBLE_SERIALIZER;
+        } else if (String.class.getName().equals(clazz)) {
+            return STRING_SERIALIZER;
+        } else {
+            return null;
         }
     }
 }

@@ -52,8 +52,8 @@ public final class JavaClassNameResolver {
     private JavaClassNameResolver() {
     }
 
-    public static String resolveClassName(String format, String className) {
-        return className == null ? CLASS_NAMES_BY_FORMAT.get(format) : className;
+    public static String resolveClassName(String format) {
+        return CLASS_NAMES_BY_FORMAT.get(format);
     }
 
     static Stream<String> formats() {

@@ -232,10 +232,22 @@ public final class KvMetadataJavaResolver implements KvMetadataResolver {
     }
 
     private Class<?> loadClass(boolean isKey, Map<String, String> options) {
-        String format = options.get(isKey ? OPTION_KEY_FORMAT : OPTION_VALUE_FORMAT);
-
+        String formatProperty = options.get(isKey ? OPTION_KEY_FORMAT : OPTION_VALUE_FORMAT);
         String classNameProperty = isKey ? OPTION_KEY_CLASS : OPTION_VALUE_CLASS;
-        String className = JavaClassNameResolver.resolveClassName(format, options.get(classNameProperty));
+
+        String className;
+        if (JAVA_FORMAT.equals(formatProperty)) {
+            className = options.get(classNameProperty);
+        } else {
+            String declaredClassName = options.get(classNameProperty);
+            String resolvedClassName = JavaClassNameResolver.resolveClassName(formatProperty);
+            if (declaredClassName != null && !declaredClassName.equals(resolvedClassName)) {
+                throw QueryException.error("Mismatch between declared and resolved class for format '"
+                        + formatProperty + "'");
+            }
+            className = resolvedClassName;
+        }
+
         if (className == null) {
             throw QueryException.error("Unable to resolve table metadata. Missing '" + classNameProperty + "' option");
         }
