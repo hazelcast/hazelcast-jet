@@ -27,27 +27,30 @@ import java.util.stream.Stream;
 
 public final class JavaClassNameResolver {
 
-    private static final Map<String, String> CLASS_NAMES_BY_FORMAT = new HashMap<String, String>() {{
-        put("varchar", String.class.getName());
-        put("character varying", String.class.getName());
-        put("char varying", String.class.getName());
-        put("boolean", Boolean.class.getName());
-        put("tinyint", Byte.class.getName());
-        put("smallint", Short.class.getName());
-        put("integer", Integer.class.getName());
-        put("int", Integer.class.getName());
-        put("bigint", Long.class.getName());
-        put("decimal", BigDecimal.class.getName());
-        put("dec", BigDecimal.class.getName());
-        put("numeric", BigDecimal.class.getName());
-        put("real", Float.class.getName());
-        put("double", Double.class.getName());
-        put("double precision", Double.class.getName());
-        put("time", LocalTime.class.getName());
-        put("date", LocalDate.class.getName());
-        put("timestamp", LocalDateTime.class.getName());
-        put("timestamp with time zone", OffsetDateTime.class.getName());
-    }};
+    private static final Map<String, String> CLASS_NAMES_BY_FORMAT;
+
+    static {
+        CLASS_NAMES_BY_FORMAT = new HashMap<>();
+        CLASS_NAMES_BY_FORMAT.put("varchar", String.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("character varying", String.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("char varying", String.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("boolean", Boolean.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("tinyint", Byte.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("smallint", Short.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("integer", Integer.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("int", Integer.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("bigint", Long.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("decimal", BigDecimal.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("dec", BigDecimal.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("numeric", BigDecimal.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("real", Float.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("double", Double.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("double precision", Double.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("time", LocalTime.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("date", LocalDate.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("timestamp", LocalDateTime.class.getName());
+        CLASS_NAMES_BY_FORMAT.put("timestamp with time zone", OffsetDateTime.class.getName());
+    }
 
     private JavaClassNameResolver() {
     }

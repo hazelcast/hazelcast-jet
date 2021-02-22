@@ -107,6 +107,7 @@ final class PropertiesResolver {
         return properties;
     }
 
+    @SuppressWarnings("NestedIfDepth")
     private static void withSerdeConsumerProperties(
             boolean isKey,
             Map<String, String> options,
@@ -160,6 +161,7 @@ final class PropertiesResolver {
         }
     }
 
+    @SuppressWarnings("NestedIfDepth")
     private static void withSerdeProducerProperties(
             boolean isKey,
             Map<String, String> options,
