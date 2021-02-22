@@ -25,6 +25,7 @@ import com.hazelcast.nio.serialization.ClassDefinitionBuilder;
 import com.hazelcast.nio.serialization.FieldDefinition;
 import com.hazelcast.nio.serialization.FieldType;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 
 public class PortableUpsertTargetDescriptor implements UpsertTargetDescriptor {
@@ -35,7 +36,7 @@ public class PortableUpsertTargetDescriptor implements UpsertTargetDescriptor {
     private PortableUpsertTargetDescriptor() {
     }
 
-    public PortableUpsertTargetDescriptor(ClassDefinition classDefinition) {
+    public PortableUpsertTargetDescriptor(@Nonnull ClassDefinition classDefinition) {
         this.classDefinition = classDefinition;
     }
 

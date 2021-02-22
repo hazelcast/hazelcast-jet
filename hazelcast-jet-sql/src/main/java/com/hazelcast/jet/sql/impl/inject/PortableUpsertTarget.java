@@ -24,6 +24,7 @@ import com.hazelcast.nio.serialization.GenericRecord;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.math.BigDecimal;
@@ -42,10 +43,10 @@ class PortableUpsertTarget implements UpsertTarget {
 
     private final Object[] values;
 
-    PortableUpsertTarget(ClassDefinition classDefinition) {
-        this.classDefinition = classDefinition;
+    PortableUpsertTarget(@Nonnull ClassDefinition classDef) {
+        this.classDefinition = classDef;
 
-        this.values = new Object[classDefinition.getFieldCount()];
+        this.values = new Object[classDef.getFieldCount()];
     }
 
     @Override

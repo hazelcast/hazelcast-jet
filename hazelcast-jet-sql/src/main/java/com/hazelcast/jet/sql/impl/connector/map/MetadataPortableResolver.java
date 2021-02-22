@@ -31,6 +31,7 @@ import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -148,27 +149,27 @@ final class MetadataPortableResolver implements KvMetadataResolver {
             InternalSerializationService serializationService
     ) {
         Map<QueryPath, MappingField> fieldsByPath = extractFields(resolvedFields, isKey);
-        ClassDefinition clazz =
+        ClassDefinition classDef =
                 resolveClassDefinition(isKey, options, fieldsByPath.values(), serializationService);
 
-        return resolveMetadata(isKey, resolvedFields, fieldsByPath, clazz);
+        return resolveMetadata(isKey, resolvedFields, fieldsByPath, classDef);
     }
 
     KvMetadata resolveMetadata(
             boolean isKey,
             List<MappingField> resolvedFields,
-            ClassDefinition clazz
+            @Nonnull ClassDefinition classDef
     ) {
         Map<QueryPath, MappingField> fieldsByPath = extractFields(resolvedFields, isKey);
 
-        return resolveMetadata(isKey, resolvedFields, fieldsByPath, clazz);
+        return resolveMetadata(isKey, resolvedFields, fieldsByPath, classDef);
     }
 
     private static KvMetadata resolveMetadata(
             boolean isKey,
             List<MappingField> resolvedFields,
             Map<QueryPath, MappingField> fieldsByPath,
-            ClassDefinition clazz
+            @Nonnull ClassDefinition classDef
     ) {
         List<TableField> fields = new ArrayList<>();
         for (Entry<QueryPath, MappingField> entry : fieldsByPath.entrySet()) {
@@ -183,10 +184,11 @@ final class MetadataPortableResolver implements KvMetadataResolver {
         return new KvMetadata(
                 fields,
                 GenericQueryTargetDescriptor.DEFAULT,
-                new PortableUpsertTargetDescriptor(clazz)
+                new PortableUpsertTargetDescriptor(classDef)
         );
     }
 
+    @Nonnull
     private static ClassDefinition resolveClassDefinition(
             boolean isKey,
             Map<String, String> options,
