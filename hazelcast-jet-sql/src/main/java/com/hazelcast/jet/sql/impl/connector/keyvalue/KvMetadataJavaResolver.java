@@ -238,18 +238,11 @@ public final class KvMetadataJavaResolver implements KvMetadataResolver {
         String className;
         if (JAVA_FORMAT.equals(formatProperty)) {
             className = options.get(classNameProperty);
-        } else {
-            String declaredClassName = options.get(classNameProperty);
-            String resolvedClassName = JavaClassNameResolver.resolveClassName(formatProperty);
-            if (declaredClassName != null && !declaredClassName.equals(resolvedClassName)) {
-                throw QueryException.error("Mismatch between declared and resolved class for format '"
-                        + formatProperty + "'");
+            if (className == null) {
+                throw QueryException.error("Unable to resolve table metadata. Missing '" + classNameProperty + "' option");
             }
-            className = resolvedClassName;
-        }
-
-        if (className == null) {
-            throw QueryException.error("Unable to resolve table metadata. Missing '" + classNameProperty + "' option");
+        } else {
+            className = JavaClassNameResolver.resolveClassName(formatProperty);
         }
 
         try {
