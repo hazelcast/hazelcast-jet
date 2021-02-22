@@ -107,7 +107,6 @@ final class PropertiesResolver {
         return properties;
     }
 
-    @SuppressWarnings("NestedIfDepth")
     private static void withSerdeConsumerProperties(
             boolean isKey,
             Map<String, String> options,
@@ -131,13 +130,9 @@ final class PropertiesResolver {
         } else {
             String resolvedClass = JavaClassNameResolver.resolveClassName(format);
             if (resolvedClass != null) {
-                String declaredClass =
-                        options.get(isKey ? SqlConnector.OPTION_KEY_CLASS : SqlConnector.OPTION_VALUE_CLASS);
-                if (declaredClass == null || declaredClass.equals(resolvedClass)) {
-                    String deserializerClass = resolveDeserializer(resolvedClass);
-                    if (deserializerClass != null) {
-                        properties.putIfAbsent(deserializer, deserializerClass);
-                    }
+                String deserializerClass = resolveDeserializer(resolvedClass);
+                if (deserializerClass != null) {
+                    properties.putIfAbsent(deserializer, deserializerClass);
                 }
             }
         }
@@ -161,7 +156,6 @@ final class PropertiesResolver {
         }
     }
 
-    @SuppressWarnings("NestedIfDepth")
     private static void withSerdeProducerProperties(
             boolean isKey,
             Map<String, String> options,
@@ -185,13 +179,9 @@ final class PropertiesResolver {
         } else {
             String resolvedClass = JavaClassNameResolver.resolveClassName(format);
             if (resolvedClass != null) {
-                String declaredClass =
-                        options.get(isKey ? SqlConnector.OPTION_KEY_CLASS : SqlConnector.OPTION_VALUE_CLASS);
-                if (declaredClass == null || declaredClass.equals(resolvedClass)) {
-                    String serializerClass = resolveSerializer(resolvedClass);
-                    if (serializerClass != null) {
-                        properties.putIfAbsent(serializer, serializerClass);
-                    }
+                String serializerClass = resolveSerializer(resolvedClass);
+                if (serializerClass != null) {
+                    properties.putIfAbsent(serializer, serializerClass);
                 }
             }
         }
