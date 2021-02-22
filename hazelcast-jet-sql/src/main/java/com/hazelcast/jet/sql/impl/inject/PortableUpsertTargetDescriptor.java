@@ -17,13 +17,9 @@
 package com.hazelcast.jet.sql.impl.inject;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.internal.serialization.impl.portable.FieldDefinitionImpl;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.ClassDefinition;
-import com.hazelcast.nio.serialization.ClassDefinitionBuilder;
-import com.hazelcast.nio.serialization.FieldDefinition;
-import com.hazelcast.nio.serialization.FieldType;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -47,42 +43,11 @@ public class PortableUpsertTargetDescriptor implements UpsertTargetDescriptor {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeInt(classDefinition.getFactoryId());
-        out.writeInt(classDefinition.getClassId());
-        out.writeInt(classDefinition.getVersion());
-        out.writeInt(classDefinition.getFieldCount());
-        for (int i = 0; i < classDefinition.getFieldCount(); i++) {
-            FieldDefinition fieldDefinition = classDefinition.getField(i);
-            out.writeInt(fieldDefinition.getIndex());
-            out.writeString(fieldDefinition.getName());
-            out.writeByte(fieldDefinition.getType().getId());
-            out.writeInt(fieldDefinition.getFactoryId());
-            out.writeInt(fieldDefinition.getClassId());
-            out.writeInt(fieldDefinition.getVersion());
-        }
+        out.writeObject(classDefinition);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        int factoryId = in.readInt();
-        int classId = in.readInt();
-        int classVersion = in.readInt();
-        ClassDefinitionBuilder classDefinition = new ClassDefinitionBuilder(factoryId, classId, classVersion);
-
-        int fieldCount = in.readInt();
-        for (int i = 0; i < fieldCount; i++) {
-            int index = in.readInt();
-            String name = in.readString();
-            FieldType type = FieldType.get(in.readByte());
-            int fieldFactoryId = in.readInt();
-            int fieldClassId = in.readInt();
-            int fieldVersion = in.readInt();
-
-            FieldDefinitionImpl fieldDefinition =
-                    new FieldDefinitionImpl(index, name, type, fieldFactoryId, fieldClassId, fieldVersion);
-            classDefinition.addField(fieldDefinition);
-        }
-
-        this.classDefinition = classDefinition.build();
+        this.classDefinition = in.readObject();
     }
 }
