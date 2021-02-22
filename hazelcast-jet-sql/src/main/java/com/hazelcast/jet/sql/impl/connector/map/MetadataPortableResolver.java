@@ -47,7 +47,6 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FAC
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PORTABLE_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.extractFields;
 import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.maybeAddDefaultField;
-import static java.lang.Integer.parseInt;
 
 final class MetadataPortableResolver implements KvMetadataResolver {
 
@@ -201,17 +200,16 @@ final class MetadataPortableResolver implements KvMetadataResolver {
         String classIdString = options.get(classIdProperty);
         String classVersionProperty = isKey ? OPTION_KEY_CLASS_VERSION : OPTION_VALUE_CLASS_VERSION;
         String classVersionString = options.getOrDefault(classVersionProperty, "0");
-        if (factoryIdString == null || classIdString == null || classVersionString == null) {
+        if (factoryIdString == null || classIdString == null) {
             throw QueryException.error(
                     "Unable to resolve table metadata. Missing ['"
-                    + factoryIdProperty + "'|'"
-                    + classIdProperty + "'|'"
-                    + classVersionProperty
-                    + "'] option(s)");
+                            + factoryIdProperty + "'|'"
+                            + classIdProperty
+                            + "'] option(s)");
         }
-        int factoryId = parseInt(factoryIdString);
-        int classId = parseInt(classIdString);
-        int classVersion = parseInt(classVersionString);
+        int factoryId = asInt(factoryIdProperty, factoryIdString);
+        int classId = asInt(classIdProperty, classIdString);
+        int classVersion = asInt(classVersionProperty, classVersionString);
 
         ClassDefinition classDefinition = serializationService
                 .getPortableContext()
@@ -269,5 +267,13 @@ final class MetadataPortableResolver implements KvMetadataResolver {
             }
         }
         return classDefinitionBuilder.build();
+    }
+
+    private static int asInt(String property, String value) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            throw QueryException.error("Cannot parse " + property + " value as integer: " + "'" + value + "'");
+        }
     }
 }
