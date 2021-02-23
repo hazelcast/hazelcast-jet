@@ -23,6 +23,7 @@ import com.hazelcast.nio.serialization.Serializer;
 import com.hazelcast.nio.serialization.SerializerHook;
 import com.hazelcast.nio.serialization.StreamSerializer;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.math.BigInteger;
 
@@ -47,12 +48,12 @@ class AccumulatorSerializerHooks {
                 }
 
                 @Override
-                public void write(ObjectDataOutput out, LongAccumulator object) throws IOException {
+                public void write(@Nonnull ObjectDataOutput out, @Nonnull LongAccumulator object) throws IOException {
                     out.writeLong(object.get());
                 }
 
-                @Override
-                public LongAccumulator read(ObjectDataInput in) throws IOException {
+                @Nonnull @Override
+                public LongAccumulator read(@Nonnull ObjectDataInput in) throws IOException {
                     return new LongAccumulator(in.readLong());
                 }
             };
@@ -80,12 +81,12 @@ class AccumulatorSerializerHooks {
                 }
 
                 @Override
-                public void write(ObjectDataOutput out, DoubleAccumulator object) throws IOException {
+                public void write(@Nonnull ObjectDataOutput out, @Nonnull DoubleAccumulator object) throws IOException {
                     out.writeDouble(object.export());
                 }
 
-                @Override
-                public DoubleAccumulator read(ObjectDataInput in) throws IOException {
+                @Nonnull @Override
+                public DoubleAccumulator read(@Nonnull ObjectDataInput in) throws IOException {
                     return new DoubleAccumulator(in.readDouble());
                 }
             };
@@ -97,6 +98,7 @@ class AccumulatorSerializerHooks {
         }
     }
 
+    @SuppressWarnings("rawtypes")
     public static final class MutableReferenceHook implements SerializerHook<MutableReference> {
 
         @Override
@@ -113,12 +115,12 @@ class AccumulatorSerializerHooks {
                 }
 
                 @Override
-                public void write(ObjectDataOutput out, MutableReference object) throws IOException {
+                public void write(@Nonnull ObjectDataOutput out, @Nonnull MutableReference object) throws IOException {
                     out.writeObject(object.get());
                 }
 
-                @Override
-                public MutableReference read(ObjectDataInput in) throws IOException {
+                @Nonnull @Override
+                public MutableReference read(@Nonnull ObjectDataInput in) throws IOException {
                     return new MutableReference<>(in.readObject());
                 }
             };
@@ -146,12 +148,14 @@ class AccumulatorSerializerHooks {
                 }
 
                 @Override
-                public void write(ObjectDataOutput out, LinTrendAccumulator object) throws IOException {
+                public void write(
+                        @Nonnull ObjectDataOutput out, @Nonnull LinTrendAccumulator object
+                ) throws IOException {
                     object.writeObject(out);
                 }
 
-                @Override
-                public LinTrendAccumulator read(ObjectDataInput in) throws IOException {
+                @Nonnull @Override
+                public LinTrendAccumulator read(@Nonnull ObjectDataInput in) throws IOException {
                     return new LinTrendAccumulator(
                             in.readLong(), readBigInt(in), readBigInt(in), readBigInt(in), readBigInt(in));
                 }
@@ -188,13 +192,16 @@ class AccumulatorSerializerHooks {
                 }
 
                 @Override
-                public void write(ObjectDataOutput out, LongLongAccumulator object) throws IOException {
+                public void write(
+                        @Nonnull ObjectDataOutput out, @Nonnull LongLongAccumulator object
+                ) throws IOException {
                     out.writeLong(object.get1());
                     out.writeLong(object.get2());
                 }
 
+                @Nonnull
                 @Override
-                public LongLongAccumulator read(ObjectDataInput in) throws IOException {
+                public LongLongAccumulator read(@Nonnull ObjectDataInput in) throws IOException {
                     return new LongLongAccumulator(in.readLong(), in.readLong());
                 }
             };
@@ -222,13 +229,15 @@ class AccumulatorSerializerHooks {
                 }
 
                 @Override
-                public void write(ObjectDataOutput out, LongDoubleAccumulator object) throws IOException {
+                public void write(
+                        @Nonnull ObjectDataOutput out, @Nonnull LongDoubleAccumulator object
+                ) throws IOException {
                     out.writeLong(object.getLong());
                     out.writeDouble(object.getDouble());
                 }
 
-                @Override
-                public LongDoubleAccumulator read(ObjectDataInput in) throws IOException {
+                @Nonnull @Override
+                public LongDoubleAccumulator read(@Nonnull ObjectDataInput in) throws IOException {
                     return new LongDoubleAccumulator(in.readLong(), in.readDouble());
                 }
             };
