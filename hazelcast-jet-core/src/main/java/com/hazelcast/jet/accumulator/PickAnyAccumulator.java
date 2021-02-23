@@ -29,6 +29,7 @@ import java.util.Objects;
  * {@code null} when all the items are deducted.
  *
  * @param <T>
+ * @since 4.5
  */
 public class PickAnyAccumulator<T> {
 
