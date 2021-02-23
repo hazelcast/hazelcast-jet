@@ -248,4 +248,40 @@ class AccumulatorSerializerHooks {
             return true;
         }
     }
+
+    @SuppressWarnings("rawtypes")
+    public static final class PickAnyAccHook implements SerializerHook<PickAnyAccumulator> {
+
+        @Override
+        public Class<PickAnyAccumulator> getSerializationType() {
+            return PickAnyAccumulator.class;
+        }
+
+        @Override
+        public Serializer createSerializer() {
+            return new StreamSerializer<PickAnyAccumulator>() {
+
+                @Override
+                public int getTypeId() {
+                    return SerializerHookConstants.PICK_ANY_ACC;
+                }
+
+                @Override
+                public void write(@Nonnull ObjectDataOutput out, @Nonnull PickAnyAccumulator acc) throws IOException {
+                    out.writeObject(acc.get());
+                    out.writeLong(acc.count());
+                }
+
+                @Nonnull @Override
+                public PickAnyAccumulator read(@Nonnull ObjectDataInput in) throws IOException {
+                    return new PickAnyAccumulator<>(in.readObject(), in.readLong());
+                }
+            };
+        }
+
+        @Override
+        public boolean isOverwritable() {
+            return false;
+        }
+    }
 }
