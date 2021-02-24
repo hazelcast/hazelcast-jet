@@ -61,7 +61,9 @@ public class PickAnyAccumulator<T> {
         if (t == null) {
             return;
         }
-        value = t;
+        if (value == null) {
+            value = t;
+        }
         count++;
     }
 

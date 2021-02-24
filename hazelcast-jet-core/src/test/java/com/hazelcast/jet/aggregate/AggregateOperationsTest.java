@@ -748,7 +748,7 @@ public class AggregateOperationsTest {
         op.accumulateFn().accept(acc1, item1);
         op.accumulateFn().accept(acc1, item2);
         // Then
-        assertEqualsOrArrayEquals("accumulated", expectCombined, getAccValFn.apply(acc1));
+        assertEqualsOrArrayEquals("accumulated both", expectCombined, getAccValFn.apply(acc1));
     }
 
     private static void assertEqualsOrArrayEquals(String msg, Object expected, Object actual) {
