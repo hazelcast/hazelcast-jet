@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.schema;
+package com.hazelcast.jet.sql.impl.connector.infoschema;
 
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -27,15 +27,18 @@ import java.util.stream.Collectors;
 public class MappingDefinition {
 
     private final Table table;
+    private final String externalName;
     private final String type;
     private final Map<String, String> options;
 
     public MappingDefinition(
             Table table,
+            String externalName,
             String type,
             Map<String, String> options
     ) {
         this.table = table;
+        this.externalName = externalName;
         this.type = type;
         this.options = options;
     }
@@ -46,6 +49,10 @@ public class MappingDefinition {
 
     public String name() {
         return table.getSqlName();
+    }
+
+    public String externalName() {
+        return externalName;
     }
 
     public String type() {

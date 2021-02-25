@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.connector.infoschema;
 
 import com.google.common.collect.ImmutableMap;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
-import com.hazelcast.jet.sql.impl.schema.MappingDefinition;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
 import org.junit.Test;
@@ -42,7 +41,8 @@ public class MappingColumnsTableTest {
                 "table-name",
                 null
         );
-        MappingDefinition definition = new MappingDefinition(table, "table-type", ImmutableMap.of("key", "value"));
+        MappingDefinition definition =
+                new MappingDefinition(table, "table-external-name", "table-type", ImmutableMap.of("key", "value"));
         MappingColumnsTable mappingColumnsTable = new MappingColumnsTable("catalog", null, singletonList(definition));
 
         // when

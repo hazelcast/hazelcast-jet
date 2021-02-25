@@ -19,6 +19,7 @@ package com.hazelcast.jet.sql.impl.schema;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.SqlConnectorCache;
 import com.hazelcast.jet.sql.impl.connector.infoschema.MappingColumnsTable;
+import com.hazelcast.jet.sql.impl.connector.infoschema.MappingDefinition;
 import com.hazelcast.jet.sql.impl.connector.infoschema.MappingsTable;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.QueryException;
@@ -115,7 +116,8 @@ public class MappingCatalog implements TableResolver {
         List<MappingDefinition> infoSchemaData = new ArrayList<>();
         for (Mapping mapping : storage.values()) {
             Table table = toTable(mapping);
-            MappingDefinition definition = new MappingDefinition(table, mapping.type(), mapping.options());
+            MappingDefinition definition =
+                    new MappingDefinition(table, mapping.externalName(), mapping.type(), mapping.options());
 
             tables.add(table);
             infoSchemaData.add(definition);

@@ -23,6 +23,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -34,6 +36,7 @@ public class SqlInfoSchemaTest extends SqlTestSupport {
     private static SqlService sqlService;
 
     private final String name = randomName();
+    private final String externalName = "my_map";
 
     @BeforeClass
     public static void setUpClass() {
@@ -43,7 +46,14 @@ public class SqlInfoSchemaTest extends SqlTestSupport {
 
     @Before
     public void setUp() {
-        sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
+        sqlService.execute(
+                "CREATE MAPPING " + name + " EXTERNAL NAME " + externalName
+                        + " TYPE " + IMapSqlConnector.TYPE_NAME + "\n"
+                        + "OPTIONS (\n"
+                        + '\'' + OPTION_KEY_FORMAT + "'='int'\n"
+                        + ", '" + OPTION_VALUE_FORMAT + "'='varchar'\n"
+                        + ")"
+        );
     }
 
     @Test
@@ -56,12 +66,11 @@ public class SqlInfoSchemaTest extends SqlTestSupport {
                                 "hazelcast",
                                 "public",
                                 name,
+                                externalName,
                                 IMapSqlConnector.TYPE_NAME,
                                 "{"
-                                        + "keyFormat=java"
-                                        + ", keyJavaClass=java.lang.Integer"
-                                        + ", valueFormat=java"
-                                        + ", valueJavaClass=java.lang.String"
+                                        + "keyFormat=int"
+                                        + ", valueFormat=varchar"
                                         + "}")
                 )
         );

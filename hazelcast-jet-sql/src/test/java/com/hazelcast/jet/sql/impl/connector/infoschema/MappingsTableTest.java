@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.connector.infoschema;
 
 import com.google.common.collect.ImmutableMap;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
-import com.hazelcast.jet.sql.impl.schema.MappingDefinition;
 import com.hazelcast.sql.impl.schema.Table;
 import org.junit.Test;
 
@@ -35,14 +34,21 @@ public class MappingsTableTest {
     public void test_rows() {
         // given
         Table table = new JetTable(null, emptyList(), "table-schema", "table-name", null);
-        MappingDefinition definition = new MappingDefinition(table, "table-type", ImmutableMap.of("key", "value"));
+        MappingDefinition definition =
+                new MappingDefinition(table, "table-external-name", "table-type", ImmutableMap.of("key", "value"));
         MappingsTable mappingTable = new MappingsTable("catalog", null, singletonList(definition));
 
         // when
         List<Object[]> rows = mappingTable.rows();
 
         // then
-        assertThat(rows)
-                .containsExactly(new Object[]{"catalog", "table-schema", "table-name", "table-type", "{key=value}"});
+        assertThat(rows).containsExactly(new Object[]{
+                "catalog"
+                , "table-schema"
+                , "table-name"
+                , "table-external-name"
+                , "table-type"
+                , "{key=value}"
+        });
     }
 }

@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.connector.infoschema;
 
-import com.hazelcast.jet.sql.impl.schema.MappingDefinition;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -37,6 +36,7 @@ public class MappingsTable extends InfoSchemaTable {
             new TableField("mapping_catalog", QueryDataType.VARCHAR, false),
             new TableField("mapping_schema", QueryDataType.VARCHAR, false),
             new TableField("mapping_name", QueryDataType.VARCHAR, false),
+            new TableField("mapping_external_name", QueryDataType.VARCHAR, false),
             new TableField("mapping_type", QueryDataType.VARCHAR, false),
             new TableField("mapping_options", QueryDataType.VARCHAR, false)
     );
@@ -68,6 +68,7 @@ public class MappingsTable extends InfoSchemaTable {
                     catalog,
                     definition.schema(),
                     definition.name(),
+                    definition.externalName(),
                     definition.type(),
                     definition.options()
             };
