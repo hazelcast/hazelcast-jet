@@ -16,14 +16,18 @@
 
 package com.hazelcast.jet.sql.impl.connector.infoschema;
 
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static java.util.Arrays.asList;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 
 /**
  * Table object for the {@code information_schema.columns} table.
@@ -37,6 +41,7 @@ public class MappingColumnsTable extends InfoSchemaTable {
             new TableField("table_schema", QueryDataType.VARCHAR, false),
             new TableField("table_name", QueryDataType.VARCHAR, false),
             new TableField("column_name", QueryDataType.VARCHAR, false),
+            new TableField("column_external_name", QueryDataType.VARCHAR, false),
             new TableField("ordinal_position", QueryDataType.INT, false),
             new TableField("is_nullable", QueryDataType.VARCHAR, false),
             new TableField("data_type", QueryDataType.VARCHAR, false)
@@ -54,7 +59,7 @@ public class MappingColumnsTable extends InfoSchemaTable {
                 FIELDS,
                 schemaName,
                 NAME,
-                new ConstantTableStatistics(definitions.size() * FIELDS.size())
+                new ConstantTableStatistics((long) definitions.size() * FIELDS.size())
         );
 
         this.catalog = catalog;
@@ -65,17 +70,21 @@ public class MappingColumnsTable extends InfoSchemaTable {
     protected List<Object[]> rows() {
         List<Object[]> rows = new ArrayList<>(definitions.size());
         for (MappingDefinition definition : definitions) {
-            List<TableField> fields = definition.fields();
-            for (int i = 0; i < fields.size(); i++) {
-                TableField field = fields.get(i);
+            Map<String, MappingField> mappingFieldsByName = definition.mappingFields().stream()
+                    .collect(toMap(MappingField::name, identity()));
+            List<TableField> tableFields = definition.tableFields();
+            for (int i = 0; i < tableFields.size(); i++) {
+                TableField tableField = tableFields.get(i);
+                MappingField mappingField = mappingFieldsByName.get(tableField.getName());
                 Object[] row = new Object[]{
                         catalog,
                         definition.schema(),
                         definition.name(),
-                        field.getName(),
+                        tableField.getName(),
+                        mappingField == null ? null : mappingField.externalName(),
                         i,
                         String.valueOf(true),
-                        field.getType().getTypeFamily().name()
+                        tableField.getType().getTypeFamily().name()
                 };
                 rows.add(row);
             }

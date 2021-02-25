@@ -16,8 +16,9 @@
 
 package com.hazelcast.jet.sql.impl.connector.infoschema;
 
-import com.google.common.collect.ImmutableMap;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
+import com.hazelcast.jet.sql.impl.schema.Mapping;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
 import org.junit.Test;
@@ -25,6 +26,9 @@ import org.junit.Test;
 import java.util.List;
 
 import static com.hazelcast.sql.impl.type.QueryDataType.INT;
+import static com.hazelcast.sql.impl.type.QueryDataType.OBJECT;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,13 +40,23 @@ public class MappingColumnsTableTest {
         // given
         Table table = new JetTable(
                 null,
-                singletonList(new TableField("table-field", INT, false)),
+                asList(
+                        new TableField("table-field-name", INT, false),
+                        new TableField("this", OBJECT, true)
+                ),
                 "table-schema",
                 "table-name",
                 null
         );
-        MappingDefinition definition =
-                new MappingDefinition(table, "table-external-name", "table-type", ImmutableMap.of("key", "value"));
+        Mapping mapping = new Mapping(
+                "table-name",
+                "table-external-name",
+                "table-type",
+                singletonList(new MappingField("table-field-name", INT, "table-field-external-name")),
+                emptyMap()
+        );
+        MappingDefinition definition = new MappingDefinition(table, mapping);
+
         MappingColumnsTable mappingColumnsTable = new MappingColumnsTable("catalog", null, singletonList(definition));
 
         // when
@@ -50,6 +64,26 @@ public class MappingColumnsTableTest {
 
         // then
         assertThat(rows).containsExactly(
-                new Object[]{"catalog", "table-schema", "table-name", "table-field", 0, "true", "INTEGER"});
+                new Object[]{
+                        "catalog",
+                        "table-schema",
+                        "table-name",
+                        "table-field-name",
+                        "table-field-external-name",
+                        0,
+                        "true",
+                        "INTEGER"
+                },
+                new Object[]{
+                        "catalog",
+                        "table-schema",
+                        "table-name",
+                        "this",
+                        null,
+                        1,
+                        "true",
+                        "OBJECT"
+                }
+        );
     }
 }

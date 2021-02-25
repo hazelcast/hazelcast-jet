@@ -16,57 +16,53 @@
 
 package com.hazelcast.jet.sql.impl.connector.infoschema;
 
+import com.hazelcast.jet.sql.impl.schema.Mapping;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 public class MappingDefinition {
 
     private final Table table;
-    private final String externalName;
-    private final String type;
-    private final Map<String, String> options;
+    private final Mapping mapping;
 
-    public MappingDefinition(
-            Table table,
-            String externalName,
-            String type,
-            Map<String, String> options
-    ) {
+    public MappingDefinition(Table table, Mapping mapping) {
         this.table = table;
-        this.externalName = externalName;
-        this.type = type;
-        this.options = options;
+        this.mapping = mapping;
     }
 
-    public String schema() {
+    String schema() {
         return table.getSchemaName();
     }
 
-    public String name() {
+    String name() {
         return table.getSqlName();
     }
 
-    public String externalName() {
-        return externalName;
+    String externalName() {
+        return mapping.externalName();
     }
 
-    public String type() {
-        return type;
+    String type() {
+        return mapping.type();
     }
 
-    public List<TableField> fields() {
+    List<TableField> tableFields() {
         return table.getFields();
     }
 
-    public String options() {
-        return options.entrySet().stream()
-                      .sorted(Entry.comparingByKey())
-                      .map(entry -> entry.getKey() + "=" + entry.getValue())
-                      .collect(Collectors.joining(", ", "{", "}"));
+    List<MappingField> mappingFields() {
+        return mapping.fields();
+    }
+
+    String options() {
+        return mapping.options().entrySet().stream()
+                .sorted(Entry.comparingByKey())
+                .map(entry -> entry.getKey() + "=" + entry.getValue())
+                .collect(Collectors.joining(", ", "{", "}"));
     }
 }

@@ -116,8 +116,7 @@ public class MappingCatalog implements TableResolver {
         List<MappingDefinition> infoSchemaData = new ArrayList<>();
         for (Mapping mapping : storage.values()) {
             Table table = toTable(mapping);
-            MappingDefinition definition =
-                    new MappingDefinition(table, mapping.externalName(), mapping.type(), mapping.options());
+            MappingDefinition definition = new MappingDefinition(table, mapping);
 
             tables.add(table);
             infoSchemaData.add(definition);

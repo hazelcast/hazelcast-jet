@@ -23,7 +23,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -35,8 +37,8 @@ public class SqlInfoSchemaTest extends SqlTestSupport {
 
     private static SqlService sqlService;
 
-    private final String name = randomName();
-    private final String externalName = "my_map";
+    private final String mappingName = randomName();
+    private final String mappingExternalName = "my_map";
 
     @BeforeClass
     public static void setUpClass() {
@@ -47,11 +49,13 @@ public class SqlInfoSchemaTest extends SqlTestSupport {
     @Before
     public void setUp() {
         sqlService.execute(
-                "CREATE MAPPING " + name + " EXTERNAL NAME " + externalName
-                        + " TYPE " + IMapSqlConnector.TYPE_NAME + "\n"
+                "CREATE MAPPING " + mappingName + " EXTERNAL NAME " + mappingExternalName + "("
+                        + "__value VARCHAR EXTERNAL NAME \"this.value\""
+                        + ") TYPE " + IMapSqlConnector.TYPE_NAME + "\n"
                         + "OPTIONS (\n"
                         + '\'' + OPTION_KEY_FORMAT + "'='int'\n"
-                        + ", '" + OPTION_VALUE_FORMAT + "'='varchar'\n"
+                        + ", '" + OPTION_VALUE_FORMAT + "'='" + JAVA_FORMAT + "'\n"
+                        + ", '" + OPTION_VALUE_CLASS + "'='" + Value.class.getName() + "'\n"
                         + ")"
         );
     }
@@ -65,12 +69,13 @@ public class SqlInfoSchemaTest extends SqlTestSupport {
                         new Row(
                                 "hazelcast",
                                 "public",
-                                name,
-                                externalName,
+                                mappingName,
+                                mappingExternalName,
                                 IMapSqlConnector.TYPE_NAME,
                                 "{"
                                         + "keyFormat=int"
-                                        + ", valueFormat=varchar"
+                                        + ", valueFormat=java"
+                                        + ", valueJavaClass=" + Value.class.getName()
                                         + "}")
                 )
         );
@@ -81,8 +86,9 @@ public class SqlInfoSchemaTest extends SqlTestSupport {
         assertRowsAnyOrder(
                 "SELECT * FROM information_schema.columns",
                 asList(
-                        new Row("hazelcast", "public", name, "__key", 0, "true", "INTEGER"),
-                        new Row("hazelcast", "public", name, "this", 1, "true", "VARCHAR")
+                        new Row("hazelcast", "public", mappingName, "__key", "__key", 0, "true", "INTEGER"),
+                        new Row("hazelcast", "public", mappingName, "__value", "this.value", 1, "true", "VARCHAR"),
+                        new Row("hazelcast", "public", mappingName, "this", null, 2, "true", "OBJECT")
                 )
         );
     }
@@ -92,10 +98,14 @@ public class SqlInfoSchemaTest extends SqlTestSupport {
         assertRowsAnyOrder(
                 "SELECT table_name, UPPER(table_catalog), column_name, data_type "
                         + "FROM information_schema.columns "
-                        + "WHERE column_name = 'this'",
+                        + "WHERE column_name = '__value'",
                 singletonList(
-                        new Row(name, "HAZELCAST", "this", "VARCHAR")
+                        new Row(mappingName, "HAZELCAST", "__value", "VARCHAR")
                 )
         );
+    }
+
+    public static final class Value {
+        public String value;
     }
 }
