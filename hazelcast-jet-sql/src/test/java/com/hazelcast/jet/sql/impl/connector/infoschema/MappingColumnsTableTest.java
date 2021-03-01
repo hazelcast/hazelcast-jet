@@ -70,7 +70,7 @@ public class MappingColumnsTableTest {
                         "table-name",
                         "table-field-name",
                         "table-field-external-name",
-                        0,
+                        1,
                         "true",
                         "INTEGER"
                 },
@@ -80,7 +80,7 @@ public class MappingColumnsTableTest {
                         "table-name",
                         "this",
                         null,
-                        1,
+                        2,
                         "true",
                         "OBJECT"
                 }
