@@ -122,7 +122,8 @@
         <protobuf.version>3.13.0</protobuf.version>
         <picocli.version>3.9.0</picocli.version>
         <classgraph.version>4.8.66</classgraph.version>
-        <jackson.jr.version>2.11.2</jackson.jr.version>
+        <jackson.version>2.11.4</jackson.version>
+
         <snakeyaml.engine.version>1.0</snakeyaml.engine.version>
 
         <!-- test dependencies -->
@@ -193,6 +194,17 @@
                 <groupId>com.hazelcast</groupId>
                 <artifactId>hazelcast</artifactId>
                 <version>${hazelcast.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
