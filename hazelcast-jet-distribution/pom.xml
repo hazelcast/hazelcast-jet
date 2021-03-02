@@ -157,17 +157,17 @@
                         <dependency>
                             <groupId>com.fasterxml.jackson.jr</groupId>
                             <artifactId>jackson-jr-objects</artifactId>
-                            <version>${jackson.jr.version}</version>
+                            <version>${jackson.version}</version>
                         </dependency>
                         <dependency>
                             <groupId>com.fasterxml.jackson.jr</groupId>
                             <artifactId>jackson-jr-annotation-support</artifactId>
-                            <version>${jackson.jr.version}</version>
+                            <version>${jackson.version}</version>
                         </dependency>
                         <dependency>
                             <groupId>com.fasterxml.jackson.core</groupId>
                             <artifactId>jackson-core</artifactId>
-                            <version>${jackson.jr.version}</version>
+                            <version>${jackson.version}</version>
                         </dependency>
                         <dependency>
                             <groupId>org.apache.hadoop</groupId>
@@ -328,20 +328,20 @@
         <dependency>
             <groupId>com.fasterxml.jackson.jr</groupId>
             <artifactId>jackson-jr-objects</artifactId>
-            <version>${jackson.jr.version}</version>
+            <version>${jackson.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.jr</groupId>
             <artifactId>jackson-jr-annotation-support</artifactId>
-            <version>${jackson.jr.version}</version>
+            <version>${jackson.version}</version>
             <optional>true</optional>
         </dependency>
         <!-- shaded in hazelcast.jar, still needs to mentioned -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>${jackson.jr.version}</version>
+            <version>${jackson.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>
