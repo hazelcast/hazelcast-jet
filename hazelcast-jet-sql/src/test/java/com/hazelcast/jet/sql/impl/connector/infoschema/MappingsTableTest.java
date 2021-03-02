@@ -16,9 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector.infoschema;
 
-import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.schema.Mapping;
-import com.hazelcast.sql.impl.schema.Table;
 import org.junit.Test;
 
 import java.util.List;
@@ -31,10 +29,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class MappingsTableTest {
 
     @Test
-    @SuppressWarnings("ConstantConditions")
     public void test_rows() {
         // given
-        Table table = new JetTable(null, emptyList(), "table-schema", "table-name", null);
         Mapping mapping = new Mapping(
                 "table-name",
                 "table-external-name",
@@ -42,9 +38,8 @@ public class MappingsTableTest {
                 emptyList(),
                 singletonMap("key", "value")
         );
-        MappingDefinition definition = new MappingDefinition(table, mapping);
 
-        MappingsTable mappingTable = new MappingsTable("catalog", null, singletonList(definition));
+        MappingsTable mappingTable = new MappingsTable("catalog", null, "table-schema", singletonList(mapping));
 
         // when
         List<Object[]> rows = mappingTable.rows();

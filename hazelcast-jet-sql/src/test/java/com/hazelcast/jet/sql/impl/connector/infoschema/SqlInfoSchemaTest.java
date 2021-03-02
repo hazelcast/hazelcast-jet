@@ -87,8 +87,7 @@ public class SqlInfoSchemaTest extends SqlTestSupport {
                 "SELECT * FROM information_schema.columns",
                 asList(
                         new Row("hazelcast", "public", mappingName, "__key", "__key", 1, "true", "INTEGER"),
-                        new Row("hazelcast", "public", mappingName, "__value", "this.value", 2, "true", "VARCHAR"),
-                        new Row("hazelcast", "public", mappingName, "this", null, 3, "true", "OBJECT")
+                        new Row("hazelcast", "public", mappingName, "__value", "this.value", 2, "true", "VARCHAR")
                 )
         );
     }

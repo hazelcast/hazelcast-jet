@@ -16,18 +16,17 @@
 
 package com.hazelcast.jet.sql.impl.connector.infoschema;
 
+import com.hazelcast.jet.sql.impl.schema.Mapping;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 import static java.util.Arrays.asList;
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
 
 /**
  * Table object for the {@code information_schema.columns} table.
@@ -47,44 +46,43 @@ public class MappingColumnsTable extends InfoSchemaTable {
             new TableField("data_type", QueryDataType.VARCHAR, false)
     );
 
-    private final String catalog;
-    private final List<MappingDefinition> definitions;
+    private final String mappingsSchema;
+    private final Collection<Mapping> mappings;
 
     public MappingColumnsTable(
             String catalog,
             String schemaName,
-            List<MappingDefinition> definitions
+            String mappingsSchema,
+            Collection<Mapping> mappings
     ) {
         super(
                 FIELDS,
+                catalog,
                 schemaName,
                 NAME,
-                new ConstantTableStatistics((long) definitions.size() * FIELDS.size())
+                new ConstantTableStatistics((long) mappings.size() * FIELDS.size())
         );
 
-        this.catalog = catalog;
-        this.definitions = definitions;
+        this.mappingsSchema = mappingsSchema;
+        this.mappings = mappings;
     }
 
     @Override
     protected List<Object[]> rows() {
-        List<Object[]> rows = new ArrayList<>(definitions.size());
-        for (MappingDefinition definition : definitions) {
-            Map<String, MappingField> mappingFieldsByName = definition.mappingFields().stream()
-                    .collect(toMap(MappingField::name, identity()));
-            List<TableField> tableFields = definition.tableFields();
-            for (int i = 0; i < tableFields.size(); i++) {
-                TableField tableField = tableFields.get(i);
-                MappingField mappingField = mappingFieldsByName.get(tableField.getName());
+        List<Object[]> rows = new ArrayList<>(mappings.size());
+        for (Mapping mapping : mappings) {
+            List<MappingField> fields = mapping.fields();
+            for (int i = 0; i < fields.size(); i++) {
+                MappingField field = fields.get(i);
                 Object[] row = new Object[]{
-                        catalog,
-                        definition.schema(),
-                        definition.name(),
-                        tableField.getName(),
-                        mappingField == null ? null : mappingField.externalName(),
+                        catalog(),
+                        mappingsSchema,
+                        mapping.name(),
+                        field.name(),
+                        field.externalName(),
                         i + 1,
                         String.valueOf(true),
-                        tableField.getType().getTypeFamily().name()
+                        field.type().getTypeFamily().name()
                 };
                 rows.add(row);
             }

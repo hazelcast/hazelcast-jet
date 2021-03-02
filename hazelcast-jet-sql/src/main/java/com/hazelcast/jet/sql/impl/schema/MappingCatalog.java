@@ -19,7 +19,6 @@ package com.hazelcast.jet.sql.impl.schema;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.SqlConnectorCache;
 import com.hazelcast.jet.sql.impl.connector.infoschema.MappingColumnsTable;
-import com.hazelcast.jet.sql.impl.connector.infoschema.MappingDefinition;
 import com.hazelcast.jet.sql.impl.connector.infoschema.MappingsTable;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.QueryException;
@@ -28,6 +27,7 @@ import com.hazelcast.sql.impl.schema.TableResolver;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -112,17 +112,13 @@ public class MappingCatalog implements TableResolver {
     @Nonnull
     @Override
     public List<Table> getTables() {
-        List<Table> tables = new ArrayList<>();
-        List<MappingDefinition> infoSchemaData = new ArrayList<>();
-        for (Mapping mapping : storage.values()) {
-            Table table = toTable(mapping);
-            MappingDefinition definition = new MappingDefinition(table, mapping);
-
-            tables.add(table);
-            infoSchemaData.add(definition);
+        Collection<Mapping> mappings = storage.values();
+        List<Table> tables = new ArrayList<>(mappings.size());
+        for (Mapping mapping : mappings) {
+            tables.add(toTable(mapping));
         }
-        tables.add(new MappingsTable(CATALOG, SCHEMA_NAME_INFORMATION_SCHEMA, infoSchemaData));
-        tables.add(new MappingColumnsTable(CATALOG, SCHEMA_NAME_INFORMATION_SCHEMA, infoSchemaData));
+        tables.add(new MappingsTable(CATALOG, SCHEMA_NAME_INFORMATION_SCHEMA, SCHEMA_NAME_PUBLIC, mappings));
+        tables.add(new MappingColumnsTable(CATALOG, SCHEMA_NAME_INFORMATION_SCHEMA, SCHEMA_NAME_PUBLIC, mappings));
         return tables;
     }
 
