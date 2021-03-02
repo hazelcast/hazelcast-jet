@@ -38,14 +38,11 @@ import static java.util.Collections.singletonList;
 
 class SeriesSqlConnector implements SqlConnector {
 
-    static final String OPTION_START = "start";
-    static final String OPTION_STOP = "stop";
-    static final String OPTION_STEP = "step";
-
     static final SeriesSqlConnector INSTANCE = new SeriesSqlConnector();
 
+    static final List<TableField> FIELDS = singletonList(new TableField("v", QueryDataType.INT, false));
+
     private static final String TYPE_NAME = "Series";
-    private static final List<TableField> FIELDS = singletonList(new TableField("v", QueryDataType.INT, false));
 
     @Override
     public String typeName() {

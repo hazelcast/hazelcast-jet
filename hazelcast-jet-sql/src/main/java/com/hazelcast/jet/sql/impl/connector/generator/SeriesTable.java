@@ -58,11 +58,15 @@ class SeriesTable extends JetTable {
     }
 
     BatchSource<Object[]> items(Expression<Boolean> predicate, List<Expression<?>> projections) {
+        if (step == 0) {
+            throw QueryException.error("step cannot equal zero");
+        }
+
         int start = this.start;
         int stop = this.stop;
         int step = this.step;
         return SourceBuilder
-                .batch("stream", ctx -> {
+                .batch("series", ctx -> {
                     InternalSerializationService serializationService = ((ProcSupplierCtx) ctx).serializationService();
                     SimpleExpressionEvalContext context = new SimpleExpressionEvalContext(serializationService);
                     return new DataGenerator(start, stop, step, predicate, projections, context);
@@ -77,7 +81,7 @@ class SeriesTable extends JetTable {
 
     private static long numberOfItems(int start, int stop, int step) {
         if (step == 0) {
-            throw QueryException.error("step cannot equal zero");
+            return 0;
         }
 
         if (start <= stop) {

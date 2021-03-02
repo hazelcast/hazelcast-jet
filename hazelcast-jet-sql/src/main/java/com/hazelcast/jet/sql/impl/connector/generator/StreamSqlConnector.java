@@ -38,12 +38,11 @@ import static java.util.Collections.singletonList;
 
 class StreamSqlConnector implements SqlConnector {
 
-    static final String OPTION_RATE = "rate";
-
     static final StreamSqlConnector INSTANCE = new StreamSqlConnector();
 
+    static final List<TableField> FIELDS = singletonList(new TableField("v", QueryDataType.BIGINT, false));
+
     private static final String TYPE_NAME = "Stream";
-    private static final List<TableField> FIELDS = singletonList(new TableField("v", QueryDataType.BIGINT, false));
 
     @Override
     public String typeName() {

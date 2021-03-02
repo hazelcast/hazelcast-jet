@@ -72,6 +72,29 @@ public class SqlSeriesGeneratorTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_generateSeriesArgumentExpression() {
+        assertRowsAnyOrder(
+                "SELECT * FROM TABLE(GENERATE_SERIES(0, CAST('4' AS INTEGER), 1 + 1))",
+                asList(
+                        new Row(0),
+                        new Row(2),
+                        new Row(4)
+                )
+        );
+    }
+
+    @Test
+    public void test_generateSeriesNamedArguments() {
+        assertRowsAnyOrder(
+                "SELECT * FROM TABLE(GENERATE_SERIES(step => 1 + 1, stop => 4, \"start\" => 1))",
+                asList(
+                        new Row(1),
+                        new Row(3)
+                )
+        );
+    }
+
+    @Test
     public void test_generateSeriesFilterAndProject() {
         assertRowsAnyOrder(
                 "SELECT v * 2 FROM TABLE(GENERATE_SERIES(0, 5)) WHERE v > 0 AND v < 5",
@@ -104,5 +127,11 @@ public class SqlSeriesGeneratorTest extends SqlTestSupport {
     public void when_stepIsZero_then_throws() {
         assertThatThrownBy(() -> sqlService.execute("SELECT * FROM TABLE(GENERATE_SERIES(0, 5, 0))"))
                 .hasMessageContaining("step cannot equal zero");
+    }
+
+    @Test
+    public void when_coercionIsRequired_then_throws() {
+        assertThatThrownBy(() -> sqlService.execute("SELECT * FROM TABLE(GENERATE_SERIES(0, '1'))"))
+                .hasMessageContaining("consider adding an explicit CAST");
     }
 }

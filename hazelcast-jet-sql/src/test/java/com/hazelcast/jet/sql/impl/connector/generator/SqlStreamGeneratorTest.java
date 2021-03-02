@@ -52,6 +52,30 @@ public class SqlStreamGeneratorTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_generateStreamArgumentExpression() {
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM TABLE(GENERATE_STREAM(CAST(CAST('50' AS INTEGER) + 50 AS INT)))",
+                asList(
+                        new Row(0L),
+                        new Row(1L),
+                        new Row(2L)
+                )
+        );
+    }
+
+    @Test
+    public void test_generateStreamNamedArguments() {
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM TABLE(GENERATE_STREAM(rate => 50 + 50))",
+                asList(
+                        new Row(0L),
+                        new Row(1L),
+                        new Row(2L)
+                )
+        );
+    }
+
+    @Test
     public void test_generateStreamFilterAndProject() {
         assertRowsEventuallyInAnyOrder(
                 "SELECT v * 2 FROM TABLE(GENERATE_STREAM(100)) WHERE v > 0 AND v < 5",
@@ -77,5 +101,11 @@ public class SqlStreamGeneratorTest extends SqlTestSupport {
     public void when_rateIsNegative_then_throws() {
         assertThatThrownBy(() -> sqlService.execute("SELECT * FROM TABLE(GENERATE_STREAM(-1))"))
                 .hasMessageContaining("rate cannot be less than zero");
+    }
+
+    @Test
+    public void when_coercionIsRequired_then_throws() {
+        assertThatThrownBy(() -> sqlService.execute("SELECT * FROM TABLE(GENERATE_STREAM('100'))"))
+                .hasMessageContaining("consider adding an explicit CAST");
     }
 }
