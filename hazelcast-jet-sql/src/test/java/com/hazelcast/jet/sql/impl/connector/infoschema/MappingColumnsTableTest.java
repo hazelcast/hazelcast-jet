@@ -39,7 +39,8 @@ public class MappingColumnsTableTest {
                 singletonList(new MappingField("table-field-name", INT, "table-field-external-name")),
                 emptyMap()
         );
-        MappingColumnsTable mappingColumnsTable = new MappingColumnsTable("catalog", null, "table-schema", singletonList(mapping));
+        MappingColumnsTable mappingColumnsTable =
+                new MappingColumnsTable("catalog", null, "table-schema", singletonList(mapping));
 
         // when
         List<Object[]> rows = mappingColumnsTable.rows();
