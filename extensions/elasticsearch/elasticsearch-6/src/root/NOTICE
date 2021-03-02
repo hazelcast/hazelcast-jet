@@ -62,7 +62,7 @@ Apache License, Version 2.0
   lang-mustache:6.4.0
   parent-join:6.4.0
   rank-eval:6.4.0
-  SnakeYAML:1.17
+  SnakeYAML:1.26
 BSD 2-Clause License
 BSD 3-Clause License
 CC0
