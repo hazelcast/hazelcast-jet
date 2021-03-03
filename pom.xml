@@ -124,6 +124,7 @@
         <classgraph.version>4.8.66</classgraph.version>
         <jackson.version>2.11.4</jackson.version>
         <snakeyaml.version>1.26</snakeyaml.version>
+        <netty.version>4.1.59.Final</netty.version>
 
         <snakeyaml.engine.version>1.0</snakeyaml.engine.version>
 
@@ -207,11 +208,17 @@
                 <artifactId>jackson-databind</artifactId>
                 <version>${jackson.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>org.yaml</groupId>
                 <artifactId>snakeyaml</artifactId>
                 <version>${snakeyaml.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-bom</artifactId>
+                <version>${netty.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
