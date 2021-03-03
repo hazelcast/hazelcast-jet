@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.connector.generator;
 
 import com.hazelcast.internal.util.UuidUtil;
-import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.schema.JetSpecificTableFunction;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTableStatistic;
@@ -41,7 +40,7 @@ public final class StreamGeneratorTableFunction extends JetSpecificTableFunction
     public StreamGeneratorTableFunction() {
         super(
                 FUNCTION_NAME,
-                binding -> OptUtils.convert(StreamSqlConnector.FIELDS, HazelcastTypeFactory.INSTANCE), // TODO:
+                binding -> toTable(0).getRowType(HazelcastTypeFactory.INSTANCE),
                 null,
                 StreamSqlConnector.INSTANCE
         );
@@ -67,8 +66,12 @@ public final class StreamGeneratorTableFunction extends JetSpecificTableFunction
     @Override
     public HazelcastTable toTable(List<Object> arguments) {
         int rate = (Integer) arguments.get(0);
-        StreamTable table = StreamSqlConnector.createTable(SCHEMA_NAME_STREAM, randomName(), rate);
 
+        return toTable(rate);
+    }
+
+    private static HazelcastTable toTable(int rate) {
+        StreamTable table = StreamSqlConnector.createTable(SCHEMA_NAME_STREAM, randomName(), rate);
         return new HazelcastTable(table, new HazelcastTableStatistic(Integer.MAX_VALUE));
     }
 

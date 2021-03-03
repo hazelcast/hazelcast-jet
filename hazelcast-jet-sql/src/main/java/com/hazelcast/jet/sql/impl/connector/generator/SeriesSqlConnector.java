@@ -40,9 +40,8 @@ class SeriesSqlConnector implements SqlConnector {
 
     static final SeriesSqlConnector INSTANCE = new SeriesSqlConnector();
 
-    static final List<TableField> FIELDS = singletonList(new TableField("v", QueryDataType.INT, false));
-
     private static final String TYPE_NAME = "Series";
+    private static final List<TableField> FIELDS = singletonList(new TableField("v", QueryDataType.INT, false));
 
     @Override
     public String typeName() {

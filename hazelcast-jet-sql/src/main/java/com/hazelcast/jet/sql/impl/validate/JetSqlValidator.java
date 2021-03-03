@@ -150,7 +150,7 @@ public class JetSqlValidator extends HazelcastSqlValidator {
                     }
                 } else if (operator instanceof JetSqlUserDefinedTableFunction) {
                     TableFunction function = ((JetSqlUserDefinedTableFunction) operator).getFunction();
-                    if (function instanceof JetTableFunction && ((JetTableFunction) function).isStream()) {
+                    if (((JetTableFunction) function).isStream()) {
                         found = true;
                         return null;
                     }

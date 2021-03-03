@@ -44,10 +44,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.rel.type.RelDataTypeFieldImpl;
-import org.apache.calcite.rel.type.RelRecordType;
-import org.apache.calcite.rel.type.StructKind;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexVisitor;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -243,22 +239,6 @@ public final class OptUtils {
             rows.add(result);
         }
         return rows;
-    }
-
-    /**
-     * Converts list of {@link TableField}s to {@link RelDataType}.
-     */
-    public static RelDataType convert(List<TableField> fields, RelDataTypeFactory typeFactory) {
-        List<RelDataTypeField> convertedFields = new ArrayList<>(fields.size());
-        for (TableField field : fields) {
-            String fieldName = field.getName();
-
-            RelDataType relType = convert(field, typeFactory);
-
-            RelDataTypeField convertedField = new RelDataTypeFieldImpl(fieldName, convertedFields.size(), relType);
-            convertedFields.add(convertedField);
-        }
-        return new RelRecordType(StructKind.PEEK_FIELDS, convertedFields, false);
     }
 
     /**

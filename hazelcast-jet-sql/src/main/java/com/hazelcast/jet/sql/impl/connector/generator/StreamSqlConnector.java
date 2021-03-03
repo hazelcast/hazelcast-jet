@@ -40,9 +40,8 @@ class StreamSqlConnector implements SqlConnector {
 
     static final StreamSqlConnector INSTANCE = new StreamSqlConnector();
 
-    static final List<TableField> FIELDS = singletonList(new TableField("v", QueryDataType.BIGINT, false));
-
     private static final String TYPE_NAME = "Stream";
+    private static final List<TableField> FIELDS = singletonList(new TableField("v", QueryDataType.BIGINT, false));
 
     @Override
     public String typeName() {

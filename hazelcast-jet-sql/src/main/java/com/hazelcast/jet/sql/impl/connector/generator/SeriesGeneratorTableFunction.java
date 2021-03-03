@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.connector.generator;
 
 import com.hazelcast.internal.util.UuidUtil;
-import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.schema.JetSpecificTableFunction;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTableStatistic;
@@ -41,7 +40,7 @@ public final class SeriesGeneratorTableFunction extends JetSpecificTableFunction
     public SeriesGeneratorTableFunction() {
         super(
                 FUNCTION_NAME,
-                binding -> OptUtils.convert(SeriesSqlConnector.FIELDS, HazelcastTypeFactory.INSTANCE), // TODO:
+                binding -> toTable(0, 0, 1).getRowType(HazelcastTypeFactory.INSTANCE),
                 null,
                 SeriesSqlConnector.INSTANCE
         );
@@ -80,6 +79,11 @@ public final class SeriesGeneratorTableFunction extends JetSpecificTableFunction
         int start = (Integer) arguments.get(0);
         int stop = (Integer) arguments.get(1);
         int step = arguments.get(2) != null ? (Integer) arguments.get(2) : 1;
+
+        return toTable(start, stop, step);
+    }
+
+    private static HazelcastTable toTable(int start, int stop, int step) {
         SeriesTable table = SeriesSqlConnector.createTable(
                 SCHEMA_NAME_SERIES,
                 randomName(),
