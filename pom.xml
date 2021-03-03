@@ -125,6 +125,10 @@
         <jackson.version>2.11.4</jackson.version>
         <snakeyaml.version>1.26</snakeyaml.version>
         <netty.version>4.1.59.Final</netty.version>
+        <mysql.connector.version>8.0.20</mysql.connector.version>
+        <apache.httpclient.version>4.5.13</apache.httpclient.version>
+        <guava.version>30.1-jre</guava.version>
+        <apache.commons.version>1.20</apache.commons.version>
 
         <snakeyaml.engine.version>1.0</snakeyaml.engine.version>
 
@@ -219,6 +223,26 @@
                 <version>${netty.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+                <version>${mysql.connector.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>${apache.httpclient.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>${apache.commons.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
