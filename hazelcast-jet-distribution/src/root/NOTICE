@@ -72,8 +72,8 @@ Apache License, Version 2.0
   perfmark:perfmark-api:0.19.0
   jmx_prometheus_javaagent:0.13.0
   Joda-Time:2.10.1
-  Apache Avro:1.8.2
-  Apache Commons Compress:1.8.1
+  Apache Avro:1.10.1
+  Apache Commons Compress:1.20
   Apache HttpAsyncClient:4.1.4
   Apache HttpClient:4.5.7
   Apache HttpCore:4.4.11
@@ -99,8 +99,6 @@ Apache License, Version 2.0
   Lucene Spatial Extras:8.0.0
   Lucene Spatial 3D:8.0.0
   Lucene Suggest:8.0.0
-  Jackson:1.9.13
-  Data Mapper for Jackson:1.9.13
   server:7.0.0
   elasticsearch-cli:7.0.0
   core:7.0.0
@@ -116,7 +114,7 @@ Apache License, Version 2.0
   rank-eval:7.0.0
   LZ4 and xxHash:1.5.0
   SnakeYAML Engine:1.0
-  snappy-java:1.1.1.3
+  snappy-java:1.1.7.2
   SnakeYAML:1.26
   AWS Java SDK :: Annotations:2.8.3
   AWS Java SDK :: HTTP Clients :: Apache:2.8.3
@@ -138,7 +136,6 @@ BSD 2-Clause License
   PostgreSQL JDBC Driver:42.2.14
 BSD 3-Clause License
   Protocol Buffers [Core]:3.13.0
-  ParaNamer Core:2.7
   ANTLR 4 Runtime:4.7.2
 CC0
   reactive-streams:1.0.2
@@ -154,8 +151,6 @@ MIT License
   Checker Qual:2.5.5
   Animal Sniffer Annotations:1.18
   SLF4J API Module:1.7.25
-Public Domain
-  XZ for Java:1.5
 Public Domain, per Creative Commons CC0
   HdrHistogram:2.1.9
 The GNU General Public License, v2 with FOSS exception
