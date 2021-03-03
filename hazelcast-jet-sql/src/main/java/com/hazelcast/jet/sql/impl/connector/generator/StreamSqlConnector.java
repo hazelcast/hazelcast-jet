@@ -78,7 +78,7 @@ class StreamSqlConnector implements SqlConnector {
 
     @Nonnull
     @SuppressWarnings("SameParameterValue")
-    static StreamTable createTable(String schemaName, String name, int rate) {
+    static StreamTable createTable(String schemaName, String name, Integer rate) {
         return new StreamTable(INSTANCE, FIELDS, schemaName, name, rate);
     }
 

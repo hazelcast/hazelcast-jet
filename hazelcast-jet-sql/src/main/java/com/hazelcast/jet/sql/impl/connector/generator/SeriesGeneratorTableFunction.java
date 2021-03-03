@@ -23,6 +23,7 @@ import com.hazelcast.sql.impl.calcite.schema.HazelcastTableStatistic;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastCallBinding;
 import com.hazelcast.sql.impl.calcite.validate.operand.OperandCheckerProgram;
 import com.hazelcast.sql.impl.calcite.validate.operand.TypedOperandChecker;
+import com.hazelcast.sql.impl.calcite.validate.operators.ReplaceUnknownOperandTypeInference;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
 import org.apache.calcite.sql.SqlOperandCountRange;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
@@ -30,6 +31,7 @@ import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import java.util.List;
 
 import static java.util.Arrays.asList;
+import static org.apache.calcite.sql.type.SqlTypeName.INTEGER;
 
 public final class SeriesGeneratorTableFunction extends JetSpecificTableFunction {
 
@@ -41,7 +43,7 @@ public final class SeriesGeneratorTableFunction extends JetSpecificTableFunction
         super(
                 FUNCTION_NAME,
                 binding -> toTable(0, 0, 1).getRowType(HazelcastTypeFactory.INSTANCE),
-                null,
+                new ReplaceUnknownOperandTypeInference(INTEGER),
                 SeriesSqlConnector.INSTANCE
         );
     }
@@ -76,14 +78,14 @@ public final class SeriesGeneratorTableFunction extends JetSpecificTableFunction
 
     @Override
     public HazelcastTable toTable(List<Object> arguments) {
-        int start = (Integer) arguments.get(0);
-        int stop = (Integer) arguments.get(1);
-        int step = arguments.get(2) != null ? (Integer) arguments.get(2) : 1;
+        Integer start = (Integer) arguments.get(0);
+        Integer stop = (Integer) arguments.get(1);
+        Integer step = arguments.get(2) != null ? (Integer) arguments.get(2) : 1;
 
         return toTable(start, stop, step);
     }
 
-    private static HazelcastTable toTable(int start, int stop, int step) {
+    private static HazelcastTable toTable(Integer start, Integer stop, Integer step) {
         SeriesTable table = SeriesSqlConnector.createTable(
                 SCHEMA_NAME_SERIES,
                 randomName(),

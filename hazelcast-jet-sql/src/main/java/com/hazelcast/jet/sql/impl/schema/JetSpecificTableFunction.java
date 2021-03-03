@@ -27,7 +27,7 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import java.util.List;
 
 /**
- * A table function which return type is known upfront.
+ * A table function return type of which is known upfront.
  */
 public abstract class JetSpecificTableFunction extends HazelcastFunction implements JetTableFunction {
 

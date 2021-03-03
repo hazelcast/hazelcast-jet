@@ -36,7 +36,7 @@ import java.nio.charset.Charset;
 import java.util.List;
 
 /**
- * A table function which return type is NOT known upfront and is determined during validation phase.
+ * A table function return type of which is NOT known upfront and is determined during validation phase.
  */
 public abstract class JetDynamicTableFunction implements JetTableFunction, TableFunction {
 

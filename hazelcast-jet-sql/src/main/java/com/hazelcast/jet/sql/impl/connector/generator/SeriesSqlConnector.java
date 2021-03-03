@@ -78,7 +78,7 @@ class SeriesSqlConnector implements SqlConnector {
 
     @Nonnull
     @SuppressWarnings("SameParameterValue")
-    static SeriesTable createTable(String schemaName, String name, int start, int stop, int step) {
+    static SeriesTable createTable(String schemaName, String name, Integer start, Integer stop, Integer step) {
         return new SeriesTable(INSTANCE, FIELDS, schemaName, name, start, stop, step);
     }
 

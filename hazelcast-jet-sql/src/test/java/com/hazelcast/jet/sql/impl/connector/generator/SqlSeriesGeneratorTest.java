@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector.generator;
 
 import com.hazelcast.jet.sql.SqlTestSupport;
+import com.hazelcast.map.IMap;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -133,5 +134,19 @@ public class SqlSeriesGeneratorTest extends SqlTestSupport {
     public void when_coercionIsRequired_then_throws() {
         assertThatThrownBy(() -> sqlService.execute("SELECT * FROM TABLE(GENERATE_SERIES(0, '1'))"))
                 .hasMessageContaining("consider adding an explicit CAST");
+    }
+
+    @Test
+    public void test_nullArgument() {
+        assertThatThrownBy(() -> sqlService.execute("SELECT * FROM TABLE(GENERATE_SERIES(null, null))"))
+                .hasMessage("null arguments to GENERATE_SERIES functions");
+    }
+
+    @Test
+    public void when_notInFromClause_then_throws() {
+        IMap<Integer, Integer> map = instance().getMap("m");
+        map.put(42, 43);
+        assertThatThrownBy(() -> sqlService.execute("SELECT GENERATE_SERIES(null, null) FROM m"))
+                .hasMessage("unexpected SQL type: ROW");
     }
 }

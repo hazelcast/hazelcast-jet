@@ -37,18 +37,18 @@ import java.util.stream.IntStream;
 
 class SeriesTable extends JetTable {
 
-    private final int start;
-    private final int stop;
-    private final int step;
+    private final Integer start;
+    private final Integer stop;
+    private final Integer step;
 
     SeriesTable(
             SqlConnector sqlConnector,
             List<TableField> fields,
             String schemaName,
             String name,
-            int start,
-            int stop,
-            int step
+            Integer start,
+            Integer stop,
+            Integer step
     ) {
         super(sqlConnector, fields, schemaName, name, new ConstantTableStatistics(numberOfItems(start, stop, step)));
 
@@ -58,6 +58,9 @@ class SeriesTable extends JetTable {
     }
 
     BatchSource<Object[]> items(Expression<Boolean> predicate, List<Expression<?>> projections) {
+        if (start == null || stop == null || step == null) {
+            throw QueryException.error("null arguments to GENERATE_SERIES functions");
+        }
         if (step == 0) {
             throw QueryException.error("step cannot equal zero");
         }
@@ -79,8 +82,9 @@ class SeriesTable extends JetTable {
         return numberOfItems(start, stop, step);
     }
 
-    private static long numberOfItems(int start, int stop, int step) {
-        if (step == 0) {
+    private static long numberOfItems(Integer start, Integer stop, Integer step) {
+        // ignore bad arguments, it will be reported in items()
+        if (start == null || stop == null || step == null || step == 0) {
             return 0;
         }
 

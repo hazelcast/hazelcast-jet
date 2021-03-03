@@ -38,14 +38,14 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 class StreamTable extends JetTable {
 
-    private final int rate;
+    private final Integer rate;
 
     StreamTable(
             SqlConnector sqlConnector,
             List<TableField> fields,
             String schemaName,
             String name,
-            int rate
+            Integer rate
     ) {
         super(sqlConnector, fields, schemaName, name, new ConstantTableStatistics(Integer.MAX_VALUE));
 
@@ -53,6 +53,9 @@ class StreamTable extends JetTable {
     }
 
     StreamSource<Object[]> items(Expression<Boolean> predicate, List<Expression<?>> projections) {
+        if (rate == null) {
+            throw QueryException.error("rate cannot be null");
+        }
         if (rate < 0) {
             throw QueryException.error("rate cannot be less than zero");
         }
