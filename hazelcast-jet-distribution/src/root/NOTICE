@@ -20,18 +20,18 @@ Copyright (c) 2008-2020 Hazelcast, Inc. All rights reserved.
 This product includes the following libraries with the following licenses:
 
 Apache License, Version 2.0
-  HPPC Collections:0.7.1
+  HPPC Collections:0.8.1
   Jackson-annotations:2.11.4
   Jackson-core:2.11.4
   jackson-databind:2.11.4
-  Jackson dataformat: CBOR:2.8.11
-  Jackson dataformat: Smile:2.8.11
-  Jackson-dataformat-YAML:2.8.11
+  Jackson dataformat: CBOR:2.10.4
+  Jackson dataformat: Smile:2.10.4
+  Jackson-dataformat-YAML:2.10.4
   Jackson datatype: JSR310:2.10.0
   jackson-jr-annotation-support:2.11.4
   jackson-jr-objects:2.11.4
   mysql-binlog-connector-java:0.20.1
-  compiler:0.9.3
+  compiler:0.9.6
   Google Android Annotations Library:4.1.1.4
   proto-google-common-protos:1.17.0
   FindBugs-jsr305:3.0.2
@@ -71,47 +71,47 @@ Apache License, Version 2.0
   Netty/Transport/Native/Unix/Common:4.1.59.Final
   perfmark:perfmark-api:0.19.0
   jmx_prometheus_javaagent:0.13.0
-  Joda-Time:2.10.1
+  Joda-Time:2.10.4
   Apache Avro:1.10.1
   Apache Commons Compress:1.20
   Apache HttpAsyncClient:4.1.4
-  Apache HttpClient:4.5.7
-  Apache HttpCore:4.4.11
-  Apache HttpCore NIO:4.4.11
+  Apache HttpClient:4.5.10
+  Apache HttpCore:4.4.12
+  Apache HttpCore NIO:4.4.12
   Apache Kafka:2.2.2
   Apache Kafka:2.2.2
   Apache Kafka:2.2.2
   Apache Log4j API:2.13.3
   Apache Log4j Core:2.13.3
   Apache Log4j SLF4J Binding:2.13.3
-  Lucene Common Analyzers:8.0.0
-  Lucene Memory:8.0.0
-  Lucene Core:8.0.0
-  Lucene Grouping:8.0.0
-  Lucene Highlighter:8.0.0
-  Lucene Join:8.0.0
-  Lucene Memory:8.0.0
-  Lucene Miscellaneous:8.0.0
-  Lucene Queries:8.0.0
-  Lucene QueryParsers:8.0.0
-  Lucene Sandbox:8.0.0
-  Lucene Spatial:8.0.0
-  Lucene Spatial Extras:8.0.0
-  Lucene Spatial 3D:8.0.0
-  Lucene Suggest:8.0.0
-  server:7.0.0
-  elasticsearch-cli:7.0.0
-  core:7.0.0
-  elasticsearch-geo:7.0.0
-  secure-sm:7.0.0
-  x-content:7.0.0
-  Elastic JNA Distribution:4.5.1
-  rest:7.0.0
-  rest-high-level:7.0.0
-  aggs-matrix-stats:7.0.0
-  lang-mustache:7.0.0
-  parent-join:7.0.0
-  rank-eval:7.0.0
+  Lucene Common Analyzers:8.7.0
+  Lucene Memory:8.7.0
+  Lucene Core:8.7.0
+  Lucene Grouping:8.7.0
+  Lucene Highlighter:8.7.0
+  Lucene Join:8.7.0
+  Lucene Memory:8.7.0
+  Lucene Miscellaneous:8.7.0
+  Lucene Queries:8.7.0
+  Lucene QueryParsers:8.7.0
+  Lucene Sandbox:8.7.0
+  Lucene Spatial Extras:8.7.0
+  Lucene Spatial 3D:8.7.0
+  Lucene Suggest:8.7.0
+  server:7.10.0
+  elasticsearch-cli:7.10.0
+  elasticsearch-core:7.10.0
+  elasticsearch-geo:7.10.0
+  elasticsearch-secure-sm:7.10.0
+  elasticsearch-x-content:7.10.0
+  Elastic JNA Distribution:5.5.0
+  rest:7.10.0
+  rest-high-level:7.10.0
+  aggs-matrix-stats:7.10.0
+  lang-mustache:7.10.0
+  mapper-extras:7.10.0
+  parent-join:7.10.0
+  rank-eval:7.10.0
   LZ4 and xxHash:1.5.0
   SnakeYAML Engine:1.0
   snappy-java:1.1.7.2
