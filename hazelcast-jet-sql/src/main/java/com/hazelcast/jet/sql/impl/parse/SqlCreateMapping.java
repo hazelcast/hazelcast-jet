@@ -96,12 +96,12 @@ public class SqlCreateMapping extends SqlCreate {
 
     public Map<String, String> options() {
         return options.getList().stream()
-                       .map(node -> (SqlOption) node)
-                       .collect(
-                               LinkedHashMap::new,
-                               (map, option) -> map.putIfAbsent(option.keyString(), option.valueString()),
-                               Map::putAll
-                       );
+                      .map(node -> (SqlOption) node)
+                      .collect(
+                              LinkedHashMap::new,
+                              (map, option) -> map.putIfAbsent(option.keyString(), option.valueString()),
+                              Map::putAll
+                      );
     }
 
     public boolean ifNotExists() {
