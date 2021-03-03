@@ -115,7 +115,7 @@
         <prometheus.version>0.13.0</prometheus.version>
         <hadoop.version>2.10.0</hadoop.version>
         <spring.version>4.3.0.RELEASE</spring.version>
-        <avro.version>1.8.2</avro.version>
+        <avro.version>1.10.1</avro.version>
         <scala.version>2.12</scala.version>
         <kafka.version>2.2.2</kafka.version>
         <grpc.version>1.31.0</grpc.version>
