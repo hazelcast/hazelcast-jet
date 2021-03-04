@@ -18,6 +18,9 @@ package com.hazelcast.jet.sql.impl.connector.generator;
 
 import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.sql.impl.schema.JetSpecificTableFunction;
+import com.hazelcast.jet.sql.impl.validate.ValidationUtil;
+import com.hazelcast.jet.sql.impl.validate.operand.NamedOperandCheckerProgram;
+import com.hazelcast.jet.sql.impl.validate.operators.NamedOperandTypeInference;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTableStatistic;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastCallBinding;
@@ -27,6 +30,7 @@ import com.hazelcast.sql.impl.calcite.validate.operators.ReplaceUnknownOperandTy
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
 import org.apache.calcite.sql.SqlOperandCountRange;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
+import org.apache.calcite.sql.type.SqlTypeName;
 
 import java.util.List;
 
@@ -43,7 +47,10 @@ public final class SeriesGeneratorTableFunction extends JetSpecificTableFunction
         super(
                 FUNCTION_NAME,
                 binding -> toTable(0, 0, 1).getRowType(HazelcastTypeFactory.INSTANCE),
-                new ReplaceUnknownOperandTypeInference(INTEGER),
+                new NamedOperandTypeInference(
+                        new SqlTypeName[]{INTEGER, INTEGER, INTEGER},
+                        new ReplaceUnknownOperandTypeInference(INTEGER)
+                ),
                 SeriesSqlConnector.INSTANCE
         );
     }
@@ -60,16 +67,22 @@ public final class SeriesGeneratorTableFunction extends JetSpecificTableFunction
 
     @Override
     protected boolean checkOperandTypes(HazelcastCallBinding binding, boolean throwOnFailure) {
-        if (binding.getOperandCount() == 2) {
+        if (ValidationUtil.hasAssignment(binding.getCall())) {
+            return new NamedOperandCheckerProgram(
+                    TypedOperandChecker.INTEGER,
+                    TypedOperandChecker.INTEGER,
+                    TypedOperandChecker.INTEGER
+            ).check(binding, throwOnFailure);
+        } else if (binding.getOperandCount() == 3) {
             return new OperandCheckerProgram(
+                    TypedOperandChecker.INTEGER,
                     TypedOperandChecker.INTEGER,
                     TypedOperandChecker.INTEGER
             ).check(binding, throwOnFailure);
         } else {
-            assert binding.getOperandCount() == 3;
+            assert binding.getOperandCount() == 2;
 
             return new OperandCheckerProgram(
-                    TypedOperandChecker.INTEGER,
                     TypedOperandChecker.INTEGER,
                     TypedOperandChecker.INTEGER
             ).check(binding, throwOnFailure);

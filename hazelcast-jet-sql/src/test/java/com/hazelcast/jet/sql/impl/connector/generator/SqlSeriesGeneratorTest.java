@@ -96,6 +96,18 @@ public class SqlSeriesGeneratorTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_generateSeriesNamedArgumentsAndDefaultStep() {
+        assertRowsAnyOrder(
+                "SELECT * FROM TABLE(GENERATE_SERIES(stop => 2 + 1, \"start\" => 1))",
+                asList(
+                        new Row(1),
+                        new Row(2),
+                        new Row(3)
+                )
+        );
+    }
+
+    @Test
     public void test_generateSeriesFilterAndProject() {
         assertRowsAnyOrder(
                 "SELECT v * 2 FROM TABLE(GENERATE_SERIES(0, 5)) WHERE v > 0 AND v < 5",
