@@ -98,20 +98,20 @@ Apache License, Version 2.0
   Lucene Spatial Extras:8.7.0
   Lucene Spatial 3D:8.7.0
   Lucene Suggest:8.7.0
-  server:7.10.0
-  elasticsearch-cli:7.10.0
-  elasticsearch-core:7.10.0
-  elasticsearch-geo:7.10.0
-  elasticsearch-secure-sm:7.10.0
-  elasticsearch-x-content:7.10.0
+  server:7.10.2
+  elasticsearch-cli:7.10.2
+  elasticsearch-core:7.10.2
+  elasticsearch-geo:7.10.2
+  elasticsearch-secure-sm:7.10.2
+  elasticsearch-x-content:7.10.2
   Elastic JNA Distribution:5.5.0
-  rest:7.10.0
-  rest-high-level:7.10.0
-  aggs-matrix-stats:7.10.0
-  lang-mustache:7.10.0
-  mapper-extras:7.10.0
-  parent-join:7.10.0
-  rank-eval:7.10.0
+  rest:7.10.2
+  rest-high-level:7.10.2
+  aggs-matrix-stats:7.10.2
+  lang-mustache:7.10.2
+  mapper-extras:7.10.2
+  parent-join:7.10.2
+  rank-eval:7.10.2
   LZ4 and xxHash:1.5.0
   SnakeYAML Engine:1.0
   snappy-java:1.1.7.2
