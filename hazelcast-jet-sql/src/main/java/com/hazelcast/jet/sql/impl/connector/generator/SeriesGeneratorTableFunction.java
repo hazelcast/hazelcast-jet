@@ -46,7 +46,7 @@ public final class SeriesGeneratorTableFunction extends JetSpecificTableFunction
     public SeriesGeneratorTableFunction() {
         super(
                 FUNCTION_NAME,
-                binding -> toTable(0, 0, 1).getRowType(HazelcastTypeFactory.INSTANCE),
+                binding -> toTable(0, 0, 1).getRowType(binding.getTypeFactory()),
                 new NamedOperandTypeInference(
                         new SqlTypeName[]{INTEGER, INTEGER, INTEGER},
                         new ReplaceUnknownOperandTypeInference(INTEGER)

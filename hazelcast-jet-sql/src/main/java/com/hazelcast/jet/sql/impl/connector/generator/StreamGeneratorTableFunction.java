@@ -42,7 +42,7 @@ public final class StreamGeneratorTableFunction extends JetSpecificTableFunction
     public StreamGeneratorTableFunction() {
         super(
                 FUNCTION_NAME,
-                binding -> toTable(0).getRowType(HazelcastTypeFactory.INSTANCE),
+                binding -> toTable(0).getRowType(binding.getTypeFactory()),
                 new ReplaceUnknownOperandTypeInference(INTEGER),
                 StreamSqlConnector.INSTANCE
         );
