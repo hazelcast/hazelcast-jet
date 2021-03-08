@@ -25,7 +25,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlUtil;
 
-import static org.apache.calcite.util.Static.RESOURCE;
+import static com.hazelcast.jet.sql.impl.validate.ValidatorResource.RESOURCE;
 
 public class NamedOperandCheckerProgram {
 
@@ -65,6 +65,6 @@ public class NamedOperandCheckerProgram {
                 return checkers[i];
             }
         }
-        throw SqlUtil.newContextException(identifier.getParserPosition(), RESOURCE.unknownIdentifier(name));
+        throw SqlUtil.newContextException(identifier.getParserPosition(), RESOURCE.unknownArgumentName(name));
     }
 }

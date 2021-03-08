@@ -166,6 +166,6 @@ public class SqlSeriesGeneratorTest extends SqlTestSupport {
     public void when_unknownIdentifier_then_throws() {
         assertThatThrownBy(() -> sqlService.execute(
                 "SELECT * FROM TABLE(GENERATE_SERIES(\"start\" => 0, stop => 1, non_existing => 0))"
-        )).hasMessageContaining("Unknown identifier 'non_existing'");
+        )).hasMessageContaining("Unknown argument name 'non_existing'");
     }
 }

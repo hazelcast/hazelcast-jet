@@ -127,6 +127,6 @@ public class SqlStreamGeneratorTest extends SqlTestSupport {
     @Test
     public void when_unknownIdentifier_then_throws() {
         assertThatThrownBy(() -> sqlService.execute("SELECT * FROM TABLE(GENERATE_STREAM(non_existing => 0))"))
-                .hasMessageContaining("Unknown identifier 'non_existing'");
+                .hasMessageContaining("Unknown argument name 'non_existing'");
     }
 }
