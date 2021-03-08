@@ -33,7 +33,6 @@ import org.junit.Test;
 
 import java.io.Serializable;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.Arrays;
 import java.util.Date;
@@ -97,8 +96,7 @@ public class MultiTableCacheIntegrationTest extends AbstractPostgresCdcIntegrati
         assertEqualsEventually(() -> getIMapContent(jet, CACHE), expected);
 
         //when
-        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
-                postgres.getPassword())) {
+        try (Connection connection = getConnection(postgres)) {
             connection.setSchema("inventory");
             Statement statement = connection.createStatement();
             for (int i = 1; i <= REPEATS; i++) {
