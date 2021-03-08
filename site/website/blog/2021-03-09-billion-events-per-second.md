@@ -112,10 +112,11 @@ To test this, we selected the NEXMark query that seemed the toughest on
 Jet given the results from Benchmark 1. This is Query 5, which showed
 a 99.99% latency 16 milliseconds in a 20-node cluster.
 
-In this round we relaxed the timings a bit, setting the goal to two
-updates per second (a new result set every 500 milliseconds), and
-accordingly had to adjust our percentile to 99% in order to make it
-practical. We also relaxed the GC timing, setting
+Since this time we'll create much more pressure on the input side,
+aiming for the highest possible throughput, we relaxed the timings a
+bit. We ask for two updates per second (a new result set every 500
+milliseconds), and accordingly had to adjust our percentile to 99% in
+order to make it practical. We also relaxed the GC timing, setting
 `-XX:MaxGCPauseMillis=50`.
 
 We started with just a single node, finding the maximum event rate Jet
