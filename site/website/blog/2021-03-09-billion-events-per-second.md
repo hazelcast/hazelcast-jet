@@ -102,7 +102,7 @@ size](assets/2021-03-09-latency-vs-scaling.png)
 The overall worst case was Query 5 in the largest cluster (20 nodes),
 and it came out as 16 milliseconds.
 
-## Benchmark 2: 99th Percentile with a Billion Events per Second
+## Benchmark 2: 99th Percentile Latency at a Billion Events per Second
 
 Our second question was this: How much hardware would Jet need to reach
 a throughput of billion events per second, while maintaining its
@@ -118,29 +118,32 @@ accordingly had to adjust our percentile to 99% in order to make it
 practical. We also relaxed the GC timing, setting
 `-XX:MaxGCPauseMillis=50`.
 
-The results we got are pretty amazing:
+We started with just a single node, finding the maximum event rate Jet
+can keep up with. The definition of "keeping up" is that the latency
+stays bounded during the test and doesn't constantly increase. We
+repeated the process at increasing cluster sizes, until reaching our
+goal of one billion. Here is what we found:
 
 ![Query 5 throughput vs. threads used](assets/2021-03-09-query5-thruput.png)
 
 First of all, Jet was able to handle **25 million events per second on a
 single node** and, even more impressively, this number kept scaling
-linearly all the way to the largest cluster we considered, 40 nodes, at
-which point it reached **1 billion events per second!**
+linearly all the way to our target, which it reached at a size of 40
+nodes.
 
-As we were increasing the cluster size, we realized we could let Jet use
-more threads without impacting the latency, and since we wanted to
-minimize the number of EC2 instances, we let it use 14 threads. This
-still leaves 2 vCPUs to the background GC work and other system needs.
-If you look carefully, you can see the curve in the chart bending
-slightly upwards at the 20-node mark, this is an artifact of the 40-node
-measurements being taken with Jet using 8.6% more threads per node (14
-vs. 12).
+During the process we realized we could let Jet use more threads without
+impacting the latency, and since we wanted to minimize the number of EC2
+instances, we let it use 14 threads. This still leaves 2 vCPUs to the
+background GC work and other system needs. If you look carefully, you
+can see the curve in the chart bending slightly upwards at the 20-node
+mark, this is an artifact of the 40-node measurements being taken with
+Jet using 8.6% more threads per node (14 vs. 12).
 
-Since the criterion for maximum throughput is keeping up with the input,
-allowing the latency to temporarily reach higher values as long as it
-settles back down, we did another round of tests at 80% of the maximum
-throughput determined for each cluster size. This gave us the following
-latency chart:
+Since the criterion for maximum throughput is just keeping up with the
+input, allowing the latency to temporarily reach higher values as long
+as it settles back down, we did another round of tests at 80% of the
+maximum throughput determined for each cluster size. This gave us the
+following latency chart:
 
 ![Jet throughput vs. threads used](assets/2021-03-09-query5-latency.png)
 
@@ -150,7 +153,7 @@ from Jet in real life.
 
 Finally, we decided to find the smallest cluster size at which Jet can
 handle 1 billion events per second at a low latency, and we got this
-result: 45 nodes, 26 milliseconds.
+result: **45 nodes, 26 milliseconds**.
 
 _If you enjoyed reading this post, check out Jet at
 [GitHub](https://github.com/hazelcast/hazelcast-jet) and give us a
