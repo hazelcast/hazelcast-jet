@@ -39,7 +39,6 @@ import org.junit.experimental.categories.Category;
 
 import javax.annotation.Nonnull;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -92,8 +91,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
         assertEqualsEventually(() -> jet.getMap("results").size(), 4);
 
         //when
-        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
-                postgres.getPassword())) {
+        try (Connection connection = getConnection(postgres)) {
             connection.setSchema("inventory");
             Statement statement = connection.createStatement();
             statement.addBatch("UPDATE customers SET first_name='Anne Marie' WHERE id=1004");
@@ -201,8 +199,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
         JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
 
         //then update a record
-        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
-                postgres.getPassword())) {
+        try (Connection connection = getConnection(postgres)) {
             connection.setSchema("inventory");
             Statement statement = connection.createStatement();
             statement.addBatch("UPDATE customers SET first_name='Anne Marie' WHERE id=1004");
@@ -250,8 +247,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
         //when
         job.restart();
         JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
-        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
-                postgres.getPassword())) {
+        try (Connection connection = getConnection(postgres)) {
             connection.setSchema("inventory");
             Statement statement = connection.createStatement();
             statement.addBatch("UPDATE customers SET first_name='Anne Marie' WHERE id=1004");
@@ -270,8 +266,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
         );
 
         //when
-        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
-                postgres.getPassword())) {
+        try (Connection connection = getConnection(postgres)) {
             connection.setSchema("inventory");
             connection
                     .prepareStatement("DELETE FROM customers WHERE id=1005")
@@ -337,8 +332,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
         assertJobStatusEventually(job, JobStatus.RUNNING);
 
         //when
-        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
-                postgres.getPassword())) {
+        try (Connection connection = getConnection(postgres)) {
             connection.setSchema("inventory");
             Statement statement = connection.createStatement();
             for (int i = offset; i < offset + length; i++) {
