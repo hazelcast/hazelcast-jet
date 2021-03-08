@@ -365,7 +365,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
     }
 
     private static void insertRecords(MySQLContainer<?> mysql, int... ids) throws SQLException {
-        try (Connection connection = AbstractMySqlCdcIntegrationTest.getConnection(mysql)) {
+        try (Connection connection = AbstractMySqlCdcIntegrationTest.getConnection(mysql, "inventory")) {
             connection.setAutoCommit(false);
             Statement statement = connection.createStatement();
             for (int id : ids) {

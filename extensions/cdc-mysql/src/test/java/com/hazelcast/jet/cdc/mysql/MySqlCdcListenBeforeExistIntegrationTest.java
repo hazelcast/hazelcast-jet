@@ -148,7 +148,7 @@ public class MySqlCdcListenBeforeExistIntegrationTest extends AbstractMySqlCdcIn
     }
 
     private void createTableWithData(String database, String table) throws SQLException {
-        try (Connection connection = getConnection(mysql)) {
+        try (Connection connection = getConnection(mysql, database)) {
             Statement statement = connection.createStatement();
             statement.addBatch("CREATE TABLE " + table + " (\n"
                             + "  id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,\n"
@@ -175,14 +175,14 @@ public class MySqlCdcListenBeforeExistIntegrationTest extends AbstractMySqlCdcIn
             statement.append(", '").append(val3).append("'");
         }
         statement.append(")");
-        try (Connection connection = getConnection(mysql)) {
+        try (Connection connection = getConnection(mysql, database)) {
             connection.createStatement().execute(statement.toString());
 
         }
     }
 
     private void addColumnToTable(String database, String table, String column) throws SQLException {
-        try (Connection connection = getConnection(mysql)) {
+        try (Connection connection = getConnection(mysql, database)) {
             connection.createStatement()
                     .execute("ALTER TABLE " + table + " ADD COLUMN " + column + " VARCHAR(255);");
         }

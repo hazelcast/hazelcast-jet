@@ -57,9 +57,9 @@ public abstract class AbstractMySqlCdcIntegrationTest extends AbstractCdcIntegra
         }
     }
 
-    static Connection getConnection(MySQLContainer<?> mysql) throws SQLException {
+    static Connection getConnection(MySQLContainer<?> mysql, String database) throws SQLException {
         return getMySqlConnection(
-                mysql.withDatabaseName("inventory").getJdbcUrl(),
+                mysql.withDatabaseName(database).getJdbcUrl(),
                 mysql.getUsername(),
                 mysql.getPassword()
         );

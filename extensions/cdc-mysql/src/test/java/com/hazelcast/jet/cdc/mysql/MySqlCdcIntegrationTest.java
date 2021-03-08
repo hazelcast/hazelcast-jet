@@ -90,7 +90,7 @@ public class MySqlCdcIntegrationTest extends AbstractMySqlCdcIntegrationTest {
         assertEqualsEventually(() -> jet.getMap("results").size(), 4);
 
         //when
-        try (Connection connection = getConnection(mysql)) {
+        try (Connection connection = getConnection(mysql, "inventory")) {
             Statement statement = connection.createStatement();
             statement.addBatch("UPDATE customers SET first_name='Anne Marie' WHERE id=1004");
             statement.addBatch("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')");
@@ -201,7 +201,7 @@ public class MySqlCdcIntegrationTest extends AbstractMySqlCdcIntegrationTest {
         JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
 
         //then update a record
-        try (Connection connection = getConnection(mysql)) {
+        try (Connection connection = getConnection(mysql, "inventory")) {
             Statement statement = connection.createStatement();
             statement.addBatch("UPDATE customers SET first_name='Anne Marie' WHERE id=1004");
             statement.addBatch("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')");
@@ -248,7 +248,7 @@ public class MySqlCdcIntegrationTest extends AbstractMySqlCdcIntegrationTest {
         //when
         job.restart();
         JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
-        try (Connection connection = getConnection(mysql)) {
+        try (Connection connection = getConnection(mysql, "inventory")) {
             Statement statement = connection.createStatement();
             statement.addBatch("UPDATE customers SET first_name='Anne Marie' WHERE id=1004");
             statement.addBatch("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')");
@@ -266,7 +266,7 @@ public class MySqlCdcIntegrationTest extends AbstractMySqlCdcIntegrationTest {
         );
 
         //when
-        try (Connection connection = getConnection(mysql)) {
+        try (Connection connection = getConnection(mysql, "inventory")) {
             connection.createStatement().execute("DELETE FROM customers WHERE id=1005");
         }
         //then
