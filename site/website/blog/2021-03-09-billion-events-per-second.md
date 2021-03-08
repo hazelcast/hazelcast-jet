@@ -1,5 +1,5 @@
 ---
-title: Billion Events Per Second with Millisecond Latency: Streaming Analytics at Giga-Scale
+title: Billion Events Per Second with Millisecond Latency: NEXMark at Giga-Scale
 author: Marko Topolnik
 authorURL: https://twitter.com/mtopolnik
 authorImageURL: https://pbs.twimg.com/profile_images/922726943614783488/Pb5DDGWF_400x400.jpg
