@@ -140,11 +140,12 @@ can see the curve in the chart bending slightly upwards at the 20-node
 mark, this is an artifact of the 40-node measurements being taken with
 Jet using 8.6% more threads per node (14 vs. 12).
 
-Since the criterion for maximum throughput is just keeping up with the
-input, allowing the latency to temporarily reach higher values as long
-as it settles back down, we did another round of tests at 80% of the
-maximum throughput determined for each cluster size. This gave us the
-following latency chart:
+The criterion for maximum throughput is just keeping up with the input,
+allowing the latency to temporarily reach higher values as long as it
+settles back down. In order to gauge Jet's stable latency at various
+scales, we did another round of tests at 80% of the maximum throughput
+determined for each cluster size. This gave us the following latency
+chart:
 
 ![Jet throughput vs. threads used](assets/2021-03-09-query5-latency.png)
 
@@ -153,7 +154,7 @@ across a range of sizes well exceeding the capacity you'd probably need
 from Jet in real life.
 
 Finally, we started from the setup that supported a billion events per
-second (40 nodes) and continued adding nodes until we got stable low
+second (40 nodes) and continued adding nodes until we got a stable low
 latency. This was our result: **45 nodes, 26 milliseconds**.
 
 _If you enjoyed reading this post, check out Jet at
