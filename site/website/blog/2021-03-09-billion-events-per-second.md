@@ -105,7 +105,7 @@ and it came out as 16 milliseconds.
 ## Benchmark 2: 99th Percentile Latency at a Billion Events per Second
 
 Our second question was this: How much hardware would Jet need to reach
-a throughput of billion events per second, while maintaining its
+a throughput of a billion events per second, while maintaining its
 millisecond-level latency?
 
 To test this, we selected the NEXMark query that seemed the toughest on
@@ -151,9 +151,9 @@ We can see that, although it's increasing, the latency stays pretty flat
 across a range of sizes well exceeding the capacity you'd probably need
 from Jet in real life.
 
-Finally, we decided to find the smallest cluster size at which Jet can
-handle 1 billion events per second at a low latency, and we got this
-result: **45 nodes, 26 milliseconds**.
+Finally, we started from the setup that supported a billion events per
+second (40 nodes) and continued adding nodes until we got stable low
+latency. This was our result: **45 nodes, 26 milliseconds**.
 
 _If you enjoyed reading this post, check out Jet at
 [GitHub](https://github.com/hazelcast/hazelcast-jet) and give us a
