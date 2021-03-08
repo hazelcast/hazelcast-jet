@@ -23,7 +23,6 @@ import org.junit.experimental.categories.Category;
 import org.testcontainers.containers.MySQLContainer;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -50,12 +49,20 @@ public abstract class AbstractMySqlCdcIntegrationTest extends AbstractCdcIntegra
 
     protected void createDb(String database) throws SQLException {
         String jdbcUrl = "jdbc:mysql://" + mysql.getContainerIpAddress() + ":" + mysql.getMappedPort(MYSQL_PORT) + "/";
-        try (Connection connection = DriverManager.getConnection(jdbcUrl, "root", "mysqlpw")) {
+        try (Connection connection = getMySqlConnection(jdbcUrl, "root", "mysqlpw")) {
             Statement statement = connection.createStatement();
             statement.addBatch("CREATE DATABASE " + database);
             statement.addBatch("GRANT ALL PRIVILEGES ON " + database + ".* TO 'mysqluser'@'%'");
             statement.executeBatch();
         }
+    }
+
+    static Connection getConnection(MySQLContainer<?> mysql) throws SQLException {
+        return getMySqlConnection(
+                mysql.withDatabaseName("inventory").getJdbcUrl(),
+                mysql.getUsername(),
+                mysql.getPassword()
+        );
     }
 
 }
