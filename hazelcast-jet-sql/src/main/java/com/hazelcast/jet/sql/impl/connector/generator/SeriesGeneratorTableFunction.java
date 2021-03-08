@@ -20,7 +20,7 @@ import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.sql.impl.schema.JetSpecificTableFunction;
 import com.hazelcast.jet.sql.impl.validate.ValidationUtil;
 import com.hazelcast.jet.sql.impl.validate.operand.NamedOperandCheckerProgram;
-import com.hazelcast.jet.sql.impl.validate.operators.NamedOperandTypeInference;
+import com.hazelcast.jet.sql.impl.validate.operators.HazelcastOperandTypeInference;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTableStatistic;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastCallBinding;
@@ -46,7 +46,7 @@ public final class SeriesGeneratorTableFunction extends JetSpecificTableFunction
         super(
                 FUNCTION_NAME,
                 binding -> toTable(0, 0, 1).getRowType(binding.getTypeFactory()),
-                new NamedOperandTypeInference(
+                new HazelcastOperandTypeInference(
                         new SqlTypeName[]{INTEGER, INTEGER, INTEGER},
                         new ReplaceUnknownOperandTypeInference(INTEGER)
                 ),

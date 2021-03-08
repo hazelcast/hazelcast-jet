@@ -25,12 +25,12 @@ import org.apache.calcite.sql.type.SqlTypeName;
 
 import static com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeUtils.createNullableType;
 
-public class NamedOperandTypeInference implements SqlOperandTypeInference {
+public class HazelcastOperandTypeInference implements SqlOperandTypeInference {
 
     private final SqlTypeName[] namedOperandTypes;
     private final SqlOperandTypeInference positionalOperandTypeInference;
 
-    public NamedOperandTypeInference(
+    public HazelcastOperandTypeInference(
             SqlTypeName[] namedOperandTypes,
             SqlOperandTypeInference positionalOperandTypeInference
     ) {
