@@ -25,7 +25,6 @@ import org.testcontainers.containers.PostgreSQLContainer;
 
 import java.io.Serializable;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.Objects;
@@ -54,10 +53,13 @@ public abstract class AbstractPostgresCdcIntegrationTest extends AbstractCdcInte
     }
 
     protected void createSchema(String schema) throws SQLException {
-        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
-                postgres.getPassword())) {
+        try (Connection connection = getConnection(postgres)) {
             connection.createStatement().execute("CREATE SCHEMA " + schema);
         }
+    }
+
+    static Connection getConnection(PostgreSQLContainer<?> postgres) throws SQLException {
+        return getPostgreSqlConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
     }
 
     protected static class Customer implements Serializable {
