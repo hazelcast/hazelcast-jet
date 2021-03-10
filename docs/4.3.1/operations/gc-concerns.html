@@ -1,0 +1,169 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Concerns Related to GC · Hazelcast Jet</title><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Choosing the right JDK-GC combination is important."/><meta name="docsearch:version" content="4.3.1"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Concerns Related to GC · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="Choosing the right JDK-GC combination is important."/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.3.1</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/4.3.1/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Operations Guide</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/kafka">Process Events from Apache Kafka</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/error-handling">Error Handling Strategies</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/4.3.1/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/014-batchstage-sort">014 -- BatchStage.sort()</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/013-system-time-watermarks">013 - Resolving Sparse Events Issue with System-Time Watermarks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/012-improved-job-resilience">012 - Improved Resilience of Fault-Tolerant Streaming Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/operations/gc-concerns.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Concerns Related to GC</h1></header><article><div><span><p>Based on an <a href="/blog/2020/06/09/jdk-gc-benchmarks-part1">extensive testing
+campaign</a> we performed in
+June-August 2020, we extracted some points of advice on how to choose
+the right JDK/GC combination and how to tune your setup to the workload
+of your Hazelcast Jet data pipeline.</p>
+<h2><a class="anchor" aria-hidden="true" id="upgrade-your-jdk"></a><a href="#upgrade-your-jdk" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Upgrade Your JDK</h2>
+<p>If you are still on JDK 8, seriously consider upgrading. We found that
+none of its garbage collectors are a match for the offerings of JDK 11,
+which is the current version with Oracle's Long-Term Support (LTS). The
+JVM has been undergoing a phase of rapid development lately, which means
+you can expect numerous improvements with each JDK version.</p>
+<h2><a class="anchor" aria-hidden="true" id="the-g1-collector-is-great-for-most-workloads"></a><a href="#the-g1-collector-is-great-for-most-workloads" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>The G1 Collector is Great for Most Workloads</h2>
+<p>For batch workloads, as well as streaming workloads that can tolerate
+occasional latency spikes of 2-3 seconds, the G1 collector is the best
+choice because it has very good throughput and its failure modes are
+graceful. It performs very well in a variety of workloads without any
+tuning parameters. Its default target for the maximum stop-the-world GC
+pause is 200 ms and you can configure it lower, down to 5 ms (using
+<code>-XX:MaxGCPauseMillis</code>). Lower targets allow less throughput, though.
+The mentioned 2-3 seconds latency (as opposed to the usual 0.2 seconds)
+occurs only in exceptional conditions with very high GC pressure. The
+advantage of G1 over many other collectors is a graceful increase in GC
+pause length under such conditions.</p>
+<h2><a class="anchor" aria-hidden="true" id="for-latency-goals-below-10-ms-consider-a-low-latency-gc"></a><a href="#for-latency-goals-below-10-ms-consider-a-low-latency-gc" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>For Latency Goals Below 10 ms, Consider a Low-Latency GC</h2>
+<p>If you aim for very low latencies (anything below 10 ms), you can
+achieve it with G1 as well, but you will probably have to use the
+<code>-XX:MaxNewSize</code> flag in order to constrain the Minor GC pause duration.
+In our <a href="/blog/2020/08/05/gc-tuning-for-jet">test</a> we found the values
+<code>100m</code>-<code>200m</code> to work best over our range of throughputs, lower values
+being better for lower throughputs.</p>
+<p>If your data pipeline doesn't have too large state (i.e., less than a
+million keys within a sliding window), you can consider the Z garbage
+collector. We found it to work well without any tuning parameters. Its
+current downside is that it handles less throughput compared to G1 and,
+being non-generational, doesn't work well if you have a lot of static
+data on the heap (for example, if your data pipeline has a <code>hashJoin</code>
+stage). ZGC is an experimental collector under intense development, so
+you can expect further improvements, including generational GC behavior,
+in the future.</p>
+<p>In our tests we found that as of JDK version 14.0.2, the other
+low-latency collector, Shenandoah, still did not perform as well as ZGC
+and latencies with it exceeded 10 ms in many cases.</p>
+<h3><a class="anchor" aria-hidden="true" id="reduce-the-jet-cooperative-thread-pool"></a><a href="#reduce-the-jet-cooperative-thread-pool" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Reduce the Jet Cooperative Thread Pool</h3>
+<p>A concurrent garbage collector uses a number of threads to do its work
+in the background. It uses some static heuristics to determine how many
+to use, mostly based on the number of <code>availableProcessors</code> that the JVM
+reports. For example, on a 16-vCPU EC2 c5.4xlarge instance:</p>
+<ul>
+<li>ZGC uses 2 threads</li>
+<li>G1 uses 3 threads</li>
+<li>Shenandoah uses 4 threads</li>
+</ul>
+<p>The number of GC threads is configurable through <code>-XX:ConcGCThreads</code>,
+but we found it best to leave the default setting. However, it is
+important to find out the number of GC threads and set Hazelcast Jet's
+<code>config/hazelcast-jet.yaml/instance/cooperative-thread-count</code> to
+(<code>availableProcessors</code> - <code>ConGCThreads</code>). This will allow the GC threads
+to be assigned to their own CPU cores, alongside Jet's threads, and thus
+the OS can avoid having to interleave Jet and GC threads on the same
+core.</p>
+<p>A Hazelcast Jet data pipeline may use additional threads for
+non-cooperative tasklets, in this case you may consider adjusting the
+cooperative thread pool size even lower.</p>
+<h3><a class="anchor" aria-hidden="true" id="egregious-amounts-of-free-heap-help-latency"></a><a href="#egregious-amounts-of-free-heap-help-latency" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Egregious Amounts of Free Heap Help Latency</h3>
+<p>The data pipeline in our tests used less than 1 GB of heap, but we
+needed at least <code>-Xmx=4g</code> to get a good 99.99% latency. We also tested
+with <code>-Xmx=8g</code> (less than 15% heap usage), and it made the latencies
+even lower.</p>
+<h2><a class="anchor" aria-hidden="true" id="for-batch-processing-garbage-free-aggregation-is-a-big-deal"></a><a href="#for-batch-processing-garbage-free-aggregation-is-a-big-deal" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>For Batch Processing, Garbage-Free Aggregation is a Big Deal</h2>
+<p>In batch aggregation, once a given grouping key is observed, the state
+associated with it is retained until the end of the computation. If
+updating that state doesn't create garbage, the whole aggregation
+process is garbage-free. The computation still produces young garbage,
+but since most garbage collectors are generational, this has
+significantly less cost. In our tests, garbage-free aggregation boosted
+the throughput of the batch pipeline by 30-35%.</p>
+<p>For this reason we always strive to make the aggregate operations we
+provide with Jet garbage-free. Examples are summing, averaging and
+finding extremes. Our current implementation of linear trend, however,
+does generate garbage because it uses immutable <code>BigDecimal</code>s in the
+state.</p>
+<p>If your requirements call for a complex aggregate operation not provided
+by Jet, and if you use Jet for batch processing, putting extra effort
+into implementing a custom garbage-free aggregate operation can be
+worth it.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/4.3.1/operations/cluster-sizing"><span class="arrow-prev">← </span><span>Cluster Sizing</span></a><a class="docs-next button" href="/docs/4.3.1/operations/job-management"><span>Job Management</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#upgrade-your-jdk">Upgrade Your JDK</a></li><li><a href="#the-g1-collector-is-great-for-most-workloads">The G1 Collector is Great for Most Workloads</a></li><li><a href="#for-latency-goals-below-10-ms-consider-a-low-latency-gc">For Latency Goals Below 10 ms, Consider a Low-Latency GC</a><ul class="toc-headings"><li><a href="#reduce-the-jet-cooperative-thread-pool">Reduce the Jet Cooperative Thread Pool</a></li><li><a href="#egregious-amounts-of-free-heap-help-latency">Egregious Amounts of Free Heap Help Latency</a></li></ul></li><li><a href="#for-batch-processing-garbage-free-aggregation-is-a-big-deal">For Batch Processing, Garbage-Free Aggregation is a Big Deal</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2021/02/03/jet-44-is-released">Jet 4.4 Released</a><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2021 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.3.1"]}
+              });
+            </script></body></html>

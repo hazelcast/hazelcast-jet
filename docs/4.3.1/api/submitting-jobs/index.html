@@ -1,0 +1,238 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Submitting Jobs · Hazelcast Jet</title><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="generator" content="Docusaurus"/><meta name="description" content="How to submit jobs to a Jet cluster."/><meta name="docsearch:version" content="4.3.1"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Submitting Jobs · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="How to submit jobs to a Jet cluster."/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.3.1</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/4.3.1/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Programming Guide</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/kafka">Process Events from Apache Kafka</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/4.3.1/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/error-handling">Error Handling Strategies</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/014-batchstage-sort">014 -- BatchStage.sort()</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/013-system-time-watermarks">013 - Resolving Sparse Events Issue with System-Time Watermarks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/012-improved-job-resilience">012 - Improved Resilience of Fault-Tolerant Streaming Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.3.1/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/api/submitting-jobs.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Submitting Jobs</h1></header><article><div><span><p>To execute a Jet job it needs to be submitted to the cluster. Once the
+job is submitted, it's distributed automatically to all the cluster members
+and will be executed on all members by default. Jet offers
+several ways to submit the job.</p>
+<p>A typical Jet program typically has the following structure:</p>
+<ul>
+<li>Acquire the <code>JetInstance</code> through <code>Jet.bootstrappedInstance()</code> or one
+of the other available means</li>
+<li>Create the data pipeline using <code>Pipeline.create()</code></li>
+<li>Add the required transforms to the pipeline</li>
+<li>Submit the pipeline as a job using <code>JetInstance.newJob()</code></li>
+<li>For a batch job, call <code>Job.join()</code> to wait for the batch job to
+complete</li>
+<li>For a streaming job, exit the program after <code>newJob()</code>, or where
+desired, have a loop to constantly monitor the results. Calling
+<code>.join()</code> on a streaming job will not return any results until a job
+is cancelled or fails.</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="submit-job-as-a-jar"></a><a href="#submit-job-as-a-jar" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Submit Job as a JAR</h2>
+<p>The simplest way to submit a Job to the Jet cluster is to use
+the <code>jet submit</code> command. When you submit a job
+using this command, then the provided JAR itself is sent to the cluster
+and all the classes inside the supplied JAR will be available during
+execution.</p>
+<p>When using the <code>jet submit</code> command, you need to acquire a
+<code>JetInstance</code> using <code>Jet.bootstrappedInstance()</code> instead of other
+options (i.e. do not use <code>Jet.newJetClient()</code>).</p>
+<p>The <code>jet submit</code> command by default will execute the main class of the
+application, but you can optionally specify which class should run:</p>
+<pre><code class="hljs css language-bash">bin/jet submit --class MainClass &lt;jar file&gt; [&lt;arguments&gt;...]
+</code></pre>
+<p>The command also has some additional options:</p>
+<ul>
+<li><code>-v</code>: for verbose mode, which will show the connection logs and
+exception stack traces, if any</li>
+<li><code>-n</code>: job name to use, will override the one set in <code>JobConfig</code></li>
+<li><code>-s</code>: name of the initial snapshot to start the job from</li>
+</ul>
+<p>The <code>jet</code> command also some global options:</p>
+<ul>
+<li><code>-t</code>: name and comma separated addresses for the cluster, which must match
+what's configured on the cluster, cluster name is optional</li>
+<li><code>-f</code>: path to a client config file, which can be used instead of
+supplying an address and name.</li>
+</ul>
+<p>Example:</p>
+<pre><code class="hljs css language-bash">bin/jet \
+  -t jet@192.168.1.100:5701,192.168.1.101:5701 \
+  submit \
+  -c &lt;MainClass&gt; \
+  &lt;jar file&gt; \
+  [&lt;arguments&gt;...]
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="bundling-dependencies"></a><a href="#bundling-dependencies" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Bundling Dependencies</h2>
+<p>A Jet pipeline is built with several transform which typically consist
+of lambda expressions. During the job submission, the pipeline is
+<a href="serialization">serialized</a> and sent to the Jet cluster, which must be
+able to execute these expressions on each node. Imagine the simple
+mapping pipeline below:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">class</span> <span class="token class-name">JetApp</span> <span class="token punctuation">{</span>
+
+  <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">TestSources</span><span class="token punctuation">.</span><span class="token function">items</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+     <span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span>x <span class="token operator">-></span> x <span class="token operator">*</span> x<span class="token punctuation">)</span>
+     <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+     <span class="token class-name">JetInstance</span> jet <span class="token operator">=</span> <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">bootstrappedInstance</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+     jet<span class="token punctuation">.</span><span class="token function">newJob</span><span class="token punctuation">(</span>p<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">join</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>The lambda <code>x -&gt; x * x</code> will get compiled by Java into an anonymous
+class with a name like <code>JetApp$$Lambda$30/0x00000008000a1840</code>. These and
+other classes which may be depend by these functions need to present
+on the nodes that will be executing the job. Jet supports several ways
+to make these classes available on the nodes.</p>
+<h3><a class="anchor" aria-hidden="true" id="uber-jar"></a><a href="#uber-jar" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Uber JAR</h3>
+<p>The easiest way to get additional dependencies to the cluster is to
+bundle it as a so-called uber JAR, which contains all the required
+dependencies inside.</p>
+<p>To build an uber JAR, there are several options:</p>
+<ul>
+<li><a href="https://maven.apache.org/plugins/maven-assembly-plugin/">Maven Assembly Plugin</a></li>
+<li><a href="https://maven.apache.org/plugins/maven-shade-plugin/">Maven Shade Plugin</a></li>
+<li><a href="https://imperceptiblethoughts.com/shadow/introduction/">Gradle Shadow Plugin</a>.</li>
+</ul>
+<p>When shading dependencies, <code>com.hazelcast.jet:hazelcast-jet</code> itself
+doesn't need to be inside the JAR and should be set with the <code>provided</code>
+scope or equivalent.</p>
+<h3><a class="anchor" aria-hidden="true" id="adding-to-classpath"></a><a href="#adding-to-classpath" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Adding to Classpath</h3>
+<p>Some dependencies may either be large or may be required to be present
+on classpath during application startup.</p>
+<p>The convention is to add these dependencies to <code>&lt;JET_HOME&gt;/lib</code> folder.
+Jet automatically picks up any dependencies placed on this folder during
+startup. Several of Jet's out of the box modules (such as connectors for
+Kafka, Hadoop) are already available in the <code>opt</code> folder and can simply
+be moved to <code>lib</code> folder to be used. Any changes to <code>lib</code> folder
+requires the node to be restarted to take effect.</p>
+<p>Alternatively, you can use the <code>CLASSPATH</code> environment variable
+to add additional classes:</p>
+<pre><code class="hljs css language-bash">CLASSPATH=&lt;path_to_jar&gt; bin/jet-start
+</code></pre>
+<p>There are some specific types of classes which are required to be
+present on the classpath and can't be dynamically sent along with the
+Job. These include:</p>
+<ul>
+<li><a href="https://jet-start.sh/docs/api/serialization#serialization-of-data-types">Custom Serializers</a></li>
+<li>Some <a href="data-structures#imap"><code>IMap</code></a> specific features like
+<code>EntryProcessor</code> or <code>MapLoader</code>/<code>MapStore</code></li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="submitting-using-jet-client"></a><a href="#submitting-using-jet-client" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Submitting using Jet Client</h2>
+<p>If you are using a Jet client as part of an application and need to
+submit jobs within that application then you can also use the Jet client
+to directly submit jobs:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">JetInstance</span> jet <span class="token operator">=</span> <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">newJetClient</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">.</span><span class="token punctuation">.</span>
+jet<span class="token punctuation">.</span><span class="token function">newJob</span><span class="token punctuation">(</span>pipeline<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="attaching-specific-classes"></a><a href="#attaching-specific-classes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Attaching Specific Classes</h3>
+<p>When submitting a Job using the Jet client, no additional classes are
+sent with the job by default, and will need to be manually added:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">JetInstance</span> jet <span class="token operator">=</span> <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">newJetClient</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+jet<span class="token punctuation">.</span><span class="token function">newJob</span><span class="token punctuation">(</span>pipeline<span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">JobConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">addClass</span><span class="token punctuation">(</span><span class="token class-name">AppClass</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+</code></pre>
+<p>When adding classes this way, nested (inner &amp; anonymous) classes are
+automatically added as well.</p>
+<p>It's also possible to add all the classes in a given package (and
+recursively in all of its subpackages) using <code>JobConfig.addPackage</code> or
+even a whole JAR with <code>JobConfig.addJar</code>.</p>
+<h2><a class="anchor" aria-hidden="true" id="setting-the-job-name"></a><a href="#setting-the-job-name" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Setting the Job Name</h2>
+<p>Each job has a cluster-wide unique ID and an optional name. Only one
+job with the same name can be running in the cluster at the same time.
+You can configure the job name through <code>JobConfig.setName()</code> option.</p>
+<p>When a job is already running with the same name, the newly submitted
+one will fail. You can avoid this by using the
+<code>JetInstance.newJobIfAbsent()</code> method.</p>
+<h2><a class="anchor" aria-hidden="true" id="setting-processing-guarantees"></a><a href="#setting-processing-guarantees" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Setting Processing Guarantees</h2>
+<p>When the job is submitted it's possible to set what fault-tolerance
+level should the job support. There are three options:</p>
+<ul>
+<li><code>NONE</code>: No snapshots will be taken and upon a restart due to cluster
+change, the job will be restarted as if it was started from scratch.</li>
+<li><code>AT_LEAST_ONCE</code>: Enables at-least-once guarantee. Regular snapshots
+will be taken and the job can be resumed from these snapshots when
+restarted.</li>
+<li><code>EXACTLY_ONCE</code>: Enables exactly-once guarantee. Regular snapshots will
+be taken and the job can be resumed from these snapshots when
+restarted.</li>
+</ul>
+<p>For a more detailed discussion on these guarantees, please refer to the
+<a href="../architecture/fault-tolerance">Fault Tolerance</a> section.
+The snapshot interval can be configured by <code>JobConfig.setSnapshotIntervalMillis()</code>.
+The default is 10 seconds.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/4.3.1/api/sources-sinks"><span class="arrow-prev">← </span><span>Sources and Sinks</span></a><a class="docs-next button" href="/docs/4.3.1/api/data-structures"><span>Distributed Data Structures</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#submit-job-as-a-jar">Submit Job as a JAR</a></li><li><a href="#bundling-dependencies">Bundling Dependencies</a><ul class="toc-headings"><li><a href="#uber-jar">Uber JAR</a></li><li><a href="#adding-to-classpath">Adding to Classpath</a></li></ul></li><li><a href="#submitting-using-jet-client">Submitting using Jet Client</a><ul class="toc-headings"><li><a href="#attaching-specific-classes">Attaching Specific Classes</a></li></ul></li><li><a href="#setting-the-job-name">Setting the Job Name</a></li><li><a href="#setting-processing-guarantees">Setting Processing Guarantees</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2021/02/03/jet-44-is-released">Jet 4.4 Released</a><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2021 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.3.1"]}
+              });
+            </script></body></html>
