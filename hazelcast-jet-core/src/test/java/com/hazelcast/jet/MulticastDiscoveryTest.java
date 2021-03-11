@@ -17,6 +17,7 @@
 package com.hazelcast.jet;
 
 import com.hazelcast.client.HazelcastClient;
+import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientNetworkConfig;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.config.Config;
@@ -122,7 +123,13 @@ public class MulticastDiscoveryTest extends JetTestSupport {
 
         expectedException.expect(IllegalStateException.class);
         expectedException.expectMessage(UNABLE_TO_CONNECT_MESSAGE);
-        HazelcastClient.newHazelcastClient();
+
+        ClientConfig clientConfig = ClientConfig.load();
+        // override default indefinite cluster connection timeout
+        clientConfig.getConnectionStrategyConfig()
+                    .getConnectionRetryConfig()
+                    .setClusterConnectTimeoutMillis(20_000);
+        HazelcastClient.newHazelcastClient(clientConfig);
     }
 
     /**
