@@ -114,10 +114,7 @@ public class MulticastDiscoveryTest extends JetTestSupport {
         expectedException.expectMessage(UNABLE_TO_CONNECT_MESSAGE);
 
         ClientConfig clientConfig = JetClientConfig.load();
-        // override default indefinite cluster connection timeout
-        clientConfig.getConnectionStrategyConfig()
-                .getConnectionRetryConfig()
-                .setClusterConnectTimeoutMillis(CLUSTER_CONNECTION_TIMEOUT);
+        configureTimeout(clientConfig);
         Jet.newJetClient(clientConfig);
     }
 
@@ -132,10 +129,7 @@ public class MulticastDiscoveryTest extends JetTestSupport {
         expectedException.expectMessage(UNABLE_TO_CONNECT_MESSAGE);
 
         ClientConfig clientConfig = ClientConfig.load();
-        // override default indefinite cluster connection timeout
-        clientConfig.getConnectionStrategyConfig()
-                    .getConnectionRetryConfig()
-                    .setClusterConnectTimeoutMillis(CLUSTER_CONNECTION_TIMEOUT);
+        configureTimeout(clientConfig);
         HazelcastClient.newHazelcastClient(clientConfig);
     }
 
@@ -152,5 +146,12 @@ public class MulticastDiscoveryTest extends JetTestSupport {
             networkConfig.addAddress(address.getHost() + ":" + address.getPort());
         }
         return jetClientConfig;
+    }
+
+    private void configureTimeout(ClientConfig clientConfig) {
+        // override default indefinite cluster connection timeout
+        clientConfig.getConnectionStrategyConfig()
+                .getConnectionRetryConfig()
+                .setClusterConnectTimeoutMillis(CLUSTER_CONNECTION_TIMEOUT);
     }
 }
