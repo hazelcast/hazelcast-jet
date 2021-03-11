@@ -19,6 +19,7 @@ package com.hazelcast.jet.sql.impl;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.jet.impl.exception.EventLimitExceededException;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
 import com.hazelcast.sql.impl.row.HeapRow;
@@ -29,6 +30,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 public final class ExpressionUtil {
 
@@ -53,6 +55,15 @@ public final class ExpressionUtil {
     };
 
     private ExpressionUtil() {
+    }
+
+    public static FunctionEx<Object[], Object[]> limitFn(AtomicLong limit) {
+        return values -> {
+            if (limit.addAndGet(-1) < 0) {
+                throw new EventLimitExceededException();
+            }
+            return values;
+        };
     }
 
     public static PredicateEx<Object[]> filterFn(

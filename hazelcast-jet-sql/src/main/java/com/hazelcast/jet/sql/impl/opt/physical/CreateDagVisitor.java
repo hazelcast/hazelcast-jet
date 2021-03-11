@@ -34,11 +34,13 @@ import com.hazelcast.jet.sql.impl.SimpleExpressionEvalContext;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector.VertexWithInputConfig;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.expression.Expression;
+import com.hazelcast.sql.impl.row.EmptyRow;
 import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.rel.RelNode;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -222,6 +224,23 @@ public class CreateDagVisitor {
         // Such edge has to be partitioned, but the sink is LP=1 anyway, so we can use
         // allToOne with any key, it goes to a single processor on a single member anyway.
         connectInput(rootRel.getInput(), vertex, edge -> edge.distributeTo(localMemberAddress).allToOne(""));
+        return vertex;
+    }
+
+    public Vertex onLimit(LimitPhysicalRel limitPhysicalRel) {
+        Expression<?> fetch = limitPhysicalRel.fetch();
+        Object val = fetch.eval(EmptyRow.INSTANCE, ExpressionUtil.NOT_IMPLEMENTED_ARGUMENTS_CONTEXT);
+        assert val instanceof Number;
+
+        long fetchValue = ((Number) val).longValue();
+        assert fetchValue >= 0;
+        AtomicLong limit = new AtomicLong(fetchValue);
+
+        Vertex vertex = dag.newUniqueVertex("Limit", mapUsingServiceP(
+                ServiceFactories.nonSharedService(ctx -> ExpressionUtil.limitFn(limit)),
+                (Function<Object[], Object[]> limitFn, Object[] row) -> limitFn.apply(row)));
+
+        connectInput(limitPhysicalRel.getInput(), vertex, null);
         return vertex;
     }
 
