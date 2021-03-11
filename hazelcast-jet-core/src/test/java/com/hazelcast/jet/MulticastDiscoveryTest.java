@@ -45,6 +45,7 @@ import static org.junit.Assert.assertEquals;
 public class MulticastDiscoveryTest extends JetTestSupport {
 
     private static final String UNABLE_TO_CONNECT_MESSAGE = "Unable to connect";
+    private static final int CLUSTER_CONNECTION_TIMEOUT = 20_000;
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
@@ -111,7 +112,13 @@ public class MulticastDiscoveryTest extends JetTestSupport {
 
         expectedException.expect(IllegalStateException.class);
         expectedException.expectMessage(UNABLE_TO_CONNECT_MESSAGE);
-        Jet.newJetClient();
+
+        ClientConfig clientConfig = JetClientConfig.load();
+        // override default indefinite cluster connection timeout
+        clientConfig.getConnectionStrategyConfig()
+                .getConnectionRetryConfig()
+                .setClusterConnectTimeoutMillis(CLUSTER_CONNECTION_TIMEOUT);
+        Jet.newJetClient(clientConfig);
     }
 
     @Test
@@ -128,7 +135,7 @@ public class MulticastDiscoveryTest extends JetTestSupport {
         // override default indefinite cluster connection timeout
         clientConfig.getConnectionStrategyConfig()
                     .getConnectionRetryConfig()
-                    .setClusterConnectTimeoutMillis(20_000);
+                    .setClusterConnectTimeoutMillis(CLUSTER_CONNECTION_TIMEOUT);
         HazelcastClient.newHazelcastClient(clientConfig);
     }
 
