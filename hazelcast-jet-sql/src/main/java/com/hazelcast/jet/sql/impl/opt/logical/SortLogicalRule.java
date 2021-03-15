@@ -17,22 +17,24 @@
 package com.hazelcast.jet.sql.impl.opt.logical;
 
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
+import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptRule;
+import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.Sort;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 
-public class LimitLogicalRule extends ConverterRule {
+public class SortLogicalRule extends ConverterRule {
 
-    static final RelOptRule INSTANCE = new LimitLogicalRule();
+    static final RelOptRule INSTANCE = new SortLogicalRule();
 
-    private LimitLogicalRule() {
+    private SortLogicalRule() {
         super(
                 Sort.class, Convention.NONE, LOGICAL,
-                LimitLogicalRule.class.getSimpleName()
+                SortLogicalRule.class.getSimpleName()
         );
     }
 
@@ -40,10 +42,12 @@ public class LimitLogicalRule extends ConverterRule {
     public RelNode convert(RelNode rel) {
         Sort sort = (Sort) rel;
 
-        return new LimitLogicalRel(
+        return new SortLogicalRel(
                 sort.getCluster(),
                 OptUtils.toLogicalConvention(sort.getTraitSet()),
                 OptUtils.toLogicalInput(sort.getInput()),
+                sort.getCollation(),
+                sort.offset,
                 sort.fetch
         );
     }

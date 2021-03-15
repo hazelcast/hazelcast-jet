@@ -45,9 +45,9 @@ public class SqlLimitTest extends SqlTestSupport {
                 new String[]{"Joey", "3"}
         );
 
-        assertRowsAnyOrder(
+        assertContainsOnlyOneOfRows(
                 "SELECT name FROM " + tableName + " LIMIT 1",
-                singletonList(new Row("Alice"))
+                new Row("Alice"), new Row("Bob"), new Row("Joey")
         );
     }
 

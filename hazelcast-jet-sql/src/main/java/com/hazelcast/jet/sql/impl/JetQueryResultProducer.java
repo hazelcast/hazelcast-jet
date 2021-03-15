@@ -16,10 +16,12 @@
 
 package com.hazelcast.jet.sql.impl;
 
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.util.concurrent.BackoffIdleStrategy;
 import com.hazelcast.internal.util.concurrent.IdleStrategy;
 import com.hazelcast.internal.util.concurrent.OneToOneConcurrentArrayQueue;
 import com.hazelcast.jet.core.Inbox;
+import com.hazelcast.jet.impl.exception.EventLimitExceededException;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryResultProducer;
 import com.hazelcast.sql.impl.ResultIterator;
@@ -47,6 +49,11 @@ public class JetQueryResultProducer implements QueryResultProducer {
     private final AtomicReference<Exception> done = new AtomicReference<>();
 
     private InternalIterator iterator;
+    private FunctionEx<Object, Object> onRowProcessed;
+
+    public void init(FunctionEx<Object, Object> onRowProcessed) {
+        this.onRowProcessed = onRowProcessed;
+    }
 
     @Override
     public ResultIterator<Row> iterator() {
@@ -69,8 +76,22 @@ public class JetQueryResultProducer implements QueryResultProducer {
 
     public void consume(Inbox inbox) {
         ensureNotDone();
-        for (Object[] row; (row = (Object[]) inbox.peek()) != null && rows.offer(new HeapRow(row)); ) {
+        Object[] row;
+        row = (Object[]) inbox.peek();
+        while (row != null) {
+            if (onRowProcessed != null) {
+                ensureNotDone();
+                try {
+                    onRowProcessed.apply(row);
+                } catch (EventLimitExceededException e) {
+                    done.compareAndSet(null, e);
+                }
+            }
+            if (!rows.offer(new HeapRow(row))) {
+                break;
+            }
             inbox.remove();
+            row = (Object[]) inbox.peek();
         }
     }
 
@@ -140,6 +161,9 @@ public class JetQueryResultProducer implements QueryResultProducer {
                 if (exception instanceof NormalCompletionException) {
                     // finish the rows first
                     return rows.isEmpty();
+                }
+                if (exception instanceof EventLimitExceededException) {
+                    return true;
                 }
                 throw sneakyThrow(exception);
             }

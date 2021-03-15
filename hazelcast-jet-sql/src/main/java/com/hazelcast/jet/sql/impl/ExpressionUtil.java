@@ -57,9 +57,9 @@ public final class ExpressionUtil {
     private ExpressionUtil() {
     }
 
-    public static FunctionEx<Object[], Object[]> limitFn(AtomicLong limit) {
+    public static FunctionEx<Object, Object> limitFn(AtomicLong limit) {
         return values -> {
-            if (limit.addAndGet(-1) < 0) {
+            if (limit.addAndGet(-1) < 1) {
                 throw new EventLimitExceededException();
             }
             return values;

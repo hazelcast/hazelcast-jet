@@ -80,7 +80,7 @@ public final class LogicalRules {
                 // Miscellaneous
                 PruneEmptyRules.PROJECT_INSTANCE,
                 PruneEmptyRules.FILTER_INSTANCE,
-                LimitLogicalRule.INSTANCE
+                SortLogicalRule.INSTANCE
         );
     }
 }

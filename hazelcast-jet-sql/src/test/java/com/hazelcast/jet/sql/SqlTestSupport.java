@@ -120,6 +120,13 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
         assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
     }
 
+    public static void assertContainsOnlyOneOfRows(String sql, Row... expectedRows) {
+        SqlService sqlService = instance().getSql();
+        List<Row> actualRows = new ArrayList<>();
+        sqlService.execute(sql).iterator().forEachRemaining(r -> actualRows.add(new Row(r)));
+        assertThat(actualRows).hasSize(1).containsAnyOf(expectedRows);
+    }
+
     /**
      * Execute a query and wait until it completes. Assert that the returned
      * rows contain the expected rows, in the given order.

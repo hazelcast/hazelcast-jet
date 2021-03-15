@@ -217,32 +217,48 @@ public class CreateDagVisitor {
     }
 
     public Vertex onRoot(JetRootRel rootRel) {
-        Vertex vertex = dag.newUniqueVertex("ClientSink",
-                rootResultConsumerSink(rootRel.getInitiatorAddress()));
+        Vertex vertex;
+        RelNode input = rootRel.getInput();
+        if (input instanceof SortPhysicalRel) {
+            SortPhysicalRel limitRel = (SortPhysicalRel) input;
+            Expression<?> fetch = limitRel.fetch();
+            Object val = fetch.eval(EmptyRow.INSTANCE, ExpressionUtil.NOT_IMPLEMENTED_ARGUMENTS_CONTEXT);
+            assert val instanceof Number;
+
+            long fetchValue = ((Number) val).longValue();
+            assert fetchValue >= 0;
+            AtomicLong limit = new AtomicLong(fetchValue);
+            vertex = dag.newUniqueVertex("ClientSink",
+                    rootResultConsumerSink(rootRel.getInitiatorAddress(), limit));
+            input = limitRel.getInput();
+        } else {
+            vertex = dag.newUniqueVertex("ClientSink",
+                    rootResultConsumerSink(rootRel.getInitiatorAddress(), null));
+        }
 
         // We use distribute-to-one edge to send all the items to the initiator member.
         // Such edge has to be partitioned, but the sink is LP=1 anyway, so we can use
         // allToOne with any key, it goes to a single processor on a single member anyway.
-        connectInput(rootRel.getInput(), vertex, edge -> edge.distributeTo(localMemberAddress).allToOne(""));
+        connectInput(input, vertex, edge -> edge.distributeTo(localMemberAddress).allToOne(""));
         return vertex;
     }
 
-    public Vertex onLimit(LimitPhysicalRel limitPhysicalRel) {
-        Expression<?> fetch = limitPhysicalRel.fetch();
-        Object val = fetch.eval(EmptyRow.INSTANCE, ExpressionUtil.NOT_IMPLEMENTED_ARGUMENTS_CONTEXT);
-        assert val instanceof Number;
-
-        long fetchValue = ((Number) val).longValue();
-        assert fetchValue >= 0;
-        AtomicLong limit = new AtomicLong(fetchValue);
-
-        Vertex vertex = dag.newUniqueVertex("Limit", mapUsingServiceP(
-                ServiceFactories.nonSharedService(ctx -> ExpressionUtil.limitFn(limit)),
-                (Function<Object[], Object[]> limitFn, Object[] row) -> limitFn.apply(row)));
-
-        connectInput(limitPhysicalRel.getInput(), vertex, null);
-        return vertex;
-    }
+//    public Vertex onLimit(LimitPhysicalRel limitPhysicalRel) {
+//        Expression<?> fetch = limitPhysicalRel.fetch();
+//        Object val = fetch.eval(EmptyRow.INSTANCE, ExpressionUtil.NOT_IMPLEMENTED_ARGUMENTS_CONTEXT);
+//        assert val instanceof Number;
+//
+//        long fetchValue = ((Number) val).longValue();
+//        assert fetchValue >= 0;
+//        AtomicLong limit = new AtomicLong(fetchValue);
+//
+//        Vertex vertex = dag.newUniqueVertex("Limit", mapUsingServiceP(
+//                ServiceFactories.nonSharedService(ctx -> ExpressionUtil.limitFn(limit)),
+//                (Function<Object, Object> limitFn, Object[] row) -> limitFn.apply(row)));
+//
+//        connectInput(limitPhysicalRel.getInput(), vertex, null);
+//        return vertex;
+//    }
 
     public DAG getDag() {
         return dag;

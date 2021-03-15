@@ -18,23 +18,19 @@ package com.hazelcast.jet.sql.impl.opt.logical;
 
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.SingleRel;
+import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rex.RexNode;
 
-import java.util.List;
-
-public class LimitLogicalRel extends SingleRel implements LogicalRel {
-    public final RexNode fetch;
-
-    LimitLogicalRel(RelOptCluster cluster, RelTraitSet traits, RelNode input, RexNode fetch) {
-        super(cluster, traits, input);
-        this.fetch = fetch;
+public class SortLogicalRel extends Sort implements LogicalRel {
+    SortLogicalRel(RelOptCluster cluster, RelTraitSet traits, RelNode newInput, RelCollation newCollation, RexNode offset, RexNode fetch) {
+        super(cluster, traits, newInput, newCollation, offset, fetch);
     }
 
     @Override
-    public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new LimitLogicalRel(getCluster(), traitSet, getInput(), fetch);
+    public Sort copy(RelTraitSet traitSet, RelNode newInput, RelCollation newCollation, RexNode offset, RexNode fetch) {
+        return new SortLogicalRel(getCluster(), traitSet, newInput, newCollation, offset, fetch);
     }
 
     public RexNode getFetch() {
