@@ -1,5 +1,5 @@
 ---
-title: Billion Events Per Second with Millisecond Latency: NEXMark at Giga-Scale
+title: Billion Events Per Second with Millisecond Latency: Streaming Analytics at Giga-Scale
 author: Marko Topolnik
 authorURL: https://twitter.com/mtopolnik
 authorImageURL: https://pbs.twimg.com/profile_images/922726943614783488/Pb5DDGWF_400x400.jpg
@@ -97,7 +97,7 @@ We used the setting of 12 Jet threads per node, mostly because that's
 what we used in the previous benchmarks. We got these results:
 
 ![99.99% latency of NEXMark queries at 1M event/second vs. cluster
-size](assets/2021-03-09-latency-vs-scaling.png)
+size](assets/2021-03-17-latency-vs-scaling.png)
 
 The overall worst case was Query 5 in the largest cluster (20 nodes),
 and it came out as 16 milliseconds.
@@ -125,7 +125,7 @@ stays bounded during the test and doesn't constantly increase. We
 repeated the process at increasing cluster sizes, until reaching our
 goal of one billion. Here is what we found:
 
-![Query 5 throughput vs. threads used](assets/2021-03-09-query5-thruput.png)
+![Query 5 throughput vs. threads used](assets/2021-03-17-query5-thruput.png)
 
 First of all, Jet was able to handle **25 million events per second on a
 single node** and, even more impressively, this number kept scaling
@@ -147,7 +147,7 @@ scales, we did another round of tests at 80% of the maximum throughput
 determined for each cluster size. This gave us the following latency
 chart:
 
-![Jet throughput vs. threads used](assets/2021-03-09-query5-latency.png)
+![Jet throughput vs. threads used](assets/2021-03-17-query5-latency.png)
 
 We can see that, although it's increasing, the latency stays pretty flat
 across a range of sizes well exceeding the capacity you'd probably need
