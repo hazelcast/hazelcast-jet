@@ -243,23 +243,6 @@ public class CreateDagVisitor {
         return vertex;
     }
 
-//    public Vertex onLimit(LimitPhysicalRel limitPhysicalRel) {
-//        Expression<?> fetch = limitPhysicalRel.fetch();
-//        Object val = fetch.eval(EmptyRow.INSTANCE, ExpressionUtil.NOT_IMPLEMENTED_ARGUMENTS_CONTEXT);
-//        assert val instanceof Number;
-//
-//        long fetchValue = ((Number) val).longValue();
-//        assert fetchValue >= 0;
-//        AtomicLong limit = new AtomicLong(fetchValue);
-//
-//        Vertex vertex = dag.newUniqueVertex("Limit", mapUsingServiceP(
-//                ServiceFactories.nonSharedService(ctx -> ExpressionUtil.limitFn(limit)),
-//                (Function<Object, Object> limitFn, Object[] row) -> limitFn.apply(row)));
-//
-//        connectInput(limitPhysicalRel.getInput(), vertex, null);
-//        return vertex;
-//    }
-
     public DAG getDag() {
         return dag;
     }

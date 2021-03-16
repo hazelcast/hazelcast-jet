@@ -52,6 +52,11 @@ public class SqlLimitTest extends SqlTestSupport {
                 2,
                 new Row("Alice"), new Row("Bob"), new Row("Joey")
         );
+
+        assertRowsAnyOrder(
+                "SELECT name FROM " + tableName + " LIMIT 5",
+                asList(new Row("Alice"), new Row("Bob"), new Row("Joey"))
+        );
     }
 
     private static String createTable(String[]... values) {
