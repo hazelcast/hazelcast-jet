@@ -21,7 +21,6 @@ import com.hazelcast.internal.util.concurrent.BackoffIdleStrategy;
 import com.hazelcast.internal.util.concurrent.IdleStrategy;
 import com.hazelcast.internal.util.concurrent.OneToOneConcurrentArrayQueue;
 import com.hazelcast.jet.core.Inbox;
-import com.hazelcast.jet.impl.exception.EventLimitExceededException;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryResultProducer;
 import com.hazelcast.sql.impl.ResultIterator;
@@ -76,8 +75,7 @@ public class JetQueryResultProducer implements QueryResultProducer {
 
     public void consume(Inbox inbox) {
         ensureNotDone();
-        Object[] row;
-        row = (Object[]) inbox.peek();
+        Object[] row = (Object[]) inbox.peek();
         while (row != null) {
             if (onRowProcessed != null) {
                 ensureNotDone();
@@ -178,4 +176,5 @@ public class JetQueryResultProducer implements QueryResultProducer {
             super("Done normally", null, false, false);
         }
     }
+
 }

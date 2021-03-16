@@ -17,15 +17,12 @@
 package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.sql.impl.connector.test.TestBatchSqlConnector;
-import com.hazelcast.map.IMap;
-import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlService;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
 
 public class SqlLimitTest extends SqlTestSupport {
 
@@ -49,6 +46,12 @@ public class SqlLimitTest extends SqlTestSupport {
                 "SELECT name FROM " + tableName + " LIMIT 1",
                 new Row("Alice"), new Row("Bob"), new Row("Joey")
         );
+
+        assertContainsOnlyNOfRows(
+                "SELECT name FROM " + tableName + " LIMIT 2",
+                2,
+                new Row("Alice"), new Row("Bob"), new Row("Joey")
+        );
     }
 
     private static String createTable(String[]... values) {
@@ -61,16 +64,5 @@ public class SqlLimitTest extends SqlTestSupport {
                 asList(values)
         );
         return name;
-    }
-
-    @Test
-    public void limit_map() throws Exception {
-        IMap<Object, Object> map = instance().getMap("map");
-        map.put(1, 1);
-        map.put(2, 2);
-        map.put(3, 3);
-
-        SqlResult execute = instance().getSql().execute("select * from map limit 1");
-        execute.iterator().forEachRemaining(row -> System.out.println("ROW: " + row.getObject(0)));
     }
 }

@@ -24,13 +24,20 @@ import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rex.RexNode;
 
 public class SortLogicalRel extends Sort implements LogicalRel {
-    SortLogicalRel(RelOptCluster cluster, RelTraitSet traits, RelNode newInput, RelCollation newCollation, RexNode offset, RexNode fetch) {
-        super(cluster, traits, newInput, newCollation, offset, fetch);
+    SortLogicalRel(
+            RelOptCluster cluster,
+            RelTraitSet traits,
+            RelNode input,
+            RelCollation collation,
+            RexNode offset,
+            RexNode fetch
+    ) {
+        super(cluster, traits, input, collation, offset, fetch);
     }
 
     @Override
-    public Sort copy(RelTraitSet traitSet, RelNode newInput, RelCollation newCollation, RexNode offset, RexNode fetch) {
-        return new SortLogicalRel(getCluster(), traitSet, newInput, newCollation, offset, fetch);
+    public Sort copy(RelTraitSet traits, RelNode input, RelCollation collation, RexNode offset, RexNode fetch) {
+        return new SortLogicalRel(getCluster(), traits, input, collation, offset, fetch);
     }
 
     public RexNode getFetch() {

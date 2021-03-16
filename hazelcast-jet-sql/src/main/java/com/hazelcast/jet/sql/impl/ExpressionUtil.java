@@ -19,7 +19,6 @@ package com.hazelcast.jet.sql.impl;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.jet.impl.exception.EventLimitExceededException;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
 import com.hazelcast.sql.impl.row.HeapRow;
