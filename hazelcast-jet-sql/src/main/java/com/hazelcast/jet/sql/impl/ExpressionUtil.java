@@ -29,7 +29,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 public final class ExpressionUtil {
 
@@ -54,15 +53,6 @@ public final class ExpressionUtil {
     };
 
     private ExpressionUtil() {
-    }
-
-    public static FunctionEx<Object, Object> limitFn(AtomicLong limit) {
-        return values -> {
-            if (limit.addAndGet(-1) < 1) {
-                throw new EventLimitExceededException();
-            }
-            return values;
-        };
     }
 
     public static PredicateEx<Object[]> filterFn(

@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl;
 
-import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.util.concurrent.BackoffIdleStrategy;
 import com.hazelcast.internal.util.concurrent.IdleStrategy;
 import com.hazelcast.internal.util.concurrent.OneToOneConcurrentArrayQueue;
@@ -29,6 +28,7 @@ import com.hazelcast.sql.impl.row.Row;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
@@ -48,10 +48,10 @@ public class JetQueryResultProducer implements QueryResultProducer {
     private final AtomicReference<Exception> done = new AtomicReference<>();
 
     private InternalIterator iterator;
-    private FunctionEx<Object, Object> onRowProcessed;
+    private AtomicLong limit;
 
-    public void init(FunctionEx<Object, Object> onRowProcessed) {
-        this.onRowProcessed = onRowProcessed;
+    public void init(AtomicLong limit) {
+        this.limit = limit;
     }
 
     @Override
@@ -76,19 +76,14 @@ public class JetQueryResultProducer implements QueryResultProducer {
     public void consume(Inbox inbox) {
         ensureNotDone();
         Object[] row = (Object[]) inbox.peek();
-        while (row != null) {
-            if (onRowProcessed != null) {
-                ensureNotDone();
-                try {
-                    onRowProcessed.apply(row);
-                } catch (EventLimitExceededException e) {
-                    done.compareAndSet(null, e);
-                }
-            }
-            if (!rows.offer(new HeapRow(row))) {
-                break;
-            }
+        while (row != null && rows.offer(new HeapRow(row))) {
             inbox.remove();
+            if (limit != null) {
+                if (limit.addAndGet(-1) < 1) {
+                    done.compareAndSet(null, new EventLimitExceededException());
+                }
+                ensureNotDone();
+            }
             row = (Object[]) inbox.peek();
         }
     }

@@ -24,7 +24,6 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.sql.impl.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.JetQueryResultProducer;
 import com.hazelcast.jet.sql.impl.JetSqlCoreBackendImpl;
 import com.hazelcast.sql.impl.JetSqlCoreBackend;
@@ -51,7 +50,7 @@ public final class RootResultConsumerSink implements Processor {
         rootResultConsumer = jetSqlCoreBackend.getResultConsumerRegistry().remove(context.jobId());
         assert rootResultConsumer != null;
         if (limit != null) {
-            rootResultConsumer.init(ExpressionUtil.limitFn(limit));
+            rootResultConsumer.init(limit);
         }
     }
 
