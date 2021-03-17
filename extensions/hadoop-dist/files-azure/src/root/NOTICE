@@ -158,7 +158,7 @@ GPL2 w/ CPE
 MIT License
   Azure Data Lake Store - Java client SDK:2.3.6
   Microsoft Azure SDK for Key Vault Core:1.0.0
-  Checker Qual:2.11.1
+  Checker Qual:3.5.0
   SLF4J API Module:1.7.28
 The Go license
   re2j:1.1

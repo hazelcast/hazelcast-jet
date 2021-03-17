@@ -149,7 +149,7 @@ GPL2 w/ CPE
   jersey-core:1.19
   Java Architecture for XML Binding:2.2.11
 MIT License
-  Checker Qual:2.11.1
+  Checker Qual:3.5.0
   SLF4J API Module:1.7.28
 The Go license
   re2j:1.1
