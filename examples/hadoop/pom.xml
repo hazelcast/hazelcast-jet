@@ -21,7 +21,7 @@
 
     <artifactId>hazelcast-jet-examples-hadoop</artifactId>
     <properties>
-        <parquet.version>1.10.1</parquet.version>
+        <parquet.version>1.11.1</parquet.version>
     </properties>
 
     <parent>
