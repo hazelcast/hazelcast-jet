@@ -1,0 +1,210 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Billion Events Per Second with Millisecond Latency: Streaming Analytics at Giga-Scale · Hazelcast Jet</title><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="generator" content="Docusaurus"/><meta name="description" content="This post is a part of a series:"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Billion Events Per Second with Millisecond Latency: Streaming Analytics at Giga-Scale · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/blog/2021/03/17/billion-events-per-second"/><meta property="og:description" content="This post is a part of a series:"/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.4</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class="siteNavGroupActive"><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>All posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">All posts</h3><ul class=""><li class="navListItem navListItemActive"><a class="navItem" href="/blog/2021/03/17/billion-events-per-second">Billion Events Per Second with Millisecond Latency: Streaming Analytics at Giga-Scale</a></li><li class="navListItem"><a class="navItem" href="/blog/2021/02/03/jet-44-is-released">Jet 4.4 Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/07/14/jet-42-is-released">Jet 4.2 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/23/jdk-gc-benchmarks-rematch">Performance of Modern Java on Data-Heavy Workloads: The Low-Latency Rematch</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/09/jdk-gc-benchmarks-part2">Performance of Modern Java on Data-Heavy Workloads: Batch Processing</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/09/jdk-gc-benchmarks-part1">Performance of Modern Java on Data-Heavy Workloads: Real-Time Streaming</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/05/25/grcp">Processing 10M queries / second on a single node using Jet and gRPC</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/05/18/spark-jet">How Hazelcast Jet Compares to Apache Spark</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/04/29/jet-41-is-released">Jet 4.1 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/04/01/upgrading-to-jet-40">Upgrading to Jet 4.0</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/03/30/ml-inference">Machine Learning Inference at Scale</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a></li><li class="navListItem"><a class="navItem" href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2021/03/17/billion-events-per-second">Billion Events Per Second with Millisecond Latency: Streaming Analytics at Giga-Scale</a></h1><p class="post-meta">March 17, 2021</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/mtopolnik" target="_blank" rel="noreferrer noopener">Marko Topolnik</a></p><div class="authorPhoto"><a href="https://twitter.com/mtopolnik" target="_blank" rel="noreferrer noopener"><img src="https://pbs.twimg.com/profile_images/922726943614783488/Pb5DDGWF_400x400.jpg" alt="Marko Topolnik"/></a></div></div></header><div><span><p>This post is a part of a series:</p>
+<ul>
+<li><a href="/blog/2020/06/09/jdk-gc-benchmarks-part1">Part 1 (Intro and high-throughput streaming
+benchmark)</a></li>
+<li><a href="/blog/2020/06/09/jdk-gc-benchmarks-part2">Part 2 (batch workload benchmark)</a></li>
+<li><a href="/blog/2020/06/23/jdk-gc-benchmarks-rematch">Part 3 (low-latency benchmark)</a></li>
+<li><a href="/blog/2020/08/05/gc-tuning-for-jet">Part 4 (concurrent GC with green threads)</a></li>
+<li>Part 5 (you are here)</li>
+</ul>
+<p>We're preparing a scientific paper on Hazelcast Jet, describing its
+architecture based on symmetric, data-local, non-blocking distributed
+event processing. As a part of this effort, we implemented the
+vendor-neutral <a href="http://datalab.cs.pdx.edu/niagara/NEXMark/">NEXMark</a>
+benchmark suite, consisting of 8 streaming queries that aim to capture
+typical kinds of questions you're likely to ask about your real-time
+data.</p>
+<p>The queries deal with a domain model of auctions, sellers, and bids. For
+example, Query 5 asks: &quot;Which auctions have achieved the highest price
+in the last period?&quot;</p>
+<p>In contrast to our previous benchmarks, which focused on single-node
+performance (especially GC-induced latency spikes), this time we focus
+on horizontal scalability: how do Jet's latency and throughput behave as
+you add more and more nodes?</p>
+<p>In a cluster of 45 nodes and 720 vCPUs, Jet reached <strong>1 billion
+events per second</strong> at a 99% latency of <strong>26 milliseconds</strong>.</p>
+<h2><a class="anchor" aria-hidden="true" id="our-setup"></a><a href="#our-setup" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Our Setup</h2>
+<p>We used the same configuration as in our earlier benchmarks:</p>
+<ul>
+<li>EC2 instance type
+<a href="https://aws.amazon.com/ec2/instance-types/c5/">c5.4xlarge</a> (16 vCPUs)</li>
+<li>Oracle OpenJDK 15.0.1 with a single GC parameter:
+<code>-XX:MaxGCPauseMillis</code></li>
+<li>Hazelcast 4.3</li>
+<li>Jet's thread pool size: 12 or 14</li>
+</ul>
+<p>In our <a href="/blog/2020/08/05/gc-tuning-for-jet">previous experience</a>, we
+found you don't need any low-level GC tuning parameters to get great
+latency results on the JVM, but you do have to use a recent JDK. We let
+the JVM use its default G1 collector and configured it with our desired
+GC pause target. Also, note that we size Jet's thread pool a bit below
+the system capacity: up to 14 threads on 16-vCPU machines. This
+important trick allows the GC to work in the background without
+interfering with Jet's real-time computations.</p>
+<p>As for the measuring methodology, it is the same as before. Events come
+from a generator that lives inside the same JVM as Jet. Every event has
+a predetermined moment of occurrence, and it is the generator's duty to
+emit it as soon as possible once that time has arrived. Any latency in
+emitting the event counts towards the reported latency.</p>
+<p>On the output side, we stop the latency clock as soon we observe some
+data item corresponding to the newest result. We compare the system time
+at that point with the moment at which the query result would ideally
+become known. For example, if the query involves a time window, then
+the moment at which the window &quot;closes&quot;, is that ideal moment.</p>
+<p>We don't require Jet to send the results to any outside system, because
+we want our results to focus on Jet's performance alone. The code we
+used in the benchmark is available on
+<a href="https://github.com/hazelcast/big-data-benchmark/tree/master/nexmark-jet/src/main/java/com/hazelcast/jet/benchmark/nexmark">GitHub</a>.</p>
+<h2><a class="anchor" aria-hidden="true" id="benchmark-1-9999th-percentile-latency-with-20-ms-time-resolution"></a><a href="#benchmark-1-9999th-percentile-latency-with-20-ms-time-resolution" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Benchmark 1: 99.99th Percentile Latency with 20 ms Time Resolution</h2>
+<p>For the first benchmark we asked this question: using a time resolution
+of 50 result updates per second and an input rate of 1 million events
+per second, what is the 99.99% latency at different cluster sizes?</p>
+<p>The main point of this benchmark is probing deep into the rare system
+events that may cause latency spikes, however the original definitions
+of NEXMark queries ask for a very low update frequency (once per
+minute). At this rate it would take 100 minutes to get barely enough
+data to report the 99th percentile latency, and a whole week to get the
+99.99th percentile. Therefore we changed this to 50 times per second
+(20-millisecond update period).</p>
+<p>Having to report another complete set of results (10,000 data points)
+every 20 milliseconds, Jet doesn't have time to recover from any hiccup
+greater than a few milliseconds. For this reason we configured the GC
+pause target to 5 milliseconds (<code>-XX:MaxGCPauseMillis=5</code>).</p>
+<p>NEXMark doesn't define the number of distinct keys involved in the
+queries, we set it to 10,000 for this benchmark.</p>
+<p>We used the setting of 12 Jet threads per node, mostly because that's
+what we used in the previous benchmarks. We got these results:</p>
+<p><img src="/blog/assets/2021-03-17-latency-vs-scaling.png" alt="99.99% latency of NEXMark queries at 1M event/second vs. cluster
+size"></p>
+<p>The overall worst case was Query 5 in the largest cluster (20 nodes),
+and it came out as 16 milliseconds.</p>
+<h2><a class="anchor" aria-hidden="true" id="benchmark-2-99th-percentile-latency-at-a-billion-events-per-second"></a><a href="#benchmark-2-99th-percentile-latency-at-a-billion-events-per-second" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Benchmark 2: 99th Percentile Latency at a Billion Events per Second</h2>
+<p>Our second question was this: How much hardware would Jet need to reach
+a throughput of a billion events per second, while maintaining its
+millisecond-level latency?</p>
+<p>To test this, we selected the NEXMark query that seemed the toughest on
+Jet given the results from Benchmark 1. This is Query 5, which showed
+a 99.99% latency 16 milliseconds in a 20-node cluster.</p>
+<p>Since this time we'll create much more pressure on the input side,
+aiming for the highest possible throughput, we relaxed the timings a
+bit. We ask for two updates per second (a new result set every 500
+milliseconds), and accordingly had to adjust our percentile to 99% in
+order to make it practical. We also relaxed the GC timing, setting
+<code>-XX:MaxGCPauseMillis=50</code>.</p>
+<p>We started with just a single node, finding the maximum event rate Jet
+can keep up with. The definition of &quot;keeping up&quot; is that the latency
+stays bounded during the test and doesn't constantly increase. We
+repeated the process at increasing cluster sizes, until reaching our
+goal of one billion. Here is what we found:</p>
+<p><img src="/blog/assets/2021-03-17-query5-thruput.png" alt="Query 5 throughput vs. threads used"></p>
+<p>First of all, Jet was able to handle <strong>25 million events per second on a
+single node</strong> and, even more impressively, this number kept scaling
+linearly all the way to our target, which it reached at a size of 40
+nodes.</p>
+<p>During the process we realized we could let Jet use more threads without
+impacting the latency, and since we wanted to minimize the number of EC2
+instances, we let it use 14 threads. This still leaves 2 vCPUs to the
+background GC work and other system needs. If you look carefully, you
+can see the curve in the chart bending slightly upwards at the 20-node
+mark, this is an artifact of the 40-node measurements being taken with
+Jet using 8.6% more threads per node (14 vs. 12).</p>
+<p>The criterion for maximum throughput is just keeping up with the input,
+allowing the latency to temporarily reach higher values as long as it
+settles back down. In order to gauge Jet's stable latency at various
+scales, we did another round of tests at 80% of the maximum throughput
+determined for each cluster size. This gave us the following latency
+chart:</p>
+<p><img src="/blog/assets/2021-03-17-query5-latency.png" alt="Jet throughput vs. threads used"></p>
+<p>We can see that, although it's increasing, the latency stays pretty flat
+across a range of sizes well exceeding the capacity you'd probably need
+from Jet in real life.</p>
+<p>Finally, we started from the setup that supported a billion events per
+second (40 nodes) and continued adding nodes until we got a stable low
+latency. This was our result: <strong>45 nodes, 26 milliseconds</strong>.</p>
+<p><em>If you enjoyed reading this post, check out Jet at
+<a href="https://github.com/hazelcast/hazelcast-jet">GitHub</a> and give us a
+star!</em></p>
+</span></div></div><div class="blogSocialSection"></div></div><div class="blog-recent"><a class="button" href="/blog/">Recent posts</a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#our-setup">Our Setup</a></li><li><a href="#benchmark-1-9999th-percentile-latency-with-20-ms-time-resolution">Benchmark 1: 99.99th Percentile Latency with 20 ms Time Resolution</a></li><li><a href="#benchmark-2-99th-percentile-latency-at-a-billion-events-per-second">Benchmark 2: 99th Percentile Latency at a Billion Events per Second</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2021/03/17/billion-events-per-second">Billion Events Per Second with Millisecond Latency: Streaming Analytics at Giga-Scale</a><a href="/blog/2021/02/03/jet-44-is-released">Jet 4.4 Released</a><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2021 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.4"]}
+              });
+            </script></body></html>
