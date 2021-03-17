@@ -63,8 +63,13 @@ For this format, you need to specify additional options:
 * `keyPortableClassId`, `valuePortableClassId`
 * `keyPortableVersion`, `valuePortableVersion`: optional, default is `0`
 
-Jet resolves the column list by looking at the `ClassDefinition` found
-using the given factory ID, class ID, and version.
+If you omit a column list from the `CREATE MAPPING` command, Jet will
+resolve column names and types by looking at the `ClassDefinition`
+found using the given factory ID, class ID, and version.
+
+Given the triplet of factory ID, class ID and version does not
+correspond to an existing `ClassDefinition`, the column list is
+mandatory.
 
 The benefit of this format is that it doesn't deserialize the whole key
 or value when reading only a subset of fields. Also it doesn't require a
