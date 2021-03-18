@@ -112,9 +112,9 @@ values:</p>
 <li><code>avro</code></li>
 <li><code>parquet</code>: remote files only</li>
 </ul>
-<p>If you omit a file list from the <code>CREATE MAPPING</code> command, Jet will read
-a sample file and try to determine column names and types from it. In
-some cases you can use a different type if you specify the columns
+<p>If you omit a column list from the <code>CREATE MAPPING</code> command, Jet will
+read a sample file and try to determine column names and types from it.
+In some cases you can use a different type if you specify the columns
 explicitly. For example, the CSV format uses <code>VARCHAR</code> for all fields -
 if you specify <code>DATE</code> manually, the behavior would be as if <code>CAST(column AS DATE)</code> was used, using the same rules for conversion from <code>VARCHAR</code>
 to <code>DATE</code> as <code>CAST</code> uses.</p>

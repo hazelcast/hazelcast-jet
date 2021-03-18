@@ -110,8 +110,12 @@ OPTIONS (
 <li><code>keyPortableClassId</code>, <code>valuePortableClassId</code></li>
 <li><code>keyPortableVersion</code>, <code>valuePortableVersion</code>: optional, default is <code>0</code></li>
 </ul>
-<p>Jet resolves the column list by looking at the <code>ClassDefinition</code> found
-using the given factory ID, class ID, and version.</p>
+<p>If you omit a column list from the <code>CREATE MAPPING</code> command, Jet will
+resolve column names and types by looking at the <code>ClassDefinition</code>
+found using the given factory ID, class ID, and version.</p>
+<p>If the <code>ClassDefinition</code> with the given IDs is not known to the cluster,
+the column list is mandatory and Jet will create the <code>ClassDefinition</code>
+based on the column list.</p>
 <p>The benefit of this format is that it doesn't deserialize the whole key
 or value when reading only a subset of fields. Also it doesn't require a
 custom Java class to be defined on the cluster, so it's usable for
