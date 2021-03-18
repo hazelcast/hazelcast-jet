@@ -130,6 +130,7 @@
         <snakeyaml.engine.version>1.0</snakeyaml.engine.version>
         <affinity.version>3.2.3</affinity.version>
         <aws.sdk.version>1.11.976</aws.sdk.version>
+        <netty.version>4.1.59.Final</netty.version>
 
         <!-- test dependencies -->
         <activemq.version>5.15.11</activemq.version>
@@ -308,13 +309,10 @@
             </dependency>
             <dependency>
                 <groupId>io.netty</groupId>
-                <artifactId>netty-handler</artifactId>
-                <version>4.1.39.Final</version>
-            </dependency>
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-codec-http</artifactId>
-                <version>4.1.39.Final</version>
+                <artifactId>netty-bom</artifactId>
+                <version>${netty.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>com.google.auto.value</groupId>
