@@ -29,7 +29,7 @@ public class JetGetJobSummaryListMessageTask
 
     JetGetJobSummaryListMessageTask(ClientMessage clientMessage, Node node, Connection connection) {
         super(clientMessage, node, connection,
-                null,
+                m -> null,
                 JetGetJobSummaryListCodec::encodeResponse);
     }
 

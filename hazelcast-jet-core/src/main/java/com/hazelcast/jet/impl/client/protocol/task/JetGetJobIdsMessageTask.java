@@ -29,7 +29,7 @@ public class JetGetJobIdsMessageTask extends AbstractJetMessageTask<Void, List<L
 
     JetGetJobIdsMessageTask(ClientMessage clientMessage, Node node, Connection connection) {
         super(clientMessage, node, connection,
-                null,
+                m -> null,
                 JetGetJobIdsCodec::encodeResponse);
     }
 
