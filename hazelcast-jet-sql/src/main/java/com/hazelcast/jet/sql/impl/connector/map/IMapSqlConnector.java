@@ -57,11 +57,13 @@ import static java.util.stream.Stream.concat;
 
 public class IMapSqlConnector implements SqlConnector {
 
+    public static final IMapSqlConnector INSTANCE = new IMapSqlConnector();
+
     public static final String TYPE_NAME = "IMap";
 
     private final KvMetadataResolvers metadataResolvers;
 
-    public IMapSqlConnector() {
+    private IMapSqlConnector() {
         this.metadataResolvers = new KvMetadataResolvers(
                 KvMetadataJavaResolver.INSTANCE,
                 MetadataPortableResolver.INSTANCE,
