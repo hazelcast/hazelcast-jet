@@ -55,7 +55,7 @@ import static com.hazelcast.sql.impl.schema.map.MapTableUtils.estimatePartitione
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
 
-public class IMapSqlConnector implements SqlConnector {
+public final class IMapSqlConnector implements SqlConnector {
 
     public static final IMapSqlConnector INSTANCE = new IMapSqlConnector();
 
