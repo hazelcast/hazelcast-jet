@@ -193,7 +193,6 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
         pipeline.readFrom(TestSources.items(1, 2))
                 .map(Value::new)
                 .writeTo(Sinks.observable(OBSERVABLE_NAME));
-        long timeout = 120;
 
         // When
         Observable<Value> observable = client().getObservable(OBSERVABLE_NAME);
@@ -201,7 +200,7 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
 
         // Then
         client().newJob(pipeline, jobConfig()).join();
-        assertThat(counter.get(timeout, TimeUnit.SECONDS).intValue()).isEqualTo(2);
+        assertThat(counter.get(120, TimeUnit.SECONDS).intValue()).isEqualTo(2);
     }
 
     private static JobConfig jobConfig() {
