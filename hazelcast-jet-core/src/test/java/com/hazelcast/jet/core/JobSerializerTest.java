@@ -200,7 +200,7 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
 
         // Then
         client().newJob(pipeline, jobConfig()).join();
-        assertThat(counter.get(120, TimeUnit.SECONDS).intValue()).isEqualTo(2);
+        assertThat(counter.get(ASSERT_TRUE_EVENTUALLY_TIMEOUT, TimeUnit.SECONDS).intValue()).isEqualTo(2);
     }
 
     private static JobConfig jobConfig() {
