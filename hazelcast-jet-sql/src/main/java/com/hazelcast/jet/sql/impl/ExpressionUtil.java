@@ -39,6 +39,7 @@ public final class ExpressionUtil {
      * Useful when evaluating expressions in planning phase where these are not
      * available.
      */
+    @Deprecated
     public static final ExpressionEvalContext NOT_IMPLEMENTED_ARGUMENTS_CONTEXT = new ExpressionEvalContext() {
 
         @Override
