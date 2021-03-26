@@ -124,7 +124,11 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
         assertContainsOnlyNOfRows(sql, 1, expectedRows);
     }
 
-    public static void assertContainsOnlyNOfRows(String sql, int n, Row... expectedRows) {
+    /**
+     * Asserts that the result of {@code sql} contains a subset of {@code expectedRows}, but
+     * only a subset of them with size of {@code subsetSize}.
+     */
+    public static void assertContainsSubsetOfRows(String sql, int subsetSize, Row... expectedRows) {
         SqlService sqlService = instance().getSql();
         List<Row> actualRows = new ArrayList<>();
         sqlService.execute(sql).iterator().forEachRemaining(r -> actualRows.add(new Row(r)));
