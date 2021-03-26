@@ -30,16 +30,14 @@ import com.hazelcast.sql.impl.JetSqlCoreBackend;
 
 import javax.annotation.Nonnull;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.forceTotalParallelismOne;
 
 public final class RootResultConsumerSink implements Processor {
 
     private JetQueryResultProducer rootResultConsumer;
-    private AtomicLong limit;
+    private long limit;
 
-    private RootResultConsumerSink(AtomicLong limit) {
+    private RootResultConsumerSink(long limit) {
         this.limit = limit;
     }
 
@@ -49,9 +47,7 @@ public final class RootResultConsumerSink implements Processor {
         JetSqlCoreBackendImpl jetSqlCoreBackend = hzInst.node.nodeEngine.getService(JetSqlCoreBackend.SERVICE_NAME);
         rootResultConsumer = jetSqlCoreBackend.getResultConsumerRegistry().remove(context.jobId());
         assert rootResultConsumer != null;
-        if (limit != null) {
-            rootResultConsumer.init(limit);
-        }
+        rootResultConsumer.init(limit);
     }
 
     @Override
@@ -76,7 +72,7 @@ public final class RootResultConsumerSink implements Processor {
         return true;
     }
 
-    public static ProcessorMetaSupplier rootResultConsumerSink(Address initiatorAddress, AtomicLong limit) {
+    public static ProcessorMetaSupplier rootResultConsumerSink(Address initiatorAddress, long limit) {
         ProcessorSupplier pSupplier = ProcessorSupplier.of(() -> new RootResultConsumerSink(limit));
         return forceTotalParallelismOne(pSupplier, initiatorAddress);
     }

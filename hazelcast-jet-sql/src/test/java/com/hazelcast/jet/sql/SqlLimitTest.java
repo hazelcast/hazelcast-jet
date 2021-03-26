@@ -47,7 +47,7 @@ public class SqlLimitTest extends SqlTestSupport {
                 new Row("Alice"), new Row("Bob"), new Row("Joey")
         );
 
-        assertContainsOnlyNOfRows(
+        assertContainsSubsetOfRows(
                 "SELECT name FROM " + tableName + " LIMIT 2",
                 2,
                 new Row("Alice"), new Row("Bob"), new Row("Joey")

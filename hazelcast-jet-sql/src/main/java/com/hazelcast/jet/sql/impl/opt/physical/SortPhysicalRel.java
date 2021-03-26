@@ -50,6 +50,11 @@ public class SortPhysicalRel extends Sort implements PhysicalRel {
         return fetch.accept(visitor);
     }
 
+    Expression<?> offset() {
+        RexVisitor<Expression<?>> visitor = OptUtils.createRexToExpressionVisitor(schema());
+        return offset.accept(visitor);
+    }
+
     @Override
     public Sort copy(RelTraitSet traitSet, RelNode input, RelCollation collation, RexNode offset, RexNode fetch) {
         return new SortPhysicalRel(getCluster(), traitSet, input, collation, offset, fetch, rowType);

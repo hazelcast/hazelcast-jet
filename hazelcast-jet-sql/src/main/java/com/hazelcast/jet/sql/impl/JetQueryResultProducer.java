@@ -28,7 +28,6 @@ import com.hazelcast.sql.impl.row.Row;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
@@ -48,9 +47,9 @@ public class JetQueryResultProducer implements QueryResultProducer {
     private final AtomicReference<Exception> done = new AtomicReference<>();
 
     private InternalIterator iterator;
-    private AtomicLong limit;
+    private long limit;
 
-    public void init(AtomicLong limit) {
+    public void init(long limit) {
         this.limit = limit;
     }
 
@@ -78,9 +77,10 @@ public class JetQueryResultProducer implements QueryResultProducer {
         Object[] row = (Object[]) inbox.peek();
         while (row != null && rows.offer(new HeapRow(row))) {
             inbox.remove();
-            if (limit != null) {
-                if (limit.addAndGet(-1) < 1) {
-                    done.compareAndSet(null, new EventLimitExceededException());
+            if (limit != Long.MAX_VALUE) {
+                limit -= 1;
+                if (limit < 1) {
+                    done.compareAndSet(null, new ResultLimitReachedException());
                 }
                 ensureNotDone();
             }
@@ -151,12 +151,9 @@ public class JetQueryResultProducer implements QueryResultProducer {
         private boolean isDone() {
             Exception exception = done.get();
             if (exception != null) {
-                if (exception instanceof NormalCompletionException) {
+                if (exception instanceof NormalCompletionException || exception instanceof ResultLimitReachedException) {
                     // finish the rows first
                     return rows.isEmpty();
-                }
-                if (exception instanceof EventLimitExceededException) {
-                    return true;
                 }
                 throw sneakyThrow(exception);
             }
@@ -172,4 +169,11 @@ public class JetQueryResultProducer implements QueryResultProducer {
         }
     }
 
+    private static class ResultLimitReachedException extends Exception {
+        ResultLimitReachedException() {
+            // Use writableStackTrace = false, the exception is not created at a place where it's thrown,
+            // it's better if it has no stack trace then.
+            super("Done by reaching events number in SQL LIMIT clause", null, false, false);
+        }
+    }
 }

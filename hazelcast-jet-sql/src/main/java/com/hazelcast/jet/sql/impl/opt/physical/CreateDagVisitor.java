@@ -40,7 +40,6 @@ import org.apache.calcite.rel.RelNode;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -220,20 +219,22 @@ public class CreateDagVisitor {
         Vertex vertex;
         RelNode input = rootRel.getInput();
         if (input instanceof SortPhysicalRel) {
-            SortPhysicalRel limitRel = (SortPhysicalRel) input;
-            Expression<?> fetch = limitRel.fetch();
+            SortPhysicalRel sortRel = (SortPhysicalRel) input;
+            assert sortRel.offset == null : "Offset is not supported";
+            assert sortRel.collation.getFieldCollations().isEmpty() : "Collation is not supported";
+
+            Expression<?> fetch = sortRel.fetch();
             Object val = fetch.eval(EmptyRow.INSTANCE, ExpressionUtil.NOT_IMPLEMENTED_ARGUMENTS_CONTEXT);
             assert val instanceof Number;
 
-            long fetchValue = ((Number) val).longValue();
-            assert fetchValue >= 0;
-            AtomicLong limit = new AtomicLong(fetchValue);
+            long limit = ((Number) val).longValue();
+            assert limit >= 0;
             vertex = dag.newUniqueVertex("ClientSink",
                     rootResultConsumerSink(rootRel.getInitiatorAddress(), limit));
-            input = limitRel.getInput();
+            input = sortRel.getInput();
         } else {
             vertex = dag.newUniqueVertex("ClientSink",
-                    rootResultConsumerSink(rootRel.getInitiatorAddress(), null));
+                    rootResultConsumerSink(rootRel.getInitiatorAddress(), Long.MAX_VALUE));
         }
 
         // We use distribute-to-one edge to send all the items to the initiator member.
