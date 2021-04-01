@@ -125,13 +125,13 @@ Apache License, Version 2.0
   Kerby Util:1.0.1
   Kerby XDR Project:1.0.1
   Token provider:1.0.1
-  Apache Parquet Avro:1.11.1
-  Apache Parquet Column:1.11.1
-  Apache Parquet Common:1.11.1
-  Apache Parquet Encodings:1.11.1
-  Apache Parquet Format Structures:1.11.1
-  Apache Parquet Hadoop:1.11.1
-  Apache Parquet Jackson:1.11.1
+  Apache Parquet Avro:1.12.0
+  Apache Parquet Column:1.12.0
+  Apache Parquet Common:1.12.0
+  Apache Parquet Encodings:1.12.0
+  Apache Parquet Format Structures:1.12.0
+  Apache Parquet Hadoop:1.12.0
+  Apache Parquet Jackson:1.12.0
   Apache Velocity - Engine:2.3
   Apache Yetus - Audience Annotations:0.12.0
   org.conscrypt:conscrypt-openjdk-uber:2.5.1

@@ -117,7 +117,7 @@
         <hadoop.version>3.3.0</hadoop.version>
         <spring.version>4.3.0.RELEASE</spring.version>
         <avro.version>1.10.2</avro.version>
-        <parquet.version>1.11.1</parquet.version>
+        <parquet.version>1.12.0</parquet.version>
         <scala.version>2.12</scala.version>
         <zookeeper.version>3.5.8</zookeeper.version>
         <kafka.version>2.2.2</kafka.version>
