@@ -17,12 +17,21 @@
 package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.sql.impl.connector.test.TestBatchSqlConnector;
+import com.hazelcast.sql.HazelcastSqlException;
 import com.hazelcast.sql.SqlService;
+import com.hazelcast.sql.SqlStatement;
+import com.hazelcast.sql.impl.SqlErrorCode;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.Collections;
+
 import static java.util.Arrays.asList;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class SqlLimitTest extends SqlTestSupport {
 
@@ -35,7 +44,7 @@ public class SqlLimitTest extends SqlTestSupport {
     }
 
     @Test
-    public void simple_limit() {
+    public void limitOverTable() {
         String tableName = createTable(
                 new String[]{"Alice", "1"},
                 new String[]{"Bob", "2"},
@@ -59,6 +68,31 @@ public class SqlLimitTest extends SqlTestSupport {
         );
     }
 
+    @Test
+    public void negativeLimitValue() {
+        String tableName = createTable(
+                new String[]{"Alice", "1"},
+                new String[]{"Bob", "2"},
+                new String[]{"Joey", "3"}
+        );
+
+        checkFailure0("SELECT name FROM " + tableName + " LIMIT -10", SqlErrorCode.PARSING, "Encountered \"-\"");
+    }
+
+    @Test
+    public void floatNumber_asLimitValue() {
+        String tableName = createTable(
+                new String[]{"Alice", "1"},
+                new String[]{"Bob", "2"},
+                new String[]{"Joey", "3"}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT name FROM " + tableName + " LIMIT 5.2",
+                asList(new Row("Alice"), new Row("Bob"), new Row("Joey"))
+        );
+    }
+
     private static String createTable(String[]... values) {
         String name = randomName();
         TestBatchSqlConnector.create(
@@ -69,5 +103,56 @@ public class SqlLimitTest extends SqlTestSupport {
                 asList(values)
         );
         return name;
+    }
+
+    @Test
+    public void limitOverStream() {
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM TABLE(GENERATE_STREAM(5)) LIMIT 1",
+                Collections.singletonList(new Row(0L))
+        );
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM TABLE(GENERATE_STREAM(5)) LIMIT 2",
+                asList(
+                        new Row(0L),
+                        new Row(1L)
+                )
+        );
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM TABLE(GENERATE_STREAM(5)) LIMIT 10",
+                asList(
+                        new Row(0L),
+                        new Row(1L),
+                        new Row(2L),
+                        new Row(3L),
+                        new Row(4L)
+                )
+        );
+    }
+
+    protected void checkFailure0(
+            String sql,
+            int expectedErrorCode,
+            String expectedErrorMessage,
+            Object... params
+    ) {
+        try {
+            SqlStatement statement = new SqlStatement(sql);
+            statement.setParameters(asList(params));
+            sqlService.execute(statement);
+
+            fail("Must fail");
+        } catch (HazelcastSqlException e) {
+            assertTrue(expectedErrorMessage.length() != 0);
+            assertNotNull(e.getMessage());
+            assertTrue(
+                    "\nExpected: " + expectedErrorMessage + "\nActual: " + e.getMessage(),
+                    e.getMessage().contains(expectedErrorMessage)
+            );
+
+            assertEquals(e.getCode() + ": " + e.getMessage(), expectedErrorCode, e.getCode());
+        }
     }
 }
