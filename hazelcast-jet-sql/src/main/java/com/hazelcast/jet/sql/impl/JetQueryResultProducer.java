@@ -47,7 +47,7 @@ public class JetQueryResultProducer implements QueryResultProducer {
     private final AtomicReference<Exception> done = new AtomicReference<>();
 
     private InternalIterator iterator;
-    private long limit;
+    private long limit = Long.MAX_VALUE;
 
     public void init(long limit) {
         this.limit = limit;
