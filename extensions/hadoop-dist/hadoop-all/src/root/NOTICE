@@ -99,17 +99,17 @@ Apache License, Version 2.0
   Apache Parquet Jackson:1.12.0
   Apache Velocity - Engine:2.3
   Apache Yetus - Audience Annotations:0.12.0
-  Jetty :: Asynchronous HTTP Client:9.4.38.v20210224
-  Jetty :: Http Utility:9.4.38.v20210224
-  Jetty :: IO Utility:9.4.38.v20210224
-  Jetty :: Security:9.4.38.v20210224
-  Jetty :: Server Core:9.4.38.v20210224
-  Jetty :: Servlet Handling:9.4.38.v20210224
-  Jetty :: Utilities:9.4.38.v20210224
-  Jetty :: Utilities :: Ajax(JSON):9.4.38.v20210224
-  Jetty :: Websocket :: API:9.4.38.v20210224
-  Jetty :: Websocket :: Client:9.4.38.v20210224
-  Jetty :: Websocket :: Common:9.4.38.v20210224
+  Jetty :: Asynchronous HTTP Client:9.4.39.v20210325
+  Jetty :: Http Utility:9.4.39.v20210325
+  Jetty :: IO Utility:9.4.39.v20210325
+  Jetty :: Security:9.4.39.v20210325
+  Jetty :: Server Core:9.4.39.v20210325
+  Jetty :: Servlet Handling:9.4.39.v20210325
+  Jetty :: Utilities:9.4.39.v20210325
+  Jetty :: Utilities :: Ajax(JSON):9.4.39.v20210325
+  Jetty :: Websocket :: API:9.4.39.v20210325
+  Jetty :: Websocket :: Client:9.4.39.v20210325
+  Jetty :: Websocket :: Common:9.4.39.v20210325
   snappy-java:1.1.7.2
 BSD 2-Clause License
   zstd-jni:1.4.5-12
@@ -132,17 +132,17 @@ Eclipse Distribution License - v 1.0
   JavaBeans Activation Framework API jar:1.2.1
   jakarta.xml.bind-api:2.3.2
 Eclipse Public License - Version 1.0
-  Jetty :: Asynchronous HTTP Client:9.4.38.v20210224
-  Jetty :: Http Utility:9.4.38.v20210224
-  Jetty :: IO Utility:9.4.38.v20210224
-  Jetty :: Security:9.4.38.v20210224
-  Jetty :: Server Core:9.4.38.v20210224
-  Jetty :: Servlet Handling:9.4.38.v20210224
-  Jetty :: Utilities:9.4.38.v20210224
-  Jetty :: Utilities :: Ajax(JSON):9.4.38.v20210224
-  Jetty :: Websocket :: API:9.4.38.v20210224
-  Jetty :: Websocket :: Client:9.4.38.v20210224
-  Jetty :: Websocket :: Common:9.4.38.v20210224
+  Jetty :: Asynchronous HTTP Client:9.4.39.v20210325
+  Jetty :: Http Utility:9.4.39.v20210325
+  Jetty :: IO Utility:9.4.39.v20210325
+  Jetty :: Security:9.4.39.v20210325
+  Jetty :: Server Core:9.4.39.v20210325
+  Jetty :: Servlet Handling:9.4.39.v20210325
+  Jetty :: Utilities:9.4.39.v20210325
+  Jetty :: Utilities :: Ajax(JSON):9.4.39.v20210325
+  Jetty :: Websocket :: API:9.4.39.v20210325
+  Jetty :: Websocket :: Client:9.4.39.v20210325
+  Jetty :: Websocket :: Common:9.4.39.v20210325
 GPL2 w/ CPE
   jersey-client:1.19
   jersey-core:1.19
