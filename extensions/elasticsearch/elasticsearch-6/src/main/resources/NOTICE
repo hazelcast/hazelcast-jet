@@ -64,7 +64,7 @@ Apache License, Version 2.0
   lang-mustache:6.8.14
   parent-join:6.8.14
   rank-eval:6.8.14
-  SnakeYAML:1.17
+  SnakeYAML:1.26
 MIT License
   JOpt Simple:5.0.2
 Public Domain, per Creative Commons CC0
