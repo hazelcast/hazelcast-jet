@@ -127,6 +127,7 @@
         <jline.version>3.16.0</jline.version>
         <classgraph.version>4.8.66</classgraph.version>
         <jackson.version>2.11.2</jackson.version>
+        <snakeyaml.version>1.26</snakeyaml.version>
         <snakeyaml.engine.version>1.0</snakeyaml.engine.version>
         <affinity.version>3.2.3</affinity.version>
         <aws.sdk.version>1.11.976</aws.sdk.version>
@@ -252,6 +253,11 @@
                 <scope>import</scope>
             </dependency>
 
+            <dependency>
+                <groupId>org.yaml</groupId>
+                <artifactId>snakeyaml</artifactId>
+                <version>${snakeyaml.version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
