@@ -73,6 +73,21 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>1.19</version>
+                <executions>
+                    <execution>
+                        <!--
+                        This extension doesn't pass our license check due to a transitive dependency with LGPL license.
+                        Don't execute the license plugin for this extension - we don't provide this module as part
+                        of the distribution or as a separate download on the download page so it should be ok.
+                        -->
+                        <phase>none</phase>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
