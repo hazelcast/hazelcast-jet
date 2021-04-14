@@ -512,6 +512,13 @@
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
+                <!--
+                Workaround for the issue with license plugin adding '**/*,txt' to includes
+                https://github.com/mojohaus/license-maven-plugin/blob/license-maven-plugin-1.19/src/main/java/org/codehaus/mojo/license/AddThirdPartyMojo.java#L211
+                -->
+                <includes>
+                    <include>**/*</include>
+                </includes>
             </resource>
             <resource>
                 <directory>src/main/resources</directory>
