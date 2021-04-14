@@ -26,6 +26,9 @@ derived from this software without prior written permission.
 
 Copyright (c) 2008-2021 Hazelcast, Inc. All rights reserved.
 
+The class com.hazelcast.jet.kafka.impl.ResumeTransactionUtil contains
+code derived from the Apache Flink project.
+
 This product includes the following libraries with the following licenses:
 
 <#list licenseMap as e>
