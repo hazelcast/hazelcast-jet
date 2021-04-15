@@ -39,21 +39,64 @@ Thank you for your valuable contributions!
 
 2. Enhancements
 
-[extensions] Ensure naming conventions for sources/sinks (#2685)
+3. Fixes
+
+4. Breaking Changes
+
+
+<<< END TEMPLATE FOR THE NEXT VERSION
+
+
+** Hazelcast Jet 4.5 **
+
+Hazelcast Jet 4.5 is based on IMDG version 4.2. Check out its Release
+Notes here: https://docs.hazelcast.org/docs/rn/index.html#4-2 and,
+for the Enterprise Edition,
+here: https://docs.hazelcast.org/docs/ern/index.html#4-y
+
+Members of the open source community that appear in these release notes:
+
+@hhromic
+
+Thank you for your valuable contributions!
+
+1. New Features
+
+2. Enhancements
+
+[core] Limit the number of parallel partition reads for map/cache. (#3009)
 [pipeline-api] Improved the pickAny aggregate operation by supporting the deduct primitive (#2917)
+[pipeline-api] Prevent exception stack trace printing when user cancels the job (#2974)
 [jdbc] Make the batch size limit configurable in the JDBC sink processor (#2888).
+[sql] Optimize SQL aggregations memory footprint (#2877)
+[sql] SQL Portable enhancements (#2895)
+[sql] Forbid OR REPLACE & IF NOT EXISTS to be used together while creating mapping (#2921)
+[sql] Support expressions in SQL generator functions (#2944)
 
 3. Fixes
 
 [core] Jet now doesn't close System.out during JVM shutdown (#2649)
 [core] Fixed queue size display in `DAG.toDotString()` when default is changed (#2887).
+[cdc] Implement processed offset feedback in CDC sources (#2854)
+[extensions] Update AWS SDK version to 1.11.976. (#2989)
+[extensions] Update Guava version to 30.1. (#2990)
+[extensions] Update Parquet version to 1.12.0 (#3012)
+[extensions] Update Avro to 1.10.2 (#2950)
+[extensions] Update Jetty version to 9.4.38.v20210224 (#2993)
+[extensions] Update wildfly-openssl to 1 (#2993)
+[extensions] Update ElasticSearch-6 to 6.8.14 (#2993)
+[extensions] Update ElasticSearch-7 to 7.10.0 (#2993)
+[extensions] Update Kafka version to 2.2.2 (#2993)
+[extensions] Update MySql Connector to 8.0.20 (#2993)
+[extensions] Update Apache Http Client to 4.5.13 (#2993)
+[extensions] Update Netty to 4.1.61.Final (#3023)
+[extensions] Update Snakeyaml version to 1.26 [SEC-71] (#3024)
+
 
 4. Breaking Changes
 
 [jdbc] Added `batchLimit` parameter to `SinkProcessors.writeJdbcP()` method.
 [core] Added `defaultQueueSize` parameter to `DAG.toDotString(int)` method.
-
-<<< END TEMPLATE FOR THE NEXT VERSION
 
 
 ** Hazelcast Jet 4.4 **

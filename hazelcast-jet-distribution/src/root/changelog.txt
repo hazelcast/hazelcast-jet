@@ -1,3 +1,17 @@
+** Hazelcast Jet 4.5 **
+
+* @hhromic added an option to configure the batch size for Jdbc Sink.
+  A new `batchLimit()` method added to the `JdbcSinkBuilder` and the
+  corresponding constructor arguments to the underlying implementation
+  class and meta-suppliers.
+* Limit parallel partition reads: In Map/Cache source, Jet tries to
+  read all the partitions in parallel, which may increase the memory
+  consumption. Now the max parallel partition read is limited.
+* Improve AggregateOperations#pickAnyby adding deduct
+* Security Updates: updated several libraries which are identified with
+  security vulnerabilities.
+
+
 ** Hazelcast Jet 4.4 **
 
 * @hhromic improved the naming of source and sink stages across different
