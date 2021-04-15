@@ -62,6 +62,8 @@ Thank you for your valuable contributions!
 
 1. New Features
 
+[sql] SQL Portable enhancements (#2895)
+
 2. Enhancements
 
 [core] Limit the number of parallel partition reads for map/cache. (#3009)
@@ -69,14 +71,13 @@ Thank you for your valuable contributions!
 [pipeline-api] Prevent exception stack trace printing when user cancels the job (#2974)
 [jdbc] Make the batch size limit configurable in the JDBC sink processor (#2888).
 [sql] Optimize SQL aggregations memory footprint (#2877)
-[sql] SQL Portable enhancements (#2895)
-[sql] Forbid OR REPLACE & IF NOT EXISTS to be used together while creating mapping (#2921)
 [sql] Support expressions in SQL generator functions (#2944)
 
 3. Fixes
 
 [core] Jet now doesn't close System.out during JVM shutdown (#2649)
 [core] Fixed queue size display in `DAG.toDotString()` when default is changed (#2887).
+[sql] Forbid OR REPLACE & IF NOT EXISTS to be used together while creating mapping (#2921)
 [cdc] Implement processed offset feedback in CDC sources (#2854)
 [extensions] Update AWS SDK version to 1.11.976. (#2989)
 [extensions] Update Guava version to 30.1. (#2990)
@@ -97,6 +98,7 @@ Thank you for your valuable contributions!
 
 [jdbc] Added `batchLimit` parameter to `SinkProcessors.writeJdbcP()` method.
 [core] Added `defaultQueueSize` parameter to `DAG.toDotString(int)` method.
+[sql] Type inference changes: in case of implicit type conversions, many inference rules were changed.
 
 
 ** Hazelcast Jet 4.4 **
