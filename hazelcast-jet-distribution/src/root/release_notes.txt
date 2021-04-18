@@ -52,7 +52,7 @@ Thank you for your valuable contributions!
 Hazelcast Jet 4.5 is based on IMDG version 4.2. Check out its Release
 Notes here: https://docs.hazelcast.org/docs/rn/index.html#4-2 and,
 for the Enterprise Edition,
-here: https://docs.hazelcast.org/docs/ern/index.html#4-y
+here: https://docs.hazelcast.org/docs/ern/index.html#4-2
 
 Members of the open source community that appear in these release notes:
 
