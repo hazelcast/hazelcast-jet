@@ -32,6 +32,7 @@
     <properties>
         <configs.from.jar>${project.build.directory}/config</configs.from.jar>
         <openhft.affinity.version>3.2.3</openhft.affinity.version>
+        <org.jetbrains.annotations.version>19.0.0</org.jetbrains.annotations.version>
     </properties>
 
     <build>
@@ -126,7 +127,7 @@
                         <dependencySourceInclude>com.hazelcast.jet:*</dependencySourceInclude>
                     </dependencySourceIncludes>
                     <excludePackageNames>
-                        *.impl:*.impl.*:*.internal:*.internal.*:*.picocli:*.picocli.*:*.com.fasterxml:*.com.fasterxml.*:*.org.snakeyaml:*.org.snakeyaml.*:*.io.github.*:org.apache.calcite.*
+                        *.impl:*.impl.*:*.internal:*.internal.*:*.picocli:*.picocli.*:*.com.fasterxml:*.com.fasterxml.*:*.org.snakeyaml:*.org.snakeyaml.*:*.io.github.*:org.apache.calcite.*:org.jetbrains.annotations.*
                     </excludePackageNames>
                     <additionalDependencies>
                         <!-- provided deps are required for javadoc generation -->
@@ -230,6 +231,11 @@
                             <groupId>net.openhft</groupId>
                             <artifactId>affinity</artifactId>
                             <version>${openhft.affinity.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.jetbrains</groupId>
+                            <artifactId>annotations</artifactId>
+                            <version>${org.jetbrains.annotations.version}</version>
                         </dependency>
                     </additionalDependencies>
                 </configuration>
