@@ -187,8 +187,8 @@ types:</p>
 <ul>
 <li><a href="https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html">java.io.Serializable</a></li>
 <li><a href="https://docs.oracle.com/javase/8/docs/api/java/io/Externalizable.html">java.io.Externalizable</a></li>
-<li><a href="/javadoc/4.5-SNAPSHOT/com/hazelcast/nio/serialization/Portable.html">com.hazelcast.nio.serialization.Portable</a></li>
-<li><a href="/javadoc/4.5-SNAPSHOT/com/hazelcast/nio/serialization/StreamSerializer.html">com.hazelcast.nio.serialization.StreamSerializer</a></li>
+<li><a href="/javadoc/4.6-SNAPSHOT/com/hazelcast/nio/serialization/Portable.html">com.hazelcast.nio.serialization.Portable</a></li>
+<li><a href="/javadoc/4.6-SNAPSHOT/com/hazelcast/nio/serialization/StreamSerializer.html">com.hazelcast.nio.serialization.StreamSerializer</a></li>
 </ul>
 <p>The following table provides a comparison between them to help you in
 deciding which interface to use in your applications.</p>
@@ -237,7 +237,7 @@ not to mention very wasteful with memory.</p>
 <h2><a class="anchor" aria-hidden="true" id="write-a-custom-serializer"></a><a href="#write-a-custom-serializer" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Write a Custom Serializer</h2>
 <p>For the best performance and simplest implementation we recommend using
 the Hazelcast
-<a href="/javadoc/4.5-SNAPSHOT/com/hazelcast/nio/serialization/StreamSerializer.html">StreamSerializer</a>
+<a href="/javadoc/4.6-SNAPSHOT/com/hazelcast/nio/serialization/StreamSerializer.html">StreamSerializer</a>
 mechanism. Here is a sample implementation for a <code>Person</code> class:</p>
 <pre><code class="hljs css language-java"><span class="token keyword">class</span> <span class="token class-name">PersonSerializer</span> <span class="token keyword">implements</span> <span class="token class-name">StreamSerializer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Person</span><span class="token punctuation">></span></span> <span class="token punctuation">{</span>
 
@@ -335,8 +335,8 @@ we encourage registering a Protobuf-specific serializer. There is a Jet
 extension module that simplifies this for Protobuf version 3.</p>
 <p>If you want to use it locally within a Jet job, add the extension as a
 dependency to your Jet job's project:</p>
-<div class="tabs"><div class="nav-tabs"><div id="tab-group-4-tab-5" class="nav-link active" data-group="group_4" data-tab="tab-group-4-content-5">Gradle</div><div id="tab-group-4-tab-6" class="nav-link" data-group="group_4" data-tab="tab-group-4-content-6">Maven</div></div><div class="tab-content"><div id="tab-group-4-content-5" class="tab-pane active" data-group="group_4" tabindex="-1"><div><span><pre><code class="hljs css language-groovy">compile <span class="hljs-string">"com.hazelcast.jet:hazelcast-jet-protobuf:$4.5-SNAPSHOT"</span><br /></code></pre>
-</span></div></div><div id="tab-group-4-content-6" class="tab-pane" data-group="group_4" tabindex="-1"><div><span><pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.hazelcast.jet<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>hazelcast-jet-protobuf<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>$4.5-SNAPSHOT<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br /></code></pre>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-4-tab-5" class="nav-link active" data-group="group_4" data-tab="tab-group-4-content-5">Gradle</div><div id="tab-group-4-tab-6" class="nav-link" data-group="group_4" data-tab="tab-group-4-content-6">Maven</div></div><div class="tab-content"><div id="tab-group-4-content-5" class="tab-pane active" data-group="group_4" tabindex="-1"><div><span><pre><code class="hljs css language-groovy">compile <span class="hljs-string">"com.hazelcast.jet:hazelcast-jet-protobuf:$4.6-SNAPSHOT"</span><br /></code></pre>
+</span></div></div><div id="tab-group-4-content-6" class="tab-pane" data-group="group_4" tabindex="-1"><div><span><pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.hazelcast.jet<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>hazelcast-jet-protobuf<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>$4.6-SNAPSHOT<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br /></code></pre>
 </span></div></div></div></div>
 <p>Implement the adapter by extending the provided class (where <code>Person</code>
 is of any Protobuf <code>GeneratedMessageV3</code> type):</p>

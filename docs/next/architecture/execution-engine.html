@@ -143,10 +143,10 @@ object with just a single abstract method:</p>
 lambda expression. If you look at the source code of Jet processor,
 you may encounter quite complex code inside <code>Traverser</code> transforms. A
 good example is the
-<a href="https://github.com/hazelcast/hazelcast-jet/blob/v4.5-SNAPSHOT/hazelcast-jet-core/src/main/java/com/hazelcast/jet/impl/processor/SlidingWindowP.java#L207"><code>SlidingWindowP</code></a>
+<a href="https://github.com/hazelcast/hazelcast-jet/blob/v4.6-SNAPSHOT/hazelcast-jet-core/src/main/java/com/hazelcast/jet/impl/processor/SlidingWindowP.java#L207"><code>SlidingWindowP</code></a>
 processor.</p>
 <p>At the
-<a href="https://github.com/hazelcast/hazelcast-jet/blob/v4.5-SNAPSHOT/hazelcast-jet-core/src/main/java/com/hazelcast/jet/impl/execution/ProcessorTasklet.java#L259"><code>ProcessorTasklet</code></a>
+<a href="https://github.com/hazelcast/hazelcast-jet/blob/v4.6-SNAPSHOT/hazelcast-jet-core/src/main/java/com/hazelcast/jet/impl/execution/ProcessorTasklet.java#L259"><code>ProcessorTasklet</code></a>
 level we needed a full state machine implementation, basically
 implementing the <a href="https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md#implementation-details">CPS
 transformation</a>

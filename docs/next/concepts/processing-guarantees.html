@@ -101,7 +101,7 @@ concurrently. That means that, while the first stage works on batch
 <em>N</em>, later stages are still working on batches <em>N - 1</em>, <em>N - 2</em> etc.</li>
 <li><strong>Volatile State.</strong> Jet stores aggregation state in plain <code>HashMap</code>s
 and only occasionally backs them up to the resilient
-<a href="/javadoc/4.5-SNAPSHOT/com/hazelcast/map/IMap.html"><code>IMap</code></a>
+<a href="/javadoc/4.6-SNAPSHOT/com/hazelcast/map/IMap.html"><code>IMap</code></a>
 storage.</li>
 <li><strong>Load Balancing.</strong> Jet often reshapes batches to better match the
 capacity of each stage.</li>

@@ -1,0 +1,316 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Cluster Discovery · Hazelcast Jet</title><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="generator" content="Docusaurus"/><meta name="description" content="How to configure Jet for cluster discovery on various deployments."/><meta name="docsearch:version" content="4.4"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Cluster Discovery · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="How to configure Jet for cluster discovery on various deployments."/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.4</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/4.4/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Operations Guide</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.4/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.4/tutorials/kafka">Connect to Apache Kafka</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/tutorials/kinesis">Connect to Amazon Kinesis</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/4.4/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/4.4/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.4/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.4/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/api/error-handling">Error Handling Strategies</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">SQL<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.4/sql/intro">Hazelcast Jet SQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/sql/basic-commands">SQL Statements</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/sql/ddl">DDL Statements</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/sql/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/sql/imap-connector">IMap Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/sql/file-connector">File Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/sql/kafka-connector">Apache Kafka Connector</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.4/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.4/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/operations/configuration">Configuration</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/4.4/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.4/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.4/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/018-kinesis-connectors">018 - Kinesis Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/017-file-data-ingestion">017 - File Data Ingestion</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/016-event-reordering">016 - Avoiding Event Reordering Effects</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/015-mqtt-connector">015 - Mqtt Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/014-batchstage-sort">014 - BatchStage.sort()</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/013-system-time-watermarks">013 - Resolving Sparse Events Issue with System-Time Watermarks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/012-improved-job-resilience">012 - Improved Resilience of Fault-Tolerant Streaming Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.4/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/operations/discovery.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Cluster Discovery</h1></header><article><div><span><p>This section describes how Hazelcast Jet members forms a cluster in
+different platforms.</p>
+<p>Please note that, after a cluster is formed, communication between
+cluster members is always via TCP/IP, regardless of the discovery
+mechanism used.</p>
+<p>The discovery mechanism must be configured before node startup and
+the options are <a href="configuration">configured</a> in <code>hazelcast.yaml</code>.</p>
+<p>Hazelcast Jet supports the following discovery mechanisms.</p>
+<h2><a class="anchor" aria-hidden="true" id="multicast"></a><a href="#multicast" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Multicast</h2>
+<p>With the multicast auto-discovery mechanism, Hazelcast Jet allows cluster
+members to find each other using multicast communication. The cluster
+members do not need to know the concrete addresses of the other members,
+as they just multicast to all the other members. Whether
+multicast is possible or allowed depends on your environment.</p>
+<p>To configure your Hazelcast Jet member for multicast auto-discovery, set
+the following configuration elements.</p>
+<ul>
+<li><p>Set the <code>enabled</code> element of the multicast element to <code>true</code>.</p></li>
+<li><p>Set <code>multicast-group</code>, <code>multicast-port</code>, <code>multicast-time-to-live</code>,
+<code>multicast-timeout-seconds</code>, <code>trusted-interfaces</code> etc. to your
+multicast values.</p></li>
+</ul>
+<p>The following is an example configuration in <code>hazelcast.yaml</code>:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">hazelcast:</span>
+  <span class="hljs-attr">network:</span>
+    <span class="hljs-attr">join:</span>
+      <span class="hljs-attr">multicast:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+        <span class="hljs-attr">multicast-group:</span> <span class="hljs-number">224.2</span><span class="hljs-number">.2</span><span class="hljs-number">.3</span>
+        <span class="hljs-attr">multicast-port:</span> <span class="hljs-number">54327</span>
+      <span class="hljs-attr">tcp-ip:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">false</span>
+</code></pre>
+<blockquote>
+<p>Multicast mechanism is not recommended for production since UDP is
+often blocked in production environments and other discovery
+mechanisms are more definite.</p>
+</blockquote>
+<h2><a class="anchor" aria-hidden="true" id="tcpip"></a><a href="#tcpip" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>TCP/IP</h2>
+<p>Hazelcast Jet can be configured to discover members by TCP/IP. The
+configuration must list all or a subset of the members' host names
+and/or IP addresses as cluster members. You do not have to list all of
+these cluster members, but at least one of the listed members has to be
+active in the cluster when a new member joins.</p>
+<p>To configure your Hazelcast Jet cluster with TCP/IP discovery, set the
+following configuration elements.</p>
+<ul>
+<li>Set the <code>enabled</code> element of the <code>tcp-ip</code> element to true.</li>
+<li>Provide your member elements within the <code>member-list</code> element.</li>
+</ul>
+<p>The following is an example configuration.</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">hazelcast:</span>
+  <span class="hljs-attr">network:</span>
+    <span class="hljs-attr">join:</span>
+      <span class="hljs-attr">multicast:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">false</span>
+      <span class="hljs-attr">tcp-ip:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+        <span class="hljs-attr">member-list:</span>
+          <span class="hljs-bullet">-</span> <span class="hljs-number">10.0</span><span class="hljs-number">.0</span><span class="hljs-number">.1</span>
+          <span class="hljs-bullet">-</span> <span class="hljs-number">10.0</span><span class="hljs-number">.0</span><span class="hljs-number">.2</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="amazon-web-servicesec2"></a><a href="#amazon-web-servicesec2" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Amazon Web Services(EC2)</h2>
+<p>Hazelcast Jet supports EC2 auto-discovery with the
+Hazelcast Discovery Plugin for AWS. The plugin is included in the main
+Hazelcast Jet distribution so no extra dependencies needs to be added to
+use it.</p>
+<p>To use AWS discovery plugin, disable other join mechanisms
+and enable <code>aws</code>.</p>
+<p>The configuration below will filter the instances in the configured
+region with security-group and the tag and will try to form a cluster.</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">hazelcast:</span>
+  <span class="hljs-attr">network:</span>
+    <span class="hljs-attr">join:</span>
+      <span class="hljs-attr">multicast:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">false</span>
+      <span class="hljs-attr">tcp-ip:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">false</span>
+      <span class="hljs-attr">aws:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+        <span class="hljs-attr">access-key:</span> <span class="hljs-string">my-access-key</span>
+        <span class="hljs-attr">secret-key:</span> <span class="hljs-string">my-secret-key</span>
+        <span class="hljs-comment"># optional, default is us-east-1</span>
+        <span class="hljs-attr">region:</span> <span class="hljs-string">us-west-1</span>
+        <span class="hljs-comment"># optional, only instances belonging to this group will be discovered, default will try all running instances</span>
+        <span class="hljs-attr">security-group-name:</span> <span class="hljs-string">hazelcast-sg</span>
+        <span class="hljs-attr">tag-key:</span> <span class="hljs-string">type</span>
+        <span class="hljs-attr">tag-value:</span> <span class="hljs-string">hz-nodes</span>
+
+</code></pre>
+<p>For more information on the discovery plugin regarding Zone Awareness
+configuration, IAM roles, AWS Autoscaling and client connections from
+outside of the AWS network please see <a href="https://github.com/hazelcast/hazelcast-aws">Hazelcast Discovery Plugin for AWS</a>
+.</p>
+<h2><a class="anchor" aria-hidden="true" id="google-cloud-platform"></a><a href="#google-cloud-platform" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Google Cloud Platform</h2>
+<p>Hazelcast Jet supports automatic member discovery in the Google Cloud
+Platform (Compute Engine) environment with the Hazelcast Discovery
+Plugin for GCP. The plugin is included in the main Hazelcast Jet
+distribution so no extra dependencies needs to be added to use it.</p>
+<p>To use GCP discovery plugin, disable other join mechanisms
+and enable <code>gcp</code>.</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">hazelcast:</span>
+  <span class="hljs-attr">network:</span>
+    <span class="hljs-attr">join:</span>
+      <span class="hljs-attr">multicast:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">false</span>
+      <span class="hljs-attr">tcp-ip:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">false</span>
+      <span class="hljs-attr">gcp:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+        <span class="hljs-attr">zones:</span> <span class="hljs-string">us-east1-a,us-east1-b</span>
+        <span class="hljs-attr">label:</span> <span class="hljs-string">application=hazelcast</span>
+        <span class="hljs-attr">hz-port:</span> <span class="hljs-number">5701</span><span class="hljs-number">-5708</span>
+</code></pre>
+<p>For more information on the discovery plugin regarding Zone Awareness and
+client connections from outside of the AWS network please see
+<a href="https://github.com/hazelcast/hazelcast-gcp">Hazelcast Discovery Plugin for GCP</a>
+.</p>
+<h2><a class="anchor" aria-hidden="true" id="azure-cloud"></a><a href="#azure-cloud" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Azure Cloud</h2>
+<p>Hazelcast Jet supports automatic member discovery in the Microsoft
+Azure environment with <a href="https://github.com/hazelcast/hazelcast-azure">Hazelcast Discovery Plugin for Microsoft Azure</a>.
+The plugin is included in the main Hazelcast Jet distribution so no
+extra dependencies needs to be added to use it.</p>
+<p>To use Azure discovery plugin, disable other join  mechanisms and
+enable <code>azure</code>.</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">hazelcast:</span>
+  <span class="hljs-attr">network:</span>
+    <span class="hljs-attr">join:</span>
+      <span class="hljs-attr">multicast:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">false</span>
+      <span class="hljs-attr">azure:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+        <span class="hljs-attr">tag:</span> <span class="hljs-string">TAG-NAME=HZLCAST001</span>
+        <span class="hljs-attr">hz-port:</span> <span class="hljs-number">5701</span><span class="hljs-number">-5703</span>
+</code></pre>
+<p>Hazelcast Azure Plugin uses <a href="https://docs.microsoft.com/en-us/azure/virtual-machines/windows/instance-metadata-service">Azure Instance Metadata Service</a>
+to get access token and other environment details. In order to use this
+service, the plugin requires that <a href="https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview">Azure managed identities</a>
+with the correct <code>READ</code> roles are setup. The other necessary
+information such as subscription ID and and resource group name will be
+retrieved from instance metadata service.</p>
+<h3><a class="anchor" aria-hidden="true" id="clients-from-outside-azure"></a><a href="#clients-from-outside-azure" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Clients from outside Azure</h3>
+<p>Client instances might be running outside of an Azure VM which makes
+Azure Instance Metadata service unavailable. Then, client instances
+should be configured with the properties as shown below:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">hazelcast-client:</span>
+  <span class="hljs-attr">network:</span>
+      <span class="hljs-attr">azure:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+        <span class="hljs-attr">instance-metadata-available:</span> <span class="hljs-literal">false</span>
+        <span class="hljs-attr">client-id:</span> <span class="hljs-string">CLIENT_ID</span>
+        <span class="hljs-attr">tenant-id:</span> <span class="hljs-string">TENANT_ID</span>
+        <span class="hljs-attr">client-secret:</span> <span class="hljs-string">CLIENT_SECRET</span>
+        <span class="hljs-attr">subscription-id:</span> <span class="hljs-string">SUB_ID</span>
+        <span class="hljs-attr">resource-group:</span> <span class="hljs-string">RESOURCE-GROUP-NAME</span>
+        <span class="hljs-attr">scale-set:</span> <span class="hljs-string">SCALE-SET-NAME</span>
+        <span class="hljs-attr">use-public-ip:</span> <span class="hljs-literal">true</span>
+</code></pre>
+<p>You will need to setup <a href="https://azure.microsoft.com/en-us/documentation/articles/resource-group-create-service-principal-portal/">Azure Active Directory Service Principal credentials</a>
+for your Azure Subscription for this plugin to work. With the
+credentials, fill in the placeholder values above.</p>
+<p>For more information on the discovery plugin regarding Zone
+Awareness and client connections from outside of the Azure network
+please see <a href="https://github.com/hazelcast/hazelcast-azure">Hazelcast Discovery Plugin for Microsoft Azure</a>.</p>
+<h2><a class="anchor" aria-hidden="true" id="kubernetes"></a><a href="#kubernetes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Kubernetes</h2>
+<p>The Hazelcast Kubernetes plugin provides the automatic member discovery
+in the Kubernetes environment by communicating with the Kubernetes
+Master. The plugin included in the main
+Hazelcast Jet distribution so no extra dependencies needs to be added to
+use it.</p>
+<p>This plugin supports two different options of how Hazelcast Jet members
+discover each other:</p>
+<ul>
+<li>Kubernetes API</li>
+<li>DNS Lookup</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="kubernetes-api"></a><a href="#kubernetes-api" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Kubernetes API</h3>
+<p><em>Kubernetes API</em> mode means that each node makes a REST call to
+Kubernetes Master in order to discover IPs of Pods (with Hazelcast Jet
+members). Using Kubernetes API requires granting certain permissions.
+Therefore, you may need to create a <em>Role Based Access Control</em>(<code>rbac.yaml</code>)
+file with the following content.</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">apiVersion:</span> <span class="hljs-string">rbac.authorization.k8s.io/v1</span>
+<span class="hljs-attr">kind:</span> <span class="hljs-string">ClusterRoleBinding</span>
+<span class="hljs-attr">metadata:</span>
+  <span class="hljs-attr">name:</span> <span class="hljs-string">default-cluster</span>
+<span class="hljs-attr">roleRef:</span>
+  <span class="hljs-attr">apiGroup:</span> <span class="hljs-string">rbac.authorization.k8s.io</span>
+  <span class="hljs-attr">kind:</span> <span class="hljs-string">ClusterRole</span>
+  <span class="hljs-attr">name:</span> <span class="hljs-string">view</span>
+<span class="hljs-attr">subjects:</span>
+<span class="hljs-bullet">-</span> <span class="hljs-attr">kind:</span> <span class="hljs-string">ServiceAccount</span>
+  <span class="hljs-attr">name:</span> <span class="hljs-string">default</span>
+  <span class="hljs-attr">namespace:</span> <span class="hljs-string">default</span>
+</code></pre>
+<p>Then, apply <code>rbac.yaml</code>.</p>
+<pre><code class="hljs css language-bash">kubectl apply -f rbac.yaml
+</code></pre>
+<p>Hazelcast Kubernetes Discovery requires creating a service to Pods where
+Hazelcast Jet is running. In case of using Kubernetes API mode, the
+service can be of any type.</p>
+<p>The Hazelcast Jet configuration to use Kubernetes Discovery with
+Kubernetes API mode looks like the following.</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">hazelcast:</span>
+  <span class="hljs-attr">network:</span>
+    <span class="hljs-attr">join:</span>
+      <span class="hljs-attr">multicast:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">false</span>
+      <span class="hljs-attr">kubernetes:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+        <span class="hljs-attr">namespace:</span> <span class="hljs-string">MY-KUBERNETES-NAMESPACE</span>
+        <span class="hljs-attr">service-name:</span> <span class="hljs-string">MY-SERVICE-NAME</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="dns-lookup"></a><a href="#dns-lookup" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>DNS Lookup</h3>
+<p><em>DNS Lookup</em> mode uses a feature of Kubernetes that <strong>headless</strong>
+(without cluster IP) services are assigned a DNS record which resolves
+to the set of IPs of related Pods.</p>
+<p>Headless service is a service of type <em>ClusterIP</em> with the <code>clusterIP</code>
+property set to <code>None</code>.</p>
+<p>The Hazelcast Jet configuration to use Kubernetes Discovery with DNS
+Lookup mode looks like the following.</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">hazelcast:</span>
+  <span class="hljs-attr">network:</span>
+    <span class="hljs-attr">join:</span>
+      <span class="hljs-attr">multicast:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">false</span>
+      <span class="hljs-attr">kubernetes:</span>
+        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+        <span class="hljs-attr">service-dns:</span> <span class="hljs-string">MY-SERVICE-DNS-NAME</span>
+</code></pre>
+<p>See <a href="https://github.com/hazelcast/hazelcast-kubernetes">Hazelcast Discovery Plugin for Kubernetes</a>
+for more information about the plugin.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/4.4/operations/configuration"><span class="arrow-prev">← </span><span>Configuration</span></a><a class="docs-next button" href="/docs/4.4/operations/cluster-sizing"><span>Cluster Sizing</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#multicast">Multicast</a></li><li><a href="#tcpip">TCP/IP</a></li><li><a href="#amazon-web-servicesec2">Amazon Web Services(EC2)</a></li><li><a href="#google-cloud-platform">Google Cloud Platform</a></li><li><a href="#azure-cloud">Azure Cloud</a><ul class="toc-headings"><li><a href="#clients-from-outside-azure">Clients from outside Azure</a></li></ul></li><li><a href="#kubernetes">Kubernetes</a><ul class="toc-headings"><li><a href="#kubernetes-api">Kubernetes API</a></li><li><a href="#dns-lookup">DNS Lookup</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2021/03/17/billion-events-per-second">Billion Events Per Second with Millisecond Latency: Streaming Analytics at Giga-Scale</a><a href="/blog/2021/02/03/jet-44-is-released">Jet 4.4 Released</a><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2021 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.4"]}
+              });
+            </script></body></html>

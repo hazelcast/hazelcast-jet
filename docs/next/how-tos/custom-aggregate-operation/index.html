@@ -68,10 +68,10 @@ output value. The function that does this transformation is called the
 <em>aggregate function</em>. A basic example is <code>sum</code> applied to a set of
 integer numbers, but the result can also be a complex value, for example
 a list of all the input items.</p>
-<p>Jet's library contains a range of <a href="/javadoc/4.5-SNAPSHOT/com/hazelcast/jet/aggregate/AggregateOperations.html">predefined aggregate
+<p>Jet's library contains a range of <a href="/javadoc/4.6-SNAPSHOT/com/hazelcast/jet/aggregate/AggregateOperations.html">predefined aggregate
 functions</a>,
 but it also exposes an abstraction, called
-<a href="/javadoc/4.5-SNAPSHOT/com/hazelcast/jet/aggregate/AggregateOperation.html"><code>AggregateOperation</code></a>,
+<a href="/javadoc/4.6-SNAPSHOT/com/hazelcast/jet/aggregate/AggregateOperation.html"><code>AggregateOperation</code></a>,
 that allows you to plug in your own. Since Jet does the aggregation in a
 parallelized and distributed way, you can't simply supply a piece of
 Java code that implements the aggregate function; we need you to break
@@ -131,9 +131,9 @@ computation performed on it. This means that you just need one
 accumulator class for each kind of structure that holds the accumulated
 data, as opposed to one for each aggregate operation. Jet's library
 offers in the
-<a href="/javadoc/4.5-SNAPSHOT/com/hazelcast/jet/accumulator/package-summary.html"><code>com.hazelcast.jet.accumulator</code></a>
+<a href="/javadoc/4.6-SNAPSHOT/com/hazelcast/jet/accumulator/package-summary.html"><code>com.hazelcast.jet.accumulator</code></a>
 package several such classes, one of them being
-<a href="/javadoc/4.5-SNAPSHOT/com/hazelcast/jet/accumulator/LongLongAccumulator.html"><code>LongLongAccumulator</code></a>,
+<a href="/javadoc/4.6-SNAPSHOT/com/hazelcast/jet/accumulator/LongLongAccumulator.html"><code>LongLongAccumulator</code></a>,
 which is a match for our <code>average</code> function. You'll just have to supply
 the logic on top of it.</p>
 <p>Specifically, you have to provide a set of six functions (we call them
@@ -230,7 +230,7 @@ have to resort to the less type-safe, general <code>AggregateOperation</code>.</
 <p>Hazelcast Jet can join several streams and simultaneously perform
 aggregation on all of them. You specify a separate aggregate operation
 for each input stream and have the opportunity to combine their results
-when done. You can use aggregate operations <a href="/javadoc/4.5-SNAPSHOT/com/hazelcast/jet/aggregate/AggregateOperations.html">provided in the
+when done. You can use aggregate operations <a href="/javadoc/4.6-SNAPSHOT/com/hazelcast/jet/aggregate/AggregateOperations.html">provided in the
 library</a>
 (see the section on
 <a href="../api/stateful-transforms#co-group--join">co-aggregating</a> for an
