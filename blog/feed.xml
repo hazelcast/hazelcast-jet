@@ -4,7 +4,7 @@
         <title>Hazelcast Jet Blog</title>
         <link>https://jet-start.sh/blog</link>
         <description>The best place to stay up-to-date with the latest Hazelcast Jet news and events.</description>
-        <lastBuildDate>Wed, 17 Mar 2021 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Wed, 21 Apr 2021 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>https://jet-start.sh/blog</link>
         </image>
         <copyright>Copyright © 2021 Hazelcast Inc.</copyright>
+        <item>
+            <title><![CDATA[Jet 4.5 Released]]></title>
+            <link>https://jet-start.sh/blog/2021/04/21/jet-45-is-released.html</link>
+            <guid>https://jet-start.sh/blog/2021/04/21/jet-45-is-released.html</guid>
+            <pubDate>Wed, 21 Apr 2021 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>Today we're releasing Hazelcast Jet 4.5, the second release this year! We're bringing Jet closer to IMDG, unifying their SQL syntax and features. Our goal is to have a single SQL dialect that seamlessly uses the features of both Jet and IMDG.</p> <p>This ve...</p>]]></description>
+        </item>
         <item>
             <title><![CDATA[Billion Events Per Second with Millisecond Latency: Streaming Analytics at Giga-Scale]]></title>
             <link>https://jet-start.sh/blog/2021/03/17/billion-events-per-second.html</link>
