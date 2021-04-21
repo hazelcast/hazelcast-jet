@@ -125,6 +125,7 @@ function Downloads(props) {
               )}
             </tbody>
           </table>
+          <p>You can download past releases of the plugins on the <a href="https://github.com/hazelcast/hazelcast-jet/releases/">GitHub Releases page</a>.</p>
 
           <h3 id="incubating-modules">Incubating Modules</h3>
           <p>In addition to the ones included in the main distribution, Jet also has
@@ -211,10 +212,24 @@ function Downloads(props) {
                       </td>
                       <td>
                         <a
-                          href={`https://download.hazelcast.com/hazelcast-jet-management-center/hazelcast-jet-management-center-${current.version}.tar.gz`} target="_blank" rel="noreferrer noopener">
+                          href={current.mcVersion ? `https://download.hazelcast.com/management-center/hazelcast-management-center-${current.mcVersion}.tar.gz`
+                          : `https://download.hazelcast.com/hazelcast-jet-management-center/hazelcast-jet-management-center-${current.version}.tar.gz`} target="_blank" rel="noreferrer noopener">
                           Management Center
                         </a>
                       </td>
+                    {current.slimSize && (
+                      <tr>
+                        <th>{current.version}-slim</th>
+                        <td>
+                          <a href={`${repoUrl}/releases/download/v${current.version}/hazelcast-jet-${current.version}-slim.tar.gz`}>
+                            hazelcast-jet-{current.version}-slim.tar.gz
+                          </a>
+                        </td>
+                        <td>
+                          {current.slimSize} MB
+                        </td>
+                        <td></td><td></td><td></td>
+                      </tr>)}
                     </tr>
                   ),
               )}
