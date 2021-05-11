@@ -15,7 +15,6 @@ This post is a part of a series:
 - [Part 4 (concurrent GC with green threads)](/blog/2020/08/05/gc-tuning-for-jet)
 - [Part 5 (billion events per second)](/blog/2021/03/17/billion-events-per-second)
 
-
 ## Batch Pipeline Benchmark
 
 A batch pipeline processes a finite amount of stored data. There are no
