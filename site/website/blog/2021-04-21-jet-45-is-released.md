@@ -26,7 +26,7 @@ type.
 This is no longer needed: you can now use `CREATE MAPPING` and Jet SQL
 will automatically translate it to the equivalent `ClassDefinition`.
 This move finally closes the loop and makes the Hazelcast SQL experience
-entirely independent of Java. See 
+entirely independent of Java. See
 [Portable Serialization](https://jet-start.sh/docs/sql/imap-connector#portable-serialization)
 for more information.
 

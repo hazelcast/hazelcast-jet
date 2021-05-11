@@ -1723,7 +1723,7 @@ convenience factory methods. Most commonly one needs to provide:
 Example using a factory method:
 
 ```java
-BatchSource<String> elasticSource = ElasticSources.elasticsearch(
+BatchSource<String> elasticSource = ElasticSources.elastic(
     () -> client("user", "password", "host", 9200),
     () -> new SearchRequest("my-index"),
     hit -> (String) hit.getSourceAsMap().get("name")
@@ -1797,7 +1797,7 @@ convenience factory methods. Most commonly you need to provide:
  sink can be created using
 
 ```java
-Sink<Map<String, Object>> elasticSink = ElasticSinks.elasticsearch(
+Sink<Map<String, Object>> elasticSink = ElasticSinks.elastic(
     () -> client("user", "password", "host", 9200),
     item -> new IndexRequest("my-index").source(item)
 );

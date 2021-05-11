@@ -14,7 +14,6 @@ This post is a part of a series:
 - [Part 4 (concurrent GC with green threads)](/blog/2020/08/05/gc-tuning-for-jet)
 - [Part 5 (billion events per second)](/blog/2021/03/17/billion-events-per-second)
 
-
 The Java runtime has been evolving more rapidly in recent years and,
 after 15 years, we finally got a new default garbage collector: the
 G1. Two more GCs are on their way to production and are available as
