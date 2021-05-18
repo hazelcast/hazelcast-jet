@@ -16,19 +16,23 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.cache.ICache;
 import com.hazelcast.cache.EventJournalCacheEvent;
+import com.hazelcast.cache.ICache;
 import com.hazelcast.collection.IList;
 import com.hazelcast.config.Config;
+import com.hazelcast.config.NearCacheConfig;
 import com.hazelcast.jet.JetCacheManager;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.TestProcessors;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.map.IMap;
 import com.hazelcast.map.EventJournalMapEvent;
+import com.hazelcast.map.IMap;
+import com.hazelcast.map.impl.proxy.NearCachedMapProxyImpl;
 import com.hazelcast.projection.Projections;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.query.impl.predicates.TruePredicate;
@@ -36,6 +40,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.IntStream;
@@ -78,6 +83,7 @@ public class HazelcastConnectorTest extends SimpleTestInClusterSupport {
         Config hazelcastConfig = jetConfig.getHazelcastConfig();
         hazelcastConfig.getCacheConfig("*").getEventJournalConfig().setEnabled(true);
         hazelcastConfig.getMapConfig("stream*").getEventJournalConfig().setEnabled(true);
+        hazelcastConfig.getMapConfig("nearCache*").setNearCacheConfig(new NearCacheConfig());
 
         initialize(2, jetConfig);
     }
@@ -115,6 +121,24 @@ public class HazelcastConnectorTest extends SimpleTestInClusterSupport {
     }
 
     @Test
+    public void test_writeMapWithNearCache() {
+        List<Integer> items = range(0, ENTRY_COUNT).boxed().collect(toList());
+        sinkName = "nearCache-" + randomName();
+
+        DAG dag = new DAG();
+        Vertex src = dag.newVertex("src", () -> new TestProcessors.ListSource(items))
+                .localParallelism(1);
+        Vertex sink = dag.newVertex("sink", SinkProcessors.writeMapP(sinkName, i -> i, i -> i));
+        dag.edge(between(src, sink));
+
+        instance().newJob(dag).join();
+
+        IMap<Object, Object> sinkMap = instance().getMap(sinkName);
+        assertInstanceOf(NearCachedMapProxyImpl.class, sinkMap);
+        assertEquals(ENTRY_COUNT, sinkMap.size());
+    }
+
+    @Test
     public void when_readMap_withNativePredicateAndProjection() {
         IMap<Integer, Integer> sourceMap = instance().getMap(sourceName);
         range(0, ENTRY_COUNT).forEach(i -> sourceMap.put(i, i));
@@ -145,9 +169,9 @@ public class HazelcastConnectorTest extends SimpleTestInClusterSupport {
 
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", readMapP(sourceName,
-                        new TruePredicate<>(),
-                        Projections.singleAttribute("value")
-                ));
+                new TruePredicate<>(),
+                Projections.singleAttribute("value")
+        ));
         Vertex sink = dag.newVertex("sink", writeListP(sinkName));
         dag.edge(between(source, sink));
 
@@ -159,10 +183,10 @@ public class HazelcastConnectorTest extends SimpleTestInClusterSupport {
     public void checkContents_projectedToNull(String sinkName) {
         assertEquals(
                 IntStream.range(0, ENTRY_COUNT)
-                         .filter(i -> i % 2 != 0)
-                         .mapToObj(String::valueOf)
-                         .sorted()
-                         .collect(joining("\n")),
+                        .filter(i -> i % 2 != 0)
+                        .mapToObj(String::valueOf)
+                        .sorted()
+                        .collect(joining("\n")),
                 instance().getHazelcastInstance().<String>getList(sinkName).stream()
                         .sorted()
                         .collect(joining("\n")));
