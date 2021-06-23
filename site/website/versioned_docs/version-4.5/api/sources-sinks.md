@@ -1182,7 +1182,7 @@ work during normal operation and the problem will only manifest if the
 job crashes in a specific moment. Jet will even not detect it, only some
 messages will be missing from the sink. To test your broker we provide a
 tool, please go to [XA
-tests](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/xa-test)
+tests](https://github.com/hazelcast/hazelcast-jet-contrib/tree/jet-4.5-maintenance/xa-test)
 to get more information. This only applies to JMS sink, the source
 doesn't use XA transactions.
 
@@ -1200,7 +1200,7 @@ for details.
 ### Apache Pulsar
 
 >This connector is currently under incubation. For more
->information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/pulsar).
+>information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/jet-4.5-maintenance/pulsar).
 
 ## In-memory Data Structures
 
@@ -1446,6 +1446,8 @@ version.
 |Jet 4.1.1  |Hazelcast 4.0.1    |Hazelcast 4.y.z|
 |Jet 4.2    |Hazelcast 4.0.1    |Hazelcast 4.y.z|
 |Jet 4.3    |Hazelcast 4.0.3    |Hazelcast 4.y.z|
+|Jet 4.4    |Hazelcast 4.1.1    |Hazelcast 4.y.z|
+|Jet 4.5    |Hazelcast 4.2      |Hazelcast 4.y.z|
 
 ## Databases
 
@@ -1566,7 +1568,7 @@ work during normal operation and the problem will only manifest if the
 Jet job crashes in a specific moment. Jet will even not detect it, only
 some records will be missing from the target database. To test your
 broker we provide a tool, please go to [XA
-tests](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/xa-test)
+tests](https://github.com/hazelcast/hazelcast-jet-contrib/tree/jet-4.5-maintenance/xa-test)
 to get more information. This only applies to the JDBC sink, the source
 doesn't use XA transactions.
 
@@ -1871,17 +1873,17 @@ For details see Elasticsearch documentation section on
 ### MongoDB
 
 >This connector is currently under incubation. For more
->information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/mongodb).
+>information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/jet-4.5-maintenance/mongodb).
 
 ### InfluxDB
 
 >This connector is currently under incubation. For more
->information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/influxdb).
+>information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/jet-4.5-maintenance/influxdb).
 
 ### Redis
 
 >This connector is currently under incubation. For more
->information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/redis).
+>information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/jet-4.5-maintenance/redis).
 
 ## Miscellaneous
 
@@ -2071,12 +2073,12 @@ so this source is mostly aimed for simple IPC or testing.
 ### HTTP Listener
 
 >This connector is currently under incubation. For more
->information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/http).
+>information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/jet-4.5-maintenance/http).
 
 ### Twitter
 
 >This connector is currently under incubation. For more
->information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/twitter).
+>information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/jet-4.5-maintenance/twitter).
 
 ## Summary
 

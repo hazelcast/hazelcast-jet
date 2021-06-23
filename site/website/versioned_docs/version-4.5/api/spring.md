@@ -334,7 +334,7 @@ attributes.
 ## Spring Boot Integration
 
 Hazelcast Jet provides
-[Hazelcast Jet Spring Boot Starter](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/hazelcast-jet-spring-boot-starter)
+[Hazelcast Jet Spring Boot Starter](https://github.com/hazelcast/hazelcast-jet-contrib/tree/jet-4.5-maintenance/hazelcast-jet-spring-boot-starter)
 which automatically configures and starts a `JetInstance`, either a
 server or a client, if Jet is on the classpath.
 

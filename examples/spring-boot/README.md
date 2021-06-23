@@ -1,7 +1,7 @@
 ## Spring Boot Integration
 
 Hazelcast Jet provides its own Spring Boot 
-[Starter](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/hazelcast-jet-spring-boot-starter).
+[Starter](https://github.com/hazelcast/hazelcast-jet-contrib/tree/jet-4.5-maintenance/hazelcast-jet-spring-boot-starter).
 You need to add the starter dependency to `pom.xml` and configuration
 file (`hazelcast-jet.yaml`) to the project root or classpath. If you 
 don't provide a configuration file, the starter will use the default 

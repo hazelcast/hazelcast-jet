@@ -1,6 +1,8 @@
 ---
 title: Spring Boot Starter
 description: How to auto-configure Jet in Spring Boot Application
+id: version-4.5-spring-boot
+original_id: spring-boot
 ---
 
 Spring Boot makes it easy to create and use third-party libraries, such
