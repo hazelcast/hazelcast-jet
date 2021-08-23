@@ -25,6 +25,15 @@ alt="Contributors"></a>
 </p>
 </div>
 
+# Note on Hazelcast 5
+
+With the release of Hazelcast 5.0, development of Jet has been moved to the 
+[core Hazelcast Repository](https://github.com/hazelcast/hazelcast) - please 
+follow the repository for details on  how to use Hazelcast for building data pipelines.
+
+Hazelcast 5 also comes with extensive documentation, replacing the existing Jet
+docs: https://docs.hazelcast.com/hazelcast/latest/index.html
+
 # What is Jet
 
 [Jet](https://jet-start.sh/) is an open-source, in-memory, distributed
