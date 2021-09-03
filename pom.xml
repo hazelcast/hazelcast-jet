@@ -254,6 +254,11 @@
             </dependency>
 
             <dependency>
+                <groupId>net.minidev</groupId>
+                <artifactId>json-smart</artifactId>
+                <version>2.4.1</version>
+            </dependency>
+            <dependency>
                 <groupId>org.yaml</groupId>
                 <artifactId>snakeyaml</artifactId>
                 <version>${snakeyaml.version}</version>
@@ -286,7 +291,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
-                <version>1.19</version>
+                <version>1.21</version>
             </dependency>
             <dependency>
                 <groupId>joda-time</groupId>
@@ -808,7 +813,8 @@
                             <licenseMerge>BSD 2-Clause License|BSD-2-Clause|BSD 2-Clause license</licenseMerge>
                             <licenseMerge>
                                 BSD 3-Clause License|BSD License|BSD|BSD licence|The BSD License|3-Clause BSD License|
-                                New BSD License|New BSD license|The New BSD License|Revised BSD|BSD New license
+                                New BSD License|New BSD license|The New BSD License|Revised BSD|BSD New license|
+                                BSD-3-Clause
                             </licenseMerge>
                             <licenseMerge>CC0|CC0 1.0 Universal License</licenseMerge>
                             <licenseMerge>MIT License|MIT|The MIT License|MIT license|The MIT License (MIT)</licenseMerge>

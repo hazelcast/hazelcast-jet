@@ -24,7 +24,7 @@ Apache License, Version 2.0
   Jackson-core:2.11.2
   jackson-databind:2.11.2
   Apache Avro:1.10.2
-  Apache Commons Compress:1.19
+  Apache Commons Compress:1.21
 MIT License
   SLF4J API Module:1.7.28
 
