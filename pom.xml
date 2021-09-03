@@ -29,7 +29,7 @@
     <version>4.5.1-SNAPSHOT</version>
 
     <modules>
-<!--        <module>examples</module>-->
+        <module>examples</module>
         <module>extensions</module>
         <module>hazelcast-jet-all</module>
         <module>hazelcast-jet-distribution</module>
