@@ -1,8 +1,8 @@
 [
     {
-        "version": "4.5",
+        "version": "4.5.1",
         "releaseNotes": "/blog/2021/04/21/jet-45-is-released",
-        "size" : 557,
+        "size" : 559,
         "slimSize" : 29,
         "mcVersion": "4.2021.03"
     },
