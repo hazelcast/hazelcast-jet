@@ -10,14 +10,14 @@ Hazelcast Jet Enterprise requires a license key to run. You can get a
 
 ## Download Hazelcast Jet
 
-Once you have a license key, download Hazelcast Jet from [here](https://download.hazelcast.com/jet-enterprise/hazelcast-jet-enterprise-4.1.1.tar.gz).
+Once you have a license key, download Hazelcast Jet from [here](https://repository.hazelcast.com/download/jet-enterprise/hazelcast-jet-enterprise-4.1.1.tar.gz).
 
 Hazelcast Jet requires a minimum of JDK 8, which can be acquired from
 [AdoptOpenJDK](https://adoptopenjdk.net/). Once you have the download,
 unzip it to a folder which we will refer from now on as `JET_HOME`.
 
 ```bash
-wget https://download.hazelcast.com/jet-enterprise/hazelcast-jet-enterprise-4.1.1.tar.gz
+wget https://repository.hazelcast.com/download/jet-enterprise/hazelcast-jet-enterprise-4.1.1.tar.gz
 tar zxvf hazelcast-jet-enterprise-4.1.1.tar.gz
 cd hazelcast-jet-enterprise-4.1.1
 ```
