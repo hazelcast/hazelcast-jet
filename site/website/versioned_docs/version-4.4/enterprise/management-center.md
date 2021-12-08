@@ -7,7 +7,7 @@ original_id: management-center
 
 Hazelcast Management Center can be used for monitoring the cluster.
 
-Download [Hazelcast Management Center](https://download.hazelcast.com/management-center/hazelcast-management-center-4.2021.02.tar.gz)
+Download [Hazelcast Management Center](https://repository.hazelcast.com/download/management-center/hazelcast-management-center-4.2021.02.tar.gz)
 (compatible wit Hazelcast Jet 4.4).
 
 See the reference Hazelcast Management Center [documentation](https://docs.hazelcast.com/management-center/4.2021.02/index.html).

@@ -17,7 +17,7 @@ for more information.
 Download Jet Management Center and unzip it to a folder:
 
 ```bash
-wget https://download.hazelcast.com/hazelcast-jet-management-center/hazelcast-jet-management-center-4.5.1.tar.gz
+wget https://repository.hazelcast.com/download/jet-management-center/hazelcast-jet-management-center-4.5.1.tar.gz
 tar zxvf hazelcast-jet-management-center-4.5.1.tar.gz
 ```
 

@@ -170,7 +170,7 @@ function Downloads(props) {
          </p>
 
          <p>
-          Download <a href={`https://download.hazelcast.com/management-center/hazelcast-management-center-${latest.mcVersion}.tar.gz`}>Hazelcast Management Center {latest.mcVersion}</a>
+          Download <a href={`https://repository.hazelcast.com/download/management-center/hazelcast-management-center-${latest.mcVersion}.tar.gz`}>Hazelcast Management Center {latest.mcVersion}</a>
            &nbsp;(compatible wit Hazelcast Jet {latest.version}).
          </p>
          <p>
@@ -212,8 +212,8 @@ function Downloads(props) {
                       </td>
                       <td>
                         <a
-                          href={current.mcVersion ? `https://download.hazelcast.com/management-center/hazelcast-management-center-${current.mcVersion}.tar.gz`
-                          : `https://download.hazelcast.com/hazelcast-jet-management-center/hazelcast-jet-management-center-${current.version}.tar.gz`} target="_blank" rel="noreferrer noopener">
+                          href={current.mcVersion ? `https://repository.hazelcast.com/download/management-center/hazelcast-management-center-${current.mcVersion}.tar.gz`
+                          : `https://repository.hazelcast.com/download/jet-management-center/hazelcast-jet-management-center-${current.version}.tar.gz`} target="_blank" rel="noreferrer noopener">
                           Management Center
                         </a>
                       </td>
