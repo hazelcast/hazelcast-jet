@@ -170,7 +170,7 @@
         <dependency>
             <groupId>com.rabbitmq.jms</groupId>
             <artifactId>rabbitmq-jms</artifactId>
-            <version>1.14.0</version>
+            <version>1.15.2</version>
             <scope>test</scope>
         </dependency>
 
