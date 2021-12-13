@@ -175,9 +175,9 @@ Apache License, Version 2.0
   Kerby Util:1.0.1
   Kerby XDR Project:1.0.1
   Token provider:1.0.1
-  Apache Log4j API:2.13.3
-  Apache Log4j Core:2.13.3
-  Apache Log4j SLF4J Binding:2.13.3
+  Apache Log4j API:2.15.0
+  Apache Log4j Core:2.15.0
+  Apache Log4j SLF4J Binding:2.15.0
   Lucene Common Analyzers:8.7.0
   Lucene Memory:8.7.0
   Lucene Core:8.7.0
