@@ -122,10 +122,10 @@ Apache License, Version 2.0
   Joda-Time:2.10.1
   ASM based accessors helper used by json-smart:2.4.7
   JSON Small and Fast Parser:2.4.7
-  Apache Avro:1.10.2
-  Apache Avro IPC:1.10.2
-  Apache Avro IPC Jetty:1.10.2
-  Apache Avro Mapred API:1.10.2
+  Apache Avro:1.11.0
+  Apache Avro IPC:1.11.0
+  Apache Avro IPC Jetty:1.11.0
+  Apache Avro Mapred API:1.11.0
   Calcite Core:1.23.0
   Calcite Linq4j:1.23.0
   Apache Calcite Avatica:1.16.0
@@ -315,7 +315,7 @@ MIT License
   Animal Sniffer Annotations:1.18
   SLF4J API Module:1.7.28
 Public Domain
-  XZ for Java:1.8
+  XZ for Java:1.9
 Public Domain, per Creative Commons CC0
   HdrHistogram:2.1.9
 The GNU General Public License, v2 with FOSS exception
