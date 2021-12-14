@@ -23,10 +23,10 @@ Apache License, Version 2.0
   AWS SDK for Java - Core:1.12.128
   AWS Java SDK for Amazon Kinesis:1.12.128
   JMES Path Query library:1.12.128
-  Jackson-annotations:2.11.2
-  Jackson-core:2.11.2
-  jackson-databind:2.11.2
-  Jackson dataformat: CBOR:2.11.2
+  Jackson-annotations:2.11.4
+  Jackson-core:2.11.4
+  jackson-databind:2.11.4
+  Jackson dataformat: CBOR:2.11.4
   Apache Commons Codec:1.12
   Apache Commons Logging:1.2
   Joda-Time:2.10.1
