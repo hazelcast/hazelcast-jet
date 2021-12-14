@@ -789,6 +789,7 @@
                     <artifactId>license-maven-plugin</artifactId>
                     <version>1.19</version>
                     <configuration>
+                        <!-- File with license override for third party libraries with a missing license -->
                         <overrideFile>${maven.multiModuleProjectDirectory}/licenses/override-THIRD-PARTY.properties</overrideFile>
                         <acceptPomPackaging>true</acceptPomPackaging>
                         <outputDirectory>src/root</outputDirectory>
