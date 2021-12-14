@@ -132,7 +132,7 @@
         <affinity.version>3.2.3</affinity.version>
         <aws.sdk.version>1.12.128</aws.sdk.version>
         <netty.version>4.1.72.Final</netty.version>
-        <mysql.connector.version>8.0.27</mysql.connector.version>
+        <mysql.connector.version>8.0.25</mysql.connector.version>
 
         <!-- test dependencies -->
         <activemq.version>5.15.11</activemq.version>
