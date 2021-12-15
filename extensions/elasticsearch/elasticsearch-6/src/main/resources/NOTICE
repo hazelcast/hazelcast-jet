@@ -21,12 +21,12 @@ This product includes the following libraries with the following licenses:
 
 Apache License, Version 2.0
   HPPC Collections:0.7.1
-  Jackson-annotations:2.11.2
-  Jackson-core:2.11.2
-  jackson-databind:2.11.2
-  Jackson dataformat: CBOR:2.11.2
-  Jackson dataformat: Smile:2.11.2
-  Jackson-dataformat-YAML:2.11.2
+  Jackson-annotations:2.11.4
+  Jackson-core:2.11.4
+  jackson-databind:2.11.4
+  Jackson dataformat: CBOR:2.11.4
+  Jackson dataformat: Smile:2.11.4
+  Jackson-dataformat-YAML:2.11.4
   compiler:0.9.3
   T-Digest:3.2
   Apache Commons Codec:1.12
@@ -36,7 +36,7 @@ Apache License, Version 2.0
   Apache HttpClient:4.5.13
   Apache HttpCore:4.4.13
   Apache HttpCore NIO:4.4.13
-  Apache Log4j API:2.15.0
+  Apache Log4j API:2.16.0
   Lucene Common Analyzers:7.7.3
   Lucene Memory:7.7.3
   Lucene Core:7.7.3
@@ -64,7 +64,7 @@ Apache License, Version 2.0
   lang-mustache:6.8.17
   parent-join:6.8.17
   rank-eval:6.8.17
-  SnakeYAML:1.26
+  SnakeYAML:1.29
 MIT License
   JOpt Simple:5.0.2
 Public Domain, per Creative Commons CC0
