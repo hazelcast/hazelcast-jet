@@ -47,6 +47,35 @@ Thank you for your valuable contributions!
 <<< END TEMPLATE FOR THE NEXT VERSION
 
 
+** Hazelcast Jet 4.5.2 **
+
+Hazelcast Jet 4.5.2 is based on IMDG version 4.2.3 .
+
+1. Fixes
+
+[dependencies] Update log4j to 2.16.0
+[dependencies] Update slf4j to 1.7.32
+[dependencies] Update jackson to 2.11.4
+[dependencies] Update snakeyaml to 1.29
+[dependencies] Update netty to 4.1.72.Final
+[dependencies] Update mysql-connector-java to 8.0.25
+[dependencies] Update aws-sdk to 1.12.128
+[dependencies] Update avro to 1.11.0
+
+** Hazelcast Jet 4.5.1 **
+
+Hazelcast Jet 4.5.1 is based on IMDG version 4.2.2 .
+
+1. Fixes
+
+[core] Fix rebalance() nonfunctional before fused stages (#3051)
+[hadoop] Update Apache Commons Compress to 1.21
+[hadoop] Update JSON Small and Fast Parser to 2.4.7
+[hadoop] Update Jetty to 9.4.43
+[hadoop] Apache Commons IO to 2.7
+[metrics] Update Prometheus JMX Exporter - Java Agent to 0.16.1
+[elasticsearch] Update Elasticsearch6 to 6.8.17
+
 ** Hazelcast Jet 4.5 **
 
 Hazelcast Jet 4.5 is based on IMDG version 4.2. Check out its Release
