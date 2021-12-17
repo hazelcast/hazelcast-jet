@@ -1,0 +1,451 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Stateful Transforms · Hazelcast Jet</title><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Data transformation available in Jet, which maintain internal state."/><meta name="docsearch:version" content="4.5.1"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Stateful Transforms · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="Data transformation available in Jet, which maintain internal state."/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.5.1</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/4.5.1/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Programming Guide</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.1/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.1/tutorials/kafka">Connect to Apache Kafka</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/tutorials/kinesis">Connect to Amazon Kinesis</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/4.5.1/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/4.5.1/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.1/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.1/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/4.5.1/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/api/error-handling">Error Handling Strategies</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">SQL<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.1/sql/intro">Hazelcast Jet SQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/sql/basic-commands">SQL Statements</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/sql/ddl">DDL Statements</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/sql/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/sql/imap-connector">IMap Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/sql/file-connector">File Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/sql/kafka-connector">Apache Kafka Connector</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.1/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.1/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.1/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.1/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/018-kinesis-connectors">018 - Kinesis Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/017-file-data-ingestion">017 - File Data Ingestion</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/016-event-reordering">016 - Avoiding Event Reordering Effects</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/015-mqtt-connector">015 - Mqtt Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/014-batchstage-sort">014 - BatchStage.sort()</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/013-system-time-watermarks">013 - Resolving Sparse Events Issue with System-Time Watermarks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/012-improved-job-resilience">012 - Improved Resilience of Fault-Tolerant Streaming Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.1/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/api/stateful-transforms.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Stateful Transforms</h1></header><article><div><span><p>Stateful transforms refer to those computations which typically
+accumulate some data and emit results depending on what was encountered
+before.</p>
+<p>For example, we want to count how many items are encountered so far in
+a stream and emit the current count with every new item. This is quite
+distinct from the mapping transforms explored in the
+<a href="/docs/4.5.1/api/stateless-transforms">previous section</a>, because after each item
+we need to maintain a current <em>state</em> of the number of total items
+encountered so far.</p>
+<p>When it comes to maintaining state, there is also a big distinction
+between streaming and batch pipelines. Windowing only
+applies to streaming pipelines where an element of time is present and
+applying a one-time aggregation over the whole data set is only possible
+in batch pipelines.</p>
+<h2><a class="anchor" aria-hidden="true" id="aggregate"></a><a href="#aggregate" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>aggregate</h2>
+<p>Data aggregation is the cornerstone of distributed stream processing. It
+computes an aggregate function (simple examples: sum or average) over
+the data items.</p>
+<p>When used without a defined <a href="#window">window</a>, <code>aggregate</code> applies a
+one-time aggregation over the whole of the input which is only possible
+in a bounded input (using <code>BatchStage</code>).</p>
+<p>For example, a very simple aggregation will look like this:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">TestSources</span><span class="token punctuation">.</span><span class="token function">items</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">aggregate</span><span class="token punctuation">(</span><span class="token class-name">AggregateOperations</span><span class="token punctuation">.</span><span class="token function">counting</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>This will output only one result, which is the count of all the items:</p>
+<pre><code class="hljs css language-text">11:49:12.435 [ INFO] [c.h.j.i.c.W.loggerSink#0] 6
+</code></pre>
+<p>The definition of the aggregate operation hides behind the
+<code>AggregateOperations.counting()</code> method call. Jet provides several built
+in aggregations, such as:</p>
+<table>
+<thead>
+<tr><th>operation</th><th style="text-align:left">description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>averagingLong/Double</code></td><td style="text-align:left">Calculates an average of the given inputs</td></tr>
+<tr><td><code>counting</code></td><td style="text-align:left">Returns the count of all the items</td></tr>
+<tr><td><code>summingLong/Double</code></td><td style="text-align:left">Returns the sum of all the items</td></tr>
+<tr><td><code>maxBy/minBy</code></td><td style="text-align:left">Finds the minimum or maximum sorted according to some criteria</td></tr>
+<tr><td><code>toList</code></td><td style="text-align:left">Simply groups the items in a list and returns it</td></tr>
+<tr><td><code>bottomN/topN</code></td><td style="text-align:left">Calculates the bottom or top N items sorted according to some criteria.</td></tr>
+<tr><td><code>linearTrend</code></td><td style="text-align:left">Computes a trend line over the given items, for example the velocity given GPS coordinates</td></tr>
+<tr><td><code>allOf</code></td><td style="text-align:left">Combine multiple aggregations into one aggregation (for example, if you want both sum and average)</td></tr>
+</tbody>
+</table>
+<p>For a complete list, please refer to the
+<a href="/javadoc/4.5.1/com/hazelcast/jet/aggregate/AggregateOperations.html">AggregateOperations</a>
+class. You can also implement your own aggregate operations using the
+builder in
+<a href="/javadoc/4.5.1/com/hazelcast/jet/aggregate/AggregateOperation.html">AggregateOperation</a>
+.</p>
+<h3><a class="anchor" aria-hidden="true" id="groupingkey"></a><a href="#groupingkey" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>groupingKey</h3>
+<p>Typically you don’t want to aggregate all the items together, but
+group them by some key and then aggregate over each group separately.
+This is achieved by using the <code>groupingKey</code> transform and then applying
+an aggregation on it afterwards.</p>
+<p>We can extend the previous example to group odd and even values
+separately:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">TestSources</span><span class="token punctuation">.</span><span class="token function">items</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">groupingKey</span><span class="token punctuation">(</span>i <span class="token operator">-></span> i <span class="token operator">%</span> <span class="token number">2</span> <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">?</span> <span class="token string">"odds"</span> <span class="token operator">:</span> <span class="token string">"evens"</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">aggregate</span><span class="token punctuation">(</span><span class="token class-name">AggregateOperations</span><span class="token punctuation">.</span><span class="token function">counting</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<pre><code class="hljs css language-text">11:51:46.723 [ INFO] [c.h.j.i.c.W.loggerSink#0] odds=3
+11:51:46.723 [ INFO] [c.h.j.i.c.W.loggerSink#0] evens=3
+</code></pre>
+<p>Grouping is critical for aggregating massive data sets in distributed
+computing - otherwise you would not be able to make use of
+parallelization as effectively.</p>
+<h2><a class="anchor" aria-hidden="true" id="rollingaggregate"></a><a href="#rollingaggregate" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>rollingAggregate</h2>
+<p>Rolling aggregation is similar to <a href="#aggregate">aggregate</a> but instead of
+waiting to output until all items are received, it produces an <em>output
+item for each input item</em>. Because of this, it's possible to use it in a
+streaming pipeline as well, as the aggregation is applied in a
+continuous way. The same pipeline from <a href="#aggregate">aggregate</a>, can be
+rewritten to use a <code>rollingAggregate</code> transform instead:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">TestSources</span><span class="token punctuation">.</span><span class="token function">items</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">groupingKey</span><span class="token punctuation">(</span>i <span class="token operator">-></span> i <span class="token operator">%</span> <span class="token number">2</span> <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">?</span> <span class="token string">"odds"</span> <span class="token operator">:</span> <span class="token string">"evens"</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">rollingAggregate</span><span class="token punctuation">(</span><span class="token class-name">AggregateOperations</span><span class="token punctuation">.</span><span class="token function">counting</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Instead of a single line of output, we would get the following output
+instead:</p>
+<pre><code class="hljs css language-text">12:06:29.405 [ INFO] [c.h.j.i.c.W.loggerSink#0] odds=1
+12:06:29.405 [ INFO] [c.h.j.i.c.W.loggerSink#0] odds=2
+12:06:29.405 [ INFO] [c.h.j.i.c.W.loggerSink#0] odds=3
+12:06:29.406 [ INFO] [c.h.j.i.c.W.loggerSink#0] evens=1
+12:06:29.406 [ INFO] [c.h.j.i.c.W.loggerSink#0] evens=2
+12:06:29.406 [ INFO] [c.h.j.i.c.W.loggerSink#0] evens=3
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="window"></a><a href="#window" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>window</h2>
+<p>The process of data aggregation takes a finite batch of data and
+produces a result. We can make it work with an infinite stream if we
+break up the stream into finite chunks. This is called windowing and
+it’s almost always defined in terms of a range of event timestamps (a
+time window).</p>
+<p>Window transforms requires a stream which is annotated with
+<em>timestamps</em>, that is each input item has a timestamp associated with
+it. Timestamps are given in milliseconds and are generally represented
+in <em>epoch</em> format, as a simple <code>long</code>.</p>
+<p>For a more in-depth look at Jet's event time model, please refer to the
+<a href="/docs/4.5.1/concepts/event-time">Event Time</a> section.</p>
+<p>The general way to assign windows to a stream works as follows:</p>
+<h3><a class="anchor" aria-hidden="true" id="tumblingwindow"></a><a href="#tumblingwindow" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>tumblingWindow</h3>
+<p>Tumbling windows are the most basic window type - a window of constant
+size that &quot;tumbles&quot; along the time axis. If you use a window size of 1
+second, Jet will group together all events that occur within the same
+second and you’ll get window results for intervals [0-1) seconds, then
+[1-2) seconds, and so on.</p>
+<p>A simple example is given below:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">TestSources</span><span class="token punctuation">.</span><span class="token function">itemStream</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token comment">// will emit 100 items per second</span>
+ <span class="token punctuation">.</span><span class="token function">withIngestionTimestamps</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">window</span><span class="token punctuation">(</span><span class="token class-name">WindowDefinition</span><span class="token punctuation">.</span><span class="token function">tumbling</span><span class="token punctuation">(</span><span class="token class-name">TimeUnit</span><span class="token punctuation">.</span>SECONDS<span class="token punctuation">.</span><span class="token function">toMillis</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">aggregate</span><span class="token punctuation">(</span><span class="token class-name">AggregateOperations</span><span class="token punctuation">.</span><span class="token function">counting</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>When you run this pipeline, you will see output like this, where each
+output window is marked with start and end timestamps:</p>
+<pre><code class="hljs css language-text">14:26:28.007 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=14:26:27.000, end=14:26:28.000, value='100', isEarly=false}
+14:26:29.009 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=14:26:28.000, end=14:26:29.000, value='100', isEarly=false}
+14:26:30.004 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=14:26:29.000, end=14:26:30.000, value='100', isEarly=false}
+14:26:31.008 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=14:26:30.000, end=14:26:31.000, value='100', isEarly=false}
+</code></pre>
+<p>As with a normal aggregation, it's also possible to apply a grouping to
+a windowed operation:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">TestSources</span><span class="token punctuation">.</span><span class="token function">itemStream</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token comment">// will emit 100 items per second</span>
+ <span class="token punctuation">.</span><span class="token function">withIngestionTimestamps</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">groupingKey</span><span class="token punctuation">(</span>i <span class="token operator">-></span> i<span class="token punctuation">.</span><span class="token function">sequence</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">%</span> <span class="token number">2</span> <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">?</span> <span class="token string">"even"</span> <span class="token operator">:</span> <span class="token string">"odd"</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">window</span><span class="token punctuation">(</span><span class="token class-name">WindowDefinition</span><span class="token punctuation">.</span><span class="token function">tumbling</span><span class="token punctuation">(</span><span class="token class-name">TimeUnit</span><span class="token punctuation">.</span>SECONDS<span class="token punctuation">.</span><span class="token function">toMillis</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">aggregate</span><span class="token punctuation">(</span><span class="token class-name">AggregateOperations</span><span class="token punctuation">.</span><span class="token function">counting</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>In this mode, the output would be keyed:</p>
+<pre><code class="hljs css language-text">15:09:24.017 [ INFO] [c.h.j.i.c.W.loggerSink#0] KeyedWindowResult{start=15:09:23.000, end=15:09:24.000, key='odd', value='50', isEarly=false}
+15:09:24.018 [ INFO] [c.h.j.i.c.W.loggerSink#0] KeyedWindowResult{start=15:09:23.000, end=15:09:24.000, key='even', value='50', isEarly=false}
+15:09:25.014 [ INFO] [c.h.j.i.c.W.loggerSink#0] KeyedWindowResult{start=15:09:24.000, end=15:09:25.000, key='odd', value='50', isEarly=false}
+15:09:25.015 [ INFO] [c.h.j.i.c.W.loggerSink#0] KeyedWindowResult{start=15:09:24.000, end=15:09:25.000, key='even', value='50', isEarly=false}
+15:09:26.009 [ INFO] [c.h.j.i.c.W.loggerSink#0] KeyedWindowResult{start=15:09:25.000, end=15:09:26.000, key='odd', value='50', isEarly=false}
+15:09:26.009 [ INFO] [c.h.j.i.c.W.loggerSink#0] KeyedWindowResult{start=15:09:25.000, end=15:09:26.000, key='even', value='50', isEarly=false}
+15:09:27.013 [ INFO] [c.h.j.i.c.W.loggerSink#0] KeyedWindowResult{start=15:09:26.000, end=15:09:27.000, key='odd', value='50', isEarly=false}
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="slidingwindow"></a><a href="#slidingwindow" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>slidingWindow</h3>
+<p>Sliding window is like a tumbling window that instead of hopping from
+one time range to another, slides along instead. It slides in discrete
+steps that are a fraction of the window’s length. If you use a window of
+size 1 second sliding by 100 milliseconds, Jet will output window
+results for intervals [0.00-1.00) seconds, then [0.10-1.1) seconds, and
+so on.</p>
+<p>We can modify the tumbling window example as below:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">TestSources</span><span class="token punctuation">.</span><span class="token function">itemStream</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token comment">// will emit 100 items per second</span>
+ <span class="token punctuation">.</span><span class="token function">withIngestionTimestamps</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">window</span><span class="token punctuation">(</span><span class="token class-name">WindowDefinition</span><span class="token punctuation">.</span><span class="token function">sliding</span><span class="token punctuation">(</span><span class="token class-name">TimeUnit</span><span class="token punctuation">.</span>SECONDS<span class="token punctuation">.</span><span class="token function">toMillis</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">100</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">aggregate</span><span class="token punctuation">(</span><span class="token class-name">AggregateOperations</span><span class="token punctuation">.</span><span class="token function">counting</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>When you run this pipeline, you will see output like the following,
+where you can see that the start and end timestamps of the windows are
+overlapping.</p>
+<pre><code class="hljs css language-text">15:07:38.108 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=15:07:37.100, end=15:07:38.100, value='100', isEarly=false}
+15:07:38.209 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=15:07:37.200, end=15:07:38.200, value='100', isEarly=false}
+15:07:38.313 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=15:07:37.300, end=15:07:38.300, value='100', isEarly=false}
+15:07:38.408 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=15:07:37.400, end=15:07:38.400, value='100', isEarly=false}
+15:07:38.505 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=15:07:37.500, end=15:07:38.500, value='100', isEarly=false}
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="sessionwindow"></a><a href="#sessionwindow" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>sessionWindow</h3>
+<p>Session window captures periods of activity followed by periods of
+inactivity. You define the &quot;session timeout&quot;, i.e., the length of the
+inactive period that causes the window to close. The typical example
+of a session window is a user's activity on a website (hence the name).
+There are bursts of activity (while the user is browsing website
+) followed by rather long periods of inactivity.</p>
+<p>As with other aggregate transforms, if you define a grouping key, there
+will be a separate, independent session window for each key.</p>
+<p>In the example below, we want to find out how many different events each
+user had during a web session. The data source is a stream of events
+read from Kafka and we assume that the user session is closed after 15
+minutes of inactivity:</p>
+<pre><code class="hljs css language-java">p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">KafkaSources</span><span class="token punctuation">.</span><span class="token function">kafka</span><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">,</span> <span class="token string">"website-events"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">withIngestionTimestamps</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">groupingKey</span><span class="token punctuation">(</span>event <span class="token operator">-></span> event<span class="token punctuation">.</span><span class="token function">getUserId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">window</span><span class="token punctuation">(</span><span class="token class-name">WindowDefinition</span><span class="token punctuation">.</span><span class="token function">session</span><span class="token punctuation">(</span><span class="token class-name">TimeUnit</span><span class="token punctuation">.</span>MINUTES<span class="token punctuation">.</span><span class="token function">toMillis</span><span class="token punctuation">(</span><span class="token number">15</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">aggregate</span><span class="token punctuation">(</span><span class="token class-name">AggregateOperations</span><span class="token punctuation">.</span><span class="token function">counting</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="early-results"></a><a href="#early-results" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Early Results</h3>
+<p>If you had to allow a lot of event lateness, or if you just use large
+time windows, you may want to track the progress of a window while it is
+still accumulating events. You can order Jet to give you, at regular
+intervals, the current status on all the windows it has some data for,
+but aren't yet complete. For example, on the session window example we
+may want to get an update of all running session every second without
+waiting for the 15 minute timeout to get the full results:</p>
+<pre><code class="hljs css language-java">p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">KafkaSources</span><span class="token punctuation">.</span><span class="token function">kafka</span><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">,</span> <span class="token string">"website-events"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">withIngestionTimestamps</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">groupingKey</span><span class="token punctuation">(</span>event <span class="token operator">-></span> event<span class="token punctuation">.</span><span class="token function">getUserId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">window</span><span class="token punctuation">(</span><span class="token class-name">WindowDefinition</span><span class="token punctuation">.</span><span class="token function">session</span><span class="token punctuation">(</span><span class="token class-name">TimeUnit</span><span class="token punctuation">.</span>MINUTES<span class="token punctuation">.</span><span class="token function">toMillis</span><span class="token punctuation">(</span><span class="token number">15</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+   <span class="token punctuation">.</span><span class="token function">setEarlyResultsPeriod</span><span class="token punctuation">(</span>SECONDS<span class="token punctuation">.</span><span class="token function">toMillis</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">aggregate</span><span class="token punctuation">(</span><span class="token class-name">AggregateOperations</span><span class="token punctuation">.</span><span class="token function">counting</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>The output of the windowing stage is in the form of
+<code>KeyedWindowResult&lt;String, Long&gt;</code>, where <code>String</code> is the word and <code>Long</code>
+is the frequency of the events in the given window. <code>KeyedWindowResult</code>
+also has an <code>isEarly</code> property that says whether the result is early or
+final.</p>
+<p>The early results period works for all windows types. For example in a
+tumbling window, if you are working with a window size of one
+minute and there's an additional 15-second allowed lateness for the
+late-coming events, this amounts to waiting up to 75 seconds from
+receiving a given event to getting the result it contributed to.
+Therefore it may be desirable to ask Jet to give us updates on the
+current progress every second.</p>
+<blockquote>
+<p>Generally, Jet doesn't guarantee that a stage will receive the items in
+the same order its upstream stage emitted them. For example, it
+executes a <code>map</code> transform with many parallel tasks. One task may get
+the early result and another one the final result. They may emit the
+transformed result to the sink in any order. This can lead to a
+situation where your sink receives an early result after it has already
+received the final result.</p>
+</blockquote>
+<h2><a class="anchor" aria-hidden="true" id="distinct"></a><a href="#distinct" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>distinct</h2>
+<p>Suppresses duplicate items from a stream. This operation
+applies primarily to batch streams, but also works on a windowed
+unbounded stream.</p>
+<p>This example takes some input of integers and outputs only the distinct
+values:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">TestSources</span><span class="token punctuation">.</span><span class="token function">items</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">distinct</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>We can also use <code>distinct</code> with grouping, but then two items mapping to
+the same key will be duplicates. For example the following will
+print only strings that have different first letters:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">TestSources</span><span class="token punctuation">.</span><span class="token function">items</span><span class="token punctuation">(</span><span class="token string">"joe"</span><span class="token punctuation">,</span> <span class="token string">"john"</span><span class="token punctuation">,</span> <span class="token string">"jenny"</span><span class="token punctuation">,</span> <span class="token string">"maria"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">groupingKey</span><span class="token punctuation">(</span>s <span class="token operator">-></span> s<span class="token punctuation">.</span><span class="token function">substring</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">distinct</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>This is a possible output (Jet can choose any of the names starting in
+&quot;j&quot;):</p>
+<pre><code class="hljs css language-text">14:05:29.382 [ INFO] [c.h.j.i.c.W.loggerSink#0] joe
+14:05:29.383 [ INFO] [c.h.j.i.c.W.loggerSink#0] maria
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="sort"></a><a href="#sort" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>sort</h2>
+<p>Sorting only works on a batch stage. It sorts the input according to its
+natural ordering (the type must be <code>Comparable</code>) or according to the
+<code>Comparator</code> you provide. Example:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">TestSources</span><span class="token punctuation">.</span><span class="token function">items</span><span class="token punctuation">(</span><span class="token string">"bob"</span><span class="token punctuation">,</span> <span class="token string">"alice"</span><span class="token punctuation">,</span> <span class="token string">"dan"</span><span class="token punctuation">,</span> <span class="token string">"chuck"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">sort</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>This is how the output should look:</p>
+<pre><code class="hljs css language-text">10:43:54.523 [ INFO] [c.h.j.i.c.W.loggerSink#0] alice
+10:43:54.524 [ INFO] [c.h.j.i.c.W.loggerSink#0] bob
+10:43:54.524 [ INFO] [c.h.j.i.c.W.loggerSink#0] chuck
+10:43:54.524 [ INFO] [c.h.j.i.c.W.loggerSink#0] dan
+</code></pre>
+<p>Jet sorts the data in two steps: first it sorts the data that is local
+on each node, and then it merges the sorted streams into the final
+output. The first step requires O(n) heap memory, but the second step
+just receives the data in the correct order and has O(1) memory needs.</p>
+<h2><a class="anchor" aria-hidden="true" id="mapstateful"></a><a href="#mapstateful" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>mapStateful</h2>
+<p>mapStateful is an extension of the simple <a href="/docs/4.5.1/api/stateless-transforms#map">map</a>
+transform. It adds the capability to optionally retain mutable state.</p>
+<p>The major use case of stateful mapping is recognizing a pattern in the
+event stream, such as matching start-transaction with end-transaction
+events based on an event correlation ID. More generally, you can
+implement any kind of state machine and detect patterns in an input of
+any complexity.</p>
+<p>As with other stateful operations, you can also use a <code>groupingKey</code> to
+have a unique state per key.</p>
+<p>For example, consider a pipeline that matches incoming
+<code>TRANSACTION_START</code> events to <code>TRANSACTION_END</code> events which can arrive
+unordered and when both are received outputs how long the transaction
+took.</p>
+<p>This would be difficult to express in terms of a <code>slidingWindow</code>,
+because we can't know how long a transaction would take in advance, and
+if it would span multiple windows. It can't be expressed using
+<code>sessionWindow</code> either, because we don't want to wait until the window
+times out before emitting the results.</p>
+<p>Let's say we have the following class:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">TransactionEvent</span> <span class="token punctuation">{</span>
+    <span class="token keyword">long</span> <span class="token function">timestamp</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">String</span> <span class="token function">transactionId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">EventType</span> <span class="token function">type</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">public</span> <span class="token keyword">enum</span> <span class="token class-name">EventType</span> <span class="token punctuation">{</span>
+    TRANSACTION_START<span class="token punctuation">,</span>
+    TRANSACTION_END
+<span class="token punctuation">}</span>
+</code></pre>
+<p>We can then use the following <code>mapStateful</code> transform to match start
+and end events:</p>
+<pre><code class="hljs css language-java">p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">KafkaSources</span><span class="token punctuation">.</span><span class="token function">kafka</span><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">,</span> <span class="token string">"transaction-events"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">withNativeTimestamps</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">groupingKey</span><span class="token punctuation">(</span>event <span class="token operator">-></span> event<span class="token punctuation">.</span><span class="token function">getTransactionId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">mapStateful</span><span class="token punctuation">(</span>MINUTES<span class="token punctuation">.</span><span class="token function">toMillis</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+   <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token keyword">new</span> <span class="token class-name">TransactionEvent</span><span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+   <span class="token punctuation">(</span>state<span class="token punctuation">,</span> id<span class="token punctuation">,</span> event<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>event<span class="token punctuation">.</span><span class="token function">type</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> TRANSACTION_START<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            state<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">=</span> event<span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>event<span class="token punctuation">.</span><span class="token function">type</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> TRANSACTION_END<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            state<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">=</span> event<span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>state<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">!=</span> <span class="token keyword">null</span> <span class="token operator">&amp;&amp;</span> state<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token comment">// we have both start and end events</span>
+            <span class="token keyword">long</span> duration <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">timestamp</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> state<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">timestamp</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> <span class="token class-name">MapUtil</span><span class="token punctuation">.</span><span class="token function">entry</span><span class="token punctuation">(</span>event<span class="token punctuation">.</span><span class="token function">transactionId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> duration<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment">// we don't have both events, do nothing for now.</span>
+        <span class="token keyword">return</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">(</span>state<span class="token punctuation">,</span> id<span class="token punctuation">,</span> currentWatermark<span class="token punctuation">)</span> <span class="token operator">-></span>
+        <span class="token comment">// if we have not received both events after 10 minutes,</span>
+        <span class="token comment">// we will emit a timeout entry</span>
+        <span class="token punctuation">(</span>state<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">||</span> state<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span>
+            <span class="token operator">?</span> <span class="token class-name">MapUtil</span><span class="token punctuation">.</span><span class="token function">entry</span><span class="token punctuation">(</span>id<span class="token punctuation">,</span> TIMED_OUT<span class="token punctuation">)</span>
+            <span class="token operator">:</span> <span class="token keyword">null</span>
+ <span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>You will note that we also had to set an expiry time on the states
+(first parameter of the <code>mapStateful</code> method), otherwise would
+eventually run out of memory as we accumulate more and more
+transactions.</p>
+<h2><a class="anchor" aria-hidden="true" id="co-group--join"></a><a href="#co-group--join" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>co-group / join</h2>
+<p>Co-grouping allows to join any number of inputs on a common key, which
+can be anything you can calculate from the input item. This makes it
+possible to correlate data from two or more different sources. In the
+same transform you are able to apply an aggregate function to all the
+grouped items.</p>
+<p>As an example, we can use a sequence of events that would be typical on
+a e-commerce website: <code>PageVisit</code> and <code>AddToCart</code>. We want to find how
+many visits were required before an item was added to the cart. For
+simplicity, let's say we're working with historical data and we are
+processing this data from a set of logs.</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">BatchStageWithKey</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">PageVisit</span><span class="token punctuation">,</span> <span class="token class-name">Integer</span><span class="token punctuation">></span></span> pageVisit <span class="token operator">=</span>
+    p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">Sources</span><span class="token punctuation">.</span><span class="token function">files</span><span class="token punctuation">(</span><span class="token string">"visit-events.log"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+     <span class="token punctuation">.</span><span class="token function">groupingKey</span><span class="token punctuation">(</span>event <span class="token operator">-></span> event<span class="token punctuation">.</span><span class="token function">userId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">BatchStageWithKey</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">AddToCart</span><span class="token punctuation">,</span> <span class="token class-name">Integer</span><span class="token punctuation">></span></span> addToCart <span class="token operator">=</span>
+    p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">Sources</span><span class="token punctuation">.</span><span class="token function">files</span><span class="token punctuation">(</span><span class="token string">"cart-events.log"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+     <span class="token punctuation">.</span><span class="token function">groupingKey</span><span class="token punctuation">(</span>event <span class="token operator">-></span> event<span class="token punctuation">.</span><span class="token function">userId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>After getting the two keyed streams, now we can join them:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">BatchStage</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Entry</span><span class="token punctuation">&lt;</span><span class="token class-name">Integer</span><span class="token punctuation">,</span> <span class="token class-name">Tuple2</span><span class="token punctuation">&lt;</span><span class="token class-name">Long</span><span class="token punctuation">,</span> <span class="token class-name">Long</span><span class="token punctuation">></span><span class="token punctuation">></span><span class="token punctuation">></span></span> coGrouped <span class="token operator">=</span> pageVisit
+        <span class="token punctuation">.</span><span class="token function">aggregate2</span><span class="token punctuation">(</span><span class="token function">counting</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> addToCart<span class="token punctuation">,</span> <span class="token function">counting</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>This gives an item which contains the counts for both events for the
+same user id. From this, it's easy to calculate the ratio of visits vs
+add to cart events.</p>
+<p>Co-grouping can also be applied to windowed streams, and works exactly
+the same way as <a href="#aggregate">aggregate</a>. An important consideration is
+that the timestamps from both streams would be considered, so it's
+important that the two streams don't have widely different timestamps.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/4.5.1/api/stateless-transforms"><span class="arrow-prev">← </span><span>Stateless Transforms</span></a><a class="docs-next button" href="/docs/4.5.1/api/more-transforms"><span>More Transforms</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#aggregate">aggregate</a><ul class="toc-headings"><li><a href="#groupingkey">groupingKey</a></li></ul></li><li><a href="#rollingaggregate">rollingAggregate</a></li><li><a href="#window">window</a><ul class="toc-headings"><li><a href="#tumblingwindow">tumblingWindow</a></li><li><a href="#slidingwindow">slidingWindow</a></li><li><a href="#sessionwindow">sessionWindow</a></li><li><a href="#early-results">Early Results</a></li></ul></li><li><a href="#distinct">distinct</a></li><li><a href="#sort">sort</a></li><li><a href="#mapstateful">mapStateful</a></li><li><a href="#co-group--join">co-group / join</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2021/04/21/jet-45-is-released">Jet 4.5 Released</a><a href="/blog/2021/03/17/billion-events-per-second">Billion Events Per Second with Millisecond Latency: Streaming Analytics at Giga-Scale</a><a href="/blog/2021/02/03/jet-44-is-released">Jet 4.4 Released</a><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2021 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.5.1"]}
+              });
+            </script></body></html>
