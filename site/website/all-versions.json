@@ -1,7 +1,7 @@
 [
     {
         "version": "4.5.2",
-        "releaseNotes": "/blog/2021/04/21/jet-45-is-released",
+        "releaseNotes": "https://github.com/hazelcast/hazelcast-jet/releases/tag/v4.5.2",
         "size" : 601,
         "slimSize" : 29,
         "mcVersion": "4.2021.12"
