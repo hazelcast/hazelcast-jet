@@ -48,7 +48,7 @@ Thank you for your valuable contributions!
 
 ** Hazelcast Jet 4.5.3 **
 
-Hazelcast Jet 4.5.3 is based on IMDG version 4.2.3 .
+Hazelcast Jet 4.5.3 is based on IMDG version 4.2.4 .
 
 1. Fixes
 
