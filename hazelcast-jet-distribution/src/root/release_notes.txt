@@ -46,6 +46,13 @@ Thank you for your valuable contributions!
 
 <<< END TEMPLATE FOR THE NEXT VERSION
 
+** Hazelcast Jet 4.5.3 **
+
+Hazelcast Jet 4.5.3 is based on IMDG version 4.2.3 .
+
+1. Fixes
+
+[dependencies] Update log4j to 2.17.0
 
 ** Hazelcast Jet 4.5.2 **
 
