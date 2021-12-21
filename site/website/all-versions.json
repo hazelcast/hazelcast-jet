@@ -1,10 +1,10 @@
 [
     {
-        "version": "4.5.2",
-        "releaseNotes": "https://github.com/hazelcast/hazelcast-jet/releases/tag/v4.5.2",
+        "version": "4.5.3",
+        "releaseNotes": "https://github.com/hazelcast/hazelcast-jet/releases/tag/v4.5.3",
         "size" : 601,
         "slimSize" : 29,
-        "mcVersion": "4.2021.12"
+        "mcVersion": "4.2021.12-1"
     },
     {
         "version": "4.4",
