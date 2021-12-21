@@ -513,10 +513,10 @@ standalone cluster in a standalone process we need to make it aware of
 all the code that we have written.</p>
 <p>For this reason we create a jar containing everything we need. All we
 need to do is to run the build command:</p>
-<div class="tabs"><div class="nav-tabs"><div id="tab-group-907-tab-908" class="nav-link active" data-group="group_907" data-tab="tab-group-907-content-908">Gradle</div><div id="tab-group-907-tab-909" class="nav-link" data-group="group_907" data-tab="tab-group-907-content-909">Maven</div></div><div class="tab-content"><div id="tab-group-907-content-908" class="tab-pane active" data-group="group_907" tabindex="-1"><div><span><pre><code class="hljs css language-bash">gradle build<br /></code></pre>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-1069-tab-1070" class="nav-link active" data-group="group_1069" data-tab="tab-group-1069-content-1070">Gradle</div><div id="tab-group-1069-tab-1071" class="nav-link" data-group="group_1069" data-tab="tab-group-1069-content-1071">Maven</div></div><div class="tab-content"><div id="tab-group-1069-content-1070" class="tab-pane active" data-group="group_1069" tabindex="-1"><div><span><pre><code class="hljs css language-bash">gradle build<br /></code></pre>
 <p>This will produce a jar file called <code>cdc-tutorial-1.0-SNAPSHOT.jar</code>
 in the <code>build/libs</code> folder of our project.</p>
-</span></div></div><div id="tab-group-907-content-909" class="tab-pane" data-group="group_907" tabindex="-1"><div><span><pre><code class="hljs css language-bash">mvn package<br /></code></pre>
+</span></div></div><div id="tab-group-1069-content-1071" class="tab-pane" data-group="group_1069" tabindex="-1"><div><span><pre><code class="hljs css language-bash">mvn package<br /></code></pre>
 <p>This will produce a jar file called <code>cdc-tutorial-1.0-SNAPSHOT.jar</code>
 in the <code>target</code> folder or our project.</p>
 </span></div></div></div></div>
@@ -530,8 +530,8 @@ tar zxvf hazelcast-jet-4.3.1.tar.gz &amp;&amp; <span class="hljs-built_in">cd</s
 <ol start="2">
 <li>Activate the CDC plugin for the database you're using:</li>
 </ol>
-<div class="tabs"><div class="nav-tabs"><div id="tab-group-910-tab-911" class="nav-link active" data-group="group_910" data-tab="tab-group-910-content-911">MySQL</div><div id="tab-group-910-tab-912" class="nav-link" data-group="group_910" data-tab="tab-group-910-content-912">Postgres</div></div><div class="tab-content"><div id="tab-group-910-content-911" class="tab-pane active" data-group="group_910" tabindex="-1"><div><span><pre><code class="hljs css language-bash">mv opt/hazelcast-jet-cdc-debezium-4.3.1.jar lib; \<br />mv opt/hazelcast-jet-cdc-mysql-4.3.1.jar lib<br /></code></pre>
-</span></div></div><div id="tab-group-910-content-912" class="tab-pane" data-group="group_910" tabindex="-1"><div><span><pre><code class="hljs css language-bash">mv opt/hazelcast-jet-cdc-debezium-4.3.1.jar lib; \<br />mv opt/hazelcast-jet-cdc-postgres-4.3.1.jar lib<br /></code></pre>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-1072-tab-1073" class="nav-link active" data-group="group_1072" data-tab="tab-group-1072-content-1073">MySQL</div><div id="tab-group-1072-tab-1074" class="nav-link" data-group="group_1072" data-tab="tab-group-1072-content-1074">Postgres</div></div><div class="tab-content"><div id="tab-group-1072-content-1073" class="tab-pane active" data-group="group_1072" tabindex="-1"><div><span><pre><code class="hljs css language-bash">mv opt/hazelcast-jet-cdc-debezium-4.3.1.jar lib; \<br />mv opt/hazelcast-jet-cdc-mysql-4.3.1.jar lib<br /></code></pre>
+</span></div></div><div id="tab-group-1072-content-1074" class="tab-pane" data-group="group_1072" tabindex="-1"><div><span><pre><code class="hljs css language-bash">mv opt/hazelcast-jet-cdc-debezium-4.3.1.jar lib; \<br />mv opt/hazelcast-jet-cdc-postgres-4.3.1.jar lib<br /></code></pre>
 </span></div></div></div></div>
 <ol start="3">
 <li>Enable user code deployment:</li>
@@ -547,8 +547,8 @@ file, at the end of the <code>hazelcast</code> block:</p>
 </code></pre>
 <p>Also add these config lines to the <code>config/hazelcast-client.yaml</code> file,
 at the end of the <code>hazelcast-client</code> block:</p>
-<div class="tabs"><div class="nav-tabs"><div id="tab-group-913-tab-914" class="nav-link active" data-group="group_913" data-tab="tab-group-913-content-914">Gradle</div><div id="tab-group-913-tab-915" class="nav-link" data-group="group_913" data-tab="tab-group-913-content-915">Maven</div></div><div class="tab-content"><div id="tab-group-913-content-914" class="tab-pane active" data-group="group_913" tabindex="-1"><div><span><pre><code class="hljs css language-yaml">  <span class="hljs-attr">user-code-deployment:</span><br />    <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span><br />    <span class="hljs-attr">jarPaths:</span><br />      <span class="hljs-bullet">-</span> <span class="hljs-string">&lt;path_to_project&gt;/build/libs/cdc-tutorial-1.0-SNAPSHOT.jar</span><br /></code></pre>
-</span></div></div><div id="tab-group-913-content-915" class="tab-pane" data-group="group_913" tabindex="-1"><div><span><pre><code class="hljs css language-yaml">  <span class="hljs-attr">user-code-deployment:</span><br />    <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span><br />    <span class="hljs-attr">jarPaths:</span><br />      <span class="hljs-bullet">-</span> <span class="hljs-string">&lt;path_to_project&gt;/target/cdc-tutorial-1.0-SNAPSHOT.jar</span><br /></code></pre>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-1075-tab-1076" class="nav-link active" data-group="group_1075" data-tab="tab-group-1075-content-1076">Gradle</div><div id="tab-group-1075-tab-1077" class="nav-link" data-group="group_1075" data-tab="tab-group-1075-content-1077">Maven</div></div><div class="tab-content"><div id="tab-group-1075-content-1076" class="tab-pane active" data-group="group_1075" tabindex="-1"><div><span><pre><code class="hljs css language-yaml">  <span class="hljs-attr">user-code-deployment:</span><br />    <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span><br />    <span class="hljs-attr">jarPaths:</span><br />      <span class="hljs-bullet">-</span> <span class="hljs-string">&lt;path_to_project&gt;/build/libs/cdc-tutorial-1.0-SNAPSHOT.jar</span><br /></code></pre>
+</span></div></div><div id="tab-group-1075-content-1077" class="tab-pane" data-group="group_1075" tabindex="-1"><div><span><pre><code class="hljs css language-yaml">  <span class="hljs-attr">user-code-deployment:</span><br />    <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span><br />    <span class="hljs-attr">jarPaths:</span><br />      <span class="hljs-bullet">-</span> <span class="hljs-string">&lt;path_to_project&gt;/target/cdc-tutorial-1.0-SNAPSHOT.jar</span><br /></code></pre>
 </span></div></div></div></div>
 <p>Make sure to replace <code>&lt;path_to_project&gt;</code> with the absolute path to where
 you created the project for this tutorial.</p>
@@ -568,8 +568,8 @@ you created the project for this tutorial.</p>
 <p>Assuming our cluster is <a href="#7-start-hazelcast-jet">running</a> and the
 database <a href="#2-start-database">is up</a>, all we need to issue is
 following command:</p>
-<div class="tabs"><div class="nav-tabs"><div id="tab-group-916-tab-917" class="nav-link active" data-group="group_916" data-tab="tab-group-916-content-917">Gradle</div><div id="tab-group-916-tab-918" class="nav-link" data-group="group_916" data-tab="tab-group-916-content-918">Maven</div></div><div class="tab-content"><div id="tab-group-916-content-917" class="tab-pane active" data-group="group_916" tabindex="-1"><div><span><pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet submit build/libs/cdc-tutorial-1.0-SNAPSHOT.jar<br /></code></pre>
-</span></div></div><div id="tab-group-916-content-918" class="tab-pane" data-group="group_916" tabindex="-1"><div><span><pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet submit target/cdc-tutorial-1.0-SNAPSHOT.jar<br /></code></pre>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-1078-tab-1079" class="nav-link active" data-group="group_1078" data-tab="tab-group-1078-content-1079">Gradle</div><div id="tab-group-1078-tab-1080" class="nav-link" data-group="group_1078" data-tab="tab-group-1078-content-1080">Maven</div></div><div class="tab-content"><div id="tab-group-1078-content-1079" class="tab-pane active" data-group="group_1078" tabindex="-1"><div><span><pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet submit build/libs/cdc-tutorial-1.0-SNAPSHOT.jar<br /></code></pre>
+</span></div></div><div id="tab-group-1078-content-1080" class="tab-pane" data-group="group_1078" tabindex="-1"><div><span><pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet submit target/cdc-tutorial-1.0-SNAPSHOT.jar<br /></code></pre>
 </span></div></div></div></div>
 <p>The output in the Jet member's log should look something like this (we
 see these lines due to the <code>peek()</code> stages we've inserted):</p>
@@ -609,9 +609,9 @@ DELETE FROM inventory.orders WHERE order_number=10002;
 <p>Then we shut down our Jet member/cluster:</p>
 <pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet-stop
 </code></pre>
-<div class="tabs"><div class="nav-tabs"><div id="tab-group-919-tab-920" class="nav-link active" data-group="group_919" data-tab="tab-group-919-content-920">MySQL</div><div id="tab-group-919-tab-921" class="nav-link" data-group="group_919" data-tab="tab-group-919-content-921">Postgres</div></div><div class="tab-content"><div id="tab-group-919-content-920" class="tab-pane active" data-group="group_919" tabindex="-1"><div><span><p>You can use Docker to stop all running containers:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-1081-tab-1082" class="nav-link active" data-group="group_1081" data-tab="tab-group-1081-content-1082">MySQL</div><div id="tab-group-1081-tab-1083" class="nav-link" data-group="group_1081" data-tab="tab-group-1081-content-1083">Postgres</div></div><div class="tab-content"><div id="tab-group-1081-content-1082" class="tab-pane active" data-group="group_1081" tabindex="-1"><div><span><p>You can use Docker to stop all running containers:</p>
 <pre><code class="hljs css language-bash">docker stop mysqlterm mysql<br /></code></pre>
-</span></div></div><div id="tab-group-919-content-921" class="tab-pane" data-group="group_919" tabindex="-1"><div><span><p>You can use Docker to stop the running container (this will kill the
+</span></div></div><div id="tab-group-1081-content-1083" class="tab-pane" data-group="group_1081" tabindex="-1"><div><span><p>You can use Docker to stop the running container (this will kill the
 command-line client too, since it's running in the same container):</p>
 <pre><code class="hljs css language-bash">docker stop postgres<br /></code></pre>
 </span></div></div></div></div>

@@ -1,0 +1,252 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Apache Kafka Connector · Hazelcast Jet</title><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Description of the SQL Apache Kafka connector"/><meta name="docsearch:version" content="4.5.2"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Apache Kafka Connector · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="Description of the SQL Apache Kafka connector"/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.5.2</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/4.5.2/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>SQL</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/kafka">Connect to Apache Kafka</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/kinesis">Connect to Amazon Kinesis</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/error-handling">Error Handling Strategies</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">SQL<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/sql/intro">Hazelcast Jet SQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/sql/basic-commands">SQL Statements</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/sql/ddl">DDL Statements</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/sql/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/sql/imap-connector">IMap Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/sql/file-connector">File Connector</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/4.5.2/sql/kafka-connector">Apache Kafka Connector</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/018-kinesis-connectors">018 - Kinesis Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/017-file-data-ingestion">017 - File Data Ingestion</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/016-event-reordering">016 - Avoiding Event Reordering Effects</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/015-mqtt-connector">015 - Mqtt Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/014-batchstage-sort">014 - BatchStage.sort()</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/013-system-time-watermarks">013 - Resolving Sparse Events Issue with System-Time Watermarks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/012-improved-job-resilience">012 - Improved Resilience of Fault-Tolerant Streaming Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/sql/kafka-connector.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Apache Kafka Connector</h1></header><article><div><span><p>The Apache Kafka connector supports reading and writing to Apache Kafka
+topics.</p>
+<p>Apache Kafka is schema-less, however SQL assumes a schema. We assume all
+messages in a topic are of the same type (with some exceptions). Kafka
+also supports several serialization options, see below.</p>
+<h2><a class="anchor" aria-hidden="true" id="serialization-options"></a><a href="#serialization-options" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Serialization Options</h2>
+<p>To work with Kafka, you must specify the <code>keyFormat</code> and <code>valueFormat</code>
+options. Currently, even if you create a table mapping explicitly, we
+can't resolve these. These are the supported values for <code>keyFormat</code> and
+<code>valueFormat</code>:</p>
+<ul>
+<li>any of the supported <a href="https://docs.hazelcast.org/docs/4.2.3/manual/html-single/index.html#data-types">SQL data
+types</a>,
+except for <code>OBJECT</code></li>
+<li><code>avro</code></li>
+<li><code>json</code></li>
+<li><code>java</code></li>
+</ul>
+<p>The key and value format can be different. Any options not recognized by
+Jet are passed directly to the Kafka producer or consumer. See the
+examples for individual serialization options below.</p>
+<h3><a class="anchor" aria-hidden="true" id="primitive-serialization"></a><a href="#primitive-serialization" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Primitive serialization</h3>
+<p>If the format is one of the primitive type names, then the Java class
+representing that type will be stored in the IMap. By <em>primitive type</em>
+we mean any <a href="https://docs.hazelcast.org/docs/4.2.3/manual/html-single/index.html#data-types">supported SQL data
+type</a>,
+except for <code>OBJECT</code>.</p>
+<p>For example, if the topic key is an <code>Integer</code> and the topic message is a
+<code>String</code>, use:</p>
+<pre><code class="hljs css language-sql"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">MAPPING</span> my_topic
+<span class="hljs-keyword">TYPE</span> Kafka
+OPTIONS (
+    <span class="hljs-string">'keyFormat'</span>=<span class="hljs-string">'int'</span>,
+    <span class="hljs-string">'valueFormat'</span>=<span class="hljs-string">'varchar'</span>,
+    <span class="hljs-string">'bootstrap.servers'</span> = <span class="hljs-string">'127.0.0.1:9092'</span>
+)
+</code></pre>
+<p>Note that you don't have to provide <code>key.serializer</code>,
+<code>key.deserializer</code>, <code>value.serializer</code> and <code>value.deserializer</code> kafka
+options, which are otherwise required - in the above case the following
+will be automatically added:</p>
+<pre><code class="hljs css language-sql">'key.serializer' = 'org.apache.kafka.common.serialization.IntegerSerializer',
+'key.deserializer' = 'org.apache.kafka.common.serialization.IntegerDeserializer',
+'value.serializer' = 'org.apache.kafka.common.serialization.StringSerializer',
+'value.deserializer' = 'org.apache.kafka.common.serialization.StringDeserializer'
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="avro-serialization"></a><a href="#avro-serialization" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Avro Serialization</h3>
+<p>When using Avro, Jet reads the fields from the <code>GenericRecord</code> returned
+by the <code>KafkaAvroDeserializer</code>. When inserting to a topic, we create an
+ad-hoc Avro schema named <code>jet.sql</code> from the mapping columns. Because of
+this, the column list is required. Jet currently can't use your custom
+Avro schema to create objects, but it can use it to read objects written
+through our ad-hoc schema, as long as the field names and types match.</p>
+<h4><a class="anchor" aria-hidden="true" id="mapping-between-sql-and-avro-types"></a><a href="#mapping-between-sql-and-avro-types" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Mapping Between SQL and Avro Types</h4>
+<table>
+<thead>
+<tr><th>SQL Type</th><th>Avro Type</th></tr>
+</thead>
+<tbody>
+<tr><td><code>TINYINT</code><br/><code>SMALLINT</code><br/><code>INT</code></td><td><code>INT</code></td></tr>
+<tr><td><code>BIGINT</code></td><td><code>LONG</code></td></tr>
+<tr><td><code>REAL</code></td><td><code>FLOAT</code></td></tr>
+<tr><td><code>DOUBLE</code></td><td><code>DOUBLE</code></td></tr>
+<tr><td><code>BOOLEAN</code></td><td><code>BOOLEAN</code></td></tr>
+<tr><td><code>VARCHAR</code><br/>and all other types</td><td><code>STRING</code></td></tr>
+</tbody>
+</table>
+<p>All Avro types are a union of the <code>NULL</code> type and the actual type.</p>
+<pre><code class="hljs css language-sql"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">MAPPING</span> my_topic (
+    __key <span class="hljs-built_in">VARCHAR</span>,
+    ticker <span class="hljs-built_in">VARCHAR</span>,
+    amount <span class="hljs-built_in">BIGINT</span>,
+    price <span class="hljs-built_in">DECIMAL</span>
+)
+<span class="hljs-keyword">TYPE</span> Kafka
+OPTIONS (
+    <span class="hljs-string">'keyFormat'</span> = <span class="hljs-string">'varchar'</span>,
+    <span class="hljs-string">'valueFormat'</span> = <span class="hljs-string">'avro'</span>,
+    <span class="hljs-string">'bootstrap.servers'</span> = <span class="hljs-string">'127.0.0.1:9092'</span>,
+    <span class="hljs-string">'schema.registry.url'</span> = <span class="hljs-string">'http://127.0.0.1:8081/'</span>
+    <span class="hljs-comment">/* more Kafka options ... */</span>
+)
+</code></pre>
+<p>In this example, the key is a plain <code>Long</code> number, the value is
+avro-serialized. <code>keyFormat</code> and <code>valueFormat</code> options are handled by
+Jet, the rest is passed directly to Kafka producer or consumer.</p>
+<p>We omitted the kafka serialization options, in this case
+<code>io.confluent.kafka.serializers.KafkaAvroSerializer</code> and
+<code>io.confluent.kafka.serializers.KafkaAvroDeserializer</code> are automatically
+added.</p>
+<h3><a class="anchor" aria-hidden="true" id="json-serialization"></a><a href="#json-serialization" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>JSON Serialization</h3>
+<p>The value will be stored as a JSON object. Jet can't automatically
+determine the column list for this format, you must explicitly specify
+it:</p>
+<pre><code class="hljs css language-sql"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">MAPPING</span> my_topic(
+    __key <span class="hljs-built_in">BIGINT</span>,
+    ticker <span class="hljs-built_in">VARCHAR</span>,
+    amount <span class="hljs-built_in">INT</span>)
+<span class="hljs-keyword">TYPE</span> Kafka
+OPTIONS (
+    <span class="hljs-string">'keyFormat'</span> = <span class="hljs-string">'bigint'</span>,
+    <span class="hljs-string">'valueFormat'</span> = <span class="hljs-string">'json'</span>,
+    <span class="hljs-string">'bootstrap.servers'</span> = <span class="hljs-string">'127.0.0.1:9092'</span>)
+</code></pre>
+<p>There are no additional options for this format.</p>
+<p>JSON's type system doesn't match SQL's exactly. For example, JSON
+numbers have unlimited precision, but such numbers are typically not
+portable. We convert SQL integer and floating-point types into JSON
+numbers. We convert the <code>DECIMAL</code> type, as well as all temporal types,
+to JSON strings.</p>
+<p>We don't support the <code>JSON</code> type from the SQL standard yet. That means
+you can't use functions like <code>JSON_VALUE</code> or <code>JSON_QUERY</code>. If your JSON
+documents don't all have the same fields or if they contain nested
+objects, the usability is limited.</p>
+<h3><a class="anchor" aria-hidden="true" id="java-serialization"></a><a href="#java-serialization" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Java Serialization</h3>
+<p>Java serialization is the last-resort serialization option. It uses the
+Java objects exactly as <code>KafkaConsumer.poll()</code> returns them. You can use
+it for objects serialized using the Java serialization or any other
+serialization method.</p>
+<p>For this format you must specify the class name using <code>keyJavaClass</code> and
+<code>valueJavaClass</code> options, for example:</p>
+<pre><code class="hljs css language-sql"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">MAPPING</span> my_topic
+<span class="hljs-keyword">TYPE</span> Kafka
+OPTIONS (
+    <span class="hljs-string">'keyFormat'</span> = <span class="hljs-string">'java'</span>,
+    <span class="hljs-string">'keyJavaClass'</span> = <span class="hljs-string">'java.lang.Long'</span>,
+    <span class="hljs-string">'valueFormat'</span> = <span class="hljs-string">'java'</span>,
+    <span class="hljs-string">'valueJavaClass'</span> = <span class="hljs-string">'com.example.Person'</span>,
+    <span class="hljs-string">'value.serializer'</span> = <span class="hljs-string">'com.example.serialization.PersonSerializer'</span>,
+    <span class="hljs-string">'value.deserializer'</span> = <span class="hljs-string">'com.example.serialization.PersonDeserializer'</span>,
+    <span class="hljs-string">'bootstrap.servers'</span> = <span class="hljs-string">'127.0.0.1:9092'</span>)
+</code></pre>
+<p>If the Java class corresponds to one of the basic data types (numbers,
+dates, strings), that type will directly be used for the key or value
+and mapped as a column named <code>__key</code> for keys and <code>this</code> for values. In
+the example above, the key will be mapped with the <code>BIGINT</code> type. In
+fact, the above <code>keyFormat</code> &amp; <code>keyJavaClass</code> duo is equivalent to
+<code>'keyFormat'='bigint'</code>.</p>
+<p>If the Java class is not one of the basic types, Hazelcast will analyze
+the class using reflection and use its properties as column names. It
+recognizes public fields and JavaBean-style getters. If some property
+has a non-primitive type, it will be mapped under the <code>OBJECT</code> type.</p>
+<h2><a class="anchor" aria-hidden="true" id="external-column-name"></a><a href="#external-column-name" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>External Column Name</h2>
+<p>You rarely need to specify the columns in DDL. If you do, you might need
+to specify the external name for the column.</p>
+<p>The entries in a map naturally have <em>key</em> and <em>value</em> elements. Because
+of this, the format of the external name must be either <code>__key.&lt;name&gt;</code>
+for a field in the key or <code>this.&lt;name&gt;</code> for a field in the value.</p>
+<p>The external name defaults to <code>this.&lt;columnName&gt;</code>, so normally you only
+need to specify it for key fields. There are also columns that represent
+the entire key and value objects, called <code>__key</code> and <code>this</code>.</p>
+<h2><a class="anchor" aria-hidden="true" id="heterogeneous-messages"></a><a href="#heterogeneous-messages" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Heterogeneous Messages</h2>
+<p>For example, let's say you have these messages in your topic:</p>
+<pre><code class="hljs css language-json">{<span class="hljs-attr">"name"</span>:<span class="hljs-string">"Alice"</span>,<span class="hljs-attr">"age"</span>:<span class="hljs-number">42</span>}
+{<span class="hljs-attr">"name"</span>:<span class="hljs-string">"Bob"</span>,<span class="hljs-attr">"age"</span>:<span class="hljs-number">43</span>,<span class="hljs-attr">"petName"</span>:<span class="hljs-string">"Zaz"</span>}
+</code></pre>
+<p>If you map the column <code>petName</code>, it will have the value <code>null</code> for the
+entry with <code>key=1</code>. This scenario is supported. Similar behavior works
+with Avro format.</p>
+<h2><a class="anchor" aria-hidden="true" id="installation"></a><a href="#installation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installation</h2>
+<p>You need the <code>hazelcast-jet-kafka</code> module on your classpath. For
+Gradle or Maven, make sure to add the dependency:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-475-tab-476" class="nav-link active" data-group="group_475" data-tab="tab-group-475-content-476">Gradle</div><div id="tab-group-475-tab-477" class="nav-link" data-group="group_475" data-tab="tab-group-475-content-477">Maven</div></div><div class="tab-content"><div id="tab-group-475-content-476" class="tab-pane active" data-group="group_475" tabindex="-1"><div><span><pre><code class="hljs css language-groovy">compile <span class="hljs-string">'com.hazelcast.jet:hazelcast-jet-kafka:4.5.2'</span><br /></code></pre>
+</span></div></div><div id="tab-group-475-content-477" class="tab-pane" data-group="group_475" tabindex="-1"><div><span><pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.hazelcast.jet<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>hazelcast-jet-kafka<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>4.5.2<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br /></code></pre>
+</span></div></div></div></div>
+<p>If you're using the distribution package make sure use the fat one,
+because the <code>hazelcast-jet-kafka-4.5.2.jar</code> you need is not
+contained in the slim one.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/4.5.2/sql/file-connector"><span class="arrow-prev">← </span><span>File Connector</span></a><a class="docs-next button" href="/docs/4.5.2/how-tos/stream-imap"><span>Receive IMap Change Stream</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#serialization-options">Serialization Options</a><ul class="toc-headings"><li><a href="#primitive-serialization">Primitive serialization</a></li><li><a href="#avro-serialization">Avro Serialization</a></li><li><a href="#json-serialization">JSON Serialization</a></li><li><a href="#java-serialization">Java Serialization</a></li></ul></li><li><a href="#external-column-name">External Column Name</a></li><li><a href="#heterogeneous-messages">Heterogeneous Messages</a></li><li><a href="#installation">Installation</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2021/04/21/jet-45-is-released">Jet 4.5 Released</a><a href="/blog/2021/03/17/billion-events-per-second">Billion Events Per Second with Millisecond Latency: Streaming Analytics at Giga-Scale</a><a href="/blog/2021/02/03/jet-44-is-released">Jet 4.4 Released</a><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2021 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.5.2"]}
+              });
+            </script></body></html>

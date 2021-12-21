@@ -1,0 +1,427 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Hazelcast Jet SQL · Hazelcast Jet</title><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Introduction to Hazelcast Jet SQL"/><meta name="docsearch:version" content="4.5.2"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Hazelcast Jet SQL · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="Introduction to Hazelcast Jet SQL"/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.5.2</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/4.5.2/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>SQL</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/kafka">Connect to Apache Kafka</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/kinesis">Connect to Amazon Kinesis</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/error-handling">Error Handling Strategies</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">SQL<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem navListItemActive"><a class="navItem" href="/docs/4.5.2/sql/intro">Hazelcast Jet SQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/sql/basic-commands">SQL Statements</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/sql/ddl">DDL Statements</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/sql/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/sql/imap-connector">IMap Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/sql/file-connector">File Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/sql/kafka-connector">Apache Kafka Connector</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/018-kinesis-connectors">018 - Kinesis Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/017-file-data-ingestion">017 - File Data Ingestion</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/016-event-reordering">016 - Avoiding Event Reordering Effects</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/015-mqtt-connector">015 - Mqtt Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/014-batchstage-sort">014 - BatchStage.sort()</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/013-system-time-watermarks">013 - Resolving Sparse Events Issue with System-Time Watermarks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/012-improved-job-resilience">012 - Improved Resilience of Fault-Tolerant Streaming Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.2/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/sql/intro.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Hazelcast Jet SQL</h1></header><article><div><span><p>With Hazelcast Jet you can write SQL to process real-time event streams
+as well as data at rest. You can pull the data from a Hazelcast cluster
+(currently only the Jet cluster itself) or from external systems like
+Kafka or S3. You can see the results directly as well as send them to
+one of those systems. Jet SQL also has an extension that allows you to
+create a long-running background job that continuously takes the
+real-time data, processes it, and pushes it to the target system.</p>
+<p><strong>Note:</strong> <em>The service is in beta state and supports only a very limited
+subset of the planned functionality. The behavior, API, and binary
+formats may change in future releases.</em></p>
+<h2><a class="anchor" aria-hidden="true" id="quick-start"></a><a href="#quick-start" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Quick Start</h2>
+<p>You can use our Docker image, or download our tarball and start Jet from
+it.</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-457-tab-458" class="nav-link active" data-group="group_457" data-tab="tab-group-457-content-458">Docker</div><div id="tab-group-457-tab-459" class="nav-link" data-group="group_457" data-tab="tab-group-457-content-459">Tarball</div></div><div class="tab-content"><div id="tab-group-457-content-458" class="tab-pane active" data-group="group_457" tabindex="-1"><div><span><p>Update and start the Jet container by pasting this into your terminal:</p>
+<pre><code class="hljs css language-text">docker pull hazelcast/hazelcast-jet<br />docker network create jet-network<br />docker run --name jet --network jet-network -v "$(pwd)":/csv-dir --rm hazelcast/hazelcast-jet<br /></code></pre>
+<p>We created a named Docker network so we can easily make several
+containers talk to each other, using the container name as the hostname.</p>
+<p>The <code>-v</code> option maps the current directory to <code>/csv-dir</code> inside the
+container, stay in the same directory when you create the file in the
+CSV example below. On Windows, due to limitations of Docker, switch to
+some subdirectory of <code>c:\Users</code> before executing the above commands.</p>
+</span></div></div><div id="tab-group-457-content-459" class="tab-pane" data-group="group_457" tabindex="-1"><div><span><p>Prerequisite is Java.</p>
+<p>Download and start Jet by pasting this into your terminal:</p>
+<pre><code class="hljs css language-text">wget https://github.com/hazelcast/hazelcast-jet/releases/download/v4.4/hazelcast-jet-4.4.tar.gz<br />tar xvf hazelcast-jet-4.4.tar.gz<br />cd hazelcast-jet-4.4<br />bin/jet-start<br /></code></pre>
+</span></div></div></div></div>
+<hr>
+<p>Wait for a message like this in the output:</p>
+<pre><code class="hljs css language-text">2021-01-15 17:50:18,645 [ INFO] [main] [c.h.c.LifecycleService]:
+    [172.17.0.2]:5701 is STARTED
+</code></pre>
+<p>The prompt doesn't return, which allows you to easily stop or restart
+Jet.</p>
+<p>Now start another terminal window and enter the SQL shell:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-460-tab-461" class="nav-link active" data-group="group_460" data-tab="tab-group-460-content-461">Docker</div><div id="tab-group-460-tab-462" class="nav-link" data-group="group_460" data-tab="tab-group-460-content-462">Tarball</div></div><div class="tab-content"><div id="tab-group-460-content-461" class="tab-pane active" data-group="group_460" tabindex="-1"><div><span><pre><code class="hljs css language-text">$ docker run --network jet-network -it --rm hazelcast/hazelcast-jet jet --targets jet sql<br />Connected to Hazelcast Jet 4.4 at [172.17.0.2]:5701 (+0 more)<br />Type 'help' for instructions<br />sql〉<br /></code></pre>
+<p>Here, <code>--targets jet</code> is the SQL shell's command-line parameter that
+tells it to connect to the host named <code>jet</code>.</p>
+</span></div></div><div id="tab-group-460-content-462" class="tab-pane" data-group="group_460" tabindex="-1"><div><span><pre><code class="hljs css language-text">$ bin/jet sql<br />Connected to Hazelcast Jet 4.4 at [192.168.0.1]:5701 (+0 more)<br />Type 'help' for instructions<br />sql〉<br /></code></pre>
+</span></div></div></div></div>
+<hr>
+<p>You are now ready to write some SQL. Try these:</p>
+<pre><code class="hljs css language-sql">sql〉 <span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">FROM</span> <span class="hljs-keyword">TABLE</span>(generate_series(<span class="hljs-number">1</span>,<span class="hljs-number">3</span>));
++<span class="hljs-comment">------------+</span>
+|           v|
++<span class="hljs-comment">------------+</span>
+|           1|
+|           2|
+|           3|
++<span class="hljs-comment">------------+</span>
+3 row(s) selected
+sql〉 <span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">sum</span>(v) <span class="hljs-keyword">as</span> total <span class="hljs-keyword">FROM</span> <span class="hljs-keyword">TABLE</span>(generate_series(<span class="hljs-number">0</span>, <span class="hljs-number">9</span>));
++<span class="hljs-comment">--------------------+</span>
+|               total|
++<span class="hljs-comment">--------------------+</span>
+|                  45|
++<span class="hljs-comment">--------------------+</span>
+1 row(s) selected
+sql〉 <span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">key</span>, <span class="hljs-keyword">sum</span>(<span class="hljs-keyword">key</span>) <span class="hljs-keyword">as</span> total <span class="hljs-keyword">FROM</span> (
+          <span class="hljs-keyword">SELECT</span> v/<span class="hljs-number">2</span> <span class="hljs-keyword">as</span> <span class="hljs-keyword">key</span> <span class="hljs-keyword">FROM</span> <span class="hljs-keyword">TABLE</span>(generate_series(<span class="hljs-number">0</span>, <span class="hljs-number">9</span>))
+      ) <span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> <span class="hljs-keyword">key</span>;
++<span class="hljs-comment">--------------------+--------------------+</span>
+|                 key|               total|
++<span class="hljs-comment">--------------------+--------------------+</span>
+|                   1|                   2|
+|                   2|                   4|
+|                   3|                   6|
+|                   4|                   8|
+|                   0|                   0|
++<span class="hljs-comment">--------------------+--------------------+</span>
+5 row(s) selected
+</code></pre>
+<p>Here are two more examples with streaming SQL. Streaming queries never
+complete, so use <code>Ctrl+C</code> to cancel them after a while:</p>
+<pre><code class="hljs css language-sql">sql〉 <span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">FROM</span> <span class="hljs-keyword">TABLE</span>(generate_stream(<span class="hljs-number">10</span>));
++<span class="hljs-comment">--------------------+</span>
+|                   v|
++<span class="hljs-comment">--------------------+</span>
+|                   0|
+|                   1|
+|                   2|
+|                   3|
+|                   4|
+|                   5|
+^C
+Query cancelled.
+sql〉 <span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">FROM</span> <span class="hljs-keyword">TABLE</span>(generate_stream(<span class="hljs-number">100</span>)) <span class="hljs-keyword">WHERE</span> v / <span class="hljs-number">10</span> * <span class="hljs-number">10</span> = v;
++<span class="hljs-comment">--------------------+</span>
+|                   v|
++<span class="hljs-comment">--------------------+</span>
+|                   0|
+|                  10|
+|                  20|
+|                  30|
+|                  40|
+|                  50|
+^C
+Query cancelled.
+sql〉
+</code></pre>
+<p><code>generate_stream()</code> generates an infinite stream of values. It emits
+<code>bigint</code>s starting from zero at the rate you indicate with the argument
+(in events per second). For Jet SQL, a stream is like a table with
+infinitely many rows which you can only access sequentially and thus
+never reach the end. For example, you get an error if you try to
+aggregate the whole stream:</p>
+<pre><code class="hljs css language-sql">sql〉 <span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">sum</span>(v) <span class="hljs-keyword">FROM</span> <span class="hljs-keyword">TABLE</span>(generate_stream(<span class="hljs-number">10</span>));
+From line 1, column 1 to line 1, column 45: Grouping/aggregations not
+supported for a streaming query
+</code></pre>
+<p>For aggregation to work in the setting of an unbounded stream, you have
+to apply a windowing function. This is an upcoming feature of Jet SQL.</p>
+<h2><a class="anchor" aria-hidden="true" id="features-in-this-beta"></a><a href="#features-in-this-beta" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Features in this Beta</h2>
+<p>In this beta release, you can use these:</p>
+<ul>
+<li><a href="https://docs.hazelcast.org/docs/4.2.3/manual/html-single/index.html#expressions">SELECT and WHERE
+expressions</a></li>
+<li>FROM <a href="/docs/4.5.2/sql/kafka-connector">Apache Kafka topics</a> and
+<a href="/docs/4.5.2/sql/file-connector">files (local and remote)</a></li>
+<li>JOIN with an IMap inside the Jet cluster (enrichment)</li>
+<li><a href="basic-commands#insertsink-statement">INSERT/SINK INTO</a> a Kafka topic
+or an IMap inside the cluster</li>
+<li><a href="basic-commands#aggregate-functions">GROUP BY and aggregate functions</a>
+on bounded data (non-streaming)</li>
+</ul>
+<p>These are some of the features on our roadmap:</p>
+<ul>
+<li>GROUP BY for IMap</li>
+<li>Windowed aggregation of streaming data</li>
+<li>JOIN with any data source</li>
+<li>JDBC driver</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="create-external-mapping"></a><a href="#create-external-mapping" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>CREATE EXTERNAL MAPPING</h2>
+<p>There is no native storage system in Jet SQL, instead it works with
+<em>external mappings</em> to access various resources as if they were tables.
+This includes its own internal IMaps.</p>
+<p>This is how you can create a mapping for a Hazelcast IMap <code>myMap</code> with
+JSON values:</p>
+<pre><code class="hljs css language-sql">sql〉 <span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">EXTERNAL</span> <span class="hljs-keyword">MAPPING</span> myMap (
+    <span class="hljs-keyword">id</span> <span class="hljs-built_in">BIGINT</span> <span class="hljs-keyword">EXTERNAL</span> <span class="hljs-keyword">NAME</span> <span class="hljs-string">"__key"</span>,
+    <span class="hljs-keyword">name</span> <span class="hljs-built_in">VARCHAR</span>,
+    age <span class="hljs-built_in">INT</span>)
+<span class="hljs-keyword">TYPE</span> IMap
+OPTIONS (
+    <span class="hljs-string">'keyFormat'</span>=<span class="hljs-string">'bigint'</span>,
+    <span class="hljs-string">'valueFormat'</span>=<span class="hljs-string">'json'</span>);
+OK
+sql〉 <span class="hljs-keyword">SHOW</span> MAPPINGS;
++<span class="hljs-comment">--------------------+</span>
+|name                |
++<span class="hljs-comment">--------------------+</span>
+|myMap               |
++<span class="hljs-comment">--------------------+</span>
+1 row(s) selected
+sql〉
+</code></pre>
+<p>The <a href="ddl">DDL</a> section has more details.</p>
+<h2><a class="anchor" aria-hidden="true" id="query-a-csv-file"></a><a href="#query-a-csv-file" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Query a CSV File</h2>
+<p>Make sure you are in the same directory from which you started Jet.
+Create a sample CSV file named <code>likes.csv</code>:</p>
+<pre><code class="hljs css language-bash">$ vi likes.csv
+
+id,name,likes
+1,Jerry,13
+2,Greg,108
+3,Mary,73
+4,Jerry,88
+</code></pre>
+<p>Now you can write the SQL:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-463-tab-464" class="nav-link active" data-group="group_463" data-tab="tab-group-463-content-464">Docker</div><div id="tab-group-463-tab-465" class="nav-link" data-group="group_463" data-tab="tab-group-463-content-465">Tarball</div></div><div class="tab-content"><div id="tab-group-463-content-464" class="tab-pane active" data-group="group_463" tabindex="-1"><div><span><pre><code class="hljs css language-sql">sql〉 <span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">MAPPING</span> csv_likes (<span class="hljs-keyword">id</span> <span class="hljs-built_in">INT</span>, <span class="hljs-keyword">name</span> <span class="hljs-built_in">VARCHAR</span>, likes <span class="hljs-built_in">INT</span>)<br /><span class="hljs-keyword">TYPE</span> <span class="hljs-keyword">File</span><br />OPTIONS (<span class="hljs-string">'format'</span>=<span class="hljs-string">'csv'</span>,<br />    <span class="hljs-string">'path'</span>=<span class="hljs-string">'/csv-dir'</span>, <span class="hljs-string">'glob'</span>=<span class="hljs-string">'likes.csv'</span>);<br />OK<br /></code></pre>
+</span></div></div><div id="tab-group-463-content-465" class="tab-pane" data-group="group_463" tabindex="-1"><div><span><pre><code class="hljs css language-sql">sql〉 <span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">MAPPING</span> csv_likes (<span class="hljs-keyword">id</span> <span class="hljs-built_in">INT</span>, <span class="hljs-keyword">name</span> <span class="hljs-built_in">VARCHAR</span>, likes <span class="hljs-built_in">INT</span>)<br /><span class="hljs-keyword">TYPE</span> <span class="hljs-keyword">File</span><br />OPTIONS (<span class="hljs-string">'format'</span>=<span class="hljs-string">'csv'</span>,<br />    <span class="hljs-string">'path'</span>=<span class="hljs-string">'/path/to/curr-dir'</span>, <span class="hljs-string">'glob'</span>=<span class="hljs-string">'likes.csv'</span>);<br />OK<br /></code></pre>
+</span></div></div></div></div>
+<pre><code class="hljs css language-sql">sql〉 <span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">FROM</span> csv_likes;
++<span class="hljs-comment">------------+--------------------+------------+</span>
+|          id|name                |       likes|
++<span class="hljs-comment">------------+--------------------+------------+</span>
+|           1|Jerry               |          13|
+|           2|Greg                |         108|
+|           3|Mary                |          73|
+|           4|Jerry               |          88|
++<span class="hljs-comment">------------+--------------------+------------+</span>
+4 row(s) selected
+sql〉 <span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">name</span>, <span class="hljs-keyword">sum</span>(likes) <span class="hljs-keyword">as</span> total_likes <span class="hljs-keyword">FROM</span> csv_likes <span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> <span class="hljs-keyword">name</span>;
++<span class="hljs-comment">--------------------+--------------------+</span>
+|name                |         total_likes|
++<span class="hljs-comment">--------------------+--------------------+</span>
+|Greg                |                 108|
+|Jerry               |                 101|
+|Mary                |                  73|
++<span class="hljs-comment">--------------------+--------------------+</span>
+3 row(s) selected
+</code></pre>
+<p>See the <a href="file-connector">File Connector</a> page for more details.</p>
+<h2><a class="anchor" aria-hidden="true" id="query-a-kafka-topic"></a><a href="#query-a-kafka-topic" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Query a Kafka Topic</h2>
+<p>Let's start by running a Kafka server.</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-466-tab-467" class="nav-link active" data-group="group_466" data-tab="tab-group-466-content-467">Docker</div><div id="tab-group-466-tab-468" class="nav-link" data-group="group_466" data-tab="tab-group-466-content-468">Tarball</div></div><div class="tab-content"><div id="tab-group-466-content-467" class="tab-pane active" data-group="group_466" tabindex="-1"><div><span><pre><code class="hljs css language-text">docker run --name kafka --network jet-network --rm hazelcast/hazelcast-quickstart-kafka<br /></code></pre>
+</span></div></div><div id="tab-group-466-content-468" class="tab-pane" data-group="group_466" tabindex="-1"><div><span><p>Paste these into your terminal:</p>
+<pre><code class="hljs css language-text">wget http://mirror.cc.columbia.edu/pub/software/apache/kafka/2.7.0/kafka_2.13-2.7.0.tgz<br />tar xvf kafka_2.13-2.7.0.tgz<br />cd kafka_2.13-2.7.0<br /></code></pre>
+<p>Now start ZooKeeper, then Kafka:</p>
+<pre><code class="hljs css language-text">$ bin/zookeeper-server-start.sh config/zookeeper.properties<br />...<br />[2021-01-20 12:44:04,863] INFO Created server with tickTime 3000<br />  minSessionTimeout 6000 maxSessionTimeout 60000 datadir<br />  /tmp/zookeeper/version-2 snapdir /tmp/zookeeper/version-2<br />  (org.apache.zookeeper.server.ZooKeeperServer)<br />...<br /><Type Ctrl-Z to get the prompt back><br />[1]+  Stopped  bin/zookeeper-server-start.sh config/zookeeper.properties<br />$ bg<br />[1]+ bin/zookeeper-server-start.sh config/zookeeper.properties &<br />$ bin/kafka-server-start.sh config/server.properties<br /></code></pre>
+</span></div></div></div></div>
+<hr>
+<p>You are now ready to query Kafka. We'll use JSON messages like this one:</p>
+<pre><code class="hljs css language-json">{
+    <span class="hljs-attr">"id"</span>: <span class="hljs-number">1</span>,
+    <span class="hljs-attr">"ticker"</span>: <span class="hljs-string">"ABCD"</span>,
+    <span class="hljs-attr">"price"</span>: <span class="hljs-number">5.5</span>,
+    <span class="hljs-attr">"amount"</span>: <span class="hljs-number">10</span>
+}
+</code></pre>
+<p>First write a streaming query that filters and transforms the trade
+events it gets from Kafka:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-469-tab-470" class="nav-link active" data-group="group_469" data-tab="tab-group-469-content-470">Docker</div><div id="tab-group-469-tab-471" class="nav-link" data-group="group_469" data-tab="tab-group-469-content-471">Tarball</div></div><div class="tab-content"><div id="tab-group-469-content-470" class="tab-pane active" data-group="group_469" tabindex="-1"><div><span><pre><code class="hljs css language-sql">sql〉 <span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">MAPPING</span> trades (<br />    <span class="hljs-keyword">id</span> <span class="hljs-built_in">BIGINT</span>,<br />    ticker <span class="hljs-built_in">VARCHAR</span>,<br />    price <span class="hljs-built_in">DECIMAL</span>,<br />    amount <span class="hljs-built_in">BIGINT</span>)<br /><span class="hljs-keyword">TYPE</span> Kafka<br />OPTIONS (<br />    <span class="hljs-string">'valueFormat'</span> = <span class="hljs-string">'json'</span>,<br />    <span class="hljs-string">'bootstrap.servers'</span> = <span class="hljs-string">'kafka:9092'</span><br />);<br />OK<br /></code></pre>
+</span></div></div><div id="tab-group-469-content-471" class="tab-pane" data-group="group_469" tabindex="-1"><div><span><pre><code class="hljs css language-sql">sql〉 <span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">MAPPING</span> trades (<br />    <span class="hljs-keyword">id</span> <span class="hljs-built_in">BIGINT</span>,<br />    ticker <span class="hljs-built_in">VARCHAR</span>,<br />    price <span class="hljs-built_in">DECIMAL</span>,<br />    amount <span class="hljs-built_in">BIGINT</span>)<br /><span class="hljs-keyword">TYPE</span> Kafka<br />OPTIONS (<br />    <span class="hljs-string">'valueFormat'</span> = <span class="hljs-string">'json'</span>,<br />    <span class="hljs-string">'bootstrap.servers'</span> = <span class="hljs-string">'127.0.0.1:9092'</span><br />);<br />OK<br /></code></pre>
+</span></div></div></div></div>
+<pre><code class="hljs css language-sql">sql〉 <span class="hljs-keyword">SELECT</span> ticker, <span class="hljs-keyword">ROUND</span>(price * <span class="hljs-number">100</span>) <span class="hljs-keyword">AS</span> price_cents, amount
+  <span class="hljs-keyword">FROM</span> trades
+  <span class="hljs-keyword">WHERE</span> price * amount &gt; <span class="hljs-number">100</span>;
++<span class="hljs-comment">------------+----------------------+-------------------+</span>
+|ticker      |           price_cents|             amount|
++<span class="hljs-comment">------------+----------------------+-------------------+</span>
+</code></pre>
+<p>The Kafka topic is infinite, so this query is a <em>streaming query</em>. It is
+now running, ready to receive messages from Kafka. You can interrupt it
+with <code>Ctrl+C</code>, but leave it running for now.</p>
+<p>Now start another terminal window and push some messages to Kafka:</p>
+<pre><code class="hljs css language-sql">sql〉 <span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> trades <span class="hljs-keyword">VALUES</span>
+  (<span class="hljs-number">1</span>, <span class="hljs-string">'ABCD'</span>, <span class="hljs-number">5.5</span>, <span class="hljs-number">10</span>),
+  (<span class="hljs-number">2</span>, <span class="hljs-string">'EFGH'</span>, <span class="hljs-number">14</span>, <span class="hljs-number">20</span>);
+OK
+</code></pre>
+<p>When you go back to the window where the query is running, you'll see
+a result row has appeared:</p>
+<pre><code class="hljs css language-text">+-----------------+----------------------+-------------------+
+|ticker           |           price_cents|             amount|
++-----------------+----------------------+-------------------+
+|EFGH             |                  1400|                 20|
+</code></pre>
+<p>You see only one of the two rows you inserted, the other one was
+eliminated by the <code>WHERE</code> clause. See the <a href="kafka-connector">Kafka
+Connector</a> page for more details.</p>
+<h2><a class="anchor" aria-hidden="true" id="store-query-results-in-an-imap"></a><a href="#store-query-results-in-an-imap" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Store Query Results in an IMap</h2>
+<p>You can send the query results to an IMap using the <code>SINK INTO</code> clause.
+<code>SINK INTO</code> is similar to the standard <code>INSERT INTO</code>, <a href="basic-commands#insertsink-statement">see
+here</a> for the full details.</p>
+<p>This creates a map named <code>tradeMap</code> with a <code>Long</code> key and the JSON trade
+event as the value, and then stores an entry in it:</p>
+<pre><code class="hljs css language-sql">sql〉 <span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">MAPPING</span> tradeMap (
+    __key <span class="hljs-built_in">BIGINT</span>,
+    ticker <span class="hljs-built_in">VARCHAR</span>,
+    price <span class="hljs-built_in">DECIMAL</span>,
+    amount <span class="hljs-built_in">BIGINT</span>)
+<span class="hljs-keyword">TYPE</span> IMap
+OPTIONS (
+    <span class="hljs-string">'keyFormat'</span>=<span class="hljs-string">'bigint'</span>,
+    <span class="hljs-string">'valueFormat'</span>=<span class="hljs-string">'json'</span>);
+OK
+sql〉 SINK INTO tradeMap <span class="hljs-keyword">VALUES</span> (<span class="hljs-number">1</span>, <span class="hljs-string">'hazl'</span>, <span class="hljs-number">10</span>, <span class="hljs-number">1</span>);
+OK
+sql〉 <span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">FROM</span> tradeMap;
++<span class="hljs-comment">-----+----------+--------+--------+</span>
+|__key|ticker    |   price|  amount|
++<span class="hljs-comment">-----+----------+--------+--------+</span>
+|    1|hazl      |10.0000…|       1|
++<span class="hljs-comment">-----+----------+--------+--------+</span>
+1 row(s) selected
+sql〉
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="create-a-standalone-streaming-query"></a><a href="#create-a-standalone-streaming-query" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Create a Standalone Streaming Query</h2>
+<p>Now we can connect the solutions above and tell Jet to syphon the data
+from the Kafka topic into the IMap:</p>
+<pre><code class="hljs css language-sql">sql〉 <span class="hljs-keyword">CREATE</span> JOB ingest_trades <span class="hljs-keyword">AS</span>
+  SINK <span class="hljs-keyword">INTO</span> tradeMap
+  <span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">id</span>, ticker, price, amount
+  <span class="hljs-keyword">FROM</span> trades;
+OK
+sql〉 <span class="hljs-keyword">SHOW</span> JOBS;
++<span class="hljs-comment">--------------------+</span>
+|name                |
++<span class="hljs-comment">--------------------+</span>
+|ingest_trades       |
++<span class="hljs-comment">--------------------+</span>
+1 row(s) selected
+</code></pre>
+<p>As we already saw, a streaming query never completes on its own and its
+lifecycle is coupled to the shell, but normally you want to create a
+long-running query that lives independently. We achieved this with
+<code>CREATE JOB</code>.</p>
+<p>Let's try it out by publishing some events to the Kafka topic and
+checking if they landed into the IMap:</p>
+<pre><code class="hljs css language-sql">sql〉 <span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> trades <span class="hljs-keyword">VALUES</span>
+  (<span class="hljs-number">1</span>, <span class="hljs-string">'ABCD'</span>, <span class="hljs-number">5.5</span>, <span class="hljs-number">10</span>),
+  (<span class="hljs-number">2</span>, <span class="hljs-string">'EFGH'</span>, <span class="hljs-number">14</span>, <span class="hljs-number">20</span>);
+OK
+sql〉 <span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">FROM</span> tradeMap;
++<span class="hljs-comment">---------------+--------------------+----------+--------------------+</span>
+|             id|ticker              |     price|              amount|
++<span class="hljs-comment">---------------+--------------------+----------+--------------------+</span>
+|              2|EFGH                |14.000000…|                  20|
+|              1|ABCD                |5.5000000…|                  10|
++<span class="hljs-comment">---------------+--------------------+----------+--------------------+</span>
+2 row(s) selected
+sql〉
+</code></pre>
+<p>To cancel the job, use:</p>
+<pre><code class="hljs css language-sql">sql〉 <span class="hljs-keyword">DROP</span> JOB ingest_trades;
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="use-jet-sql-embedded-inside-your-java-app"></a><a href="#use-jet-sql-embedded-inside-your-java-app" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Use Jet SQL Embedded Inside Your Java App</h2>
+<p>If you use Jet as an embedded Java library, besides the <code>hazelcast-jet</code>
+dependency add also the <code>hazelcast-jet-sql</code> dep:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-472-tab-473" class="nav-link active" data-group="group_472" data-tab="tab-group-472-content-473">Gradle</div><div id="tab-group-472-tab-474" class="nav-link" data-group="group_472" data-tab="tab-group-472-content-474">Maven</div></div><div class="tab-content"><div id="tab-group-472-content-473" class="tab-pane active" data-group="group_472" tabindex="-1"><div><span><pre><code class="hljs css language-groovy">compile <span class="hljs-string">'com.hazelcast.jet:hazelcast-jet-sql:4.5.2'</span><br /></code></pre>
+</span></div></div><div id="tab-group-472-content-474" class="tab-pane" data-group="group_472" tabindex="-1"><div><span><pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.hazelcast.jet<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>hazelcast-jet-sql<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>4.5.2<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br /></code></pre>
+</span></div></div></div></div>
+<p>Submit a query:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">JetInstance</span> jet <span class="token operator">=</span> <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">newJetInstance</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">String</span> query <span class="token operator">=</span> <span class="token string">"SELECT * FROM TABLE(generate_series(1,5))"</span><span class="token punctuation">;</span>
+<span class="token keyword">try</span> <span class="token punctuation">(</span><span class="token class-name">SqlResult</span> result <span class="token operator">=</span> jet<span class="token punctuation">.</span><span class="token function">getSql</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span>query<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">SqlRow</span> row <span class="token operator">:</span> result<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">""</span> <span class="token operator">+</span> row<span class="token punctuation">.</span><span class="token function">getObject</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>This code will print:</p>
+<pre><code class="hljs css language-txt"><span class="hljs-number">1</span>
+<span class="hljs-number">2</span>
+<span class="hljs-number">3</span>
+<span class="hljs-number">4</span>
+<span class="hljs-number">5</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="imdg-sql-and-jet-sql"></a><a href="#imdg-sql-and-jet-sql" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>IMDG SQL and Jet SQL</h2>
+<p>Hazelcast IMDG can execute SQL statements using either the default SQL
+backend or the Jet SQL backend.</p>
+<p>The default SQL backend is designed for quick, ad-hoc queries over
+IMaps. The Jet backend allows you to combine various data sources (IMap,
+Kafka, files) using a single query. It is designed for long-running
+queries (continuous queries, batch processing) and does not optimize for
+very low query initialization overhead.</p>
+<p>The Hazelcast SQL service selects the backend automatically with a
+trial-and-error approach: first try the default IMDG backend, if it
+can't execute the statement, try the Jet backend.</p>
+<p>This documentation summarizes the additional SQL features of Hazelcast
+Jet. For a summary of the default SQL engine features, supported data
+types and the built-in functions and operators, please see the <a href="https://docs.hazelcast.org/docs/4.2.3/manual/html-single/index.html#sql">chapter
+on SQL</a>
+in the Hazelcast IMDG reference manual.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/4.5.2/api/spring"><span class="arrow-prev">← </span><span>Spring Integration</span></a><a class="docs-next button" href="/docs/4.5.2/sql/basic-commands"><span>SQL Statements</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#quick-start">Quick Start</a></li><li><a href="#features-in-this-beta">Features in this Beta</a></li><li><a href="#create-external-mapping">CREATE EXTERNAL MAPPING</a></li><li><a href="#query-a-csv-file">Query a CSV File</a></li><li><a href="#query-a-kafka-topic">Query a Kafka Topic</a></li><li><a href="#store-query-results-in-an-imap">Store Query Results in an IMap</a></li><li><a href="#create-a-standalone-streaming-query">Create a Standalone Streaming Query</a></li><li><a href="#use-jet-sql-embedded-inside-your-java-app">Use Jet SQL Embedded Inside Your Java App</a></li><li><a href="#imdg-sql-and-jet-sql">IMDG SQL and Jet SQL</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2021/04/21/jet-45-is-released">Jet 4.5 Released</a><a href="/blog/2021/03/17/billion-events-per-second">Billion Events Per Second with Millisecond Latency: Streaming Analytics at Giga-Scale</a><a href="/blog/2021/02/03/jet-44-is-released">Jet 4.4 Released</a><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2021 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.5.2"]}
+              });
+            </script></body></html>
