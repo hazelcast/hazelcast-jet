@@ -15,7 +15,7 @@ Once you have a license key, download Hazelcast Jet and unzip it to a
 folder we will refer as `JET_HOME`.
 
 ```bash
-wget https://download.hazelcast.com/jet-enterprise/hazelcast-jet-enterprise-{jet-version}.tar.gz
+wget https://repository.hazelcast.com/download/jet-enterprise/hazelcast-jet-enterprise-{jet-version}.tar.gz
 tar zxvf hazelcast-jet-enterprise-{jet-version}.tar.gz
 cd hazelcast-jet-enterprise-{jet-version}
 ```
