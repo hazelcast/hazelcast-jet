@@ -69,7 +69,7 @@ the moment at which the window "closes", is that ideal moment.
 We don't require Jet to send the results to any outside system, because
 we want our results to focus on Jet's performance alone. The code we
 used in the benchmark is available on
-[GitHub](https://github.com/hazelcast/big-data-benchmark/tree/master/nexmark-jet/src/main/java/com/hazelcast/jet/benchmark/nexmark).
+[GitHub](https://github.com/hazelcast/big-data-benchmark/tree/master/nexmark-jet/src/main/java/com/example/jet/benchmark/nexmark).
 
 ## Benchmark 1: 99.99th Percentile Latency with 20 ms Time Resolution
 
