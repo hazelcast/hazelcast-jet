@@ -114,7 +114,7 @@
         <reflections.version>0.9.10</reflections.version>
         <osgi.version>4.2.0</osgi.version>
         <prometheus.version>0.13.0</prometheus.version>
-        <hadoop.version>3.3.0</hadoop.version>
+        <hadoop.version>3.3.3</hadoop.version>
         <spring.version>4.3.0.RELEASE</spring.version>
         <avro.version>1.10.2</avro.version>
         <parquet.version>1.12.0</parquet.version>
