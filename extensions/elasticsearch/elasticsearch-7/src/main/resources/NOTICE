@@ -21,10 +21,10 @@ This product includes the following libraries with the following licenses:
 
 Apache License, Version 2.0
   HPPC Collections:0.8.1
-  Jackson-core:2.11.4
-  Jackson dataformat: CBOR:2.11.4
-  Jackson dataformat: Smile:2.11.4
-  Jackson-dataformat-YAML:2.11.4
+  Jackson-core:2.14.1
+  Jackson dataformat: CBOR:2.14.1
+  Jackson dataformat: Smile:2.14.1
+  Jackson-dataformat-YAML:2.14.1
   compiler:0.9.6
   T-Digest:3.2
   Apache Commons Codec:1.12
@@ -44,7 +44,7 @@ Apache License, Version 2.0
   Lucene Memory:8.7.0
   Lucene Miscellaneous:8.7.0
   Lucene Queries:8.7.0
-  Lucene QueryParsers:8.7.0
+  Lucene QueryParsers:6.6.5
   Lucene Sandbox:8.7.0
   Lucene Spatial Extras:8.7.0
   Lucene Spatial 3D:8.7.0
@@ -63,7 +63,7 @@ Apache License, Version 2.0
   mapper-extras:7.10.0
   parent-join:7.10.0
   rank-eval:7.10.0
-  SnakeYAML:1.29
+  SnakeYAML:1.33
 MIT License
   JOpt Simple:5.0.2
 Public Domain, per Creative Commons CC0

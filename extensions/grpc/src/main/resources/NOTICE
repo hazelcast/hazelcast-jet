@@ -23,7 +23,7 @@ Apache License, Version 2.0
   Google Android Annotations Library:4.1.1.4
   proto-google-common-protos:1.18.1
   FindBugs-jsr305:3.0.2
-  Gson:2.8.6
+  Gson:2.10
   error-prone annotations:2.14.0
   Guava InternalFutureFailureAccess and InternalFutures:1.0.1
   Guava: Google Core Libraries for Java:30.1-jre

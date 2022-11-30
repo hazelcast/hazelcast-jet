@@ -234,7 +234,7 @@
             </dependency>
             <dependency>
                 <groupId>org.codehaus.jackson</groupId>
-                <artifactId>*</artifactId>
+                <artifactId>jackson-mapper-asl</artifactId>
                 <version>1.9.13</version>
             </dependency>
             <dependency>
@@ -456,6 +456,23 @@
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>annotations</artifactId>
                 <version>3.0.0</version>
+            </dependency>
+
+            <!-- needed for enforcer plugin -->
+            <dependency>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+                <version>1.2.22</version>
+            </dependency>
+            <dependency>
+                <groupId>jakarta.activation</groupId>
+                <artifactId>jakarta.activation-api</artifactId>
+                <version>1.2.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.woodstox</groupId>
+                <artifactId>stax2-api</artifactId>
+                <version>4.2.1</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
