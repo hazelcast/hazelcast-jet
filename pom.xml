@@ -121,8 +121,8 @@
         <scala.version>2.12</scala.version>
         <zookeeper.version>3.5.8</zookeeper.version>
         <kafka.version>2.2.2</kafka.version>
-        <grpc.version>1.34.0</grpc.version>
-        <protobuf.version>3.13.0</protobuf.version>
+        <grpc.version>1.51.0</grpc.version>
+        <protobuf.version>3.21.9</protobuf.version>
         <picocli.version>3.9.0</picocli.version>
         <jline.version>3.16.0</jline.version>
         <classgraph.version>4.8.66</classgraph.version>
@@ -203,6 +203,13 @@
                 <groupId>com.hazelcast</groupId>
                 <artifactId>hazelcast</artifactId>
                 <version>${hazelcast.version}</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>com.google.errorprone</groupId>
+                <artifactId>error_prone_annotations</artifactId>
+                <version>2.14.0</version>
             </dependency>
 
             <!--

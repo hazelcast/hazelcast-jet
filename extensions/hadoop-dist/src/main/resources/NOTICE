@@ -30,7 +30,7 @@ Apache License, Version 2.0
   JCIP Annotations under Apache License:1.0-1
   FindBugs-jsr305:3.0.2
   Gson:2.8.6
-  error-prone annotations:2.3.4
+  error-prone annotations:2.14.0
   Guava InternalFutureFailureAccess and InternalFutures:1.0.1
   Guava: Google Core Libraries for Java:30.1-jre
   Guava ListenableFuture only:9999.0-empty-to-avoid-conflict-with-guava
@@ -115,7 +115,7 @@ BSD 2-Clause License
   zstd-jni:1.4.5-12
   dnsjava:2.1.7
 BSD 3-Clause License
-  Protocol Buffers [Core]:3.13.0
+  Protocol Buffers [Core]:3.21.9
   Stax2 API:3.1.4
   JLine Bundle:3.9.0
   asm:9.1

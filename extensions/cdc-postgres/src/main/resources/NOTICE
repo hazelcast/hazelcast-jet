@@ -29,8 +29,9 @@ Apache License, Version 2.0
 BSD 2-Clause License
   PostgreSQL JDBC Driver:42.5.1
 BSD 3-Clause License
-  Protocol Buffers [Core]:3.13.0
+  Protocol Buffers [Core]:3.21.9
 MIT License
+  Checker Qual:3.5.0
   SLF4J API Module:1.7.32
 
 -----

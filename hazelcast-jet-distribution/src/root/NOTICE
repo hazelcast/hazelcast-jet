@@ -119,7 +119,7 @@ Apache License, Version 2.0
   Netty/Transport/Native/Unix/Common:4.1.72.Final
   OpenCensus:0.24.0
   OpenCensus:0.24.0
-  perfmark:perfmark-api:0.19.0
+  perfmark:perfmark-api:0.25.0
   Prometheus JMX Exporter - Java Agent:0.16.1
   Joda-Time:2.10.1
   ASM based accessors helper used by json-smart:2.4.7
@@ -130,7 +130,7 @@ Apache License, Version 2.0
   Apache Avro Mapred API:1.11.0
   Calcite Core:1.23.0
   Calcite Linq4j:1.23.0
-  Apache Calcite Avatica:1.16.0
+  Apache Calcite Avatica:1.22.0
   Apache Commons Compress:1.21
   Apache Commons Configuration:2.1.1
   Apache Commons Lang:3.7
@@ -159,6 +159,9 @@ Apache License, Version 2.0
   Apache HttpClient:4.5.13
   Apache HttpCore:4.4.13
   Apache HttpCore NIO:4.4.13
+  Apache HttpClient:5.1.3
+  Apache HttpComponents Core HTTP/1.1:5.1.3
+  Apache HttpComponents Core HTTP/2:5.1.3
   Apache Kafka:2.2.2
   Apache Kafka:2.2.2
   Apache Kafka:2.2.2
@@ -205,7 +208,7 @@ Apache License, Version 2.0
   Apache Yetus - Audience Annotations:0.12.0
   Jackson:1.9.13
   Data Mapper for Jackson:1.9.13
-  org.conscrypt:conscrypt-openjdk-uber:2.5.1
+  org.conscrypt:conscrypt-openjdk-uber:2.5.2
   Jetty :: Asynchronous HTTP Client:9.4.43.v20210629
   Jetty :: Http Utility:9.4.43.v20210629
   Jetty :: IO Utility:9.4.43.v20210629
@@ -231,7 +234,6 @@ Apache License, Version 2.0
   mapper-extras:7.10.0
   parent-join:7.10.0
   rank-eval:7.10.0
-  jansi:1.18
   LZ4 and xxHash:1.5.0
   SnakeYAML Engine:1.0
   wildfly-openssl:1.1.3.Final
@@ -261,8 +263,8 @@ BSD 3-Clause License
   API Common:1.8.1
   Google Auth Library for Java - Credentials:0.21.1
   Google Auth Library for Java - OAuth2 HTTP:0.21.1
-  Protocol Buffers [Core]:3.13.0
-  Protocol Buffers [Util]:3.13.0
+  Protocol Buffers [Core]:3.21.9
+  Protocol Buffers [Util]:3.21.9
   ANTLR 4 Runtime:4.7.2
   commons-compiler:3.0.11
   janino:3.0.11
@@ -270,7 +272,6 @@ BSD 3-Clause License
   JLine Bundle:3.9.0
   JLine Reader:3.16.0
   JLine Terminal:3.16.0
-  JLine JANSI Terminal:3.16.0
   asm:9.1
 CC0
   reactive-streams:1.0.2
@@ -314,7 +315,7 @@ MIT License
   JOpt Simple:5.0.2
   Checker Qual:2.5.3
   Checker Qual:3.5.0
-  Animal Sniffer Annotations:1.18
+  Animal Sniffer Annotations:1.21
   SLF4J API Module:1.7.32
 Public Domain
   XZ for Java:1.9
