@@ -21,7 +21,7 @@ This product includes the following libraries with the following licenses:
 
 Apache License, Version 2.0
   reload4j:1.2.22
-  AWS SDK for Java - Bundle:1.12.128
+  AWS SDK for Java - Bundle:1.12.352
   Jackson-annotations:2.14.1
   Jackson-core:2.14.1
   jackson-databind:2.14.1

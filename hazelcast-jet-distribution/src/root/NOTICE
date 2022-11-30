@@ -24,10 +24,10 @@ This product includes the following libraries with the following licenses:
 
 Apache License, Version 2.0
   reload4j:1.2.22
-  AWS SDK for Java - Bundle:1.12.128
-  AWS SDK for Java - Core:1.12.128
-  AWS Java SDK for Amazon Kinesis:1.12.128
-  JMES Path Query library:1.12.128
+  AWS SDK for Java - Bundle:1.12.352
+  AWS SDK for Java - Core:1.12.352
+  AWS Java SDK for Amazon Kinesis:1.12.352
+  JMES Path Query library:1.12.352
   HPPC Collections:0.8.1
   Jackson-annotations:2.14.1
   Jackson-core:2.14.1
@@ -43,6 +43,7 @@ Apache License, Version 2.0
   jackson-jr-objects:2.14.1
   Jackson module: Old JAXB Annotations (javax.xml.bind):2.14.1
   Woodstox:5.3.0
+  guava-retrying:2.0.0
   mysql-binlog-connector-java:0.20.1
   compiler:0.9.6
   JCIP Annotations under Apache License:1.0-1
@@ -51,14 +52,14 @@ Apache License, Version 2.0
   Jackson 2 extensions to the Google APIs Client Library for Java:1.30.10
   Java 6 (and higher) Extensions to the Google API Client Library for Java.:1.30.10
   proto-google-common-protos:1.18.1
-  proto-google-iam-v1:0.13.0
-  IAM Service Account Credentials API v1-rev20200821-1.30.10:v1-rev20200821-1.30.10
-  Cloud Storage JSON API v1-rev20200814-1.30.10:v1-rev20200814-1.30.10
+  proto-google-iam-v1:1.0.3
+  IAM Service Account Credentials API v1-rev20201022-1.30.10:v1-rev20201022-1.30.10
+  Cloud Storage JSON API v1-rev20200927-1.30.10:v1-rev20200927-1.30.10
   AutoValue Annotations:1.7.4
-  gcs-connector-hadoop3:hadoop3-2.1.5
-  gcsio:2.1.5
-  util:2.1.5
-  util-hadoop-hadoop3:hadoop3-2.1.5
+  gcs-connector-hadoop3:hadoop3-2.1.9
+  gcsio:2.1.9
+  util:2.1.9
+  util-hadoop-hadoop3:hadoop3-2.1.9
   FindBugs-jsr305:3.0.2
   Gson:2.10
   error-prone annotations:2.14.0
@@ -70,10 +71,11 @@ Apache License, Version 2.0
   Guava: Google Core Libraries for Java:30.1-jre
   Guava ListenableFuture only:9999.0-empty-to-avoid-conflict-with-guava
   Google HTTP Client Library for Java:1.36.0
+  GSON extensions to the Google HTTP Client Library for Java.:1.42.0
   Jackson 2 extensions to the Google HTTP Client Library for Java.:1.36.0
   J2ObjC Annotations:1.3
-  Google OAuth Client Library for Java:1.31.0
-  Java 6 (and higher) extensions to the Google OAuth Client Library for Java.:1.31.0
+  Google OAuth Client Library for Java:1.34.1
+  Java 6 (and higher) extensions to the Google OAuth Client Library for Java.:1.34.1
   project ':json-path':2.4.0
   Microsoft Azure Storage Client SDK:7.0.1
   Nimbus JOSE+JWT:7.9
@@ -259,7 +261,6 @@ BSD 2-Clause License
   dnsjava:2.1.7
   PostgreSQL JDBC Driver:42.2.14
 BSD 3-Clause License
-  API Common:1.8.1
   Google Auth Library for Java - Credentials:0.21.1
   Google Auth Library for Java - OAuth2 HTTP:0.21.1
   Protocol Buffers [Core]:3.21.9
