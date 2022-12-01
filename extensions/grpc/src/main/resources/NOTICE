@@ -38,7 +38,7 @@ Apache License, Version 2.0
   io.grpc:grpc-stub:1.51.0
   perfmark:perfmark-api:0.25.0
 BSD 3-Clause License
-  Protocol Buffers [Core]:3.21.9
+  Protocol Buffers [Core]:3.20.3
 MIT License
   Checker Qual:3.5.0
   Animal Sniffer Annotations:1.21

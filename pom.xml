@@ -122,7 +122,7 @@
         <zookeeper.version>3.5.8</zookeeper.version>
         <kafka.version>2.2.2</kafka.version>
         <grpc.version>1.51.0</grpc.version>
-        <protobuf.version>3.21.9</protobuf.version>
+        <protobuf.version>3.20.3</protobuf.version>
         <picocli.version>3.9.0</picocli.version>
         <jline.version>3.16.0</jline.version>
         <classgraph.version>4.8.66</classgraph.version>
