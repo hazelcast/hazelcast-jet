@@ -114,7 +114,7 @@ BSD 2-Clause License
   zstd-jni:1.4.5-12
   dnsjava:2.1.7
 BSD 3-Clause License
-  Protocol Buffers [Core]:3.21.9
+  Protocol Buffers [Core]:3.19.6
   Stax2 API:4.2.1
   JLine Bundle:3.9.0
   asm:9.1

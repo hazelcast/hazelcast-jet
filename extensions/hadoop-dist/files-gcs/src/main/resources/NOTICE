@@ -153,8 +153,8 @@ BSD 2-Clause License
 BSD 3-Clause License
   Google Auth Library for Java - Credentials:0.21.1
   Google Auth Library for Java - OAuth2 HTTP:0.21.1
-  Protocol Buffers [Core]:3.21.9
-  Protocol Buffers [Util]:3.21.9
+  Protocol Buffers [Core]:3.19.6
+  Protocol Buffers [Util]:3.19.6
   Stax2 API:4.2.1
   JLine Bundle:3.9.0
   asm:9.1
