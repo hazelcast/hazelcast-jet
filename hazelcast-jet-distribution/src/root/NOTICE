@@ -260,7 +260,7 @@ Apache License, Version 2.0
 BSD 2-Clause License
   zstd-jni:1.4.5-12
   dnsjava:2.1.7
-  PostgreSQL JDBC Driver:42.2.14
+  PostgreSQL JDBC Driver:42.5.1
 BSD 3-Clause License
   Google Auth Library for Java - Credentials:0.21.1
   Google Auth Library for Java - OAuth2 HTTP:0.21.1
