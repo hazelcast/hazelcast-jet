@@ -46,7 +46,7 @@
         <dependency>
             <groupId>com.hazelcast.jet.contrib</groupId>
             <artifactId>hazelcast-jet-spring-boot-starter</artifactId>
-            <version>2.0.0</version>
+            <version>2.0.1</version>
         </dependency>
 
         <!-- Spring Boot -->
