@@ -20,17 +20,18 @@ Copyright (c) 2008-2021 Hazelcast, Inc. All rights reserved.
 This product includes the following libraries with the following licenses:
 
 Apache License, Version 2.0
-  Jackson-core:2.11.4
-  jackson-databind:2.11.4
-  Jackson datatype: JSR310:2.11.4
+  Jackson-core:2.14.1
+  jackson-databind:2.14.1
+  Jackson datatype: JSR310:2.14.1
   Debezium API:1.2.5.Final
   Debezium Connector for PostgreSQL:1.2.5.Final
   Debezium Core:1.2.5.Final
 BSD 2-Clause License
-  PostgreSQL JDBC Driver:42.2.14
+  PostgreSQL JDBC Driver:42.5.1
 BSD 3-Clause License
-  Protocol Buffers [Core]:3.13.0
+  Protocol Buffers [Core]:3.19.6
 MIT License
+  Checker Qual:3.5.0
   SLF4J API Module:1.7.32
 
 -----
