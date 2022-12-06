@@ -23,25 +23,25 @@ Apache License, Version 2.0
   Google Android Annotations Library:4.1.1.4
   proto-google-common-protos:1.18.1
   FindBugs-jsr305:3.0.2
-  Gson:2.8.6
-  error-prone annotations:2.3.4
+  Gson:2.10
+  error-prone annotations:2.14.0
   Guava InternalFutureFailureAccess and InternalFutures:1.0.1
   Guava: Google Core Libraries for Java:30.1-jre
   Guava ListenableFuture only:9999.0-empty-to-avoid-conflict-with-guava
   J2ObjC Annotations:1.3
-  io.grpc:grpc-api:1.34.0
-  io.grpc:grpc-context:1.34.0
-  io.grpc:grpc-core:1.34.0
-  io.grpc:grpc-netty-shaded:1.34.0
-  io.grpc:grpc-protobuf:1.34.0
-  io.grpc:grpc-protobuf-lite:1.34.0
-  io.grpc:grpc-stub:1.34.0
-  perfmark:perfmark-api:0.19.0
+  io.grpc:grpc-api:1.51.0
+  io.grpc:grpc-context:1.51.0
+  io.grpc:grpc-core:1.51.0
+  io.grpc:grpc-netty-shaded:1.51.0
+  io.grpc:grpc-protobuf:1.51.0
+  io.grpc:grpc-protobuf-lite:1.51.0
+  io.grpc:grpc-stub:1.51.0
+  perfmark:perfmark-api:0.25.0
 BSD 3-Clause License
-  Protocol Buffers [Core]:3.13.0
+  Protocol Buffers [Core]:3.19.6
 MIT License
   Checker Qual:3.5.0
-  Animal Sniffer Annotations:1.18
+  Animal Sniffer Annotations:1.21
 
 -----
 
