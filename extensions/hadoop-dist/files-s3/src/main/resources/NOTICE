@@ -28,7 +28,7 @@ Apache License, Version 2.0
   Jackson-JAXRS: base:2.14.1
   Jackson-JAXRS: JSON:2.14.1
   Jackson module: Old JAXB Annotations (javax.xml.bind):2.14.1
-  Woodstox:5.3.0
+  Woodstox:6.4.0
   JCIP Annotations under Apache License:1.0-1
   FindBugs-jsr305:3.0.2
   Gson:2.10
