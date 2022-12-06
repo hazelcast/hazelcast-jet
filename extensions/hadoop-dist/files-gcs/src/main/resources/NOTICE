@@ -27,7 +27,7 @@ Apache License, Version 2.0
   Jackson-JAXRS: base:2.14.1
   Jackson-JAXRS: JSON:2.14.1
   Jackson module: Old JAXB Annotations (javax.xml.bind):2.14.1
-  Woodstox:5.3.0
+  Woodstox:6.4.0
   guava-retrying:2.0.0
   JCIP Annotations under Apache License:1.0-1
   Google Android Annotations Library:4.1.1.4
@@ -68,16 +68,16 @@ Apache License, Version 2.0
   Apache Commons Logging:1.2
   Apache Commons Net:3.6
   Commons Pool:1.6
-  io.grpc:grpc-alts:1.51.0
-  io.grpc:grpc-api:1.51.0
-  io.grpc:grpc-auth:1.51.0
-  io.grpc:grpc-context:1.51.0
-  io.grpc:grpc-core:1.51.0
-  io.grpc:grpc-grpclb:1.51.0
-  io.grpc:grpc-netty-shaded:1.51.0
-  io.grpc:grpc-protobuf:1.51.0
-  io.grpc:grpc-protobuf-lite:1.51.0
-  io.grpc:grpc-stub:1.51.0
+  io.grpc:grpc-alts:1.48.2
+  io.grpc:grpc-api:1.48.2
+  io.grpc:grpc-auth:1.48.2
+  io.grpc:grpc-context:1.48.2
+  io.grpc:grpc-core:1.48.2
+  io.grpc:grpc-grpclb:1.48.2
+  io.grpc:grpc-netty-shaded:1.48.2
+  io.grpc:grpc-protobuf:1.48.2
+  io.grpc:grpc-protobuf-lite:1.48.2
+  io.grpc:grpc-stub:1.48.2
   OpenCensus:0.24.0
   OpenCensus:0.24.0
   perfmark:perfmark-api:0.25.0
