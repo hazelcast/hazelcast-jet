@@ -121,7 +121,7 @@
         <scala.version>2.12</scala.version>
         <zookeeper.version>3.5.8</zookeeper.version>
         <kafka.version>2.2.2</kafka.version>
-        <grpc.version>1.34.0</grpc.version>
+        <grpc.version>1.48.2</grpc.version>
         <protobuf.version>3.13.0</protobuf.version>
         <picocli.version>3.9.0</picocli.version>
         <jline.version>3.16.0</jline.version>
@@ -133,6 +133,7 @@
         <aws.sdk.version>1.12.128</aws.sdk.version>
         <netty.version>4.1.72.Final</netty.version>
         <mysql.connector.version>8.0.25</mysql.connector.version>
+        <woodstox-version>6.4.0</woodstox-version>
 
         <!-- test dependencies -->
         <activemq.version>5.15.11</activemq.version>
@@ -223,6 +224,11 @@
                 <version>${jackson.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.woodstox</groupId>
+                <artifactId>woodstox-core</artifactId>
+                <version>${woodstox-version}</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
