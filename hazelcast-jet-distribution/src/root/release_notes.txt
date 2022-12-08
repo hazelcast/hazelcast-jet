@@ -46,6 +46,22 @@ Thank you for your valuable contributions!
 
 <<< END TEMPLATE FOR THE NEXT VERSION
 
+** Hazelcast Jet 4.5.4 **
+
+Hazelcast Jet 4.5.4 is based on IMDG version 4.2.6.
+
+1. Fixes
+
+[core] Fixed an issue where a Jet job was stuck when there is a Near Cache configured at the target map.
+[dependencies] Updated Hazelcast IMDG to 4.2.6
+[dependencies] Updated jackson to 2.14.1
+[dependencies] Updated snakeyaml to 1.33
+[dependencies] Updated hadoop to 3.3.4
+[dependencies] Updated jetty to 9.4.49.v20220914
+[dependencies] Updated hazelcast-aws to 3.4
+[dependencies] Updated hazelcast-kubernetes to 2.2.3
+[distribution] Removed the hazelcast-jet-cdc-mysql module from the Jet Enterprise distribution
+
 ** Hazelcast Jet 4.5.3 **
 
 Hazelcast Jet 4.5.3 is based on IMDG version 4.2.4 .
