@@ -57,12 +57,13 @@ Hazelcast Jet 4.5.4 is based on IMDG version 4.2.6.
 [dependencies] Updated jackson to 2.14.1
 [dependencies] Updated snakeyaml to 1.33
 [dependencies] Updated hadoop to 3.3.4
+[dependencies] Updated parquet to 1.12.3
 [dependencies] Updated jetty to 9.4.49.v20220914
 [dependencies] Updated hazelcast-aws to 3.4
 [dependencies] Updated AWS SDK to 1.12.352
 [dependencies] Updated hazelcast-kubernetes to 2.2.3
 [dependencies] Updated hazelcast-azure to 2.1.2
-[dependencies] Updated grpc to 1.51.0
+[dependencies] Updated grpc to 1.48.2
 [dependencies] Updated protobuf to 3.19.6
 [dependencies] Updated postgresql driver to 42.5.1
 [dependencies] Updated jackson-mapper-asl to 1.9.13
