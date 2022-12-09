@@ -1,0 +1,371 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>005 - Change Data Capture (CDC) Sources · Hazelcast Jet</title><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Change Data Capture (CDC) Sources"/><meta name="docsearch:version" content="4.5.3"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="005 - Change Data Capture (CDC) Sources · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="Change Data Capture (CDC) Sources"/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.5.3</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/4.5.3/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Design Documents</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.3/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.3/tutorials/kafka">Connect to Apache Kafka</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/tutorials/kinesis">Connect to Amazon Kinesis</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/4.5.3/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/4.5.3/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.3/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.3/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/api/error-handling">Error Handling Strategies</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">SQL<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.3/sql/intro">Hazelcast Jet SQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/sql/basic-commands">SQL Statements</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/sql/ddl">DDL Statements</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/sql/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/sql/imap-connector">IMap Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/sql/file-connector">File Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/sql/kafka-connector">Apache Kafka Connector</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.3/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.3/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.3/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.3/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/018-kinesis-connectors">018 - Kinesis Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/017-file-data-ingestion">017 - File Data Ingestion</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/016-event-reordering">016 - Avoiding Event Reordering Effects</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/015-mqtt-connector">015 - Mqtt Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/014-batchstage-sort">014 - BatchStage.sort()</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/013-system-time-watermarks">013 - Resolving Sparse Events Issue with System-Time Watermarks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/012-improved-job-resilience">012 - Improved Resilience of Fault-Tolerant Streaming Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/4.5.3/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.5.3/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/design-docs/005-cdc-sources.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">005 - Change Data Capture (CDC) Sources</h1></header><article><div><span><p><em>Since</em>: 4.2</p>
+<h2><a class="anchor" aria-hidden="true" id="goal"></a><a href="#goal" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Goal</h2>
+<p>Make Jet's CDC sources production ready: consistent with each other in
+behaviour, easy to use, reliable and performant.</p>
+<h2><a class="anchor" aria-hidden="true" id="background"></a><a href="#background" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Background</h2>
+<p>In Jet 4.0 we have introduced <a href="/blog/2020/03/02/jet-40-is-released#debezium">support for CDC sources</a>
+based on <a href="https://debezium.io/">Debezium</a>.</p>
+<p>That form however is not production ready:</p>
+<ul>
+<li><p>it's <strong>inconvenient</strong> to use: gives you huge JSON messages which you
+then have to interpret on your own, based on Debezium documentation</p></li>
+<li><p>native <strong>timestamps</strong> aren't provided (due to bugs in the code); even
+if fixed their shortcomings aren't documented (mostly that timestamps
+in events coming from database snapshots aren't really event-times)</p></li>
+<li><p><strong>performance</strong> impact on the DBs is not explored at all, recommended
+deployment guide is not provided</p></li>
+<li><p>miscellaneous <strong>shortcomings</strong> and <strong>inconsistencies</strong> of the various
+connectors are not documented</p></li>
+</ul>
+<p>These are the problems we are trying to address for the next version(s).</p>
+<h2><a class="anchor" aria-hidden="true" id="parsing-convenience"></a><a href="#parsing-convenience" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Parsing Convenience</h2>
+<p>We want to help users not to have to deal with low level JSON messages
+directly. In order to achieve this we:</p>
+<ul>
+<li><strong>flatten</strong> the original Debezium event's complex structure using the
+<a href="https://docs.confluent.io/current/connect/transforms/index.html">Kafka Connect
+SMT</a>
+they themselves provide (see <a href="https://debezium.io/documentation/reference/1.1/configuration/event-flattening.html">Record State
+Extraction</a>)</li>
+<li>define standard interfaces which offer <strong>event structure</strong></li>
+<li>offer support for mapping various event component directly into
+<strong>POJO data objects</strong> or to simply extract individual from them</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="record-structure"></a><a href="#record-structure" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Record Structure</h3>
+<p>The interfaces framing the general structure of change events (we call
+them &quot;records&quot;) are quite simple:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">ChangeRecord</span> <span class="token punctuation">{</span>
+
+    <span class="token keyword">long</span> <span class="token function">timestamp</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">ParsingException</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">Operation</span> <span class="token function">operation</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">ParsingException</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">RecordPart</span> <span class="token function">key</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">RecordPart</span> <span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">String</span> <span class="token function">toJson</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<pre><code class="hljs css language-java"><span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">RecordPart</span> <span class="token punctuation">{</span>
+
+    <span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token class-name">T</span> <span class="token function">toObject</span><span class="token punctuation">(</span><span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> clazz<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">ParsingException</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">></span></span> <span class="token function">toMap</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">ParsingException</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">String</span> <span class="token function">toJson</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token punctuation">}</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="content-extraction"></a><a href="#content-extraction" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Content Extraction</h3>
+<p>As can be noticed from the <a href="#record-structure">record structure
+interfaces</a>, most content can be found in the form of
+<code>RecordPart</code> instances.</p>
+<p>Such an object is basically an encapsulated JSON message (part of the
+original, big message) and offers two main methods to access the
+data:</p>
+<ul>
+<li>mapping the entire content to a <strong>POJO</strong> directly</li>
+<li>parsing the JSON into an easy to work with <strong>map</strong> form</li>
+</ul>
+<p>More information on both will be presented in the <a href="#json-parsing">JSON
+Parsing</a> section.</p>
+<h3><a class="anchor" aria-hidden="true" id="fallback"></a><a href="#fallback" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fallback</h3>
+<p>Considering the complexity of the original JSON messages and even their
+varying formats it is clear that parsing them can be error prone and
+can fail in some scenarios (for example on some untested DB-connector
+version combination).</p>
+<p>To prevent a total API failure in this case each of the record structure
+interfaces contains an extra <code>toJson()</code> method, which will provide the
+raw JSON message the object is based on:</p>
+<ul>
+<li><code>ChangeRecord.toJson()</code> gives you the original message from the
+connector (although already flattened), without anything having been
+done to it; if all else fails this will still work</li>
+<li><code>RecordPart.toJson()</code> gives you the JSON message of that particular
+fragment</li>
+</ul>
+<p>There is also a second type of fallback. Among our <a href="/javadoc/4.5.3/com/hazelcast/jet/cdc/DebeziumCdcSources.html">generic Debezium
+sources</a>
+we also provide a version, called <code>debeziumJson</code>, which streams data
+as it comes in from Debezium, without doing any processing on it. This
+bypasses our convenience API completely.</p>
+<h3><a class="anchor" aria-hidden="true" id="json-parsing"></a><a href="#json-parsing" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>JSON parsing</h3>
+<p>Debezium database connectors provide messages in standard JSON format
+which can be parsed by any one of the well-known JSON parsing libraries
+out there. For backing the implementations of our <a href="#record-structure">record structure
+interfaces</a> we have chosen to use <a href="https://github.com/FasterXML/jackson-jr">Jackson
+jr</a> with <a href="https://github.com/FasterXML/jackson-jr/tree/master/jr-annotation-support">annotation
+support</a>.</p>
+<p>The consequence of this for object mapping is that the classes we intend
+to map to need to define Bean style accessors. Further details in the
+<a href="https://github.com/FasterXML/jackson-jr">Jackson jr documentation</a>. The
+<a href="https://github.com/FasterXML/jackson-jr/tree/master/jr-annotation-support">annotation
+support</a>
+can simplify things. Accessors can be replaced with <code>@JsonProperty</code>
+annotations, Bean fields can be named differently then JSON ones and so
+on.</p>
+<p>For example a <code>Customer</code> class to which we could map JSON like</p>
+<pre><code class="hljs css language-json">"id":1004,"first_name":"Anne Marie","last_name":"Kretchmar","email":"annek@noanswer.org"
+</code></pre>
+<p>could be defined as follows:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">com<span class="token punctuation">.</span>fasterxml<span class="token punctuation">.</span>jackson<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">JsonProperty</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Customer</span> <span class="token punctuation">{</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"id"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token keyword">int</span> id<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"first_name"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token class-name">String</span> firstName<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"last_name"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token class-name">String</span> lastName<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"email"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token class-name">String</span> email<span class="token punctuation">;</span>
+
+    <span class="token keyword">public</span> <span class="token class-name">Customer</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">// also needs: hashCode, equals, toString</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Once all these things are in place it becomes quite easy to turn the
+Debezium stream of raw, complicated JSON messages into a stream of
+simple data objects:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">StreamStage</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Customer</span><span class="token punctuation">></span></span> stage <span class="token operator">=</span> pipeline<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span>source<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">withNativeTimestamps</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span>record <span class="token operator">-></span> <span class="token punctuation">{</span>
+        <span class="token class-name">RecordPart</span> value <span class="token operator">=</span> record<span class="token punctuation">.</span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> value<span class="token punctuation">.</span><span class="token function">toObject</span><span class="token punctuation">(</span><span class="token class-name">Customer</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="source-configuration"></a><a href="#source-configuration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Source Configuration</h2>
+<p>Debezium CDC connectors have a ton of configuration options and we don't
+want to ask users to go to the Debezium website to explore them.</p>
+<p>We need to provide two things. A way to <strong>discover</strong> and <strong>easily use</strong>
+the config options and a way to still allow any properties to be set or
+overwritten, even if for some reason we forgot or failed to handle them.</p>
+<p>For this we are going to use builders:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">StreamSource</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ChangeRecord</span><span class="token punctuation">></span></span> source <span class="token operator">=</span> <span class="token class-name">MySqlCdcSources</span><span class="token punctuation">.</span><span class="token function">mysql</span><span class="token punctuation">(</span>tableName<span class="token punctuation">)</span>
+    <span class="token comment">//set any of the essential properties we cover</span>
+    <span class="token punctuation">.</span><span class="token function">setDatabaseAddress</span><span class="token punctuation">(</span>mysql<span class="token punctuation">.</span><span class="token function">getContainerIpAddress</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setDatabasePort</span><span class="token punctuation">(</span>mysql<span class="token punctuation">.</span><span class="token function">getMappedPort</span><span class="token punctuation">(</span><span class="token constant">MYSQL_PORT</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setDatabaseUser</span><span class="token punctuation">(</span><span class="token string">"debezium"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setDatabasePassword</span><span class="token punctuation">(</span><span class="token string">"dbz"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setClusterName</span><span class="token punctuation">(</span><span class="token string">"dbserver1"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setDatabaseWhitelist</span><span class="token punctuation">(</span><span class="token string">"inventory"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setTableWhitelist</span><span class="token punctuation">(</span><span class="token string">"inventory."</span> <span class="token operator">+</span> tableName<span class="token punctuation">)</span>
+
+    <span class="token comment">//set arbitrary custom property</span>
+    <span class="token punctuation">.</span><span class="token function">setCustomProperty</span><span class="token punctuation">(</span><span class="token string">"database.server.id"</span><span class="token punctuation">,</span> <span class="token string">"5401"</span><span class="token punctuation">)</span>
+
+    <span class="token comment">//check the properties that have been set</span>
+    <span class="token comment">//construct the source</span>
+    <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Such public builders can:</p>
+<ul>
+<li>hardcode some properties we rely on</li>
+<li>explain what various properties do</li>
+<li>check rules like properties that always need to be set or can't be
+used together</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="inconsistencies"></a><a href="#inconsistencies" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Inconsistencies</h2>
+<h3><a class="anchor" aria-hidden="true" id="timestamps-arent-always-event-times"></a><a href="#timestamps-arent-always-event-times" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Timestamps aren't always event times</h3>
+<p>The current version of the sources does fix timestamps, because they
+haven't been working before, but beyond that timestamps have a big
+weakness, which we need to at least document.</p>
+<p>The timestamps we normally get from these sources are proper event
+times, sourced from the database change-log. The problem is with fault
+tolerance. If the connector needs to be restarted it will need to
+re-fetch some change records (that happened after the last Jet
+snapshot).</p>
+<p>It can happen in such cases, that not all these events are in the quite
+limited database changelog. In such cases the connector uses a snapshot
+of the database, which merges many past events into a single, current
+image. Not only do events get lost for good, the timestamps in the
+snapshot ones aren't event times any longer.</p>
+<p>Luckily change events that come from snapshots can be simply identified.
+They are basically insert records and their <code>Operation</code> field will not
+only reflect that, but use a special type of insert value, called <code>SYNC</code>
+for them. Except some, see <a href="#snapshots-are-not-marked-in-mysql">further inconsistencies</a>.</p>
+<p>This problem can be mitigated for example by longer DB changelogs. They
+probably aren't that big of a deal in most practical situations, but
+still, they can be and we need to make that clear in our documentation.</p>
+<h3><a class="anchor" aria-hidden="true" id="snapshots-are-not-marked-in-mysql"></a><a href="#snapshots-are-not-marked-in-mysql" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Snapshots are not marked in MySQL</h3>
+<p>As discussed in the <a href="#timestamps-arent-always-event-times">section about
+timestamps</a> there is a need to
+identify change records that originate in database snapshots (as opposed
+to database changelogs).</p>
+<p>This is almost always possible, because such records will have <code>SYNC</code> as
+their operation, except one case, MySQL which does not mark them the
+same way. We could fix this in our implementation, but the fix might not
+work as expected in some messages we fail to consider, causing their
+parsing to fail. We don't want to do more harm then good, so for now
+we'll just document this inconsistency.</p>
+<h2><a class="anchor" aria-hidden="true" id="dependencies"></a><a href="#dependencies" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Dependencies</h2>
+<p>Regardless what convenience we add, our CDC connectors ultimately remain
+Debezium based which means lots of dependencies that need to be
+satisfied.</p>
+<p>CDC sources in Jet are set up as extension modules:</p>
+<ul>
+<li><a href="https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/cdc-debezium">cdc-debezium</a>:
+contains all the helper classes we have defined and also allows for
+the creation of generic Debezium sources (see
+<a href="https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/cdc-debezium/src/main/java/com/hazelcast/jet/cdc/DebeziumCdcSources.java">DebeziumCdcSources</a>)</li>
+<li><a href="https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/cdc-mysql">cdc-mysql</a>:
+allows for the creation of MySQL based CDC sources (see <a href="https://github.com/hazelcast/hazelcast-jet/blob/master/extensions/cdc-mysql/src/main/java/com/hazelcast/jet/cdc/mysql/MySqlCdcSources.java">MySqlCdcSources</a>)</li>
+<li><a href="https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/cdc-postgres">cdc-postgres</a>:
+allows for the creation of PostgreSQL based CDC sources (see <a href="https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/cdc-mysql/src/main/java/com/hazelcast/jet/cdc/postgres/PostgresCdcSources.java">PostgresCdcSources</a>)</li>
+<li>more supported databases coming in future versions</li>
+</ul>
+<p><code>cdc-debezium</code> is the core module. It generates a self-contained JAR
+with all dependencies included and is stored in the <code>lib</code> folder of the
+distribution. The <code>cdc-mysql</code> and <code>cdc-postgres</code> jars are also in the
+<code>lib</code> folder of the distribution, but they don't contain dependencies,
+so have to be put on the classpath together with the <code>cdc-debezium</code> jar.</p>
+<p>The above mentioned jars will take care of all external dependencies
+too, no need to explicitly deal with Debezium connector jars or anything
+else. Just take care that these jars aren't included in the slim
+distribution of Jet, only the fat one.</p>
+<h2><a class="anchor" aria-hidden="true" id="serialization"></a><a href="#serialization" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Serialization</h2>
+<p>The helper classes defined in <code>cdc-debezium</code>, such as <code>ChangeRecord</code> and
+its innards are data objects that need to travel around in Jet
+clusters. For that they need to be serializable. Among the
+<a href="/docs/4.5.3/api/serialization#serialization-of-data-types">serialization options available in
+Jet</a> they
+implement the <code>StreamSerializer</code> and their <code>SerializerHook</code> gets
+registered with the cluster when the <code>cdc-debezium</code> jar is put on the
+classpath (or any of the other, database specific jars, which also
+include the core).</p>
+<h2><a class="anchor" aria-hidden="true" id="performance"></a><a href="#performance" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Performance</h2>
+<h3><a class="anchor" aria-hidden="true" id="setup"></a><a href="#setup" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Setup</h3>
+<p>Initial performance tests have been performed on non-production grade
+hardware, but results should still be relevant:</p>
+<ul>
+<li>MySQL (v5.7) / PostgreSQL (v11) server running via Docker on a
+dedicated Ubuntu 19.10 box (quad core i7-6700K CPU @ 4.0GHz, 16GB
+memory, AMD Radeon R3 SSD drive)</li>
+<li>Jet CDC pipeline running in a single node Jet cluster on a MacBook
+Pro (6 core i7 CPU @ 2.6GHz, 32GB memory, Apple AP0512M SSD)</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="results"></a><a href="#results" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Results</h3>
+<h4><a class="anchor" aria-hidden="true" id="mysql"></a><a href="#mysql" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MySQL</h4>
+<p>Maximum number of <em>sustained</em> change records that could be produced in
+the MySQL database (by continuously inserting into and then deleting
+data from) was around <strong>100,000 rows/second</strong>. The Jet job processing
+all the corresponding CDC events (reading them and mapping them to user
+data objects) had no problems with keeping up, no lagging behind observed.</p>
+<p><em>Peak</em> even handling rate of the Jet pipeline has been observed around
+<strong>200,000 records/second</strong>. This scenario was achieved by making the
+connector snapshot a very large table and inserting into the table at
+peak rate while snapshotting was going on. Once the connector finished
+snapshotting and switched to reading the binlog the above peak rate
+seems to be what it's capable of.</p>
+<p><em>Snapshotting</em> seems to be pretty fast too, was observed to happen at
+around <strong>185,000 rows/second</strong> (10 million row table finished in under
+one minute).</p>
+<h5><a class="anchor" aria-hidden="true" id="database-hit"></a><a href="#database-hit" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Database Hit</h5>
+<p>Enabling the <em>binlog</em> on the MySQL database has been observed to produce
+a <strong>15%</strong> performance hit on the number of update/insert/delete events
+it's able to process.</p>
+<p>Enabling <em>global transaction IDs</em> doesn't seem to produce a
+significant performance impact.</p>
+<h4><a class="anchor" aria-hidden="true" id="postgresql"></a><a href="#postgresql" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>PostgreSQL</h4>
+<p>Maximum number of <em>sustained</em> change records that could be produced in
+the database (by continuously inserting into and then deleting data
+from) was only around <strong>20,000 rows/second</strong>.</p>
+<p>This rate is much lower than what was possible with MySQL and seems to
+stem from how <a href="https://www.postgresql.org/docs/current/logicaldecoding-explanation.html">logical
+decoding</a>
+is implemented by PostgreSQL, namely that it seems to be a single
+threaded process which doesn't scale much.</p>
+<p>We are not sure if this is a technical limitation or is intentionally
+done so by Postgres to limit the impact of logical replication, since it
+can be enabled only on the primary server of the Postgres cluster.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/4.5.3/design-docs/006-declarative-serialization"><span class="arrow-prev">← </span><span>006 - Declarative Serialization</span></a><a class="docs-next button" href="/docs/4.5.3/design-docs/004-spring-boot-starter"><span>004 - Spring Boot Starter</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#goal">Goal</a></li><li><a href="#background">Background</a></li><li><a href="#parsing-convenience">Parsing Convenience</a><ul class="toc-headings"><li><a href="#record-structure">Record Structure</a></li><li><a href="#content-extraction">Content Extraction</a></li><li><a href="#fallback">Fallback</a></li><li><a href="#json-parsing">JSON parsing</a></li></ul></li><li><a href="#source-configuration">Source Configuration</a></li><li><a href="#inconsistencies">Inconsistencies</a><ul class="toc-headings"><li><a href="#timestamps-arent-always-event-times">Timestamps aren't always event times</a></li><li><a href="#snapshots-are-not-marked-in-mysql">Snapshots are not marked in MySQL</a></li></ul></li><li><a href="#dependencies">Dependencies</a></li><li><a href="#serialization">Serialization</a></li><li><a href="#performance">Performance</a><ul class="toc-headings"><li><a href="#setup">Setup</a></li><li><a href="#results">Results</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2021/04/21/jet-45-is-released">Jet 4.5 Released</a><a href="/blog/2021/03/17/billion-events-per-second">Billion Events Per Second with Millisecond Latency: Streaming Analytics at Giga-Scale</a><a href="/blog/2021/02/03/jet-44-is-released">Jet 4.4 Released</a><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2022 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.5.3"]}
+              });
+            </script></body></html>

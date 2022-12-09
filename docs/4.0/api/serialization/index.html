@@ -156,7 +156,7 @@ available in the JDK:</p>
 <pre><code class="hljs css language-java"><span class="token comment">// Accesses the static final field `ISO_LOCAL_TIME`. Static fields are</span>
 <span class="token comment">// not subject to lambda capture, they are dereferenced when the code</span>
 <span class="token comment">// runs on the target machine.</span>
-src<span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">Long</span> tstamp<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token class-name">DateTimeFormatter</span><span class="token punctuation">.</span>ISO_LOCAL_TIME
+src<span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">Long</span> tstamp<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token class-name">DateTimeFormatter</span><span class="token punctuation">.</span><span class="token constant">ISO_LOCAL_TIME</span>
         <span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token class-name">Instant</span><span class="token punctuation">.</span><span class="token function">ofEpochMilli</span><span class="token punctuation">(</span>tstamp<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">atZone</span><span class="token punctuation">(</span><span class="token class-name">ZoneId</span><span class="token punctuation">.</span><span class="token function">systemDefault</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <p>This refers to a <code>static final</code> field in the JDK, so the instance is
@@ -249,11 +249,11 @@ or
 <code>Person</code> (mind the type id which should be unique across all serializers):</p>
 <pre><code class="hljs css language-java"><span class="token keyword">class</span> <span class="token class-name">PersonSerializer</span> <span class="token keyword">implements</span> <span class="token class-name">StreamSerializer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Person</span><span class="token punctuation">></span></span> <span class="token punctuation">{</span>
 
-        <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token keyword">int</span> TYPE_ID <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+        <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token keyword">int</span> <span class="token constant">TYPE_ID</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
 
         <span class="token annotation punctuation">@Override</span>
         <span class="token keyword">public</span> <span class="token keyword">int</span> <span class="token function">getTypeId</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
-            <span class="token keyword">return</span> TYPE_ID<span class="token punctuation">;</span>
+            <span class="token keyword">return</span> <span class="token constant">TYPE_ID</span><span class="token punctuation">;</span>
         <span class="token punctuation">}</span>
 
         <span class="token annotation punctuation">@Override</span>

@@ -167,7 +167,7 @@ levels, cluster and job, the latter will be chosen for given job.</p>
 <p>Given sample value class and its serializer:</p>
 <pre><code class="hljs css language-java"><span class="token keyword">class</span> <span class="token class-name">Value</span> <span class="token punctuation">{</span>
 
-    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token keyword">int</span> TYPE <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token keyword">int</span> <span class="token constant">TYPE</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
 
     <span class="token keyword">private</span> <span class="token class-name">Integer</span> v<span class="token punctuation">;</span>
 
@@ -180,7 +180,7 @@ levels, cluster and job, the latter will be chosen for given job.</p>
 
     <span class="token annotation punctuation">@Override</span>
     <span class="token keyword">public</span> <span class="token keyword">int</span> <span class="token function">getTypeId</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
-        <span class="token keyword">return</span> <span class="token class-name">Value</span><span class="token punctuation">.</span>TYPE<span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token class-name">Value</span><span class="token punctuation">.</span><span class="token constant">TYPE</span><span class="token punctuation">;</span>
     <span class="token punctuation">}</span>
 
     <span class="token annotation punctuation">@Override</span>

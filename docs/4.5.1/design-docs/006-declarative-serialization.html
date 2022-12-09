@@ -90,7 +90,7 @@ can be applied for other serialization frameworks.</p>
 via <code>addClass()</code>, <code>addJar()</code> etc. you can simply enable/register
 Protocol Buffers serializer with:</p>
 <pre><code class="hljs css language-java"><span class="token keyword">new</span> <span class="token class-name">JobConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  <span class="token punctuation">.</span><span class="token function">enableSerialization</span><span class="token punctuation">(</span>PROTOCOL_BUFFERS<span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token function">enableSerialization</span><span class="token punctuation">(</span><span class="token constant">PROTOCOL_BUFFERS</span><span class="token punctuation">)</span>
 </code></pre>
 <p>Exploiting the fact that all
 <a href="https://www.javadoc.io/static/com.google.protobuf/protobuf-java/3.11.4/com/google/protobuf/GeneratedMessageV3.html">generated protocol message classes extend GeneratedMessageV3</a>
@@ -168,10 +168,10 @@ Buffers has been created. To implement a Protocol Buffers serializer it's
 now enough to extend:</p>
 <pre><code class="hljs css language-java"><span class="token keyword">class</span> <span class="token class-name">PersonSerializer</span> <span class="token keyword">extends</span> <span class="token class-name">ProtobufSerializer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Person</span><span class="token punctuation">></span></span> <span class="token punctuation">{</span>
 
-    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token keyword">int</span> TYPE_ID <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token keyword">int</span> <span class="token constant">TYPE_ID</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
 
     <span class="token class-name">PersonSerializer</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
-        <span class="token keyword">super</span><span class="token punctuation">(</span><span class="token class-name">Person</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">,</span> TYPE_ID<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">super</span><span class="token punctuation">(</span><span class="token class-name">Person</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">,</span> <span class="token constant">TYPE_ID</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
     <span class="token punctuation">}</span>
 <span class="token punctuation">}</span>
 </code></pre>
@@ -186,7 +186,7 @@ Buffers serializer on a cluster level it's enough to extend:</p>
 <pre><code class="hljs css language-java"><span class="token keyword">class</span> <span class="token class-name">PersonSerializerHook</span> <span class="token keyword">extends</span> <span class="token class-name">ProtobufSerializerHook</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Person</span><span class="token punctuation">></span></span> <span class="token punctuation">{</span>
 
     <span class="token class-name">PersonSerializerHook</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
-        <span class="token keyword">super</span><span class="token punctuation">(</span><span class="token class-name">Person</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">,</span> TYPE_ID<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">super</span><span class="token punctuation">(</span><span class="token class-name">Person</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">,</span> <span class="token constant">TYPE_ID</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
     <span class="token punctuation">}</span>
 <span class="token punctuation">}</span>
 </code></pre>

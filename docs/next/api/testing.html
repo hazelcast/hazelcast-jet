@@ -472,7 +472,7 @@ to validate job is in the desired state.</p>
         <span class="token comment">// when</span>
         <span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token function">buildPipeline</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
         <span class="token class-name">Job</span> job <span class="token operator">=</span> jet<span class="token punctuation">.</span><span class="token function">newJob</span><span class="token punctuation">(</span>p<span class="token punctuation">)</span><span class="token punctuation">;</span>
-        <span class="token function">assertJobStatusEventually</span><span class="token punctuation">(</span>job<span class="token punctuation">,</span> <span class="token class-name">JobStatus</span><span class="token punctuation">.</span>RUNNING<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">assertJobStatusEventually</span><span class="token punctuation">(</span>job<span class="token punctuation">,</span> <span class="token class-name">JobStatus</span><span class="token punctuation">.</span><span class="token constant">RUNNING</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 
         <span class="token comment">// then</span>
         <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
