@@ -1,9 +1,9 @@
 [
     {
-        "version": "4.5.3",
-        "releaseNotes": "https://github.com/hazelcast/hazelcast-jet/releases/tag/v4.5.3",
-        "size" : 601,
-        "slimSize" : 29,
+        "version": "4.5.4",
+        "releaseNotes": "https://github.com/hazelcast/hazelcast-jet/releases/tag/v4.5.4",
+        "size" : 655,
+        "slimSize" : 31,
         "mcVersion": "4.2021.12-1"
     },
     {
