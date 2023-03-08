@@ -552,5 +552,5 @@ can't execute the statement, try the Jet backend.
 This documentation summarizes the additional SQL features of Hazelcast
 Jet. For a summary of the default SQL engine features, supported data
 types and the built-in functions and operators, please see the [chapter
-on SQL](https://docs.hazelcast.org/docs/{imdg-minor-version}/manual/html-single/index.html#sql)
+on SQL](https://docs.hazelcast.com/imdg/{imdg-minor-version}/sql/distributed-sql.html)
 in the Hazelcast IMDG reference manual.
