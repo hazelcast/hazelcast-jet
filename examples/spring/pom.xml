@@ -30,7 +30,7 @@
 
     <properties>
         <spring.version>4.3.26.RELEASE</spring.version>
-        <hsqldb.version>2.3.2</hsqldb.version>
+        <hsqldb.version>2.7.1</hsqldb.version>
         <dbh2.version>1.4.187</dbh2.version>
     </properties>
 
