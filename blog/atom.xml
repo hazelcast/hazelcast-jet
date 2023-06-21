@@ -2,12 +2,23 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://jet-start.sh/blog</id>
     <title>Hazelcast Jet Blog</title>
-    <updated>2021-04-21T06:00:00.000Z</updated>
+    <updated>2023-06-14T06:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://jet-start.sh/blog"/>
     <subtitle>The best place to stay up-to-date with the latest Hazelcast Jet news and events.</subtitle>
     <logo>https://jet-start.sh/img/logo-dark.svg</logo>
     <rights>Copyright © 2023 Hazelcast Inc.</rights>
+    <entry>
+        <title type="html"><![CDATA[Jet engine lives on in Hazelcast 5.x]]></title>
+        <id>https://jet-start.sh/blog/2023/06/14/jet-engine-in-hazelcast.html</id>
+        <link href="https://jet-start.sh/blog/2023/06/14/jet-engine-in-hazelcast.html"/>
+        <updated>2023-06-14T06:00:00.000Z</updated>
+        <summary type="html"><![CDATA[<p>At Hazelcast we have a policy of supporting a minor version for two years since the initial release. For Hazelcast Jet 4.5 this period expired at the end of April, marking an end of Hazelcast Jet as a standalone product.</p> <p>Since 2021 our Jet engine, a ...</p>]]></summary>
+        <author>
+            <name>František Hartman</name>
+            <uri>https://www.linkedin.com/in/frantisek-hartman/</uri>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Jet 4.5 Released]]></title>
         <id>https://jet-start.sh/blog/2021/04/21/jet-45-is-released.html</id>
