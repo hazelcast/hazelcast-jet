@@ -29,8 +29,11 @@ class HomeSplash extends React.Component {
 
     const ProjectTitle = props => (
       <h2 className="projectTitle">
-        Use Your Data Instantly At Scale
-        <small>Hazelcast Jet is a distributed batch and stream processing system that can do stateful computations over massive amounts of data with consistent low latency.
+        Hazelcast Jet is now part of Hazelcast Platform
+        <small>
+        Hazelcast Jet 4.5 reached end-of-life on April 21, 2023.
+        New versions of the Jet engine are included in Hazelcast Platform.
+        See <a href="/blog/2023/06/14/jet-engine-in-hazelcast">this post</a> for details.
         </small>
       </h2>
     );
