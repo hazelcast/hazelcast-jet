@@ -29,7 +29,7 @@ class HomeSplash extends React.Component {
 
     const ProjectTitle = props => (
       <h2 className="projectTitle">
-        Hazelcast Jet is now part of Hazelcast Platform
+        Hazelcast Jet is now part of <a href="https://hazelcast.com/">Hazelcast Platform</a>
         <small>
         Hazelcast Jet 4.5 reached end-of-life on April 21, 2023.
         New versions of the Jet engine are included in Hazelcast Platform.
@@ -227,3 +227,6 @@ class Index extends React.Component {
 }
 
 module.exports = Index;
+
+// Redirect to hazelcast.com
+window.location.replace("https://hazelcast.com/");
